@@ -1,7 +1,21 @@
+
+#include "ffx_a_pruned.h"
+
+// FSR Parameters
+uniform AU4 easu_const_0;
+uniform AU4 easu_const_1;
+uniform AU4 easu_const_2;
+uniform AU4 easu_const_3;
+uniform AU4 rcas_const_0;
+
+// OBS Parameters
 uniform float4x4 ViewProj;
 uniform texture2d image; 
 
-#include "ffx_a_pruned.h"
+//TODO: include and define callbacks
+//#include "ffx_fsr1.h"
+
+// TODO: re-write everything below
 
 sampler_state defaultSampler {
         Filter      = Linear;
