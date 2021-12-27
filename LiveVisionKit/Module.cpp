@@ -26,12 +26,13 @@ MODULE_EXPORT const char* obs_module_description(void)
 //		MODULE SET UP
 //================================
 
-void register_fsr_filter();
+void register_fsr_plugin();
+
+
 
 bool obs_module_load()
 {
-	register_fsr_filter();
+	register_fsr_plugin();
 
-	// Return false on fail
 	return true;
 }

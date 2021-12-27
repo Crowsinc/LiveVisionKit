@@ -7,7 +7,8 @@
 // ===========
 //
 // This is a copy of AMD's FSR provided ffx_a.h file which has been significantly pruned for use by OBS's graphics sub-system.
-// 
+// Pruning is required as not all functionality used by the original file is supported. 
+//
 // Please see the original ffx_a.h file for more information. 
 //
 // AMD LICENSE

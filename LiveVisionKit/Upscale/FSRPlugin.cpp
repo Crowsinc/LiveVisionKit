@@ -72,6 +72,13 @@ static obs_properties_t* fsr_filter_properties(void* data)
 
 //-------------------------------------------------------------------------------------
 
+static void fsr_filter_default_settings(obs_data_t* settings)
+{
+	lvk::FSRFilter::LoadDefaults(settings);
+}
+
+//-------------------------------------------------------------------------------------
+
 static uint32_t fsr_output_width(void* data)
 {
 	return static_cast<lvk::FSRFilter*>(data)->width();
@@ -93,10 +100,10 @@ static const char* fsr_filter_name(void* _)
 }
 
 //=====================================================================================
-//		FILTER CONFIGURATION
+//		PLUGIN REGISTRATION
 //=====================================================================================
 
-extern void register_fsr_filter()
+extern void register_fsr_plugin()
 {
 	struct obs_source_info config = {};
 	config.id = "LVK~FSR";
@@ -111,7 +118,8 @@ extern void register_fsr_filter()
 	config.get_name = fsr_filter_name;
 	config.get_width = fsr_output_width;
 	config.get_height = fsr_output_height;
-	config.get_properties = fsr_filter_properties; //TODO: add .get_defaults as well?
+	config.get_properties = fsr_filter_properties;
+//TODO:	config.get_defaults = fsr_filter_default_settings;
 
 	obs_register_source(&config);
 }

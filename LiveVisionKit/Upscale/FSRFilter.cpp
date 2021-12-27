@@ -57,6 +57,7 @@ namespace lvk
 		if(m_Shader)
 		{
 			// Load all shader uniform/parameter locations
+			m_OutputSizeParam = gs_effect_get_param_by_name(m_Shader, "output_size");
 			m_EASUConstParam0 = gs_effect_get_param_by_name(m_Shader, "easu_const_0");
 			m_EASUConstParam1 = gs_effect_get_param_by_name(m_Shader, "easu_const_1");
 			m_EASUConstParam2 = gs_effect_get_param_by_name(m_Shader, "easu_const_2");
@@ -138,6 +139,8 @@ namespace lvk
 
 		// Update all shader parameters.
 		// No need to check if they changed, OBS handles that.
+		uint32_t size_vec[2] = {m_OutputWidth, m_OutputHeight};
+		gs_effect_set_val(m_OutputSizeParam, size_vec, sizeof(size_vec));
 		gs_effect_set_val(m_EASUConstParam0, m_EASUConst0, sizeof(m_EASUConst0));
 		gs_effect_set_val(m_EASUConstParam0, m_EASUConst1, sizeof(m_EASUConst1));
 		gs_effect_set_val(m_EASUConstParam0, m_EASUConst2, sizeof(m_EASUConst2));
@@ -169,6 +172,7 @@ namespace lvk
 		// Ensure we have no nulls for key filter members
 		return m_Context
 				&& m_Shader
+				&& m_OutputSizeParam
 				&& m_EASUConstParam0
 				&& m_EASUConstParam1
 				&& m_EASUConstParam2

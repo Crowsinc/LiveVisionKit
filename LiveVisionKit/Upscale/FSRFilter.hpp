@@ -51,6 +51,7 @@ namespace lvk
 		bool m_EASUOutdated;
 		AU1 m_InputWidth, m_InputHeight;
 		AU1 m_OutputWidth, m_OutputHeight;
+		gs_eparam_t* m_OutputSizeParam;
 		gs_eparam_t* m_EASUConstParam0;
 		gs_eparam_t* m_EASUConstParam1;
 		gs_eparam_t* m_EASUConstParam2;
@@ -61,7 +62,6 @@ namespace lvk
 		varAU4(m_EASUConst2);
 		varAU4(m_EASUConst3);
 		varAU4(m_RCASConst0);
-
 
 		FSRFilter(obs_source_t* context);
 
