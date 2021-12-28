@@ -1,5 +1,5 @@
-//NOTE: need to use pruned version for compatibility
-#include "ffx_a_pruned.h"
+//NOTE: need to use modified version for compatibility
+#include "ffx_a_mod.h"
 
 //=====================================================================================
 //		OBS Parameters & Callbacks
@@ -12,37 +12,83 @@ uniform texture2d image;
 //		FSR Parameters & Callbacks
 //=====================================================================================
 
-uniform AU2 output_size;
-uniform AU4 easu_const_0;
-uniform AU4 easu_const_1;
-uniform AU4 easu_const_2;
-uniform AU4 easu_const_3;
-uniform AU4 rcas_const_0;
+// NOTE: We use AF* instead of the original FSR AU*
+// uniforms as these aren't supported in the HLSL-GLSL
+// conversion performed by OBS. See modified FSR files
+// for more information on unsupported functionality. 
+uniform AF2 output_size;
+uniform AF4 easu_const_0;
+uniform AF4 easu_const_1;
+uniform AF4 easu_const_2;
+uniform AF4 easu_const_3;
+uniform AF4 rcas_const_0;
 
-sampler_state Sampler 
+sampler_state LinearSampler 
 {
-    Filter      = Linear; //TODO: mess with different types (point?)
+    Filter      = Linear; 
+    AddressU    = Clamp;
+    AddressV    = Clamp;
+};
+
+
+sampler_state PointSampler 
+{
+    Filter      = Point; 
     AddressU    = Clamp;
     AddressV    = Clamp;
 };
 
 AF4 FsrEasuRF(AF2 p)
 {
-    return image.GatherRed(Sampler, p);
+    // Four texel gather operations such as GatherRed (HLSL) or textureGather.r (GLSL)
+    // are not supported by OBS So we are forced to mimic this functionality.
+    
+    return AF4(
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).r,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).r,
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).r,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).r
+    );
 }
 
 AF4 FsrEasuGF(AF2 p)
 {
-    return image.GatherGreen(Sampler, p);
+    // Four texel gather operations such as GatherGreen (HLSL) or textureGather.g (GLSL)
+    // are not supported by OBS So we are forced to mimic this functionality.
+    return AF4(
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).g,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).g,
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).g,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).g
+    );
 }
 
 AF4 FsrEasuBF(AF2 p)
 {
-    return image.GatherBlue(Sampler, p);
+    // Four texel gather operations such as GatherBlue (HLSL) or textureGather.b (GLSL)
+    // are not supported by OBS So we are forced to mimic this functionality.
+    return AF4(
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).b,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).b,
+        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).b,
+        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).b
+    );
 }
 
-//NOTE: need to use pruned version for compatibility
-#include "ffx_fsr1_pruned.h"
+AF4 FsrRcasLoadF(ASU2 p)
+{   
+    // Texel gather operations such as .Load (HLSL( or texelFetch (GLSL)
+    // are not supported by the OBS HLSL-GLSL converter So we are forced to mimic this functionality.
+    return image.Sample(PointSampler, AF2(p) / output_size);
+}
+
+void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b)
+{
+    // NOT USED
+}
+
+//NOTE: need to use modified version for compatibility
+#include "ffx_fsr1_mod.h"
 
 //=====================================================================================
 //		VERTEX SHADER
@@ -68,13 +114,20 @@ VSData VSMain(VSData vs_in)
 
 float4 PSMain(VSData vs_in) : TARGET
 {
-    float3 out_col = float3(0, 0, 0);
-    float2 out_pos = vs_in.uv * output_size.xy;
+    AF3 out_col = AF3(0, 0, 0);
+    AF2 out_pos = vs_in.uv * output_size.xy;
 
     FsrEasuF(out_col, out_pos, easu_const_0, easu_const_1, easu_const_2, easu_const_3);
-    
-  //  return float4(out_col, 1.0);
-    return float4(image.Sample(Sampler, vs_in.uv).r, 0, .5, 1);
+   
+    //FsrRcasF(out_col.r, out_col.g, out_col.b, out_pos, rcas_const_0);
+
+//  AF4 a = float4(out_col, 1.0);
+//  a.r = FsrEasuRF(out_pos).r;
+//  a.g = FsrEasuGF(out_pos).r;
+//  a.b = FsrEasuBF(out_pos).r;
+//  return a;
+    return float4(out_col, 1.0);
+  // return float4(image.Sample(LinearSampler, vs_in.uv).r, 0, .5, 1);
 }
 
 //=====================================================================================

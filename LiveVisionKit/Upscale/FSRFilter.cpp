@@ -1,11 +1,19 @@
 #include "FSRFilter.hpp"
 
-
-
 #include <filesystem>
 
 namespace lvk
 {
+	//-------------------------------------------------------------------------------------
+
+	//TODO: move to some common util file
+	float reinterpret_float(AU1& uint)
+	{
+		// Re-interprets the bits of a uint32_t as that of a float instead.
+		// Don't use this unless you understand exactly what all the consequences are.
+		return *reinterpret_cast<float*>(&uint);
+	}
+
 	//-------------------------------------------------------------------------------------
 
 	const char* FSRFilter::Name()
@@ -71,13 +79,11 @@ namespace lvk
 		// Set output size to 1080p. If properly implemented, this
 		// shouldn't be necessary as it would get configured to the
 		// user's preferred setting before the render function is called.
-		m_OutputWidth = c_DefaultOutputWidth;
-		m_OutputHeight = c_DefaultOutputHeight;
+		vec2_set(&m_OutputSize, c_DefaultOutputWidth, c_DefaultOutputHeight);
 
 		// We set the input to {-1,-1} to force the first render
 		// call to update the EASU constants for the shader.
-		m_InputWidth = -1;
-		m_InputHeight = -1;
+		vec2_set(&m_InputSize, -1.0f, -1.0f);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -101,7 +107,16 @@ namespace lvk
 	{
 		//TODO: implement properly
 
-		FsrRcasCon(m_RCASConst0, c_DefaultSharpness); // @suppress("Invalid arguments")
+		varAU4(con0);
+		FsrRcasCon(con0, c_DefaultSharpness); // @suppress("Invalid arguments")
+
+		// Although con0 is defined as being a 32bit unsigned vector for use with FSR.
+		// Their bits ultimately re-interpreted as a float in the FSR shader. The re-interpretation
+		// of bits functionality is not supported by OBS's shader parser. So we do it here instead.
+		// See ffx_fsr1_mod.h for more information.
+		vec4_set(&m_RCASConst0, reinterpret_float(con0[0]), reinterpret_float(con0[1]),
+				reinterpret_float(con0[2]), reinterpret_float(con0[3]));
+
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -111,23 +126,38 @@ namespace lvk
 		//TODO: handle downscaling
 
 		auto filter_target = obs_filter_get_target(m_Context);
-		const uint32_t input_width = obs_source_get_base_width(filter_target);
-		const uint32_t input_height = obs_source_get_base_height(filter_target);
+		const float input_width = obs_source_get_base_width(filter_target);
+		const float input_height = obs_source_get_base_height(filter_target);
 
 		// If the EASU constant is flagged as out-dated, or the input source size
 		// has changed. Then we need to re-compute the EASU constants.
-		if(m_EASUOutdated || input_width != m_InputWidth || input_height != m_InputHeight)
+		if(m_EASUOutdated || input_width != m_InputSize.x || input_height != m_InputSize.y)
 		{
+			vec2_set(&m_InputSize, input_width, input_height);
 			m_EASUOutdated = false;
-			m_InputWidth = input_width;
-			m_InputHeight = input_height;
 
-			FsrEasuCon(m_EASUConst0, m_EASUConst1, m_EASUConst2, m_EASUConst3, // @suppress("Invalid arguments")
-					m_InputWidth, m_InputHeight, m_InputWidth, m_InputHeight,
-					m_OutputWidth, m_OutputHeight);
+			// NOTE: the constants should be defined by varAU4, but we skip
+			// the macro and define it ourselves for brevity.
+			AU1 con0[4], con1[4], con2[4], con3[4];
+			FsrEasuCon(con0, con1, con2, con3,
+					m_InputSize.x, m_InputSize.y, m_InputSize.x, m_InputSize.y,
+					m_OutputSize.x, m_OutputSize.y);
+
+			// Although con0-con3 are defined as being uint32_t vectors for use with FSR.
+			// Their bits ultimately re-interpreted as a float in the FSR shader. The re-interpretation
+			// of bits functionality is not supported by OBS's shader parser. So we do it here instead.
+			// See ffx_fsr1_mod.h for more information.
+			vec4_set(&m_EASUConst0, reinterpret_float(con0[0]), reinterpret_float(con0[1]),
+					reinterpret_float(con0[2]), reinterpret_float(con0[3]));
+			vec4_set(&m_EASUConst1, reinterpret_float(con1[0]), reinterpret_float(con1[1]),
+					reinterpret_float(con1[2]), reinterpret_float(con1[3]));
+			vec4_set(&m_EASUConst2, reinterpret_float(con2[0]), reinterpret_float(con2[1]),
+					reinterpret_float(con2[2]), reinterpret_float(con2[3]));
+			vec4_set(&m_EASUConst3, reinterpret_float(con3[0]), reinterpret_float(con3[1]),
+					reinterpret_float(con3[2]), reinterpret_float(con3[3]));
+
 		}
 	}
-
 
 	//-------------------------------------------------------------------------------------
 
@@ -139,29 +169,28 @@ namespace lvk
 
 		// Update all shader parameters.
 		// No need to check if they changed, OBS handles that.
-		uint32_t size_vec[2] = {m_OutputWidth, m_OutputHeight};
-		gs_effect_set_val(m_OutputSizeParam, size_vec, sizeof(size_vec));
-		gs_effect_set_val(m_EASUConstParam0, m_EASUConst0, sizeof(m_EASUConst0));
-		gs_effect_set_val(m_EASUConstParam0, m_EASUConst1, sizeof(m_EASUConst1));
-		gs_effect_set_val(m_EASUConstParam0, m_EASUConst2, sizeof(m_EASUConst2));
-		gs_effect_set_val(m_EASUConstParam0, m_EASUConst3, sizeof(m_EASUConst3));
-		gs_effect_set_val(m_EASUConstParam0, m_RCASConst0, sizeof(m_RCASConst0));
+		gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
+		gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
+		gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
+		gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
+		gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
+		gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
 
-		obs_source_process_filter_end(m_Context, m_Shader, m_OutputWidth, m_OutputHeight);
+		obs_source_process_filter_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y);
 	}
 
 	//-------------------------------------------------------------------------------------
 
 	uint32_t FSRFilter::width()
 	{
-		return m_OutputWidth;
+		return m_OutputSize.x;
 	}
 
 	//-------------------------------------------------------------------------------------
 
 	uint32_t FSRFilter::height()
 	{
-		return m_OutputHeight;
+		return m_OutputSize.y;
 	}
 
 
