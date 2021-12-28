@@ -7,11 +7,11 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	//TODO: move to some common util file
-	float reinterpret_float(AU1& uint)
+	AF1 reinterpret_float(AU1& val)
 	{
 		// Re-interprets the bits of a uint32_t as that of a float instead.
 		// Don't use this unless you understand exactly what all the consequences are.
-		return *reinterpret_cast<float*>(&uint);
+		return *reinterpret_cast<AF1*>(&val);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -155,7 +155,6 @@ namespace lvk
 					reinterpret_float(con2[2]), reinterpret_float(con2[3]));
 			vec4_set(&m_EASUConst3, reinterpret_float(con3[0]), reinterpret_float(con3[1]),
 					reinterpret_float(con3[2]), reinterpret_float(con3[3]));
-
 		}
 	}
 

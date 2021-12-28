@@ -41,45 +41,87 @@ sampler_state PointSampler
 AF4 FsrEasuRF(AF2 p)
 {
     // Four texel gather operations such as GatherRed (HLSL) or textureGather.r (GLSL)
-    // are not supported by OBS So we are forced to mimic this functionality.
-    
+    // are not supported by OBS So we are forced to mimic using point sampling. 
+    // For a given point p in normalized texture coordinates. We want to grab neighbouring
+    // texels x, y, z, and w in the listed order.
+    //
+    //                                  +---+---+
+    //                                  | w | z |
+    //                                  +--(p)--+
+    //                                  | x | y |
+    //                                  +---+---+
+    //
+    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
+    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
+    // To get the normalized texture coordinates for each required texel, we then offset 
+    // point p by half the texel size using addition/subtraction as necessary.
     return AF4(
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).r,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).r,
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).r,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).r
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).r,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).r,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).r,
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).r
     );
 }
 
 AF4 FsrEasuGF(AF2 p)
 {
-    // Four texel gather operations such as GatherGreen (HLSL) or textureGather.g (GLSL)
-    // are not supported by OBS So we are forced to mimic this functionality.
+    // Four texel gather operations such as GatherGreen (HLSL) or textureGather.r (GLSL)
+    // are not supported by OBS So we are forced to mimic using point sampling. 
+    // For a given point p in normalized texture coordinates. We want to grab neighbouring
+    // texels x, y, z, and w in the listed order.
+    //
+    //                                  +---+---+
+    //                                  | w | z |
+    //                                  +--(p)--+
+    //                                  | x | y |
+    //                                  +---+---+
+    //
+    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
+    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
+    // To get the normalized texture coordinates for each required texel, we then offset 
+    // point p by half the texel size using addition/subtraction as necessary.
     return AF4(
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).g,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).g,
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).g,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).g
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).g,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).g,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).g,
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).g
     );
 }
 
 AF4 FsrEasuBF(AF2 p)
 {
-    // Four texel gather operations such as GatherBlue (HLSL) or textureGather.b (GLSL)
-    // are not supported by OBS So we are forced to mimic this functionality.
+    // Four texel gather operations such as GatherBlue (HLSL) or textureGather.r (GLSL)
+    // are not supported by OBS So we are forced to mimic using point sampling. 
+    // For a given point p in normalized texture coordinates. We want to grab neighbouring
+    // texels x, y, z, and w in the listed order.
+    //
+    //                                  +---+---+
+    //                                  | w | z |
+    //                                  +--(p)--+
+    //                                  | x | y |
+    //                                  +---+---+
+    //
+    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
+    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
+    // To get the normalized texture coordinates for each required texel, we then offset 
+    // point p by half the texel size using addition/subtraction as necessary.
     return AF4(
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 0)) / AF2(1280, 720)).b,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 0)) / AF2(1280, 720)).b,
-        image.Sample(PointSampler, (AF2(p) + AF2(0, 1)) / AF2(1280, 720)).b,
-        image.Sample(PointSampler, (AF2(p) + AF2(1, 1)) / AF2(1280, 720)).b
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).b,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y + 0.5 * easu_const_1.y)).b,
+        image.Sample(PointSampler, AF2(p.x + 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).b,
+        image.Sample(PointSampler, AF2(p.x - 0.5 * easu_const_1.x, p.y - 0.5 * easu_const_1.y)).b
     );
 }
 
 AF4 FsrRcasLoadF(ASU2 p)
 {   
     // Texel gather operations such as .Load (HLSL( or texelFetch (GLSL)
-    // are not supported by the OBS HLSL-GLSL converter So we are forced to mimic this functionality.
-    return image.Sample(PointSampler, AF2(p) / output_size);
+    // are not supported by the OBS HLSL-GLSL converter So we are forced to mimic 
+    // this functionality using a simple point sample.
+
+    //NOTE: Addition of small value such as 0.1 removes blocking artifacts caused by Point 
+    // sampling and makes output more similar to performing a proper .Load or texelFetch. 
+    return image.Sample(PointSampler, (AF2(p) + AF2(0.1, 0.1)) / output_size);
 }
 
 void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b)
@@ -112,33 +154,44 @@ VSData VSMain(VSData vs_in)
 //		PIXEL SHADER
 //=====================================================================================
 
-float4 PSMain(VSData vs_in) : TARGET
+float4 PSEASUMain(VSData vs_in) : TARGET
 {
     AF3 out_col = AF3(0, 0, 0);
-    AF2 out_pos = vs_in.uv * output_size.xy;
+    AF2 out_pos = floor(vs_in.uv * output_size.xy); 
 
     FsrEasuF(out_col, out_pos, easu_const_0, easu_const_1, easu_const_2, easu_const_3);
-   
-    //FsrRcasF(out_col.r, out_col.g, out_col.b, out_pos, rcas_const_0);
 
-//  AF4 a = float4(out_col, 1.0);
-//  a.r = FsrEasuRF(out_pos).r;
-//  a.g = FsrEasuGF(out_pos).r;
-//  a.b = FsrEasuBF(out_pos).r;
-//  return a;
     return float4(out_col, 1.0);
-  // return float4(image.Sample(LinearSampler, vs_in.uv).r, 0, .5, 1);
+}
+
+float4 PSRCASMain(VSData vs_in) : TARGET
+{
+    AF3 out_col = AF3(0, 0, 0);
+    AF2 out_pos = floor(vs_in.uv * output_size.xy);
+   
+    FsrRcasF(out_col.r, out_col.g, out_col.b, out_pos, rcas_const_0);
+
+    return float4(out_col, 1.0);
 }
 
 //=====================================================================================
 //		TECHNIQUES
 //=====================================================================================
 
-technique Draw
+technique Draw //TODO: rename 
 {
     pass
     {
         vertex_shader = VSMain(vs_in);
-        pixel_shader  = PSMain(vs_in);
+        pixel_shader  = PSEASUMain(vs_in);
+    }
+};
+
+technique DrawRCAS //TODO: rename + run from plugin
+{
+    pass
+    {
+        vertex_shader = VSMain(vs_in);
+        pixel_shader  = PSRCASMain(vs_in);
     }
 };
