@@ -13,11 +13,9 @@ namespace lvk
 	{
 	public:
 
-		//TODO:
-		static void LoadDefaults(obs_data_t* settings);
-
-		//TODO:
 		static obs_properties_t* Properties();
+
+		static void LoadDefaults(obs_data_t* settings);
 
 		static FSRFilter* Create(obs_source_t* context);
 
@@ -39,16 +37,13 @@ namespace lvk
 
 	private:
 
-		static constexpr const char* c_FilterName = "(LVK) FidelityFX Super Resolution 1.0";
-		static constexpr uint32_t c_DefaultOutputWidth = 1920;
-		static constexpr uint32_t c_DefaultOutputHeight = 1080;
-		static constexpr float c_DefaultSharpness = 0.2f;
-
 		uint32_t* m_DummyAlloc;
 		obs_source_t* m_Context;
 		gs_effect_t* m_Shader;
 
 		bool m_EASUOutdated;
+		bool m_BypassEASU, m_BypassRCAS;
+		bool m_EASUMatchSource, m_EASUMatchCanvas;
 		vec2 m_InputSize, m_OutputSize;
 		vec4 m_EASUConst0;
 		vec4 m_EASUConst1;
@@ -62,7 +57,6 @@ namespace lvk
 		gs_eparam_t* m_EASUConstParam2;
 		gs_eparam_t* m_EASUConstParam3;
 		gs_eparam_t* m_RCASConstParam0;
-
 
 		FSRFilter(obs_source_t* context);
 

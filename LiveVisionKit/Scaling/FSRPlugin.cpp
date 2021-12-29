@@ -66,8 +66,7 @@ static void on_fsr_render(void* data, gs_effect_t* _)
 
 static obs_properties_t* fsr_filter_properties(void* data)
 {
-	// TODO: FSRFilter::Properties();
-	return NULL;
+	return lvk::FSRFilter::Properties();
 }
 
 //-------------------------------------------------------------------------------------
@@ -95,7 +94,6 @@ static uint32_t fsr_output_height(void* data)
 
 static const char* fsr_filter_name(void* _)
 {
-	//TODO: this is technically wrong because it doesn't use locale info
 	return lvk::FSRFilter::Name();
 }
 
@@ -109,7 +107,7 @@ extern void register_fsr_plugin()
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.icon_type = OBS_ICON_TYPE_CAMERA;
-	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW; //TODO: custom draw needed?
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
 	config.create = on_fsr_create;
 	config.destroy = on_fsr_destroy;
 	config.update = on_fsr_configure;
@@ -119,7 +117,7 @@ extern void register_fsr_plugin()
 	config.get_width = fsr_output_width;
 	config.get_height = fsr_output_height;
 	config.get_properties = fsr_filter_properties;
-//TODO:	config.get_defaults = fsr_filter_default_settings;
+	config.get_defaults = fsr_filter_default_settings;
 
 	obs_register_source(&config);
 }
