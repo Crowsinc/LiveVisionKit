@@ -8,9 +8,6 @@
 
 OBS_DECLARE_MODULE()
 
-//TODO: figure out why this fails to compile
-//OBS_MODULE_USE_DEFAULT_LOCALE("LiveVisionKit", "en-US")
-
 MODULE_EXPORT const char* obs_module_name(void)
 {
 	return "Live Vision Kit";

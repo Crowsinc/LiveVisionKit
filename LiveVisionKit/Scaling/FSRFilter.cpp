@@ -1,5 +1,6 @@
 #include "../Scaling/FSRFilter.hpp"
 
+#include <obs/obs-module.h>
 #include <filesystem>
 #include <string>
 
@@ -130,9 +131,7 @@ namespace lvk
 		m_DummyAlloc = static_cast<uint32_t*>(bzalloc(sizeof(uint32_t)));
 
 		// Load the FSR shader
-		//TODO: use obs_module_file("fsr.effect") instead of absolute path.
-		std::filesystem::path shader_path("/home/sdm/Projects/C++/LiveVisionKit/LiveVisionKit/Scaling/Effects/fsr.effect");
-
+		std::filesystem::path shader_path(obs_module_file("effects/fsr.effect"));
 
 		obs_enter_graphics();
 
@@ -159,7 +158,6 @@ namespace lvk
 		// We set the input size to {-1,-1} to force the first render
 		// call to update the EASU constants for the shader.
 		vec2_set(&m_InputSize, -1.0f, -1.0f);
-
 	}
 
 
@@ -393,14 +391,10 @@ namespace lvk
 			}
 		}
 
-		// If both RCAS and EASU were bypassed, then perform a default render
+		// If both RCAS and EASU were bypassed, then completely skip the filter
 		if(m_BypassRCAS && m_BypassEASU)
 		{
-			// NOTE: returns false if rendering of the filter should be bypassed.
-			if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
-				return;
-
-			obs_source_process_filter_end(m_Context, obs_get_base_effect(OBS_EFFECT_DEFAULT), m_OutputSize.x, m_OutputSize.y);
+			obs_source_skip_video_filter(m_Context);
 		}
 	}
 
