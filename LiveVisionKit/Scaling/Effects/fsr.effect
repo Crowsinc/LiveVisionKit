@@ -23,14 +23,6 @@ uniform AF4 easu_const_2;
 uniform AF4 easu_const_3;
 uniform AF4 rcas_const_0;
 
-sampler_state LinearSampler 
-{
-    Filter      = Linear; 
-    AddressU    = Clamp;
-    AddressV    = Clamp;
-};
-
-
 sampler_state PointSampler 
 {
     Filter      = Point; 
@@ -161,6 +153,7 @@ float4 PSEASUMain(VSData vs_in) : TARGET
 
     FsrEasuF(out_col, out_pos, easu_const_0, easu_const_1, easu_const_2, easu_const_3);
 
+
     return float4(out_col, 1.0);
 }
 
@@ -178,7 +171,7 @@ float4 PSRCASMain(VSData vs_in) : TARGET
 //		TECHNIQUES
 //=====================================================================================
 
-technique Draw //TODO: rename 
+technique EASU
 {
     pass
     {
@@ -187,7 +180,7 @@ technique Draw //TODO: rename
     }
 };
 
-technique DrawRCAS //TODO: rename + run from plugin
+technique RCAS
 {
     pass
     {

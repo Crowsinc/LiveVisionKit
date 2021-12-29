@@ -2,7 +2,7 @@
 #include <obs/obs-source.h>
 #include <obs/obs.h>
 
-#include "FSRFilter.hpp"
+#include "../Scaling/FSRFilter.hpp"
 
 /* NOTES:
  * 	- custom draw is for when you draw your own texture, otherwise the source frame
@@ -109,7 +109,7 @@ extern void register_fsr_plugin()
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.icon_type = OBS_ICON_TYPE_CAMERA;
-	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB; //TODO: custom draw needed?
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW; //TODO: custom draw needed?
 	config.create = on_fsr_create;
 	config.destroy = on_fsr_destroy;
 	config.update = on_fsr_configure;

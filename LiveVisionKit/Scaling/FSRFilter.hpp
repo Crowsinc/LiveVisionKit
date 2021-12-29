@@ -31,15 +31,15 @@ namespace lvk
 
 		void tick();
 
-		void render();
+		void render() const;
 
-		uint32_t width();
+		uint32_t width() const;
 
-		uint32_t height();
+		uint32_t height() const;
 
 	private:
 
-		static constexpr const char* c_FilterName = "LVK - FSR Upscaler";
+		static constexpr const char* c_FilterName = "(LVK) FidelityFX Super Resolution 1.0";
 		static constexpr uint32_t c_DefaultOutputWidth = 1920;
 		static constexpr uint32_t c_DefaultOutputHeight = 1080;
 		static constexpr float c_DefaultSharpness = 0.2f;
@@ -50,17 +50,19 @@ namespace lvk
 
 		bool m_EASUOutdated;
 		vec2 m_InputSize, m_OutputSize;
+		vec4 m_EASUConst0;
+		vec4 m_EASUConst1;
+		vec4 m_EASUConst2;
+		vec4 m_EASUConst3;
+		vec4 m_RCASConst0;
+
 		gs_eparam_t* m_OutputSizeParam;
 		gs_eparam_t* m_EASUConstParam0;
 		gs_eparam_t* m_EASUConstParam1;
 		gs_eparam_t* m_EASUConstParam2;
 		gs_eparam_t* m_EASUConstParam3;
 		gs_eparam_t* m_RCASConstParam0;
-		vec4 m_EASUConst0;
-		vec4 m_EASUConst1;
-		vec4 m_EASUConst2;
-		vec4 m_EASUConst3;
-		vec4 m_RCASConst0;
+
 
 		FSRFilter(obs_source_t* context);
 
