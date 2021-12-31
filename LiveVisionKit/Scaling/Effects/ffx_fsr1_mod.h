@@ -6,16 +6,20 @@
 // ABOUT
 // ===========
 //
-// This is a copy of AMD's FSR provided ffx_fsr1.h file which has been significantly modified for use by OBS's graphics sub-system.
-// Modification is required as the shader parser does not support all functionality that is used by the original file, namely:
+// This is a copy of AMD's FSR provided ffx_fsr1.h file which has been modified/pruned for use by OBS's graphics system.
+// 
+// The following modifications have been made:
 //
-//   > #if macros are not supported, but #ifdef is.
+//   > The file has been simplified by removing everything except for the core EASU and RCAS float based implementations.
+//  
+//   > All uses of AU4 have been swapped for AF4 due to EASU failing to render properly in GLSL (not sure why). All instances
+//     of AU4 are ultimately converted to floats for use anyway. So they are not necessary in this version of FSR.   
+// 
+//   > #if macros are not supported so have been removed.
 //
-//   > Computations within #define macros are not supported, so they must be resolved manually.
+//   > Computations within #define would cause the shader parser to fail (tested with GLSL 330) so have been pre-computed
 //
-//   > HLSL to GLSL conversion within the OBS sub-system does not support many required of the functionality, such as AU4.
-//     The only use of AU4, is for supplying EASU/RCAS constants, which are ultimately re-interpreted as floats anyway
-//     (also unsupported). Hence they are swapped for AF4, and the re-interpret casts are performed on the CPU side.
+//   > Input callback prototypes would cause shader parser to seg fault (tested with GLSL 330) so have been commented out
 //
 // Please see the original ffx_fsr1.h file for proper implementation. 
 //
@@ -37,7 +41,6 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 //==============================================================================================================================
 //
 //                                        FSR - [EASU] EDGE ADAPTIVE SPATIAL UPSAMPLING
@@ -54,7 +57,7 @@
 //AF4 FsrEasuGF(AF2 p);
 //AF4 FsrEasuBF(AF2 p);
 
-//------------------------------------------------------------------------------------------------------------------------------
+// /------------------------------------------------------------------------------------------------------------------------------
 // Filtering for a given tap for the scalar.
 void FsrEasuTapF(
   inout AF3 aC, // Accumulated color, with negative lobe.

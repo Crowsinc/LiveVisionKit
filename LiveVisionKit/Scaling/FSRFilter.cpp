@@ -27,17 +27,6 @@ namespace lvk
 	static constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_CANVAS;
 
 	//=====================================================================================
-	//		MISC FUNCTIONS
-	//=====================================================================================
-
-	static inline AF1 interpret_float(AU1& val)
-	{
-		// Re-interprets the bits of a uint32_t as that of a float instead.
-		// Don't use this unless you understand exactly what all the consequences are.
-		return *reinterpret_cast<AF1*>(&val);
-	}
-
-	//=====================================================================================
 	//		FILTER IMPLEMENTATION
 	//=====================================================================================
 
@@ -117,7 +106,7 @@ namespace lvk
 
 	FSRFilter::FSRFilter(obs_source_t* context)
 		: m_Context(context),
-		  m_EASUOutdated(true),
+		  m_EASURender(nullptr),
 		  m_BypassEASU(false),
 		  m_BypassRCAS(false),
 		  m_EASUMatchSource(false),
@@ -130,34 +119,42 @@ namespace lvk
 		// to allow memory leak detection for this class.
 		m_DummyAlloc = static_cast<uint32_t*>(bzalloc(sizeof(uint32_t)));
 
-		// Load the FSR shader
-		std::filesystem::path shader_path(obs_module_file("effects/fsr.effect"));
+		// Due to inadequate HLSL to GLSL conversion by the OBS shader parser
+		// along with being constrained to GLSL version 330, we must use a
+		// different FSR shader whenever OBS is using the OpenGL API for rendering.
+		obs_video_info video_info;
+		obs_get_video_info(&video_info);
+		std::string graphics_api = video_info.graphics_module;
 
-		obs_enter_graphics();
+		const char* shader_path = nullptr;
+		if(graphics_api.find("opengl") != std::string::npos)
+			shader_path =  obs_module_file("effects/fsr_glsl.effect");
+		else
+			shader_path =  obs_module_file("effects/fsr.effect");
 
-		m_Shader = gs_effect_create_from_file(shader_path.c_str(), NULL);
-		if(m_Shader)
+		if(shader_path != nullptr)
 		{
-			// Load all shader uniform/parameter locations
-			m_OutputSizeParam = gs_effect_get_param_by_name(m_Shader, "output_size");
-			m_EASUConstParam0 = gs_effect_get_param_by_name(m_Shader, "easu_const_0");
-			m_EASUConstParam1 = gs_effect_get_param_by_name(m_Shader, "easu_const_1");
-			m_EASUConstParam2 = gs_effect_get_param_by_name(m_Shader, "easu_const_2");
-			m_EASUConstParam3 = gs_effect_get_param_by_name(m_Shader, "easu_const_3");
-			m_RCASConstParam0 = gs_effect_get_param_by_name(m_Shader, "rcas_const_0");
+			obs_enter_graphics();
+			// Load the FSR shader
+			m_Shader = gs_effect_create_from_file(shader_path, NULL);
+
+			if(m_Shader)
+			{
+				// Load all shader uniform/parameter locations
+				m_OutputSizeParam = gs_effect_get_param_by_name(m_Shader, "output_size");
+				m_EASUConstParam0 = gs_effect_get_param_by_name(m_Shader, "easu_const_0");
+				m_EASUConstParam1 = gs_effect_get_param_by_name(m_Shader, "easu_const_1");
+				m_EASUConstParam2 = gs_effect_get_param_by_name(m_Shader, "easu_const_2");
+				m_EASUConstParam3 = gs_effect_get_param_by_name(m_Shader, "easu_const_3");
+				m_RCASConstParam0 = gs_effect_get_param_by_name(m_Shader, "rcas_const_0");
+			}
+
+			obs_leave_graphics();
 		}
 
-		obs_leave_graphics();
-
-
-		// We set the output size to {-1,-1}. This is invalid,
-		// but should be updated before the first render when
-		// the filter properties settings are configured.
-		vec2_set(&m_OutputSize, -1.0f, -1.0f);
-
-		// We set the input size to {-1,-1} to force the first render
-		// call to update the EASU constants for the shader.
-		vec2_set(&m_InputSize, -1.0f, -1.0f);
+		// These should get updated to their proper values before the first render.
+		vec2_zero(&m_OutputSize);
+		vec2_zero(&m_InputSize);
 	}
 
 
@@ -172,6 +169,7 @@ namespace lvk
 		{
 			obs_enter_graphics();
 			gs_effect_destroy(m_Shader);
+			gs_texture_destroy(m_EASURender);
 			obs_leave_graphics();
 		}
 	}
@@ -180,12 +178,9 @@ namespace lvk
 
 	void FSRFilter::configure(obs_data_t* settings)
 	{
-		// Reset any render pass bypassing
 		m_BypassEASU = m_BypassRCAS = m_EASUMatchCanvas = m_EASUMatchSource = false;
 
-		// Convert output size setting to numeric value
-		const uint32_t old_output_width = m_OutputSize.x;
-		const uint32_t old_output_height = m_OutputSize.y;
+		// Determine the output size of EASU
 		std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
 		if(output_size == OUTPUT_SIZE_CANVAS)
 			m_EASUMatchCanvas = true; // Match canvas size on tick()
@@ -200,107 +195,88 @@ namespace lvk
 		else if(output_size == OUTPUT_SIZE_720P)
 			vec2_set(&m_OutputSize, 1280, 720);
 
-		// If the output size has changed, then we need to flag the EASU constants
-		// as out-dated. So that they get forcefully updated next tick() call.
-		m_EASUOutdated = old_output_width != static_cast<uint32_t>(m_OutputSize.x)
-				|| old_output_height != static_cast<uint32_t>(m_OutputSize.y);
-
 		// NOTE: the sharpness is presented as a value from 0-1 with 1 at max sharpness.
 		// However, we internally interpret it as 0-2 with 0 being max sharpness.
 		const float sharpness = 2.0 * (1.0 - obs_data_get_double(settings, PROP_SHARPNESS));
 
-		// At a minimum sharpness of 2, we disable RCAS from running
+		// At a minimum sharpness of 2, we disable RCAS from running.
+		// Otherwise, we update the RCAS constants
 		if(sharpness >= 2.0)
 			m_BypassRCAS = true;
 		else
 		{
-			// Otherwise, set up the RCAS parameters for this sharpness.
-
-			varAU4(con0);
-			FsrRcasCon(con0, sharpness);
-
-			// Although con0 is defined as being a uint32_t vector for use with FSR, its bits
-			// are ultimately re-interpreted as a float in the FSR shader. The re-interpretation of
-			// bits functionality is not supported by OBS's shader parser. So we do it here instead.
-			// See ffx_fsr1_mod.h for more information.
-			vec4_set(&m_RCASConst0, interpret_float(con0[0]), interpret_float(con0[1]),
-					interpret_float(con0[2]), interpret_float(con0[3]));
+			// The RCAS constant is a vector of four uint32_t but its bits actually represent floats.
+			// Normally this conversion happens in the FSR shader. However due to compatibility issues,
+			// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
+			// to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
+			FsrRcasCon((AU1*)m_RCASConst0.ptr, sharpness);
 		}
-
 	}
 
 	//-------------------------------------------------------------------------------------
 
 	void FSRFilter::tick()
 	{
+		auto filter_target = obs_filter_get_target(m_Context);
+		const uint32_t input_width = obs_source_get_base_width(filter_target);
+		const uint32_t input_height = obs_source_get_base_height(filter_target);
+
 		// If EASU is set to match the canvas size, then update the output size to match
 		if(m_EASUMatchCanvas)
 		{
 			obs_video_info video_info;
 			obs_get_video_info(&video_info);
 
-			// If the size is different, then we make sure the
-			// out-dated flag is asserted so that the constants are updated
-			m_EASUOutdated = m_EASUOutdated
-					|| video_info.base_width != static_cast<uint32_t>(m_OutputSize.x)
-					|| video_info.base_height != static_cast<uint32_t>(m_OutputSize.y);
-
-
 			vec2_set(&m_OutputSize, video_info.base_width, video_info.base_height);
 		}
 
-		auto filter_target = obs_filter_get_target(m_Context);
-		const uint32_t input_width = obs_source_get_base_width(filter_target);
-		const uint32_t input_height = obs_source_get_base_height(filter_target);
-
 		// If EASU is set to match the source size, then update the output size to match
 		if(m_EASUMatchSource)
-		{
 			vec2_set(&m_OutputSize, input_width, input_height);
 
-			// Although the source matching flag inherently causes EASU to be bypassed
-			// we will still set the out-dated flag for the constants to be updated.
-			m_EASUOutdated = true;
+
+		obs_enter_graphics();
+
+		// We need to ensure that the EASU render texture exists
+		if(m_EASURender == nullptr)
+			m_EASURender = gs_texture_create(m_OutputSize.x, m_OutputSize.y,  GS_RGBA, 1, NULL, GS_RENDER_TARGET);
+
+
+		// The EASU render texture has to match the EASU output resolution.
+		// If it doesn't, then the size output size has changed so we need
+		// to re-create the texture and forcefully update the EASU constants.
+		uint32_t render_width = gs_texture_get_width(m_EASURender);
+		uint32_t render_height = gs_texture_get_width(m_EASURender);
+		bool output_size_changed = render_width != static_cast<uint32_t>(m_OutputSize.x)
+								|| render_height != static_cast<uint32_t>(m_OutputSize.y);
+
+		if(output_size_changed)
+		{
+			gs_texture_destroy(m_EASURender);
+			m_EASURender = gs_texture_create(m_OutputSize.x, m_OutputSize.y,  GS_RGBA, 1, NULL, GS_RENDER_TARGET);
 		}
 
-		// If the input size matches the output size, then we will bypass EASU next render
-		m_BypassEASU = m_BypassEASU
-				|| m_EASUMatchSource
-				|| (input_width == static_cast<uint32_t>(m_OutputSize.x)
-				&& input_height == static_cast<uint32_t>(m_OutputSize.y));
+		obs_leave_graphics();
 
 
-		// If the EASU constants are flagged as out-dated, or the input size has changed
-		// then we need to re-calculate the constants. Note that we still calculate them
-		// even if we are bypassing EASU. This is to avoid issues with the constants
-		// losing synchronization with the input/output sizes because we bypassed.
-		if(m_EASUOutdated || input_width != m_InputSize.x || input_height != m_InputSize.y)
+		// If any input/output size has changed, we need to update the EASU constants
+		if(output_size_changed || input_width != m_InputSize.x || input_height != m_InputSize.y)
 		{
 			vec2_set(&m_InputSize, input_width, input_height);
 
-			// NOTE: the constants should be defined by varAU4, but
-			// we skip the macro and define it ourselves for brevity.
-			AU1 con0[4], con1[4], con2[4], con3[4];
-			FsrEasuCon(con0, con1, con2, con3,
+			// The EASU constants are a vector of four uint32_t but their bits actually represent floats.
+			// Normally this conversion happens in the FSR shader. However due to compatibility issues,
+			// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
+			// to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
+			FsrEasuCon((AU1*)m_EASUConst0.ptr, (AU1*)m_EASUConst1.ptr, (AU1*)m_EASUConst2.ptr, (AU1*)m_EASUConst3.ptr,
 					m_InputSize.x, m_InputSize.y, m_InputSize.x, m_InputSize.y,
 					m_OutputSize.x, m_OutputSize.y);
-
-			// Although con0-con3 are defined as being uint32_t vectors for use with FSR, their bits
-			// are ultimately re-interpreted as a float in the FSR shader. The re-interpretation of
-			// bits functionality is not supported by OBS's shader parser. So we do it here instead.
-			// See ffx_fsr1_mod.h for more information.
-			vec4_set(&m_EASUConst0, interpret_float(con0[0]), interpret_float(con0[1]),
-					interpret_float(con0[2]), interpret_float(con0[3]));
-			vec4_set(&m_EASUConst1, interpret_float(con1[0]), interpret_float(con1[1]),
-					interpret_float(con1[2]), interpret_float(con1[3]));
-			vec4_set(&m_EASUConst2, interpret_float(con2[0]), interpret_float(con2[1]),
-					interpret_float(con2[2]), interpret_float(con2[3]));
-			vec4_set(&m_EASUConst3, interpret_float(con3[0]), interpret_float(con3[1]),
-					interpret_float(con3[2]), interpret_float(con3[3]));
-
-
-			m_EASUOutdated = false;
 		}
+
+		// If the input size matches the output size, then we will bypass EASU next render
+		m_BypassEASU = m_EASUMatchSource
+				|| (input_width == static_cast<uint32_t>(m_OutputSize.x)
+				&& input_height == static_cast<uint32_t>(m_OutputSize.y));
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -309,6 +285,10 @@ namespace lvk
 	// Probably to do with the render target being used and drawn to at the same time
 	void FSRFilter::render() const
 	{
+		// If both RCAS and EASU were bypassed, then completely skip the filter
+		if(m_BypassRCAS && m_BypassEASU)
+			obs_source_skip_video_filter(m_Context);
+
 
 		// AMD's FSR shader needs to be ran in two passes. The first performing edge adaptive
 		// spatial upscaling (EASU), and the second performing robust contrast adaptive
@@ -316,35 +296,39 @@ namespace lvk
 		//
 		// To do this we first use OBS's provided source process filter rendering functionality,
 		// allowing us to perform the EASU pass on the source video frame, automatically provided
-		// in the 'image' parameter of the shader. This renders the up-scaled frame to the OBS bound
-		// render target.
+		// through the 'image' parameter of the shader. However, we remember the old render target
+		// and instead render to our own EASU render texture.
 		//
-		// The RCAS pass then needs to operate on the up-scaled frame. So we bind the render
-		// target used for EASU to the shader 'image' parameter, and manually execute a rendering
-		// pass of RCAS. Note that the original EASU render target remains as the target for RCAS
-		// so we are technically reading and writing to it at the same time.
-		//
-		// TODO: Test ^ for issues. We can always add a third pass where we render the EASU render
-		// target to a separate texture then render that texture back to the original render target.
+		// The RCAS pass then needs to operate on the up-scaled frame. So we bind the EASU render
+		// texture to the shader 'image' parameter, and manually execute a rendering pass of RCAS.
+		// The new render target should be the one which was originally bound for EASU.
 
 
 		// EASU PASS
 		// ================================================================================
 
-		// Only perform the EASU pass if has not been flagged to be skipped
+		gs_texture_t* original_target;
+		gs_zstencil_t* original_zstencil;
+
 		if(!m_BypassEASU)
 		{
 			// NOTE: returns false if rendering of the filter should be bypassed.
 			if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
 				return;
 
-			// Update all EASU shader parameters.
-			// OBS requires us to perform this for every render
 			gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
 			gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
 			gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
 			gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
 			gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
+
+			// Only change render target if we are doing RCAS
+			if(!m_BypassRCAS)
+			{
+				original_target = gs_get_render_target();
+				original_zstencil = gs_get_zstencil_target();
+				gs_set_render_target(m_EASURender, NULL);
+			}
 
 			obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "EASU");
 		}
@@ -352,50 +336,40 @@ namespace lvk
 		// RCAS PASS
 		// ================================================================================
 
-		// Only perform the RCAS pass if it has not been flagged to be skipped
 		if(!m_BypassRCAS)
 		{
-			// We need to switch how we handle the RCAS pass based on whether we performed EASU
-			// or not. If we didn't then we render it normally as expected by OBS. Otherwise, we
-			// need to perform the multi-pass rendering techniques discussed in previous comments.
-			if(m_BypassEASU)
+			// If EASU wasn't bypassed, then we perform the second pass as described.
+			// Otherwise we just perform a single normal pass using only RCAS.
+			if(!m_BypassEASU)
+			{
+				auto rcas_technique = gs_effect_get_technique(m_Shader, "RCAS");
+
+				gs_set_render_target(original_target, original_zstencil);
+
+				gs_technique_begin(rcas_technique);
+				gs_technique_begin_pass(rcas_technique, 0);
+
+				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
+				gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
+
+				obs_source_draw(m_EASURender, 0, 0, m_OutputSize.x, m_OutputSize.y, false);
+
+				gs_technique_end_pass(rcas_technique);
+				gs_technique_end(rcas_technique);
+			}
+			else
 			{
 				// NOTE: returns false if rendering of the filter should be bypassed.
-				if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
+				if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 					return;
 
-				// Update all RCAS shader parameters
-				// OBS requires us to perform this for every render
 				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
 				gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
 
 				obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "RCAS");
 			}
-			else
-			{
-				auto easu_texture = gs_get_render_target();
-				auto rcas_technique = gs_effect_get_technique(m_Shader, "RCAS");
-
-				gs_technique_begin(rcas_technique);
-				gs_technique_begin_pass(rcas_technique, 0);
-
-				// Update all RCAS shader parameters
-				// OBS requires us to perform this for every render
-				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
-				gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
-
-				obs_source_draw(easu_texture, 0, 0, m_OutputSize.x, m_OutputSize.y, false);
-
-				gs_technique_end_pass(rcas_technique);
-				gs_technique_end(rcas_technique);
-			}
 		}
 
-		// If both RCAS and EASU were bypassed, then completely skip the filter
-		if(m_BypassRCAS && m_BypassEASU)
-		{
-			obs_source_skip_video_filter(m_Context);
-		}
 	}
 
 	//-------------------------------------------------------------------------------------

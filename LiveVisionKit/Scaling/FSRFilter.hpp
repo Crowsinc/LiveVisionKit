@@ -39,17 +39,19 @@ namespace lvk
 
 		uint32_t* m_DummyAlloc;
 		obs_source_t* m_Context;
-		gs_effect_t* m_Shader;
 
-		bool m_EASUOutdated;
+		gs_effect_t* m_Shader;
+		gs_texture_t* m_EASURender;
+
 		bool m_BypassEASU, m_BypassRCAS;
 		bool m_EASUMatchSource, m_EASUMatchCanvas;
+
 		vec2 m_InputSize, m_OutputSize;
-		vec4 m_EASUConst0;
-		vec4 m_EASUConst1;
-		vec4 m_EASUConst2;
-		vec4 m_EASUConst3;
+		vec4 m_EASUConst0, m_EASUConst1;
+		vec4 m_EASUConst2, m_EASUConst3;
 		vec4 m_RCASConst0;
+
+
 
 		gs_eparam_t* m_OutputSizeParam;
 		gs_eparam_t* m_EASUConstParam0;
