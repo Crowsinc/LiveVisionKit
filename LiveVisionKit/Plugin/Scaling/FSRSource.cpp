@@ -101,7 +101,7 @@ static const char* fsr_filter_name(void* _)
 //		PLUGIN REGISTRATION
 //=====================================================================================
 
-extern void register_fsr_plugin()
+extern void register_fsr_source()
 {
 	struct obs_source_info config = {};
 	config.id = "LVK~FSR";

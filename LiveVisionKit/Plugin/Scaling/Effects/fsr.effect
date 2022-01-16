@@ -37,7 +37,7 @@ AF4 FsrEasuRF(AF2 p)
 #ifdef GLSL
     // For GLSL we should use the textureGather function here, however that 
     // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using texel fetch.  
+    // mimic the functionality by using point sampling.  
     //
     // For a given point p in normalized texture coordinates. We want to grab neighbouring
     // texels x, y, z, and w in the listed order.
@@ -69,7 +69,7 @@ AF4 FsrEasuGF(AF2 p)
 #ifdef GLSL
     // For GLSL we should use the textureGather function here, however that 
     // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using texel fetch.  
+    // mimic the functionality by using point sampling.  
     //
     // For a given point p in normalized texture coordinates. We want to grab neighbouring
     // texels x, y, z, and w in the listed order.
@@ -101,7 +101,7 @@ AF4 FsrEasuBF(AF2 p)
 #ifdef GLSL
     // For GLSL we should use the textureGather function here, however that 
     // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using texel fetch.  
+    // mimic the functionality by using point sampling.  
     //
     // For a given point p in normalized texture coordinates. We want to grab neighbouring
     // texels x, y, z, and w in the listed order.

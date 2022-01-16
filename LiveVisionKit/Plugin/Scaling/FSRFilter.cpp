@@ -289,7 +289,6 @@ namespace lvk
 		if(m_BypassRCAS && m_BypassEASU)
 			obs_source_skip_video_filter(m_Context);
 
-
 		// AMD's FSR shader needs to be ran in two passes. The first performing edge adaptive
 		// spatial upscaling (EASU), and the second performing robust contrast adaptive
 		// sharpening (RCAS).

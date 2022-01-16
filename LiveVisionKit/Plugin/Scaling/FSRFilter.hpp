@@ -1,3 +1,5 @@
+#pragma once
+
 #include <obs/obs.h>
 
 #define A_CPU 1
