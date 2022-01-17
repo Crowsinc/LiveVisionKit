@@ -6,6 +6,9 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <util/platform.h>
+
+#include "../../Vision/FrameIngest.hpp"
 
 //=====================================================================================
 //		EVENT HANDLING
@@ -21,6 +24,7 @@ static void* on_vs_create(obs_data_t* settings, obs_source_t* context)
 
 static void on_vs_destroy(void* data)
 {
+	delete data;
 }
 
 //-------------------------------------------------------------------------------------
@@ -39,29 +43,13 @@ static void on_vs_tick(void* data, float seconds)
 
 static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 {
+	static cv::UMat buff(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-	std::vector<cv::Mat> channels(3);
+	buff << *frame;
 
+	cv::imshow("TEST", buff);
 
-	//NOTE: dont need to copy when we do the proper thing because we just upload it up to the GPU
-	channels[0] = cv::Mat(1080, 1920, CV_8UC1, frame->data[0], frame->linesize[0]);
-
-	cv::Mat tmp;
-
-	tmp = cv::Mat(1080/2, 1920/2, CV_8UC1, frame->data[1], frame->linesize[1]);
-	cv::resize(tmp, channels[1], cv::Size(1920, 1080), 0, 0, cv::INTER_LINEAR);
-
-	tmp = cv::Mat(1080/2, 1920/2, CV_8UC1, frame->data[2], frame->linesize[2]);
-	cv::resize(tmp, channels[2], cv::Size(1920, 1080), 0, 0, cv::INTER_LINEAR);
-
-	cv::merge(channels, tmp);
-
-	cv::cvtColor(tmp, tmp, cv::COLOR_YUV2BGR);
-
-
-	cv::imshow("TEST", tmp);
-
-	// TODO: always output in RGBA format to avoid conversion and allow transparency
+	// TODO: always output in RGBA format to avoid conversion and allow transparency?
 	return frame;
 }
 
