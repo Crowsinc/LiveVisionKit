@@ -4,20 +4,6 @@
 
 #include "../Scaling/FSRFilter.hpp"
 
-/* NOTES:
- * 	- custom draw is for when you draw your own texture, otherwise the source frame
- *    is passed to the shader by OBS.
- *
- *  - async video is for accessing video data in RAM, otherwise OBS automatically
- *    passes data to the shader in a synchronous fashion.
- *
- *  - Seems like scaling occurs after all the rendering. So the FSR scaling has to be
- *    between the input and output textures. Where the input resolution is based on
- *    the source, and the output is based on the given resolution in the render call.
- *    So if the input source is 4k, and we render to 1920x1080, then the output will be
- *    1/4th the size which is then scaled to whatever the scene scaling is in the OBS output.
- */
-
 //=====================================================================================
 //		EVENT HANDLING
 //=====================================================================================
@@ -103,7 +89,7 @@ static const char* fsr_filter_name(void* _)
 
 extern void register_fsr_source()
 {
-	struct obs_source_info config = {};
+	obs_source_info config = {};
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.icon_type = OBS_ICON_TYPE_CAMERA;

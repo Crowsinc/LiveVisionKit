@@ -25,11 +25,13 @@ MODULE_EXPORT const char* obs_module_description(void)
 
 void register_fsr_source();
 
+void register_vs_source();
 
 
 bool obs_module_load()
 {
 	register_fsr_source();
+	register_vs_source();
 
 	return true;
 }

@@ -43,7 +43,7 @@ namespace lvk
 		obs_source_t* m_Context;
 
 		gs_effect_t* m_Shader;
-		gs_texture_t* m_EASURender;
+		gs_texture_t* m_EASURenderTarget;
 
 		bool m_BypassEASU, m_BypassRCAS;
 		bool m_EASUMatchSource, m_EASUMatchCanvas;
@@ -52,8 +52,6 @@ namespace lvk
 		vec4 m_EASUConst0, m_EASUConst1;
 		vec4 m_EASUConst2, m_EASUConst3;
 		vec4 m_RCASConst0;
-
-
 
 		gs_eparam_t* m_OutputSizeParam;
 		gs_eparam_t* m_EASUConstParam0;
@@ -65,6 +63,8 @@ namespace lvk
 		FSRFilter(obs_source_t* context);
 
 		bool validate() const;
+
+		bool prepare_easu_render_target();
 	};
 
 }
