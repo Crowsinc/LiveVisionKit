@@ -6,6 +6,7 @@
 
 #include <util/platform.h>
 #include <media-io/video-io.h>
+#include <media-io/video-frame.h>
 
 /* NOTE:
  *  All upload conversion operations are to YUV, and are performed on the GPU using thread
@@ -16,6 +17,8 @@
  *  likely have the same video format the entire time.
  *
  *  We prefer YUV over BGR because many vision algorithms require only the Y plane.
+ *  Additionally, OBS uses a special color matrix to convert YUV to RGB which makes
+ *  OpenCV's YUV to RGB conversion result in different colors than OBS'.
  */
 
 bool operator<<(cv::UMat& dst, const obs_source_frame* src)
@@ -35,8 +38,14 @@ namespace lvk
 
 	inline void wrap_data(uint8_t* src, cv::UMat& dst, const uint32_t width, const uint32_t height, const uint32_t line_size, const uint32_t components)
 	{
-		// NOTE: Need to keep this as fast as possible because it is responsible for all
-		// the CPU to GPU data upload which is the bottleneck of the upload procedure.
+		// NOTE: This is what ultimately uploads OBS plane data to the GPU/CPU UMats
+		// and is the bottleneck of the ingest operation. OBS frame planes are actually
+		// just pointer offsets to a large contiguous piece of memory starting at the first
+		// plane. So it is possible to upload all planes to the GPU/CPU at the same time
+		// then extract the other planes through ROIs. In testing this saves around .2 ms
+		// when ingesting an 3 plane I420 frame. It is definitely not worth the dangerous
+		// dependency on implementation details.
+
 		cv::Mat(height, width, CV_8UC(components), src, line_size).copyTo(dst);
 	}
 
@@ -71,8 +80,8 @@ namespace lvk
 		const cv::Size frame_size = y.size();
 
 		gpu_planes[0] = y;
-		cv::resize(u, gpu_planes[1], frame_size, 0, 0, cv::INTER_LINEAR);
-		cv::resize(v, gpu_planes[2], frame_size, 0, 0, cv::INTER_LINEAR);
+		cv::resize(u, gpu_planes[1], frame_size, 0, 0, cv::INTER_NEAREST);
+		cv::resize(v, gpu_planes[2], frame_size, 0, 0, cv::INTER_NEAREST);
 
 		cv::merge(gpu_planes, dst);
 	}
@@ -233,7 +242,16 @@ namespace lvk
 
 	void download(const cv::UMat& src, obs_source_frame* dst)
 	{
-		// Convert back to original format.
+		const auto& frame = *dst;
+
+		switch(frame.format)
+		{
+
+
+
+
+
+		}
 	}
 
 	//-------------------------------------------------------------------------------------
