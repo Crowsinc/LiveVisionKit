@@ -50,7 +50,7 @@ static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 	blog(LOG_INFO, "Format: %s", get_video_format_name(frame->format));
 	auto t1 = os_gettime_ns();
 
-	buff << *frame;
+	buff << frame;
 
 	auto t2 = os_gettime_ns();
 
