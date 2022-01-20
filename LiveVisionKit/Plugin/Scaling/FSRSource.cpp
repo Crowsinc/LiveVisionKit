@@ -80,7 +80,7 @@ static uint32_t fsr_output_height(void* data)
 
 static const char* fsr_filter_name(void* _)
 {
-	return lvk::FSRFilter::Name();
+	return "(LVK) FidelityFX Super Resolution 1.0";
 }
 
 //=====================================================================================
