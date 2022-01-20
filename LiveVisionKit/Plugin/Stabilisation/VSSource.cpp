@@ -40,31 +40,50 @@ static void on_vs_tick(void* data, float seconds)
 
 //-------------------------------------------------------------------------------------
 
+// BGR3 - GOOD - 1-2ms both ways
+// RGBA - GOOD - 1-3ms both ways
+// BGRA - GOOD - 1-3ms both ways
+// Y800 - GOOD - < 1ms both ways
+// UYVY - GOOD - 1-3ms both ways
+// YUY2 - GOOD - 1-3ms both ways
+// YVYU - GOOD - 1-3ms both ways
+// I40A - GOOD - 1-3ms both ways
+// I420 - GOOD - ~1ms both ways
+// I422 - GOOD - ~2ms both ways
+// I42A - GOOD - ~2ms both ways
+// I444 - GOOD - ~2ms both ways
+// YUVA - GOOD - ~2ms both ways
+// NV12 - GOOD - ~1ms both ways
+// Almost all the lag comes from the initial GPU upload/download time, which
+// is made worse for uncompressed formats because there is more data to move.
+
 static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 {
-	//TODO: need to buffer frames as well as UMats because we need the timestamp to sync the audio
-	// See async filter to figure out how to do it properly.
-	static cv::UMat buff(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+	static cv::UMat yuv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+	static obs_source_frame* test_frame = nullptr;
+
+	if(test_frame == nullptr)
+		test_frame = obs_source_frame_create(video_format::VIDEO_FORMAT_RGBA, frame->width, frame->height);
+
+	yuv << frame;
 
 	auto t1 = os_gettime_ns();
 
-	buff << frame;
+	yuv >> test_frame;
 
 	auto t2 = os_gettime_ns();
 
-	cv::imshow("OUT", buff);
-
-	blog(LOG_INFO, "%s Extract Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
-
-	cv::putText(buff, "HAHAHA", cv::Point(100,100), cv::FONT_HERSHEY_PLAIN, 4, cv::Scalar(255, 255, 255), 4);
+	blog(LOG_INFO, "%s Insert Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
 
 	t1 = os_gettime_ns();
 
-	buff >> frame;
+	yuv << test_frame;
 
 	t2 = os_gettime_ns();
 
-	blog(LOG_INFO, "%s Insert Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
+	blog(LOG_INFO, "%s Extract Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
+
+	yuv >> frame;
 
 	return frame;
 }

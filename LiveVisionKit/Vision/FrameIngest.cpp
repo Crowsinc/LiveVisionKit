@@ -24,8 +24,6 @@
  *  OpenCV's YUV to RGB conversion result in different colors than OBS'.
  */
 
-//TODO: Test all 42x, uncompressed packed formats, and any formats with alpha
-
 bool operator<<(cv::UMat& dst, const obs_source_frame* src)
 {
 	return lvk::extract_frame(src, dst);
@@ -107,7 +105,6 @@ namespace lvk
 		// then extract the other planes through ROIs. In testing this saves around .2 ms
 		// when ingesting a 3 plane I420 frame. It is definitely not worth the dependency
 		// on implementation details.
-
 		cv::Mat(height, width, CV_8UC(components), src, line_size).copyTo(dst);
 	}
 
@@ -199,7 +196,7 @@ namespace lvk
 		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
 		dst.create(plane_y.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		// NOTE: need to explicitely set destination as a UMat vector to invoke OpenCL optimisations.
+		// NOTE: need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
 		cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>(1, dst), {0,0,  1,1,  2,2});
 	}
 
@@ -226,15 +223,31 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void extract_packed_direct(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, bool remove_alpha, const cv::ColorConversionCodes conversion)
+	void extract_packed_direct_stepped(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
+	{
+		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// Simple packed uncompressed formats like RGBA don't need to be processed, hence
+		// can be directly wrapped into a buffer, and converted to the required color format.
+		extract_data(
+			src.data[0],
+			buffer_1,
+			src.width,
+			src.height,
+			src.linesize[0],
+			components
+		);
+
+		cv::cvtColor(buffer_1, buffer_2, conversion_1);
+		cv::cvtColor(buffer_2, dst, conversion_2);
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	void extract_packed_direct(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, const cv::ColorConversionCodes conversion)
 	{
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		// If we have been asked to remove the alpha channel, then swap this call for a two
-		// step conversion with the first culling the alpha channel. We use the fact
-		// that the BGRA2BGR conversion just removes the alpha channel.
-		if(remove_alpha)
-			extract_packed_direct(src, dst, components, cv::COLOR_BGRA2BGR, conversion);
 
 		// Simple packed uncompressed formats like RGBA don't need to be processed, hence
 		// can be directly wrapped into a buffer, and converted to the required color format.
@@ -250,15 +263,6 @@ namespace lvk
 		cv::cvtColor(buffer, dst, conversion);
 	}
 
-	//-------------------------------------------------------------------------------------
-
-	void extract_packed_direct(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
-	{
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		extract_packed_direct(src, buffer, components, false, conversion_1);
-		cv::cvtColor(buffer, dst, conversion_2);
-	}
 
 	//-------------------------------------------------------------------------------------
 
@@ -300,17 +304,17 @@ namespace lvk
 
 			// Packed uncompressed non-YUV formats
 			case video_format::VIDEO_FORMAT_Y800:
-				extract_packed_direct(frame, dst, 1, cv::COLOR_GRAY2BGR, cv::COLOR_BGR2YUV);
+				extract_packed_direct_stepped(frame, dst, 1, cv::COLOR_GRAY2BGR, cv::COLOR_BGR2YUV);
 				break;
 			case video_format::VIDEO_FORMAT_RGBA:
-				extract_packed_direct(frame, dst, 4, true, cv::COLOR_RGB2YUV);
+				extract_packed_direct_stepped(frame, dst, 4, cv::COLOR_RGBA2RGB, cv::COLOR_RGB2YUV);
 				break;
 			case video_format::VIDEO_FORMAT_BGRX:
 			case video_format::VIDEO_FORMAT_BGRA:
-				extract_packed_direct(frame, dst, 4, true, cv::COLOR_BGR2YUV);
+				extract_packed_direct_stepped(frame, dst, 4, cv::COLOR_BGRA2BGR, cv::COLOR_BGR2YUV);
 				break;
 			case video_format::VIDEO_FORMAT_BGR3:
-				extract_packed_direct(frame, dst, 3, false, cv::COLOR_BGR2YUV);
+				extract_packed_direct(frame, dst, 3, cv::COLOR_BGR2YUV);
 				break;
 
 			// Unsupported formats
@@ -374,7 +378,7 @@ namespace lvk
 		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
 		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		// NOTE: need to explicitely set destination as a UMat vector to invoke OpenCL optimisations.
+		// NOTE: need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
 		cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {1,0,  2,1});
 		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 0.5, cv::INTER_NEAREST);
 
@@ -409,7 +413,6 @@ namespace lvk
 		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 1.0, cv::INTER_NEAREST);
 		plane_uv = plane_uv.reshape(1, plane_uv.rows);
 
-
 		if(y_first)
 			cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>{buffer}, {0,0,  1,1});
 		else
@@ -420,32 +423,30 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void insert_packed_direct(const cv::UMat& src, obs_source_frame& dst, bool add_alpha, const cv::ColorConversionCodes conversion)
+	void insert_packed_direct_stepped(const cv::UMat& src, obs_source_frame& dst, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
+	{
+		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// For a simple uncompressed format we just need to perform the color
+		// conversion and insert the entire packed plane into the frame.
+
+		cv::cvtColor(src, buffer_1, conversion_1);
+		cv::cvtColor(buffer_1, buffer_2, conversion_2);
+		insert_plane(buffer_2, dst, 0);
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	void insert_packed_direct(const cv::UMat& src, obs_source_frame& dst, const cv::ColorConversionCodes conversion)
 	{
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// For a simple uncompressed format we just need to perform the color
 		// conversion and insert the entire packed plane into the frame.
 
-		// If we have been asked to add an alpha channel, then swap this call for a two
-		// step conversion with the second adding the alpha channel. We use the fact
-		// that the BGR2BGRA conversion just removes the alpha channel.
-
-		if(add_alpha)
-			insert_packed_direct(src, dst, conversion, cv::COLOR_BGR2BGRA);
-
 		cv::cvtColor(src, buffer, conversion);
 		insert_plane(buffer, dst, 0);
-	}
-
-	//-------------------------------------------------------------------------------------
-
-	void insert_packed_direct(const cv::UMat& src, obs_source_frame& dst, const uint32_t components, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
-	{
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		cv::cvtColor(src, buffer, conversion_1);
-		insert_packed_direct(buffer, dst, false, conversion_2);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -491,17 +492,17 @@ namespace lvk
 
 			// Packed uncompressed non-YUV formats
 			case video_format::VIDEO_FORMAT_Y800:
-				insert_packed_direct(src, frame, false, cv::COLOR_YUV2BGR, cv::COLOR_BGR2GRAY);
+				insert_packed_direct_stepped(src, frame, cv::COLOR_YUV2BGR, cv::COLOR_BGR2GRAY);
 				break;
 			case video_format::VIDEO_FORMAT_RGBA:
-				insert_packed_direct(src, frame, true, cv::COLOR_YUV2BGR);
+				insert_packed_direct_stepped(src, frame, cv::COLOR_YUV2RGB, cv::COLOR_RGB2RGBA);
 				break;
 			case video_format::VIDEO_FORMAT_BGRX:
 			case video_format::VIDEO_FORMAT_BGRA:
-				insert_packed_direct(src, frame, true, cv::COLOR_YUV2BGR);
+				insert_packed_direct_stepped(src, frame, cv::COLOR_YUV2BGR, cv::COLOR_BGR2BGRA);
 				break;
 			case video_format::VIDEO_FORMAT_BGR3:
-				insert_packed_direct(src, frame, false, cv::COLOR_YUV2BGR);
+				insert_packed_direct(src, frame, cv::COLOR_YUV2BGR);
 				break;
 
 			// Unsupported formats
