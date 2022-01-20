@@ -7,10 +7,10 @@ namespace lvk
 {
 
 	// Converts OBS frame to YUV UMat
-	bool upload(const obs_source_frame* src, cv::UMat& dst);
+	bool extract_frame(const obs_source_frame* src, cv::UMat& dst);
 
 	// Converts YUV UMat to I444 OBS frame
-	void download(const cv::UMat& src, obs_source_frame* dst);
+	void insert_frame(const cv::UMat& src, obs_source_frame* dst);
 
 }
 

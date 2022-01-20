@@ -42,12 +42,10 @@ static void on_vs_tick(void* data, float seconds)
 
 static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 {
+	//TODO: need to buffer frames as well as UMats because we need the timestamp to sync the audio
+	// See async filter to figure out how to do it properly.
 	static cv::UMat buff(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-	static cv::UMat ret(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-	static cv::Mat p1, p2, p3;
-	static cv::Mat tmp;
 
-	blog(LOG_INFO, "Format: %s", get_video_format_name(frame->format));
 	auto t1 = os_gettime_ns();
 
 	buff << frame;
@@ -56,23 +54,17 @@ static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 
 	cv::imshow("OUT", buff);
 
-	blog(LOG_INFO, "Ingest Time: %4.2fms", ((double)t2 - t1) * 1e-6);
+	blog(LOG_INFO, "%s Extract Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
 
-	cv::putText(buff, "HAHAHA", cv::Point(100,100), cv::FONT_HERSHEY_PLAIN, 4, cv::Scalar(0, 255, 255), 2);
+	cv::putText(buff, "HAHAHA", cv::Point(100,100), cv::FONT_HERSHEY_PLAIN, 4, cv::Scalar(255, 255, 255), 4);
 
+	t1 = os_gettime_ns();
 
-//	cv::cvtColor(buff, ret, cv::COLOR_BGR2YUV);
+	buff >> frame;
 
-//	tmp = cv::Mat(frame->height, frame->width, CV_8UC1, frame->data[0], frame->linesize[0]);
-//	cv::extractChannel(ret, tmp, 0);
-//
-//	cv::extractChannel(ret, p2, 1);
-//	tmp = cv::Mat(frame->height/2, frame->width/2, CV_8UC1, frame->data[1], frame->linesize[1]);
-//	cv::resize(p2, tmp, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
-//
-//	cv::extractChannel(ret, p3, 2);
-//	tmp = cv::Mat(frame->height/2, frame->width/2, CV_8UC1, frame->data[2], frame->linesize[2]);
-//	cv::resize(p3, tmp, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+	t2 = os_gettime_ns();
+
+	blog(LOG_INFO, "%s Insert Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
 
 	return frame;
 }
