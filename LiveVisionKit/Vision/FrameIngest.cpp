@@ -1,12 +1,5 @@
 #include "FrameIngest.hpp"
 
-#include <vector>
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-
-#include <util/platform.h>
-#include <media-io/video-io.h>
-#include <media-io/video-frame.h>
 
 /* NOTE:
  *  All upload conversion operations are to YUV, and are performed on the GPU using thread

@@ -3,8 +3,6 @@
 #include <vector>
 #include <stdint.h>
 
-#include <opencv2/core.hpp>
-
 namespace lvk
 {
 
@@ -28,6 +26,12 @@ namespace lvk
 
 		T& operator[](const uint32_t index);
 
+		T& centre();
+
+		T& oldest();
+
+		T& newest();
+
 		const T& at(const uint32_t index) const;
 
 		const T& operator[](const uint32_t index) const;
@@ -37,12 +41,6 @@ namespace lvk
 		const T& oldest() const;
 
 		const T& newest() const;
-
-		T& centre();
-
-		T& oldest();
-
-		T& newest();
 
 		bool full() const;
 

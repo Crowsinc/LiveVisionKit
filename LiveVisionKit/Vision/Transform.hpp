@@ -1,15 +1,21 @@
 #pragma once
 
-#include <opencv2/core.hpp>
+#include <opencv2/opencv.hpp>
 
 namespace lvk
 {
 
 	struct Transform
 	{
-		cv::Point2d translation = {0.0, 0.0};
-		double rotation = 0.0; // Radians
-		double scale = 1.0;
+		cv::Point2d translation;
+		double rotation; // Radians
+		double scale;
+
+		static Transform FromAffine2D(const cv::Mat& affine);
+
+		static Transform Identity();
+
+		Transform(cv::Point2d translation, double rotation, double scale);
 
 		void operator+=(const Transform& other);
 
