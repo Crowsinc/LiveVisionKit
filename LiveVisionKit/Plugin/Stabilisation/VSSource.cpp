@@ -9,6 +9,7 @@
 #include <util/platform.h>
 
 #include "../../Vision/FrameIngest.hpp"
+#include "../../Structures/SlidingBuffer.hpp"
 
 //=====================================================================================
 //		EVENT HANDLING
@@ -40,14 +41,14 @@ static void on_vs_tick(void* data, float seconds)
 
 //-------------------------------------------------------------------------------------
 
-// BGR3 - GOOD - 1-2ms both ways
-// RGBA - GOOD - 1-3ms both ways
-// BGRA - GOOD - 1-3ms both ways
+// BGR3 - GOOD - 2-2ms both ways
+// RGBA - GOOD - 2-3ms both ways
+// BGRA - GOOD - 2-3ms both ways
 // Y800 - GOOD - < 1ms both ways
-// UYVY - GOOD - 1-3ms both ways
-// YUY2 - GOOD - 1-3ms both ways
-// YVYU - GOOD - 1-3ms both ways
-// I40A - GOOD - 1-3ms both ways
+// UYVY - GOOD - 1-2ms both ways
+// YUY2 - GOOD - 1-2ms both ways
+// YVYU - GOOD - 1-2ms both ways
+// I40A - GOOD - 1-2ms both ways
 // I420 - GOOD - ~1ms both ways
 // I422 - GOOD - ~2ms both ways
 // I42A - GOOD - ~2ms both ways
@@ -59,31 +60,61 @@ static void on_vs_tick(void* data, float seconds)
 
 static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 {
-	static cv::UMat yuv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-	static obs_source_frame* test_frame = nullptr;
 
-	if(test_frame == nullptr)
-		test_frame = obs_source_frame_create(video_format::VIDEO_FORMAT_RGBA, frame->width, frame->height);
+//	lvk::SlidingBuffer<int> kernel(5);
+//	for(int i = 0; i < 6; i++)
+//		kernel.push(2);
+//
+//	lvk::SlidingBuffer<int> buff(15);
+//	for(int i = 1; i <= 42; i++)
+//		buff.push(i);
+//
+//	blog(LOG_INFO, "============================================");
+//
+//	for(int i = 0; i < buff.elements(); i++)
+//		blog(LOG_INFO, "%d", buff[i]);
+//
+//	blog(LOG_INFO, "============================================");
+//
+//	buff.resize(14);
+//	for(int i = 0; i < buff.elements(); i++)
+//		blog(LOG_INFO, "%d", buff[i]);
+//
+//	auto r = buff.convolve(kernel);
+//
+//	blog(LOG_INFO, "RESULT: %d", r);
+//	blog(LOG_INFO, "OLDEST: %d", buff.oldest());
+//	blog(LOG_INFO, "NEWEST: %d", buff.newest());
+//	blog(LOG_INFO, "CENTRE: %d", buff.centre());
+//
+//	blog(LOG_INFO, "********************************************");
 
-	yuv << frame;
 
-	auto t1 = os_gettime_ns();
-
-	yuv >> test_frame;
-
-	auto t2 = os_gettime_ns();
-
-	blog(LOG_INFO, "%s Insert Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
-
-	t1 = os_gettime_ns();
-
-	yuv << test_frame;
-
-	t2 = os_gettime_ns();
-
-	blog(LOG_INFO, "%s Extract Time: %4.2fms", get_video_format_name(frame->format), ((double)t2 - t1) * 1e-6);
-
-	yuv >> frame;
+//	static cv::UMat yuv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+//	static obs_source_frame* test_frame = nullptr;
+//
+//	if(test_frame == nullptr)
+//		test_frame = obs_source_frame_create(video_format::VIDEO_FORMAT_I420, frame->width, frame->height);
+//
+//	yuv << frame;
+//
+//	auto t1 = os_gettime_ns();
+//
+//	yuv >> test_frame;
+//
+//	auto t2 = os_gettime_ns();
+//
+//	blog(LOG_INFO, "%s Insert Time: %4.2fms", get_video_format_name(test_frame->format), ((double)t2 - t1) * 1e-6);
+//
+//	t1 = os_gettime_ns();
+//
+//	yuv << test_frame;
+//
+//	t2 = os_gettime_ns();
+//
+//	blog(LOG_INFO, "%s Extract Time: %4.2fms", get_video_format_name(test_frame->format), ((double)t2 - t1) * 1e-6);
+//
+//	yuv >> frame;
 
 	return frame;
 }
