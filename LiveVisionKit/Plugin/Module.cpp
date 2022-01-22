@@ -2,6 +2,8 @@
 #include <obs/obs-source.h>
 #include <obs/obs.h>
 
+#include <opencv2/core/ocl.hpp>
+
 //=====================================================================================
 //		MODULE DECLARATION
 //=====================================================================================
@@ -31,7 +33,11 @@ void register_vs_source();
 bool obs_module_load()
 {
 	register_fsr_source();
-	register_vs_source();
+
+	// Only enable the video stabalisation filter if the user has OpenCL.
+	// It will run without it, but it will run too slow to be real-time.
+	if(cv::ocl::haveOpenCL())
+		register_vs_source();
 
 	return true;
 }

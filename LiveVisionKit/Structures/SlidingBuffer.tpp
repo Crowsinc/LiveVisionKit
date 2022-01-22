@@ -15,23 +15,49 @@ namespace lvk
 		clear();
 	}
 
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
+	void SlidingBuffer<T>::advance_window()
+	{
+		if(full())
+		{
+			m_EndIndex = (m_EndIndex + 1) % m_WindowSize;
+			m_StartIndex = (m_StartIndex + 1) % m_WindowSize;
+		}
+		else m_EndIndex = m_InternalBuffer.size();
+	}
+
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
 	void SlidingBuffer<T>::push(const T& element)
 	{
-		if(!full())
-		{
-			m_InternalBuffer.push_back(element);
-			m_EndIndex = m_InternalBuffer.size() - 1;
-		}
-		else
-		{
-			m_EndIndex = (m_EndIndex + 1) % m_WindowSize;
-			m_StartIndex = (m_StartIndex + 1) % m_WindowSize;
+		advance_window();
 
+		if(!full())
+			m_InternalBuffer.push_back(element);
+		else
 			m_InternalBuffer[m_EndIndex] = element;
-		}
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
+	template<typename... Args>
+	T& SlidingBuffer<T>::advance(Args&&... args)
+	{
+		// Advances the window, either emplacing a new element or re-using the element
+		// being overwritten when full. This exists in order to enable user-level
+		// optimisations by removing the need to use the copying push function.
+
+		advance_window();
+
+		if(!full())
+			return m_InternalBuffer.emplace_back(args...);
+		else
+			return m_InternalBuffer[m_EndIndex];
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -57,9 +83,9 @@ namespace lvk
 		if(!m_InternalBuffer.empty() && m_StartIndex != 0)
 		{
 			// Simplest way to do this is to allocate a new internal buffer
-			// And copy over all the elements which fit in the correct order.
-			// We always copy back to front, in order to leave the newest N
-			// elements which fit, in order to keep 'temporal' consistency.
+			// and copy over all the elements which fit in the correct order.
+			// We always copy back to front, keeping the newest N elements
+			// to conserve 'temporal consistency'.
 
 			std::vector<T> new_buffer;
 			new_buffer.reserve(window_size);
@@ -81,27 +107,26 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel) const
+	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
-		T result{};
 
 		// NOTE: The kernel and sliding window is always centre alligned.
-		// If either sizing is even, it is alligned with the lower indexed centre value.
+		// If either sizing is even, it is alligned with the lower centre index.
 		if(elements() > kernel.elements())
 		{
 			// Window is bigger than kernel, so allign kernel to window.
 			const auto centre_offset = centre_index() - kernel.centre_index();
 			for(uint32_t i = 0; i < kernel.elements(); i++)
-				result += this->at(i + centre_offset) * kernel.at(i);
+				initial += this->at(i + centre_offset) * kernel.at(i);
 		}
 		else
 		{
 			// Kernel is bigger (or equal) to window, so allign window to kernel
 			const auto centre_offset = kernel.centre_index() - centre_index();
 			for(uint32_t i = 0; i < elements(); i++)
-				result += this->at(i) * kernel.at(i + centre_offset);
+				initial += this->at(i) * kernel.at(i + centre_offset);
 		}
-		return result;
+		return initial;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -144,7 +169,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::centre() const
 	{
-		// NOTE: gets lower centre for even sizing.
+		// NOTE: Gets lower centre for even sizing.
 		return m_InternalBuffer[centre_index()];
 	}
 
@@ -169,7 +194,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::centre()
 	{
-		// NOTE: gets lower centre for even sizing.
+		// NOTE: Gets lower centre for even sizing.
 		return m_InternalBuffer[centre_index()];
 	}
 
@@ -194,7 +219,7 @@ namespace lvk
 	template<typename T>
 	bool SlidingBuffer<T>::full() const
 	{
-		return elements() == m_WindowSize;
+		return elements() == window_size();
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -216,9 +241,18 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
+	uint32_t SlidingBuffer<T>::window_radius() const
+	{
+		// NOTE: No centre element for even window sizes
+		return centre_index() + 1;
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
 	uint32_t SlidingBuffer<T>::centre_index() const
 	{
-		// NOTE: gets lower centre index for even sizing.
+		// NOTE: Gets lower centre index for even sizing.
 		return (elements() - 1) / 2;
 	}
 

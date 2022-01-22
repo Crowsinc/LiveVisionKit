@@ -38,6 +38,9 @@ namespace lvk
 			m_MotionScale.x = static_cast<float>(next_frame.cols) / m_Properties.tracking_size.width;
 			m_MotionScale.y = static_cast<float>(next_frame.rows) / m_Properties.tracking_size.width;
 
+			// Round-robin the buffers so we can re-use the internal frame we just imported.
+			std::swap(m_PrevFrame, m_NextFrame);
+
 			return Transform::Identity();
 		}
 
@@ -84,22 +87,21 @@ namespace lvk
 		}
 
 		// Estimate the affine transform required to match the track points to the matched points
-		// TODO: use USAC instead of RANSAC if the partial affine function gets support.
+		// TODO: test USAC if the partial affine function gets support.
 		const auto affine_estimate = cv::estimateAffinePartial2D(m_TrackPoints, m_MatchedPoints);
 
-		// If not estimate was found, return identify transform.
+		// If nno estimate was found, return identity transform.
 		if(affine_estimate.empty())
 			return Transform::Identity();
 
-		const auto transform = Transform::FromAffine2D(affine_estimate);
+		const auto estimated_transform = Transform::FromAffine2D(affine_estimate);
 
-		// Keep cumulative scaling relative to identity scale of 1 by adding
-		// only the change in scale. This technically only works if the scale
-		// is > 0. No pair of frames should ever result in a scale <= 0.
-		m_CumulativeTransform += transform;
+		m_CumulativeTransform += estimated_transform;
+
+		// Only add the change in scale, relative to 1.0
 		m_CumulativeTransform.scale -= 1.0;
 
-		return transform;
+		return estimated_transform;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -128,7 +130,7 @@ namespace lvk
 	void FrameTracker::reset()
 	{
 		m_FrameCount = 0;
-		m_MotionScale = {0, 0};
+		m_MotionScale = {1, 1};
 		m_CumulativeTransform = Transform::Identity();
 	}
 

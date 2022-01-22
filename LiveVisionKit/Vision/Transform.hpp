@@ -15,7 +15,7 @@ namespace lvk
 
 		static Transform Identity();
 
-		Transform(cv::Point2d translation, double rotation, double scale);
+		Transform(cv::Point2d translation = {0, 0}, double rotation = 0, double scale = 0);
 
 		void operator+=(const Transform& other);
 

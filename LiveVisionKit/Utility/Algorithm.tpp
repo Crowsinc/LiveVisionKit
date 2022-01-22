@@ -24,7 +24,6 @@ namespace lvk
 		// Generic filter using fast erase for the removal of data
 		// NOTE: Changes ordering of the vector data so should be used with caution.
 
-
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// vector element correspondence of unprocessed elements.
 		for(auto k = keep.size() - 1; k >= 0; k--)
@@ -56,8 +55,7 @@ namespace lvk
 	template<typename T, typename P>
 	void filter(std::vector<T>& data, const std::vector<P>& keep)
 	{
-		// Inspired from https://stackoverflow.com/a/33494518
-
+		// https://stackoverflow.com/a/33494518
 		const auto predicate = [&data, &keep](const T& value) {
 			return !keep.at(&value - &data[0]);
 		};
@@ -70,7 +68,8 @@ namespace lvk
 	template<typename T>
 	int signum(const T value)
 	{
-		 return (T(0) < value) - (value < T(0));
+		// https://stackoverflow.com/a/4609795
+		return (T(0) < value) - (value < T(0));
 	}
 
 	//-------------------------------------------------------------------------------------

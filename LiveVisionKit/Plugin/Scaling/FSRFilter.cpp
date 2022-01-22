@@ -4,6 +4,11 @@
 #include <filesystem>
 #include <string>
 
+#define A_CPU 1
+#include "../Effects/ffx_a.h"
+#include "../Effects/ffx_fsr1.h"
+
+
 namespace lvk
 {
 
@@ -104,10 +109,6 @@ namespace lvk
 		  m_EASUConstParam2(nullptr),
 		  m_EASUConstParam3(nullptr)
 	{
-		// Use of C++ 'new' keyword bypasses OBS' memory leak detection, which requires the use of
-		// bmalloc/bfree. So make a dummy allocation to allow memory leak detection for this class.
-		m_DummyAlloc = static_cast<uint32_t*>(bzalloc(sizeof(uint32_t)));
-
 		obs_video_info video_info;
 		obs_get_video_info(&video_info);
 		const std::string graphics_api = video_info.graphics_module;
@@ -153,8 +154,6 @@ namespace lvk
 
 	FSRFilter::~FSRFilter()
 	{
-		bfree(m_DummyAlloc);
-
 		if(m_Shader != nullptr)
 		{
 			obs_enter_graphics();
@@ -226,7 +225,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::tick()
+	void FSRFilter::update()
 	{
 		auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);

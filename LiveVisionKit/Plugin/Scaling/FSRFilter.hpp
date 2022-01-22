@@ -2,11 +2,8 @@
 
 #include <obs/obs.h>
 
-#define A_CPU 1
 #include <cmath>
 #include <cstdint>
-#include "../Effects/ffx_a.h"
-#include "../Effects/ffx_fsr1.h"
 
 // OBS doesn't 'officially' support two separate render passes per filter.
 // It works but sometimes leads to unexpected behaviour and potential
@@ -34,7 +31,7 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		void tick();
+		void update();
 
 		void render() const;
 
@@ -44,9 +41,7 @@ namespace lvk
 
 	private:
 
-		uint32_t* m_DummyAlloc;
 		obs_source_t* m_Context;
-
 		gs_effect_t* m_Shader;
 
 		bool m_BypassEASU;

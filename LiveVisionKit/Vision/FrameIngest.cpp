@@ -187,7 +187,7 @@ namespace lvk
 		cv::resize(buffer, plane_uv, plane_y.size(), 0, 0, cv::INTER_NEAREST);
 
 		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
-		dst.create(plane_y.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		dst.create(plane_y.size(), CV_8UC3);
 
 		// NOTE: need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
 		cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>(1, dst), {0,0,  1,1,  2,2});
@@ -262,6 +262,9 @@ namespace lvk
 	bool extract_frame(const obs_source_frame* src, cv::UMat& dst)
 	{
 		const auto& frame = *src;
+
+		// Ensure the destinatiion is ready to receive a YUV frame and is allocated to the GPU.
+		dst.create(frame.height,  frame.width,  CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		switch(frame.format)
 		{
@@ -503,6 +506,8 @@ namespace lvk
 				return;
 		}
 
+		frame.height = src.rows;
+		frame.width = src.cols;
 	}
 
 	//-------------------------------------------------------------------------------------

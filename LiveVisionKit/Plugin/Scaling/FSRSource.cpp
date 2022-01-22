@@ -36,7 +36,7 @@ static void on_fsr_configure(void* data, obs_data_t* settings)
 
 static void on_fsr_tick(void* data, float seconds)
 {
-	static_cast<lvk::FSRFilter*>(data)->tick();
+	static_cast<lvk::FSRFilter*>(data)->update();
 }
 
 //-------------------------------------------------------------------------------------
@@ -92,7 +92,6 @@ extern void register_fsr_source()
 	obs_source_info config = {};
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.icon_type = OBS_ICON_TYPE_CAMERA;
 	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
 	config.create = on_fsr_create;
 	config.destroy = on_fsr_destroy;

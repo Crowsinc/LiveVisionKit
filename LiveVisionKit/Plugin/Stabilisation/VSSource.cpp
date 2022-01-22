@@ -32,11 +32,11 @@ static void on_vs_destroy(void* data)
 static void on_vs_configure(void* data, obs_data_t* settings)
 {
 }
-
 //-------------------------------------------------------------------------------------
 
 static void on_vs_tick(void* data, float seconds)
 {
+
 }
 
 //-------------------------------------------------------------------------------------
@@ -165,8 +165,7 @@ extern void register_vs_source()
 	obs_source_info config;
 	config.id = "LVK~VS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.icon_type = OBS_ICON_TYPE_CAMERA;
-	config.output_flags = OBS_SOURCE_ASYNC_VIDEO; // | OBS_SOURCE_CUSTOM_DRAW
+	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
 	config.update = on_vs_configure;

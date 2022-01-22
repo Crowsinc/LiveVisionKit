@@ -11,16 +11,19 @@ namespace lvk
 	{
 	public:
 
-		SlidingBuffer(const uint32_t window_size);
+		SlidingBuffer(const uint32_t window_size = 5);
 
 		void push(const T& element);
+
+		template<typename... Args>
+		T& advance(Args&&... args);
 
 		void clear();
 
 		void resize(const uint32_t window_size);
 
 		template<typename K>
-		T convolve(const SlidingBuffer<K>& kernel) const;
+		T convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
 
 		T& at(const uint32_t index);
 
@@ -48,12 +51,16 @@ namespace lvk
 
 		uint32_t window_size() const;
 
+		uint32_t window_radius() const;
+
 		uint32_t centre_index() const;
 
 	private:
 
 		std::vector<T> m_InternalBuffer;
 		uint32_t m_StartIndex, m_EndIndex, m_WindowSize;
+
+		void advance_window();
 	};
 
 }

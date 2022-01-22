@@ -29,8 +29,8 @@ namespace lvk
 	Transform Transform::Identity()
 	{
 		// Identify transform is just a transform which doesn't do anything.
-		// This function just exists to attach an informative name to it.
-		return Transform({0,0}, 0, 1.0);
+		// This function exists to attach an informative name to it.
+		return Transform({0.0, 0.0}, 0.0, 1.0);
 	}
 
 	//-------------------------------------------------------------------------------------
