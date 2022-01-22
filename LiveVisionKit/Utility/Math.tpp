@@ -27,7 +27,7 @@ namespace lvk
 	template<typename V, typename T>
 	inline V lerp(const V from, const V to, const T t)
 	{
-		from + t * (to - from);
+		return from + t * (to - from);
 	}
 
 	//-------------------------------------------------------------------------------------

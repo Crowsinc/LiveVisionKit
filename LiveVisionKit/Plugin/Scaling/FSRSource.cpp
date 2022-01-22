@@ -2,7 +2,7 @@
 #include <obs/obs-source.h>
 #include <obs/obs.h>
 
-#include "../Scaling/FSRFilter.hpp"
+#include "FSRFilter.hpp"
 
 //=====================================================================================
 //		EVENT HANDLING

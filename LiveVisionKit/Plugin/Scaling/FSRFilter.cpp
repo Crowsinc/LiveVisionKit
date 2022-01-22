@@ -58,7 +58,7 @@ namespace lvk
 
 #ifndef DISABLE_RCAS
 		// Slider for selecting sharpness (0.0 to 1.0)
-		property = obs_properties_add_float_slider(
+		obs_properties_add_float_slider(
 				properties,
 				PROP_SHARPNESS,
 				"Sharpness",

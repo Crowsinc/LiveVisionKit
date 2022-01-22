@@ -1,7 +1,4 @@
-
-
 #include "Structures/SlidingBuffer.hpp"
-
 
 #include "Utility/Algorithm.hpp"
 #include "Utility/Math.hpp"
