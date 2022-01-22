@@ -1,6 +1,7 @@
 #include "Transform.hpp"
 
 #include "../Utility/Algorithm.hpp"
+#include "../Utility/Math.hpp"
 
 namespace lvk
 {
@@ -19,7 +20,7 @@ namespace lvk
 		// Decompose transform from 2x3 affine matrix of rotation, uniform scaling and translation
 		const cv::Point2d translation(tx, ty);
 		const double rotation = std::atan2(scaled_sin, scaled_cos);
-		const double scale = signum(scaled_cos) * std::sqrt(scaled_cos * scaled_cos + scaled_sin * scaled_sin);
+		const double scale = sign(scaled_cos) * std::sqrt(scaled_cos * scaled_cos + scaled_sin * scaled_sin);
 
 		return Transform(translation, rotation, scale);
 	}
@@ -78,11 +79,21 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void Transform::apply(const Transform& transform)
+	cv::Point2d Transform::apply(const cv::Point2d& point) const
 	{
-		translation += transform.translation;
-		rotation += transform.rotation;
-		scale *= transform.scale;
+		const double cos = scale * std::cos(rotation);
+		const double sin = scale * std::sin(rotation);
+		return {
+			point.x * cos + point.y * -sin + translation.x,
+			point.x * sin + point.y *  cos + translation.y
+		};
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	Transform Transform::apply(const Transform& transform) const
+	{
+		return {translation + transform.translation, rotation + transform.rotation, scale * transform.scale};
 	}
 
 	//-------------------------------------------------------------------------------------

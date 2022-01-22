@@ -25,7 +25,9 @@ namespace lvk
 
 		void operator/=(const double scaling);
 
-		void apply(const Transform& transform);
+		cv::Point2d apply(const cv::Point2d& point) const;
+
+		Transform apply(const Transform& transform) const;
 
 		cv::Mat as_matrix() const;
 

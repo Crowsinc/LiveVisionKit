@@ -15,8 +15,6 @@ namespace lvk
 	template<typename T, typename P>
 	void filter(std::vector<T>& data, const std::vector<P>& keep);
 
-	template<typename T>
-	int signum(const T value);
 
 }
 

@@ -127,8 +127,28 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	Transform VSFilter::clamp_to_frame(Transform transform)
+	Transform VSFilter::clamp_to_frame(const Transform& transform)
 	{
+		// Reduce the magnitude of the transform until the crop region is
+		// fully enclosed within the warped frame. We reduce the magnitude
+		// by iteratively lerping the transform back to identity in small steps.
+
+		// Returns identity transform after max iterations
+		constexpr int max_iterations = 100;
+
+		double t = 0.0;
+		constexpr double max_t = 1.0;
+		constexpr double step = max_t/max_iterations;
+
+		auto reduced_transform = transform;
+		const auto identity = Transform::Identity();
+		while(t <= max_t && !encloses(m_FrameRegion, reduced_transform, m_CropRegion))
+		{
+			reduced_transform = lerp(transform, identity, t);
+			t += step;
+		}
+
+		return reduced_transform;
 	}
 
 	//-------------------------------------------------------------------------------------

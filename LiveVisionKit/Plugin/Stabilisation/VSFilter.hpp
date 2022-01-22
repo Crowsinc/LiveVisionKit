@@ -35,7 +35,7 @@ namespace lvk
 
 		bool m_TestMode;
 
-		cv::Rect m_CropRegion;
+		cv::Rect m_CropRegion, m_FrameRegion;
 		cv::Size m_CropAmount;
 
 		FrameTracker m_FrameTracker;
@@ -49,7 +49,7 @@ namespace lvk
 
 		VSFilter(obs_source_t* context);
 
-		Transform clamp_to_frame(Transform transform);
+		Transform clamp_to_frame(const Transform& transform);
 
 		cv::UMat draw_test_information(const cv::UMat& test_frame);
 
