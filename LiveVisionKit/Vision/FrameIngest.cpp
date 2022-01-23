@@ -1,5 +1,6 @@
 #include "FrameIngest.hpp"
 
+#include "../Diagnostics/Assert.hpp"
 
 /* NOTE:
  *  All upload conversion operations are to YUV, and are performed on the GPU using thread
@@ -34,6 +35,7 @@ namespace lvk
 
 	inline void fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value)
 	{
+		LVK_ASSERT(dst.data[plane] != nullptr, "Dst data is nullptr.");
 		std::memset(dst.data[plane], value, dst.width * dst.height);
 	}
 
@@ -91,6 +93,8 @@ namespace lvk
 
 	inline void import_data(uint8_t* src, cv::UMat& dst, const uint32_t width, const uint32_t height, const uint32_t line_size, const uint32_t components)
 	{
+		LVK_ASSERT(src != nullptr, "Src is nullptr.");
+
 		// NOTE: This is what ultimately uploads OBS plane data to the GPU/CPU UMats
 		// and is the bottleneck of the ingest operation. OBS frame planes are actually
 		// just pointer offsets to a large contiguous piece of memory starting at the first
@@ -105,6 +109,8 @@ namespace lvk
 
 	inline void export_data(const cv::UMat& src, uint8_t* dst)
 	{
+		LVK_ASSERT(src != nullptr, "Dst is nullptr.");
+
 		// Wrap the destination data in a Mat header and perform the download using an optimised OpenCV copy.
 		// This assumes that the destination is large enough to actually hold all the src data.
 		src.copyTo(cv::Mat(src.size(), src.type(), dst));
@@ -261,10 +267,9 @@ namespace lvk
 
 	bool import_frame(const obs_source_frame* src, cv::UMat& dst)
 	{
-		const auto& frame = *src;
+		LVK_ASSERT(src != nullptr, "OBS frame is nullptr.");
 
-		// Ensure the destinatiion is ready to receive a YUV frame and is allocated to the GPU.
-		dst.create(frame.height,  frame.width,  CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		const auto& frame = *src;
 
 		switch(frame.format)
 		{
@@ -449,6 +454,11 @@ namespace lvk
 
 	void export_frame(const cv::UMat& src, obs_source_frame* dst)
 	{
+		LVK_ASSERT(dst != nullptr && dst->data != nullptr && dst->linesize[0] > 0, "OBS frame is not initialised.");
+		LVK_ASSERT(src.channels() == 3 && src.type == CV_8UC3, "Src must be CV_8UC3 and YUV.");
+		LVK_ASSERT_FMT(dst->width >= src.cols || dst->height >= src.rows,
+				"Dst is %dx%d, must be at least %dx%d to fit Src.", dst->width, dst->height, src.cols, src.rows);
+
 		auto& frame = *dst;
 
 		switch(frame.format)

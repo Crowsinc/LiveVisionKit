@@ -3,6 +3,8 @@
 #include "../Utility/Algorithm.hpp"
 #include "../Utility/Math.hpp"
 
+#include "../Diagnostics/Assert.hpp"
+
 namespace lvk
 {
 
@@ -10,7 +12,8 @@ namespace lvk
 
 	Transform Transform::FromAffine2D(const cv::Mat& affine)
 	{
-		//TODO: asserts
+		LVK_ASSERT_FMT(affine.cols == 3 && affine.rows == 2, "Affine matrix is %dx%d, must be 2x3.", affine.rows, affine.cols);
+		LVK_ASSERT(affine.type() == CV_64FC1, "Affine matrix must be CV_64FC1.");
 
 		const auto& tx = affine.at<double>(0, 2);
 		const auto& ty = affine.at<double>(1, 2);
@@ -72,6 +75,8 @@ namespace lvk
 
 	void Transform::operator/=(const double scaling)
 	{
+		LVK_ASSERT(scaling == 0.0, "Scaling by zero.");
+
 		translation /= scaling;
 		rotation /= scaling;
 		scale /= scaling;
@@ -131,6 +136,8 @@ namespace lvk
 
 	Transform operator/(const Transform& transform, const double scaling)
 	{
+		LVK_ASSERT(scaling == 0.0, "Scaling by zero.");
+
 		return {transform.translation / scaling, transform.rotation / scaling, transform.scale / scaling};
 	}
 
@@ -145,6 +152,8 @@ namespace lvk
 
 	Transform operator/(const double scaling, const Transform& transform)
 	{
+		LVK_ASSERT(scaling == 0, "Scaling by zero.");
+
 		return transform / scaling;
 	}
 	//-------------------------------------------------------------------------------------

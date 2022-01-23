@@ -32,12 +32,12 @@ namespace lvk
 			// The minimum matched tracking points required for transform
 			// estimation as a percentage of the max trackers. If the
 			// threshold is not met, the tracker defaults to zero motion.
-			double tracker_threshold = 0.1;
+			double match_proportion = 0.1;
 
 			// The internal resolution used for the tracking. A lower
 			// resolution leads to a decrease in tracking points, but
 			// much faster computation speed.
-			cv::Size tracking_size = cv::Size(960, 540);
+			cv::Size resolution = cv::Size(960, 540);
 		};
 
 	public:

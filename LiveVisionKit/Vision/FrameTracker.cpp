@@ -1,9 +1,10 @@
 #include "FrameTracker.hpp"
 
 #include <algorithm>
-#include <tuple>
 
 #include "../Utility/Algorithm.hpp"
+
+#include "../Diagnostics/Assert.hpp"
 
 namespace lvk
 {
@@ -12,11 +13,22 @@ namespace lvk
 
 	FrameTracker::FrameTracker(const Properties properties)
 		: m_Properties(properties),
-		  m_MatchThreshold(properties.max_trackers * properties.tracker_threshold),
+		  m_MatchThreshold(properties.max_trackers * properties.match_proportion),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_CumulativeTransform(Transform::Identity())
 	{
+		LVK_ASSERT_FMT(properties.max_trackers > 0,
+				"Maximum trackers is set to %d, must be > 0.", properties.max_trackers);
+		LVK_ASSERT_FMT(properties.min_tracker_distance > 0,
+				"Minimum tracker distance is set to %d, must be > 0.", properties.min_tracker_distance);
+		LVK_ASSERT_FMT(properties.tracker_quality > 0 && properties.tracker_quality <= 1.0,
+				"Tracker quality is set to %f, must be 0 to 1.", properties.tracker_quality);
+		LVK_ASSERT_FMT(properties.match_proportion > 0 && properties.match_proportion <= 1.0,
+				"Match proportion is set to %f, must be 0 to 1.", properties.match_proportion);
+		LVK_ASSERT_FMT(properties.resolution.width > 0 && properties.resolution.height > 0,
+				"Resolution is %dx%d, must be at least 1x1 ", properties.resolution.width, properties.resolution.height);
+
 		reset();
 
 		m_TrackPoints.reserve(m_Properties.max_trackers);
@@ -27,7 +39,8 @@ namespace lvk
 
 	Transform FrameTracker::track(const cv::UMat& next_frame)
 	{
-		//TODO: Assert 1 component & consistent frame size
+		LVK_ASSERT_FMT(next_frame.channels() == 1, "Frame has %d channels, must have 1.", next_frame.channels());
+		LVK_ASSERT(next_frame.type() == CV_8UC1, "Frame must be CV_8UC1");
 
 		import_next(next_frame);
 
@@ -77,8 +90,8 @@ namespace lvk
 			return Transform::Identity();
 
 		// Re-scale all the points to original frame size otherwise the motion won't correspond
-		const double x_scale = static_cast<float>(next_frame.cols) / m_Properties.tracking_size.width;
-		const double y_scale = static_cast<float>(next_frame.rows) / m_Properties.tracking_size.height;
+		const double x_scale = static_cast<float>(next_frame.cols) / m_Properties.resolution.width;
+		const double y_scale = static_cast<float>(next_frame.rows) / m_Properties.resolution.height;
 		for(size_t i = 0; i < m_TrackPoints.size(); i++)
 		{
 			m_TrackPoints[i].x *= x_scale;
@@ -114,7 +127,7 @@ namespace lvk
 		//
 		// TODO: Test more transformations other than the sharpening pass.
 
-		cv::resize(frame, m_NextFrame, m_Properties.tracking_size, 0, 0, cv::INTER_NEAREST);
+		cv::resize(frame, m_NextFrame, m_Properties.resolution, 0, 0, cv::INTER_NEAREST);
 		m_FrameCount++;
 
 		const cv::Mat light_sharpening_kernel({3,3}, {
