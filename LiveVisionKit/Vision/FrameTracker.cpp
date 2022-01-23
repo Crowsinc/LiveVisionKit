@@ -32,15 +32,10 @@ namespace lvk
 		import_next(next_frame);
 
 		// Can't track until we have imported at least 2 frames
-		if(frames() < 2)
+		if(frames_tracked() < 2)
 		{
-			// Determine the motion scale based on the size of the first frame
-			m_MotionScale.x = static_cast<float>(next_frame.cols) / m_Properties.tracking_size.width;
-			m_MotionScale.y = static_cast<float>(next_frame.rows) / m_Properties.tracking_size.width;
-
 			// Round-robin the buffers so we can re-use the internal frame we just imported.
 			std::swap(m_PrevFrame, m_NextFrame);
-
 			return Transform::Identity();
 		}
 
@@ -57,13 +52,17 @@ namespace lvk
 				m_Properties.min_tracker_distance
 		);
 
+		// Return identity transform if we don't have enough trackers
+		if(m_TrackPoints.size() < m_MatchThreshold)
+			return Transform::Identity();
+
 		// Match tracking points in next frame
 		cv::calcOpticalFlowPyrLK(
 				m_PrevFrame,
 				m_NextFrame,
 				m_TrackPoints,
 				m_MatchedPoints,
-				m_MatchedPoints,
+				m_MatchStatus,
 				cv::noArray()
 		);
 
@@ -78,12 +77,14 @@ namespace lvk
 			return Transform::Identity();
 
 		// Re-scale all the points to original frame size otherwise the motion won't correspond
+		const double x_scale = static_cast<float>(next_frame.cols) / m_Properties.tracking_size.width;
+		const double y_scale = static_cast<float>(next_frame.rows) / m_Properties.tracking_size.height;
 		for(size_t i = 0; i < m_TrackPoints.size(); i++)
 		{
-			m_TrackPoints[i].x *= m_MotionScale.x;
-			m_TrackPoints[i].y *= m_MotionScale.y;
-			m_MatchedPoints[i].x *= m_MotionScale.x;
-			m_MatchedPoints[i].y *= m_MotionScale.y;
+			m_TrackPoints[i].x *= x_scale;
+			m_TrackPoints[i].y *= y_scale;
+			m_MatchedPoints[i].y *= y_scale;
+			m_MatchedPoints[i].x *= x_scale;
 		}
 
 		// Estimate the affine transform required to match the track points to the matched points
@@ -130,7 +131,6 @@ namespace lvk
 	void FrameTracker::reset()
 	{
 		m_FrameCount = 0;
-		m_MotionScale = {1, 1};
 		m_CumulativeTransform = Transform::Identity();
 	}
 
@@ -143,7 +143,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	uint64_t FrameTracker::frames() const
+	uint64_t FrameTracker::frames_tracked() const
 	{
 		return m_FrameCount;
 	}

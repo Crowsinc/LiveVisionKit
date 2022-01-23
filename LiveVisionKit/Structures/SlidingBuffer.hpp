@@ -47,11 +47,11 @@ namespace lvk
 
 		bool full() const;
 
+		bool empty() const;
+
 		uint32_t elements() const;
 
 		uint32_t window_size() const;
-
-		uint32_t window_radius() const;
 
 		uint32_t centre_index() const;
 

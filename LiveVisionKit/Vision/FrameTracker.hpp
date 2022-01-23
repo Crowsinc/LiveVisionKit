@@ -48,7 +48,7 @@ namespace lvk
 
 		Transform cumulative() const;
 
-		uint64_t frames() const;
+		uint64_t frames_tracked() const;
 
 		void reset();
 
@@ -65,7 +65,6 @@ namespace lvk
 		std::vector<uint8_t> m_MatchStatus;
 		cv::UMat m_PrevFrame, m_NextFrame;
 		Transform m_CumulativeTransform;
-		cv::Point2f m_MotionScale;
 		uint64_t m_FrameCount;
 
 		void import_next(const cv::UMat& frame);

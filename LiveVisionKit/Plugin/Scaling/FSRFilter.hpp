@@ -31,7 +31,7 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		void update();
+		void tick();
 
 		void render() const;
 

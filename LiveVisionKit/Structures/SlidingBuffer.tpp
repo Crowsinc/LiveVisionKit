@@ -170,7 +170,8 @@ namespace lvk
 	const T& SlidingBuffer<T>::centre() const
 	{
 		// NOTE: Gets lower centre for even sizing.
-		return m_InternalBuffer[centre_index()];
+		// Use at() method to automatically handle wrapping.
+		return at(centre_index());
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -195,7 +196,8 @@ namespace lvk
 	T& SlidingBuffer<T>::centre()
 	{
 		// NOTE: Gets lower centre for even sizing.
-		return m_InternalBuffer[centre_index()];
+		// Use at() method to automatically handle wrapping.
+		return at(centre_index());
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -225,6 +227,14 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
+	bool SlidingBuffer<T>::empty() const
+	{
+		return m_InternalBuffer.empty();
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
 	uint32_t SlidingBuffer<T>::elements() const
 	{
 		return m_InternalBuffer.size();
@@ -241,18 +251,13 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	uint32_t SlidingBuffer<T>::window_radius() const
-	{
-		// NOTE: No centre element for even window sizes
-		return centre_index() + 1;
-	}
-
-	//-------------------------------------------------------------------------------------
-
-	template<typename T>
 	uint32_t SlidingBuffer<T>::centre_index() const
 	{
+		//TODO: assert non empty
+
 		// NOTE: Gets lower centre index for even sizing.
+		// NOTE: This is an external 0-N index not an internal
+		// one which wraps from start index to end index.
 		return (elements() - 1) / 2;
 	}
 

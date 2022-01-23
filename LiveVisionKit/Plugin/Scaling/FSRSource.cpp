@@ -36,7 +36,7 @@ static void on_fsr_configure(void* data, obs_data_t* settings)
 
 static void on_fsr_tick(void* data, float seconds)
 {
-	static_cast<lvk::FSRFilter*>(data)->update();
+	static_cast<lvk::FSRFilter*>(data)->tick();
 }
 
 //-------------------------------------------------------------------------------------

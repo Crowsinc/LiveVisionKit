@@ -19,9 +19,13 @@ namespace lvk
 
 	public:
 
+		~VSFilter();
+
 		void configure(obs_data_t* settings);
 
-		void update();
+		void tick();
+
+		void render() const;
 
 		obs_source_frame* process(obs_source_frame* next_frame);
 
@@ -29,35 +33,43 @@ namespace lvk
 
 		uint32_t height() const;
 
+		void reset();
+
 	private:
 
+
 		obs_source_t* m_Context;
+		gs_effect_t* m_Shader;
 
-		bool m_TestMode;
-
+		bool m_TestMode, m_AutoUpscale;
+		float m_EdgeCropProportion;
+		uint32_t m_SmoothingRadius;
 		cv::Rect m_CropRegion, m_FrameRegion;
-		cv::Size m_CropAmount;
+		cv::Size m_OutputSize;
 
-		FrameTracker m_FrameTracker;
+
 		SlidingBuffer<double> m_PathFilter;
 		SlidingBuffer<Transform> m_PathWindow;
 		SlidingBuffer<Transform> m_MotionQueue;
-
-		SlidingBuffer<obs_source_frame*> m_OBSFrameQueue;
 		SlidingBuffer<cv::UMat> m_StabilisationQueue;
-		cv::UMat m_WarpFrame;
+		SlidingBuffer<obs_source_frame*> m_OBSFrameQueue;
+
+		cv::UMat m_WarpFrame, m_StabilisedFrame;
+
+		cv::UMat m_TrackingFrame;
+		FrameTracker m_FrameTracker;
 
 		VSFilter(obs_source_t* context);
 
-		Transform clamp_to_frame(const Transform& transform);
+		Transform fit_to_crop(const Transform& transform);
 
-		cv::UMat draw_test_information(const cv::UMat& test_frame);
+		cv::UMat draw_test_information(cv::UMat& frame, const uint64_t ingest_time_ns, const uint64_t warp_time_ns);
 
-		void update_crop_region(const cv::Size frame_size);
+		void prepare_buffers(const uint32_t filter_radius);
 
-		void configure_sliding_windows(const uint32_t filter_radius);
+		void reset_buffers();
 
-		void reset_sliding_windows();
+		bool stabilisation_ready() const;
 
 		bool validate() const;
 

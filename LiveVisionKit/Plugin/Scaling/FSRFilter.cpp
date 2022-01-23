@@ -225,7 +225,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::update()
+	void FSRFilter::tick()
 	{
 		auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);

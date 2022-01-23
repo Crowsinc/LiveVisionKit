@@ -36,9 +36,23 @@ static void on_vs_configure(void* data, obs_data_t* settings)
 
 //-------------------------------------------------------------------------------------
 
+static void on_vs_deactivate(void* data, obs_source_t* context)
+{
+	static_cast<lvk::VSFilter*>(data)->reset();
+}
+
+//-------------------------------------------------------------------------------------
+
 static void on_vs_tick(void* data, float seconds)
 {
-	static_cast<lvk::VSFilter*>(data)->update();
+	static_cast<lvk::VSFilter*>(data)->tick();
+}
+
+//-------------------------------------------------------------------------------------
+
+static void on_vs_render(void* data, gs_effect_t* _)
+{
+	static_cast<lvk::VSFilter*>(data)->render();
 }
 
 //-------------------------------------------------------------------------------------
@@ -95,11 +109,13 @@ extern void register_vs_source()
 	obs_source_info config;
 	config.id = "LVK~VS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
+	config.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
 	config.update = on_vs_configure;
+	config.filter_remove = on_vs_deactivate;
 	config.video_tick = on_vs_tick;
+	config.video_render = on_vs_render;
 	config.filter_video = on_vs_async_filter;
 	config.get_name = vs_filter_name;
 	config.get_width = vs_output_width;

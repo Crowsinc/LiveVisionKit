@@ -12,8 +12,8 @@ namespace lvk
 	{
 		//TODO: asserts
 
-		const auto& ty = affine.at<double>(0, 2);
-		const auto& tx = affine.at<double>(1, 2);
+		const auto& tx = affine.at<double>(0, 2);
+		const auto& ty = affine.at<double>(1, 2);
 		const auto& scaled_cos = affine.at<double>(0, 0);
 		const auto& scaled_sin = affine.at<double>(1, 0);
 

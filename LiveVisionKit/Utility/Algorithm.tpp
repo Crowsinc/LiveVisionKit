@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <obs/obs.h>
+
 namespace lvk
 {
 
@@ -12,7 +14,7 @@ namespace lvk
 	{
 		// Removes an element by first swapping it with the final element to avoid re-shuffling.
 		// NOTE: Changes ordering of the vector data so should be used with caution.
-		std::swap(data[index], data.back());
+		std::swap(data[index], data[data.size() - 1]);//TODO data.back());
 		data.pop_back();
 	}
 
@@ -42,7 +44,7 @@ namespace lvk
 
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// vector element correspondence of unprocessed elements.
-		for(auto k = keep.size() - 1; k >= 0; k--)
+		for(int k = keep.size() - 1; k >= 0; k--)
 			if(!keep[k])
 			{
 				fast_erase(data_1, k);
