@@ -1,6 +1,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "../Diagnostics/Assert.hpp"
+
 namespace lvk
 {
 

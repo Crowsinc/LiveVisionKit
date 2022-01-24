@@ -33,16 +33,33 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value)
+	bool obs_frame_initialised(const obs_source_frame& frame)
 	{
-		LVK_ASSERT(dst.data[plane] != nullptr, "Dst data is nullptr.");
+		return frame.data[0] != nullptr
+			&& frame.width > 0
+			&& frame.height > 0
+			&& frame.linesize[0] >= frame.width
+			&& frame.format != VIDEO_FORMAT_NONE;
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	void fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value)
+	{
+		LVK_ASSERT(plane < MAX_AV_PLANES);
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.data[plane] != nullptr);
+
 		std::memset(dst.data[plane], value, dst.width * dst.height);
 	}
 
 	//-------------------------------------------------------------------------------------
 
-	inline void merge_planes(const cv::UMat& p1, const cv::UMat& p2, const cv::UMat& p3, cv::UMat& dst)
+	void merge_planes(const cv::UMat& p1, const cv::UMat& p2, const cv::UMat& p3, cv::UMat& dst)
 	{
+		LVK_ASSERT(p1.type() == CV_8UC1 && p2.type() == CV_8UC1 && p3.type() == CV_8UC1);
+		LVK_ASSERT(!p1.empty() && !p2.empty() && !p3.empty());
+
 		thread_local std::vector<cv::UMat> planes(3);
 
 		planes[0] = p1;
@@ -54,8 +71,11 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void merge_planes(const cv::UMat& p1, const cv::UMat& p2, cv::UMat& dst)
+	void merge_planes(const cv::UMat& p1, const cv::UMat& p2, cv::UMat& dst)
 	{
+		LVK_ASSERT(p1.type() == CV_8UC1 && p2.type() == CV_8UC1);
+		LVK_ASSERT(!p1.empty() && !p2.empty());
+
 		thread_local std::vector<cv::UMat> planes(2);
 
 		planes[0] = p1;
@@ -66,8 +86,10 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3)
+	void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3)
 	{
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+
 		thread_local std::vector<cv::UMat> planes(3);
 
 		cv::split(src, planes);
@@ -79,8 +101,10 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2)
+	void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2)
 	{
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC2);
+
 		thread_local std::vector<cv::UMat> planes(2);
 
 		cv::split(src, planes);
@@ -91,9 +115,12 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void import_data(uint8_t* src, cv::UMat& dst, const uint32_t width, const uint32_t height, const uint32_t line_size, const uint32_t components)
+	void import_data(uint8_t* src, cv::UMat& dst, const uint32_t width, const uint32_t height, const uint32_t line_size, const uint32_t components)
 	{
-		LVK_ASSERT(src != nullptr, "Src is nullptr.");
+		LVK_ASSERT(src != nullptr);
+		LVK_ASSERT(width > 0 && height > 0);
+		LVK_ASSERT(components > 0 && components <= 4);
+		LVK_ASSERT(line_size >= width * components);
 
 		// NOTE: This is what ultimately uploads OBS plane data to the GPU/CPU UMats
 		// and is the bottleneck of the ingest operation. OBS frame planes are actually
@@ -107,9 +134,9 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void export_data(const cv::UMat& src, uint8_t* dst)
+	void export_data(const cv::UMat& src, uint8_t* dst)
 	{
-		LVK_ASSERT(src != nullptr, "Dst is nullptr.");
+		LVK_ASSERT(!src.empty() && dst != nullptr);
 
 		// Wrap the destination data in a Mat header and perform the download using an optimised OpenCV copy.
 		// This assumes that the destination is large enough to actually hold all the src data.
@@ -118,8 +145,13 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void import_plane(const obs_source_frame& src, cv::UMat& dst, const uint32_t plane, const float width_scaling, const float height_scaling,  const uint32_t components)
+	void import_plane(const obs_source_frame& src, cv::UMat& dst, const uint32_t plane, const float width_scaling, const float height_scaling, const uint32_t components)
 	{
+		LVK_ASSERT(plane < MAX_AV_PLANES);
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(width_scaling * src.width > 0.0 && width_scaling * src.width <= src.width);
+		LVK_ASSERT(height_scaling * src.height > 0.0 && height_scaling * src.height <= src.height);
+
 		import_data(
 			src.data[plane],
 			dst,
@@ -132,8 +164,12 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	inline void export_plane(const cv::UMat& src, obs_source_frame& dst, const uint32_t plane)
+	void export_plane(const cv::UMat& src, obs_source_frame& dst, const uint32_t plane)
 	{
+		LVK_ASSERT(!src.empty());
+		LVK_ASSERT(plane < MAX_AV_PLANES);
+		LVK_ASSERT(obs_frame_initialised(dst));
+
 		export_data(src, dst.data[plane]);
 		dst.linesize[plane] = src.step;
 	}
@@ -142,6 +178,9 @@ namespace lvk
 
 	void import_planar_4xx(const obs_source_frame& src, cv::UMat& dst, const bool subsampled_width, const bool subsampled_height)
 	{
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr && src.data[2] != nullptr);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_u(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -177,6 +216,9 @@ namespace lvk
 
 	void import_semi_planar_nv12(const obs_source_frame& src, cv::UMat& dst)
 	{
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -203,6 +245,10 @@ namespace lvk
 
 	void import_packed_422(const obs_source_frame& src, cv::UMat& dst, const bool y_first, const bool u_first)
 	{
+		LVK_ASSERT(!(y_first == false && u_first == false));
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// Packed 422 contains interleaved sets of YU and YV for every two pixels. It is equivalent to
@@ -224,6 +270,10 @@ namespace lvk
 
 	void import_packed_direct_stepped(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
 	{
+		LVK_ASSERT(components > 0 && components <= 4);
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr);
+
 		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
@@ -246,6 +296,10 @@ namespace lvk
 
 	void import_packed_direct(const obs_source_frame& src, cv::UMat& dst, const uint32_t components, const cv::ColorConversionCodes conversion)
 	{
+		LVK_ASSERT(components > 0 && components <= 4);
+		LVK_ASSERT(obs_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// Simple packed uncompressed formats like RGBA don't need to be processed, hence
@@ -267,7 +321,8 @@ namespace lvk
 
 	bool import_frame(const obs_source_frame* src, cv::UMat& dst)
 	{
-		LVK_ASSERT(src != nullptr, "OBS frame is nullptr.");
+		LVK_ASSERT(src != nullptr);
+		LVK_ASSERT(obs_frame_initialised(*src));
 
 		const auto& frame = *src;
 
@@ -330,6 +385,11 @@ namespace lvk
 
 	void export_planar_4xx(const cv::UMat& src, obs_source_frame& dst, const bool subsample_width, const bool subsample_height)
 	{
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr && dst.data[2] != nullptr);
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_u(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -365,6 +425,11 @@ namespace lvk
 
 	void export_semi_planar_nv12(const cv::UMat& src, obs_source_frame& dst)
 	{
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr);
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -390,6 +455,11 @@ namespace lvk
 
 	void export_packed_422(const cv::UMat& src, obs_source_frame& dst, const bool y_first, const bool u_first)
 	{
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+		LVK_ASSERT(dst.data[0] != nullptr);
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -426,6 +496,11 @@ namespace lvk
 
 	void export_packed_direct_stepped(const cv::UMat& src, obs_source_frame& dst, const cv::ColorConversionCodes conversion_1, const cv::ColorConversionCodes conversion_2)
 	{
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(dst.data[0] != nullptr);
+		LVK_ASSERT(!src.empty());
+
 		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
@@ -441,6 +516,11 @@ namespace lvk
 
 	void export_packed_direct(const cv::UMat& src, obs_source_frame& dst, const cv::ColorConversionCodes conversion)
 	{
+		LVK_ASSERT(obs_frame_initialised(dst));
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(dst.data[0] != nullptr);
+		LVK_ASSERT(!src.empty());
+
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// For a simple uncompressed format we just need to perform the color
@@ -454,10 +534,10 @@ namespace lvk
 
 	void export_frame(const cv::UMat& src, obs_source_frame* dst)
 	{
-		LVK_ASSERT(dst != nullptr && dst->data != nullptr && dst->linesize[0] > 0, "OBS frame is not initialised.");
-		LVK_ASSERT(src.channels() == 3 && src.type == CV_8UC3, "Src must be CV_8UC3 and YUV.");
-		LVK_ASSERT_FMT(dst->width >= src.cols || dst->height >= src.rows,
-				"Dst is %dx%d, must be at least %dx%d to fit Src.", dst->width, dst->height, src.cols, src.rows);
+		LVK_ASSERT(dst != nullptr);
+		LVK_ASSERT(obs_frame_initialised(*dst));
+		LVK_ASSERT(dst->width >= (uint32_t)src.cols && dst->height >= (uint32_t)src.rows);
+		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
 
 		auto& frame = *dst;
 

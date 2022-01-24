@@ -1,6 +1,8 @@
 
 #include <stdint.h>
 
+#include "../Diagnostics/Assert.hpp"
+
 namespace lvk
 {
 	//-------------------------------------------------------------------------------------
@@ -11,6 +13,8 @@ namespace lvk
 		  m_EndIndex(0),
 		  m_WindowSize(window_size)
 	{
+		LVK_ASSERT(window_size > 0);
+
 		resize(window_size);
 		clear();
 	}
@@ -75,6 +79,8 @@ namespace lvk
 	template<typename T>
 	void SlidingBuffer<T>::resize(const uint32_t window_size)
 	{
+		LVK_ASSERT(window_size > 0);
+
 		if(window_size == m_WindowSize)
 			return;
 
@@ -109,6 +115,7 @@ namespace lvk
 	template<typename K>
 	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
+		LVK_ASSERT(!this->empty() && !kernel.empty());
 
 		// NOTE: The kernel and sliding window is always centre alligned.
 		// If either sizing is even, it is alligned with the lower centre index.
@@ -134,7 +141,8 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::at(const uint32_t index)
 	{
-		//TODO: assert if index > WindowSize
+		LVK_ASSERT(index < this->elements());
+
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
 
@@ -151,7 +159,8 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::at(const uint32_t index) const
 	{
-		//TODO: assert if index > WindowSize
+		LVK_ASSERT(index < this->elements());
+
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
 
@@ -169,6 +178,8 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::centre() const
 	{
+		LVK_ASSERT(!this->empty());
+
 		// NOTE: Gets lower centre for even sizing.
 		// Use at() method to automatically handle wrapping.
 		return at(centre_index());
@@ -179,6 +190,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::oldest() const
 	{
+		LVK_ASSERT(!this->empty());
 		return m_InternalBuffer[m_StartIndex];
 	}
 
@@ -187,6 +199,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::newest() const
 	{
+		LVK_ASSERT(!this->empty());
 		return m_InternalBuffer[m_EndIndex];
 	}
 
@@ -195,6 +208,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::centre()
 	{
+		LVK_ASSERT(!this->empty());
 		// NOTE: Gets lower centre for even sizing.
 		// Use at() method to automatically handle wrapping.
 		return at(centre_index());
@@ -205,6 +219,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::oldest()
 	{
+		LVK_ASSERT(!this->empty());
 		return m_InternalBuffer[m_StartIndex];
 	}
 
@@ -213,6 +228,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::newest()
 	{
+		LVK_ASSERT(!this->empty());
 		return m_InternalBuffer[m_EndIndex];
 	}
 
@@ -253,7 +269,7 @@ namespace lvk
 	template<typename T>
 	uint32_t SlidingBuffer<T>::centre_index() const
 	{
-		//TODO: assert non empty
+		LVK_ASSERT(!this->empty());
 
 		// NOTE: Gets lower centre index for even sizing.
 		// NOTE: This is an external 0-N index not an internal

@@ -18,16 +18,11 @@ namespace lvk
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_CumulativeTransform(Transform::Identity())
 	{
-		LVK_ASSERT_FMT(properties.max_trackers > 0,
-				"Maximum trackers is set to %d, must be > 0.", properties.max_trackers);
-		LVK_ASSERT_FMT(properties.min_tracker_distance > 0,
-				"Minimum tracker distance is set to %d, must be > 0.", properties.min_tracker_distance);
-		LVK_ASSERT_FMT(properties.tracker_quality > 0 && properties.tracker_quality <= 1.0,
-				"Tracker quality is set to %f, must be 0 to 1.", properties.tracker_quality);
-		LVK_ASSERT_FMT(properties.match_proportion > 0 && properties.match_proportion <= 1.0,
-				"Match proportion is set to %f, must be 0 to 1.", properties.match_proportion);
-		LVK_ASSERT_FMT(properties.resolution.width > 0 && properties.resolution.height > 0,
-				"Resolution is %dx%d, must be at least 1x1 ", properties.resolution.width, properties.resolution.height);
+		LVK_ASSERT(properties.max_trackers > 0);
+		LVK_ASSERT(properties.min_tracker_distance > 0);
+		LVK_ASSERT(properties.tracker_quality > 0.0 && properties.tracker_quality <= 1.0);
+		LVK_ASSERT(properties.resolution.width > 0 && properties.resolution.height > 0);
+		LVK_ASSERT(properties.match_proportion * properties.max_trackers >= 3 && properties.match_proportion <= 1.0);
 
 		reset();
 
@@ -39,8 +34,7 @@ namespace lvk
 
 	Transform FrameTracker::track(const cv::UMat& next_frame)
 	{
-		LVK_ASSERT_FMT(next_frame.channels() == 1, "Frame has %d channels, must have 1.", next_frame.channels());
-		LVK_ASSERT(next_frame.type() == CV_8UC1, "Frame must be CV_8UC1");
+		LVK_ASSERT(next_frame.type() == CV_8UC1);
 
 		import_next(next_frame);
 
@@ -122,6 +116,8 @@ namespace lvk
 
 	void FrameTracker::import_next(const cv::UMat& frame)
 	{
+		LVK_ASSERT(frame.type() == CV_8UC1);
+
 		// The internal frame is made smaller to speed up computations and lightly sharpened
 		// to remove blurriness and increase the number of detected tracking points later.
 		//
@@ -130,13 +126,13 @@ namespace lvk
 		cv::resize(frame, m_NextFrame, m_Properties.resolution, 0, 0, cv::INTER_NEAREST);
 		m_FrameCount++;
 
-		const cv::Mat light_sharpening_kernel({3,3}, {
+		const cv::Mat sharpening_kernel({3,3}, {
 				 0.0f, -0.5f, 0.0f,
 				-0.5f, 3.0f, -0.5f,
 				 0.0f, -0.5f, 0.0f
 		});
 
-		cv::filter2D(m_NextFrame, m_NextFrame, -1, light_sharpening_kernel);
+		cv::filter2D(m_NextFrame, m_NextFrame, -1, sharpening_kernel);
 	}
 
 	//-------------------------------------------------------------------------------------

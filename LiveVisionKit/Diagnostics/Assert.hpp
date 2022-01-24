@@ -1,29 +1,17 @@
 #pragma once
 
+#include <obs/obs.h>
 
 //#define DISABLE_ASSERTS
 
 #ifndef DISABLE_ASSERTS
 
-#define LVK_ASSERT_FMT(assertion, format, ...) lvk::_assert(assertion, __FILE__, __func__, format, __VA_ARGS__)
-
-#define LVK_ASSERT(assertion, format) lvk::_assert(assertion, __FILE__, __func__, format)
+#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("\e[1;31m" "LVK@" __FILE__ "@%s(..) FAILED " #assertion "\n \e[0m" , __func__);}
 
 #else
 
-#define LVK_ASSERT_FMT(assertion, format, ...)
-
-#define LVK_ASSERT(assertion, format)
+#define LVK_ASSERT(assertion)
 
 #endif
 
 
-namespace lvk
-{
-
-	template<typename... T>
-	void _assert(const bool condition, const char* file, const char* func, const char* format, T... vars);
-
-}
-
-#include "Assert.tpp"
