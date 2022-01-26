@@ -36,6 +36,7 @@ static void on_vs_configure(void* data, obs_data_t* settings)
 
 static void on_vs_deactivate(void* data, obs_source_t* context)
 {
+	blog(LOG_INFO, "Removing");
 	static_cast<lvk::VSFilter*>(data)->reset();
 }
 
@@ -82,7 +83,7 @@ extern void register_vs_source()
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
 	config.update = on_vs_configure;
-	config.filter_remove = on_vs_deactivate;
+//	config.filter_remove = on_vs_deactivate;
 	config.filter_video = on_vs_async_filter;
 	config.get_name = vs_filter_name;
 	config.get_properties = vs_filter_properties;

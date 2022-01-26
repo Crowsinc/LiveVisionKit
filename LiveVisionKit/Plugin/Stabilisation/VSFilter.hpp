@@ -54,7 +54,6 @@ namespace lvk
 		obs_source_t* m_Context;
 		uint32_t m_SmoothingRadius;
 		float m_EdgeCropProportion;
-		bool m_RemakeBuffers;
 		bool m_TestMode;
 
 		SlidingBuffer<double> m_Filter;

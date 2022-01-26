@@ -38,10 +38,9 @@ namespace lvk
 	obs_properties_t* FSRFilter::Properties()
 	{
 		obs_properties_t* properties = obs_properties_create();
-		obs_property_t* property;
 
 		// Output resolution list
-		property = obs_properties_add_list(
+		auto property = obs_properties_add_list(
 				properties,
 				PROP_OUTPUT_SIZE,
 				"Output Size",

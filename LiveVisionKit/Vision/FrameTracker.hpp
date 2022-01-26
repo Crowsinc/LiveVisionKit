@@ -16,7 +16,7 @@ namespace lvk
 			// The maximum amount of tracking points to use per frame.
 			// A higher amount usually leads more robust tracking at the
 			// cost of computational performance.
-			uint32_t max_trackers = 400;
+			uint32_t max_trackers = 500;
 
 			// The minimum allowable distance between each tracking point.
 			// A lower amount leads to an increase in discovered tracking

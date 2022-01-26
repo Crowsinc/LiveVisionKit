@@ -20,6 +20,10 @@ namespace lvk
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
 	static constexpr auto SMOOTHING_RADIUS_MAX = 30;
 
+	static constexpr auto PROP_FRAME_DELAY_INFO = "FRAME_DELAY_INFO";
+	static constexpr auto FRAME_DELAY_INFO_MIN = 0;
+	static constexpr auto FRAME_DELAY_INFO_MAX = 10000;
+
 	static constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	static constexpr auto CROP_PERCENTAGE_DEFAULT = 5;
 	static constexpr auto CROP_PERCENTAGE_MIN = 1;
@@ -39,7 +43,6 @@ namespace lvk
 		obs_properties_t* properties = obs_properties_create();
 
 		// Slider for window radius.
-		// Capped at 30 to avoid people using insanely high delays
 		auto property = obs_properties_add_int(
 				properties,
 				PROP_SMOOTHING_RADIUS,
@@ -48,6 +51,17 @@ namespace lvk
 				SMOOTHING_RADIUS_MAX,
 				2
 		);
+
+		property = obs_properties_add_int(
+				properties,
+				PROP_FRAME_DELAY_INFO,
+				"Frame Delay",
+				FRAME_DELAY_INFO_MIN,
+				FRAME_DELAY_INFO_MAX,
+				1
+		);
+		obs_property_int_set_suffix(property, "ms");
+		obs_property_set_enabled(property, false);
 
 		// Slider for total proportion of allowable crop along each dimension.
 		// The amount of pixels to crop at each edge is: dimension * (crop/2/100)
@@ -63,7 +77,7 @@ namespace lvk
 
 
 		// Toggle for test mode, used to help configure settings.
-		obs_properties_add_bool(
+		property = obs_properties_add_bool(
 				properties,
 				PROP_TEST_MODE,
 				"Test Mode"
@@ -105,7 +119,6 @@ namespace lvk
 		: m_Context(context),
 		  m_SmoothingRadius(0),
 		  m_EdgeCropProportion(0),
-		  m_RemakeBuffers(true),
 		  m_TestMode(false),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -127,7 +140,17 @@ namespace lvk
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 
 		if(m_SmoothingRadius != new_radius)
+		{
 			prepare_buffers(new_radius);
+
+			// Update frame delay
+			obs_video_info video_info;
+			obs_get_video_info(&video_info);
+
+			const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
+			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
+			obs_source_update_properties(m_Context);
+		}
 
 		// Crop proportion is shared by opposite edges, so we also divide by 2
 		m_EdgeCropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 200.0f;
@@ -254,6 +277,7 @@ namespace lvk
 		const uint32_t queue_size = smoothing_radius + 2;
 		const uint32_t window_size = 2 * smoothing_radius + 1;
 
+		//TODO: causes memory leak if smaller then before, because frames are dropped!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		m_FrameQueue.resize(queue_size);
 		m_Trajectory.resize(window_size);
 		m_Filter.resize(window_size);
@@ -269,8 +293,6 @@ namespace lvk
 
 		// Enforces synchronisation.
 		reset_buffers();
-
-		m_RemakeBuffers = false;
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -288,9 +310,9 @@ namespace lvk
 		LVK_ASSERT(m_Trajectory.window_size() > m_FrameQueue.window_size());
 
 		// Need to release all the OBS frames to prevent memory leaks
-//		obs_source_t* parent = obs_filter_get_parent(m_Context);
-//		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
-//			obs_source_release_frame(parent, m_FrameQueue[i].output);
+		obs_source_t* parent = obs_filter_get_parent(m_Context);
+		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
+			obs_source_release_frame(parent, m_FrameQueue[i].output);
 
 		m_FrameQueue.clear();
 		m_Trajectory.clear();
@@ -300,9 +322,9 @@ namespace lvk
 		// The frame tracker always gives the vector from the previous to current
 		// frame, while we want the vector from the current to the next frame instead.
 		// So lag the tracjectory by one.
-		const uint32_t sync_offset = m_Trajectory.window_size() - m_FrameQueue.window_size();
-		for(uint32_t i = 0; i < sync_offset; i++)
-			m_Trajectory.advance(Transform::Identity());
+		m_Trajectory.advance(Transform::Identity());
+		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
+			m_Trajectory.advance(m_Trajectory.newest() + Transform::Identity());
 
 	}
 

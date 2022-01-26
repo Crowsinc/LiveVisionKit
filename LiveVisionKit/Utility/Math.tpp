@@ -46,14 +46,12 @@ namespace lvk
 	bool intersects(const cv::Point_<T> l1, const cv::Point_<T> l2, const cv::Rect_<T>& rect)
 	{
 		// Checks if the infinite line l1 to l2 intersects the given rect
-
 		const auto tl = rect.tl();
 		const auto br = rect.br();
 		const cv::Point_<T> tr(br.x, tl.y);
 		const cv::Point_<T> bl(tl.x, br.y);
 
 		// The l1-l2 intersects the rect if any vertices are on opposite sides of the line
-
 		const auto s1 = sign_2d(tl, l1, l2);
 		const auto s2 = sign_2d(bl, l1, l2);
 		const auto s3 = sign_2d(br, l1, l2);
@@ -115,6 +113,7 @@ namespace lvk
 		// point enclosure check. It requires significantly less computations but
 		// introduces mathematical complexity which is likely unnecessary.
 
+		//TODO: remake properly using ^^
 
 		const cv::Point2d tl = rect.tl();
 		const cv::Point2d br = rect.br();
@@ -163,7 +162,6 @@ namespace lvk
 							&& sign_2d(aabb_bl, rect_tr, rect_br) <= 0
 							&& sign_2d(aabb_bl, rect_br, rect_bl) <= 0
 							&& sign_2d(aabb_bl, rect_bl, rect_tl) <= 0;
-
 
 		return all_left || all_right;
 	}
