@@ -70,11 +70,11 @@ namespace lvk
 
 		cv::Rect find_crop_region(const cv::UMat& frame);
 
-		Transform respect_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region);
+		Transform enclose_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region);
 
 		cv::UMat draw_test_mode(cv::UMat& frame, const cv::Rect& crop, const uint64_t frame_time_ns);
 
-		void prepare_buffers();
+		void prepare_buffers(const uint32_t smoothing_radius);
 
 		void reset_buffers();
 
@@ -82,7 +82,6 @@ namespace lvk
 
 		bool validate() const;
 
-		Transform filter(SlidingBuffer<FrameVector>& motions) const;
 	};
 
 }

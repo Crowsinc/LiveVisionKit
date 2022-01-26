@@ -16,7 +16,7 @@ namespace lvk
 	static const FrameTracker::Properties TRACKING_PROPERTIES = {/* Use defaults */};
 
 	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
-	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 30; //14
+	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 14;
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
 	static constexpr auto SMOOTHING_RADIUS_MAX = 30;
 
@@ -32,16 +32,18 @@ namespace lvk
 	//		FILTER IMPLEMENTATION
 	//===================================================================================
 
+
+
 	obs_properties_t* VSFilter::Properties()
 	{
 		obs_properties_t* properties = obs_properties_create();
 
 		// Slider for window radius.
 		// Capped at 30 to avoid people using insanely high delays
-		obs_properties_add_int(
+		auto property = obs_properties_add_int(
 				properties,
 				PROP_SMOOTHING_RADIUS,
-				"Smoothing Radius (Frame Delay)",
+				"Smoothing Radius",
 				SMOOTHING_RADIUS_MIN,
 				SMOOTHING_RADIUS_MAX,
 				2
@@ -49,7 +51,7 @@ namespace lvk
 
 		// Slider for total proportion of allowable crop along each dimension.
 		// The amount of pixels to crop at each edge is: dimension * (crop/2/100)
-		auto property = obs_properties_add_int_slider(
+		property = obs_properties_add_int_slider(
 				properties,
 				PROP_CROP_PERCENTAGE,
 				"Crop Percentage",
@@ -58,6 +60,7 @@ namespace lvk
 				1
 		);
 		obs_property_int_set_suffix(property, "%");
+
 
 		// Toggle for test mode, used to help configure settings.
 		obs_properties_add_bool(
@@ -124,10 +127,7 @@ namespace lvk
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 
 		if(m_SmoothingRadius != new_radius)
-		{
-			m_SmoothingRadius = new_radius;
-			m_RemakeBuffers = true;
-		}
+			prepare_buffers(new_radius);
 
 		// Crop proportion is shared by opposite edges, so we also divide by 2
 		m_EdgeCropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 200.0f;
@@ -139,9 +139,6 @@ namespace lvk
 
 	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
 	{
-		if(m_RemakeBuffers)
-			prepare_buffers();
-
 		const uint64_t start_time = os_gettime_ns();
 
 		auto& buffer = m_FrameQueue.advance();
@@ -149,8 +146,9 @@ namespace lvk
 		buffer.output = obs_frame;
 
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
+
 		auto& motion = m_Trajectory.advance();
-		motion.velocity = m_FrameTracker.track(m_TrackingFrame) - Transform::Identity();
+		motion.velocity = m_FrameTracker.track(m_TrackingFrame);
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
 
 		if(stabilisation_ready())
@@ -160,8 +158,9 @@ namespace lvk
 
 			const auto crop_region = find_crop_region(frame);
 
-			const auto path_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
-			const auto smooth_warp = velocity + path_correction + Transform::Identity();
+			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
+			const auto smooth_warp = velocity + correction;
+
 //			const auto cropped_warp = respect_crop(frame, smooth_warp, crop_region);
 			const auto cropped_warp = smooth_warp;
 
@@ -198,7 +197,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	Transform VSFilter::respect_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region)
+	Transform VSFilter::enclose_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region)
 	{
 		// Reduce the magnitude of the transform until the crop region is
 		// fully enclosed within the warped frame. We reduce the magnitude
@@ -227,22 +226,23 @@ namespace lvk
 	{
 		const double frame_time_ms = frame_time_ns * 1.0e-6;
 
-		const cv::Scalar rect_color_yuv(105, 212, 234);
-		const cv::Scalar text_color_yuv(76, 84, 255);
+		//TODO: switch to C++20 fmt as soon as GCC supports it.
+		std::stringstream text;
+		text << std::fixed << std::setprecision(2);
+		text << frame_time_ms << "ms";
 
-		cv::rectangle(frame, crop, rect_color_yuv, 2);
-
-		const std::string frame_time_text = std::to_string(frame_time_ms) + "ms";
-		cv::putText(frame, frame_time_text, cv::Point(10, 40), cv::FONT_HERSHEY_COMPLEX_SMALL, 2, text_color_yuv, 2);
+		const cv::Scalar magenta_yuv(105, 212, 234);
+		cv::rectangle(frame, crop, magenta_yuv, 2);
+		cv::putText(frame, text.str(), crop.tl() + cv::Point(5, 40), cv::FONT_HERSHEY_DUPLEX, 1.5, magenta_yuv, 2);
 
 		return frame;
 	}
 
 	//-------------------------------------------------------------------------------------
 
-	void VSFilter::prepare_buffers()
+	void VSFilter::prepare_buffers(const uint32_t smoothing_radius)
 	{
-		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN && m_SmoothingRadius % 2 == 0);
+		LVK_ASSERT(smoothing_radius >= SMOOTHING_RADIUS_MIN && smoothing_radius % 2 == 0);
 
 		// NOTE: Stabalisation is achieved by applying a windowed low pass filter
 		// to the frame/camera's path to remove high frequency 'shaking'. Effective
@@ -251,8 +251,9 @@ namespace lvk
 		// via half-sized sliding buffers. Such that the oldest element corresponds
 		// with the centre element in the full sized path buffer.
 
-		const uint32_t queue_size = m_SmoothingRadius + 2;
-		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
+		m_SmoothingRadius = smoothing_radius;
+		const uint32_t queue_size = smoothing_radius + 2;
+		const uint32_t window_size = 2 * smoothing_radius + 1;
 
 		m_FrameQueue.resize(queue_size);
 		m_Trajectory.resize(window_size);
@@ -261,9 +262,11 @@ namespace lvk
 		// We use a low pass Gaussian filter because it has both decent time domain
 		// and frequency domain performance. Unlike an average or windowed sinc filter.
 		// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
-		const auto gaussian_pdf = cv::getGaussianKernel(window_size, window_size/6.0);
+		const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size/6.0);
+
+		m_Filter.clear();
 		for(uint32_t i = 0; i < window_size; i++)
-			m_Filter.push(gaussian_pdf.at<double>(i));
+			m_Filter.push(gaussian_kernel.at<double>(i));
 
 		// Enforces synchronisation.
 		reset_buffers();
@@ -286,9 +289,9 @@ namespace lvk
 		LVK_ASSERT(m_Trajectory.window_size() > m_FrameQueue.window_size());
 
 		// Need to release all the OBS frames to prevent memory leaks
-		obs_source_t* parent = obs_filter_get_parent(m_Context);
-		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
-			obs_source_release_frame(parent, m_FrameQueue[i].output);
+//		obs_source_t* parent = obs_filter_get_parent(m_Context);
+//		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
+//			obs_source_release_frame(parent, m_FrameQueue[i].output);
 
 		m_FrameQueue.clear();
 		m_Trajectory.clear();
@@ -308,8 +311,8 @@ namespace lvk
 
 	bool VSFilter::stabilisation_ready() const
 	{
-		// Check synchronisation
 		LVK_ASSERT(m_Trajectory.full() == m_FrameQueue.full());
+
 		return m_Trajectory.full()
 			&& m_FrameQueue.full();
 	}
