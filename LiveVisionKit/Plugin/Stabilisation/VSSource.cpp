@@ -2,8 +2,6 @@
 #include <obs/obs-source.h>
 #include <obs/obs.h>
 
-#include <util/platform.h>
-
 #include "VSFilter.hpp"
 
 //=====================================================================================
@@ -43,20 +41,6 @@ static void on_vs_deactivate(void* data, obs_source_t* context)
 
 //-------------------------------------------------------------------------------------
 
-static void on_vs_tick(void* data, float seconds)
-{
-	static_cast<lvk::VSFilter*>(data)->tick();
-}
-
-//-------------------------------------------------------------------------------------
-
-static void on_vs_render(void* data, gs_effect_t* _)
-{
-	static_cast<lvk::VSFilter*>(data)->render();
-}
-
-//-------------------------------------------------------------------------------------
-
 static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
 {
 	return static_cast<lvk::VSFilter*>(data)->process(frame);
@@ -80,20 +64,6 @@ static void vs_filter_default_settings(obs_data_t* settings)
 
 //-------------------------------------------------------------------------------------
 
-static uint32_t vs_output_width(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->width();
-}
-
-//-------------------------------------------------------------------------------------
-
-static uint32_t vs_output_height(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->height();
-}
-
-//-------------------------------------------------------------------------------------
-
 static const char* vs_filter_name(void* _)
 {
 	return "(LVK) Video Stabiliser";
@@ -103,23 +73,18 @@ static const char* vs_filter_name(void* _)
 //		PLUGIN REGISTRATION
 //=====================================================================================
 
-
 extern void register_vs_source()
 {
-	obs_source_info config;
+	obs_source_info config = {0};
 	config.id = "LVK~VS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
 	config.update = on_vs_configure;
 	config.filter_remove = on_vs_deactivate;
-	config.video_tick = on_vs_tick;
-	config.video_render = on_vs_render;
 	config.filter_video = on_vs_async_filter;
 	config.get_name = vs_filter_name;
-	config.get_width = vs_output_width;
-	config.get_height = vs_output_height;
 	config.get_properties = vs_filter_properties;
 	config.get_defaults = vs_filter_default_settings;
 

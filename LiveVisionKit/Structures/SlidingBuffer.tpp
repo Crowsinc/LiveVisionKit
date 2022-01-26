@@ -116,23 +116,11 @@ namespace lvk
 	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
 		LVK_ASSERT(!this->empty() && !kernel.empty());
+		LVK_ASSERT(this->elements() == kernel.elements());
 
-		// NOTE: The kernel and sliding window is always centre alligned.
-		// If either sizing is even, it is alligned with the lower centre index.
-		if(elements() > kernel.elements())
-		{
-			// Window is bigger than kernel, so allign kernel to window.
-			const auto centre_offset = centre_index() - kernel.centre_index();
-			for(uint32_t i = 0; i < kernel.elements(); i++)
-				initial += this->at(i + centre_offset) * kernel.at(i);
-		}
-		else
-		{
-			// Kernel is bigger (or equal) to window, so allign window to kernel
-			const auto centre_offset = kernel.centre_index() - centre_index();
-			for(uint32_t i = 0; i < elements(); i++)
-				initial += this->at(i) * kernel.at(i + centre_offset);
-		}
+		for(uint32_t i = 0; i < elements(); i++)
+			initial = initial + this->at(i) * kernel.at(i);
+
 		return initial;
 	}
 
@@ -172,7 +160,6 @@ namespace lvk
 		return at(index);
 	}
 
-
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
@@ -206,6 +193,15 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
+	const T& SlidingBuffer<T>::previous() const
+	{
+		LVK_ASSERT(this->elements() > 1);
+		return this->at(this->elements() - 2);
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
 	T& SlidingBuffer<T>::centre()
 	{
 		LVK_ASSERT(!this->empty());
@@ -220,6 +216,7 @@ namespace lvk
 	T& SlidingBuffer<T>::oldest()
 	{
 		LVK_ASSERT(!this->empty());
+
 		return m_InternalBuffer[m_StartIndex];
 	}
 
@@ -230,6 +227,15 @@ namespace lvk
 	{
 		LVK_ASSERT(!this->empty());
 		return m_InternalBuffer[m_EndIndex];
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
+	T& SlidingBuffer<T>::previous()
+	{
+		LVK_ASSERT(this->elements() > 1);
+		return this->at(this->elements() - 2);
 	}
 
 	//-------------------------------------------------------------------------------------

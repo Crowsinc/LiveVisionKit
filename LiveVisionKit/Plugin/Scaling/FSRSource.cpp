@@ -89,7 +89,7 @@ static const char* fsr_filter_name(void* _)
 
 extern void register_fsr_source()
 {
-	obs_source_info config = {};
+	obs_source_info config = {0};
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;

@@ -15,8 +15,7 @@ namespace lvk
 		: m_Properties(properties),
 		  m_MatchThreshold(properties.max_trackers * properties.match_proportion),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_CumulativeTransform(Transform::Identity())
+		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{
 		LVK_ASSERT(properties.max_trackers > 0);
 		LVK_ASSERT(properties.min_tracker_distance > 0);
@@ -34,14 +33,13 @@ namespace lvk
 
 	Transform FrameTracker::track(const cv::UMat& next_frame)
 	{
-		LVK_ASSERT(next_frame.type() == CV_8UC1);
+		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
 		import_next(next_frame);
 
 		// Can't track until we have imported at least 2 frames
 		if(frames_tracked() < 2)
 		{
-			// Round-robin the buffers so we can re-use the internal frame we just imported.
 			std::swap(m_PrevFrame, m_NextFrame);
 			return Transform::Identity();
 		}
@@ -61,7 +59,10 @@ namespace lvk
 
 		// Return identity transform if we don't have enough trackers
 		if(m_TrackPoints.size() < m_MatchThreshold)
+		{
+			std::swap(m_PrevFrame, m_NextFrame);
 			return Transform::Identity();
+		}
 
 		// Match tracking points in next frame
 		cv::calcOpticalFlowPyrLK(
@@ -72,6 +73,7 @@ namespace lvk
 				m_MatchStatus,
 				cv::noArray()
 		);
+
 
 		// Round-robin the buffers so we can re-use the internal frame we just imported.
 		std::swap(m_PrevFrame, m_NextFrame);
@@ -102,14 +104,7 @@ namespace lvk
 		if(affine_estimate.empty())
 			return Transform::Identity();
 
-		const auto estimated_transform = Transform::FromAffine2D(affine_estimate);
-
-		m_CumulativeTransform += estimated_transform;
-
-		// Only add the change in scale, relative to 1.0
-		m_CumulativeTransform.scale -= 1.0;
-
-		return estimated_transform;
+		return Transform::FromAffine2D(affine_estimate);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -140,14 +135,6 @@ namespace lvk
 	void FrameTracker::reset()
 	{
 		m_FrameCount = 0;
-		m_CumulativeTransform = Transform::Identity();
-	}
-
-	//-------------------------------------------------------------------------------------
-
-	Transform FrameTracker::cumulative() const
-	{
-		return m_CumulativeTransform;
 	}
 
 	//-------------------------------------------------------------------------------------

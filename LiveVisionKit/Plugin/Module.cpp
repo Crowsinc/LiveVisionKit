@@ -36,8 +36,8 @@ bool obs_module_load()
 
 	// Only enable the video stabalisation filter if the user has OpenCL.
 	// It will run without it, but it will run too slow to be real-time.
-	if(cv::ocl::haveOpenCL())
-		register_vs_source();
+//	TODO: if(cv::ocl::haveOpenCL())
+	register_vs_source();
 
 	return true;
 }

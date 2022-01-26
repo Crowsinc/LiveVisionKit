@@ -22,7 +22,7 @@ namespace lvk
 			// A lower amount leads to an increase in discovered tracking
 			// points per frame. But potentially leads to spatial bias in
 			// the tracking.
-			uint32_t min_tracker_distance = 15;
+			uint32_t min_tracker_distance = 20;
 
 			// The quality threshold for tracking points as a percentage
 			// of the highest quality tracker found each track operation.
@@ -46,8 +46,6 @@ namespace lvk
 
 		Transform track(const cv::UMat& next_frame);
 
-		Transform cumulative() const;
-
 		uint64_t frames_tracked() const;
 
 		void reset();
@@ -64,7 +62,6 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackPoints, m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus;
 		cv::UMat m_PrevFrame, m_NextFrame;
-		Transform m_CumulativeTransform;
 		uint64_t m_FrameCount;
 
 		void import_next(const cv::UMat& frame);

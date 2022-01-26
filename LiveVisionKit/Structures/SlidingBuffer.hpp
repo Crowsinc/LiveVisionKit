@@ -35,6 +35,8 @@ namespace lvk
 
 		T& newest();
 
+		T& previous();
+
 		const T& at(const uint32_t index) const;
 
 		const T& operator[](const uint32_t index) const;
@@ -44,6 +46,8 @@ namespace lvk
 		const T& oldest() const;
 
 		const T& newest() const;
+
+		const T& previous() const;
 
 		bool full() const;
 

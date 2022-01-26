@@ -9,7 +9,15 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline int sign(const T value, const T reference)
+	T round_even(const T value)
+	{
+		return std::round(value / 2) * 2;
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	template<typename T>
+	int sign(const T value, const T reference)
 	{
 		// Returns 0 if the value is equal to the reference, -1 if it is on its left, 1 if its on its right
 		return (reference < value) - (value < reference);
@@ -18,7 +26,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline int sign_2d(const cv::Point_<T> p, const cv::Point_<T> l1, const cv::Point_<T> l2)
+	int sign_2d(const cv::Point_<T> p, const cv::Point_<T> l1, const cv::Point_<T> l2)
 	{
 		// Returns 0 if p is on the infinite line l1 to l2, -1 if it is on its left, 1 if its on its right
 		return sign((l1.x - l2.x) * (p.y - l2.y) - (l1.y - l2.y) * (p.x - l2.x));
@@ -27,7 +35,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename V, typename T>
-	inline V lerp(const V from, const V to, const T t)
+	V lerp(const V from, const V to, const T t)
 	{
 		return from + t * (to - from);
 	}
@@ -35,7 +43,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline bool intersects(const cv::Point_<T> l1, const cv::Point_<T> l2, const cv::Rect_<T>& rect)
+	bool intersects(const cv::Point_<T> l1, const cv::Point_<T> l2, const cv::Rect_<T>& rect)
 	{
 		// Checks if the infinite line l1 to l2 intersects the given rect
 
@@ -57,7 +65,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline bool encloses(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2)
+	bool encloses(const cv::Rect_<T>& r1, const cv::Rect_<T>& r2)
 	{
 		// Checks if r1 encloses r2
 
@@ -75,7 +83,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline bool encloses(const cv::Rect_<T>& aabb, const cv::Rect_<T>& rect, const Transform& transform)
+	bool encloses(const cv::Rect_<T>& aabb, const cv::Rect_<T>& rect, const Transform& transform)
 	{
 		// Checks if the AABB encloses the transformed rect
 
@@ -96,7 +104,7 @@ namespace lvk
 	//-------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline bool encloses(const cv::Rect_<T>& rect, const Transform& transform, const cv::Rect_<T>& aabb)
+	bool encloses(const cv::Rect_<T>& rect, const Transform& transform, const cv::Rect_<T>& aabb)
 	{
 		// Checks if the transformed rect encloses the AABB
 

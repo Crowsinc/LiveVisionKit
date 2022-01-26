@@ -8,6 +8,9 @@ namespace lvk
 {
 
 	template<typename T>
+	T round_even(const T value);
+
+	template<typename T>
 	int sign(const T value, const T reference = T());
 
 	template<typename T>
@@ -27,6 +30,7 @@ namespace lvk
 
 	template<typename T>
 	bool encloses(const cv::Rect_<T>& rect, const Transform& transform, const cv::Rect_<T>& aabb);
+
 
 }
 

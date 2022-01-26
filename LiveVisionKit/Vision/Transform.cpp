@@ -14,10 +14,10 @@ namespace lvk
 	{
 		LVK_ASSERT(affine.cols == 3 && affine.rows == 2 && affine.type() == CV_64FC1);
 
-		const auto& tx = affine.at<double>(0, 2);
-		const auto& ty = affine.at<double>(1, 2);
-		const auto& scaled_cos = affine.at<double>(0, 0);
-		const auto& scaled_sin = affine.at<double>(1, 0);
+		const auto tx = affine.at<double>(0, 2);
+		const auto ty = affine.at<double>(1, 2);
+		const auto scaled_cos = affine.at<double>(0, 0);
+		const auto scaled_sin = affine.at<double>(1, 0);
 
 		// Decompose transform from 2x3 affine matrix of rotation, uniform scaling and translation
 		const cv::Point2d translation(tx, ty);
@@ -34,6 +34,15 @@ namespace lvk
 		// Identify transform is just a transform which doesn't do anything.
 		// This function exists to attach an informative name to it.
 		return Transform({0.0, 0.0}, 0.0, 1.0);
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	Transform Transform::Zero()
+	{
+		// Zero transform is just a transform which is all zero-ed.
+		// This function exists to attach an informative name to it.
+		return Transform({0.0, 0.0}, 0.0, 0.0);
 	}
 
 	//-------------------------------------------------------------------------------------
