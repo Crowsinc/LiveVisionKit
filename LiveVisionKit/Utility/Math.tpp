@@ -115,6 +115,7 @@ namespace lvk
 		// point enclosure check. It requires significantly less computations but
 		// introduces mathematical complexity which is likely unnecessary.
 
+
 		const cv::Point2d tl = rect.tl();
 		const cv::Point2d br = rect.br();
 
@@ -128,27 +129,43 @@ namespace lvk
 		const cv::Point2d aabb_tr(aabb_br.x, aabb_tl.y);
 		const cv::Point2d aabb_bl(aabb_tl.x, aabb_br.y);
 
-		// The AABB is enclosed if all of its points fall on the right
-		// of each side of the rect, with lines going in clockwise order.
-		return sign_2d(aabb_tl, rect_tl, rect_tr) >= 0
-			&& sign_2d(aabb_tl, rect_tr, rect_br) >= 0
-			&& sign_2d(aabb_tl, rect_br, rect_bl) >= 0
-			&& sign_2d(aabb_tl, rect_bl, rect_tl) >= 0
+		// The AABB is enclosed if all of its points fall on the side of each edge of the rect.
+		const bool all_right = sign_2d(aabb_tl, rect_tl, rect_tr) >= 0
+							&& sign_2d(aabb_tl, rect_tr, rect_br) >= 0
+							&& sign_2d(aabb_tl, rect_br, rect_bl) >= 0
+							&& sign_2d(aabb_tl, rect_bl, rect_tl) >= 0
+							&& sign_2d(aabb_tr, rect_tl, rect_tr) >= 0
+							&& sign_2d(aabb_tr, rect_tr, rect_br) >= 0
+							&& sign_2d(aabb_tr, rect_br, rect_bl) >= 0
+							&& sign_2d(aabb_tr, rect_bl, rect_tl) >= 0
+							&& sign_2d(aabb_br, rect_tl, rect_tr) >= 0
+							&& sign_2d(aabb_br, rect_tr, rect_br) >= 0
+							&& sign_2d(aabb_br, rect_br, rect_bl) >= 0
+							&& sign_2d(aabb_br, rect_bl, rect_tl) >= 0
+							&& sign_2d(aabb_bl, rect_tl, rect_tr) >= 0
+							&& sign_2d(aabb_bl, rect_tr, rect_br) >= 0
+							&& sign_2d(aabb_bl, rect_br, rect_bl) >= 0
+							&& sign_2d(aabb_bl, rect_bl, rect_tl) >= 0;
 
-			&& sign_2d(aabb_tr, rect_tl, rect_tr) >= 0
-			&& sign_2d(aabb_tr, rect_tr, rect_br) >= 0
-			&& sign_2d(aabb_tr, rect_br, rect_bl) >= 0
-			&& sign_2d(aabb_tr, rect_bl, rect_tl) >= 0
+		const bool all_left  = sign_2d(aabb_tl, rect_tl, rect_tr) <= 0
+							&& sign_2d(aabb_tl, rect_tr, rect_br) <= 0
+							&& sign_2d(aabb_tl, rect_br, rect_bl) <= 0
+							&& sign_2d(aabb_tl, rect_bl, rect_tl) <= 0
+							&& sign_2d(aabb_tr, rect_tl, rect_tr) <= 0
+							&& sign_2d(aabb_tr, rect_tr, rect_br) <= 0
+							&& sign_2d(aabb_tr, rect_br, rect_bl) <= 0
+							&& sign_2d(aabb_tr, rect_bl, rect_tl) <= 0
+							&& sign_2d(aabb_br, rect_tl, rect_tr) <= 0
+							&& sign_2d(aabb_br, rect_tr, rect_br) <= 0
+							&& sign_2d(aabb_br, rect_br, rect_bl) <= 0
+							&& sign_2d(aabb_br, rect_bl, rect_tl) <= 0
+							&& sign_2d(aabb_bl, rect_tl, rect_tr) <= 0
+							&& sign_2d(aabb_bl, rect_tr, rect_br) <= 0
+							&& sign_2d(aabb_bl, rect_br, rect_bl) <= 0
+							&& sign_2d(aabb_bl, rect_bl, rect_tl) <= 0;
 
-			&& sign_2d(aabb_br, rect_tl, rect_tr) >= 0
-			&& sign_2d(aabb_br, rect_tr, rect_br) >= 0
-			&& sign_2d(aabb_br, rect_br, rect_bl) >= 0
-			&& sign_2d(aabb_br, rect_bl, rect_tl) >= 0
 
-			&& sign_2d(aabb_bl, rect_tl, rect_tr) >= 0
-			&& sign_2d(aabb_bl, rect_tr, rect_br) >= 0
-			&& sign_2d(aabb_bl, rect_br, rect_bl) >= 0
-			&& sign_2d(aabb_bl, rect_bl, rect_tl) >= 0;
+		return all_left || all_right;
 	}
 
 }

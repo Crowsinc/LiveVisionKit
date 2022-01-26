@@ -111,6 +111,18 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
+	Transform Transform::flip() const
+	{
+		// Flips transform to work in an inverted-Y coorindate system
+		return Transform(
+			{translation.x, -translation.y},
+			-rotation,
+			scale
+		);
+	}
+
+	//-------------------------------------------------------------------------------------
+
 	cv::Mat Transform::as_matrix() const
 	{
 		const double cos = scale * std::cos(rotation);

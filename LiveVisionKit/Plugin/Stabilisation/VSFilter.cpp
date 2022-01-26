@@ -161,8 +161,7 @@ namespace lvk
 			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
 			const auto smooth_warp = velocity + correction;
 
-//			const auto cropped_warp = respect_crop(frame, smooth_warp, crop_region);
-			const auto cropped_warp = smooth_warp;
+			const auto cropped_warp = enclose_crop(frame, smooth_warp, crop_region);
 
 			cv::warpAffine(frame, m_WarpFrame, cropped_warp.as_matrix(), frame.size());
 
@@ -209,9 +208,9 @@ namespace lvk
 		const auto identity = Transform::Identity();
 		const cv::Rect frame_boundary({0, 0}, frame.size());
 
-		double t = 0.0;
+		double t = step;
 		auto reduced_transform = transform;
-		while(t <= max_t && !encloses(frame_boundary, reduced_transform, crop_region))
+		while(t <= max_t && !encloses(frame_boundary, reduced_transform.flip(), crop_region))
 		{
 			reduced_transform = lerp(transform, identity, t);
 			t += step;
