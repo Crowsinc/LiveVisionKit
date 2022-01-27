@@ -140,17 +140,15 @@ namespace lvk
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 
 		if(m_SmoothingRadius != new_radius)
-		{
 			prepare_buffers(new_radius);
 
-			// Update frame delay
-			obs_video_info video_info;
-			obs_get_video_info(&video_info);
+		// Update frame delay
+		obs_video_info video_info;
+		obs_get_video_info(&video_info);
 
-			const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
-			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
-			obs_source_update_properties(m_Context);
-		}
+		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
+		obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
+		obs_source_update_properties(m_Context);
 
 		// Crop proportion is shared by opposite edges, so we also divide by 2
 		m_EdgeCropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 200.0f;
