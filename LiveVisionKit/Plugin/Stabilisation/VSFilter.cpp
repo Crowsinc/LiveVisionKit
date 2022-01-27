@@ -233,7 +233,7 @@ namespace lvk
 
 		double t = step;
 		auto reduced_transform = transform;
-		while(t <= max_t && !encloses(frame_boundary, reduced_transform.flip(), crop_region))
+		while(t <= max_t && !encloses(frame_boundary, reduced_transform, crop_region))
 		{
 			reduced_transform = lerp(transform, identity, t);
 			t += step;

@@ -88,10 +88,10 @@ namespace lvk
 		const cv::Point2d tl = rect.tl();
 		const cv::Point2d br = rect.br();
 
-		const auto new_tl = transform.apply(tl);
-		const auto new_bl = transform.apply({tl.x, br.y});
-		const auto new_br = transform.apply(br);
-		const auto new_tr = transform.apply({br.x, tl.y});
+		const cv::Point2d new_tl = transform.apply(tl);
+		const cv::Point2d new_bl = transform.apply({tl.x, br.y});
+		const cv::Point2d new_br = transform.apply(br);
+		const cv::Point2d new_tr = transform.apply({br.x, tl.y});
 
 		return aabb.contains(new_tl)
 			&& aabb.contains(new_bl)
@@ -106,64 +106,32 @@ namespace lvk
 	{
 		// Checks if the transformed rect encloses the AABB
 
-		// NOTE: We can speed this up by projecting the the vertices of the AABB
-		// along the normals of the transformed rect. Which brings the AABB to the
-		// local coordinate system of the transformed rect, effectively making the
-		// transformed rect become the AABB instead. We then just do a simple
-		// point enclosure check. It requires significantly less computations but
-		// introduces mathematical complexity which is likely unnecessary.
+		// NOTE: Rect is specified in inverted Y coordinate system, so the top left
+		// point is actually the bottom left point, bottom right is top right etc.
 
-		//TODO: remake properly using ^^
+		// Find the AABB vertices relative to the top left (actually bottom left) corner.
+		// Project the relative vertices of the AABB along the normals of the transformed
+		// rect to bring the AABB to its local coordinate system. Then perform a simple
+		// point enclosure check. We are effectively swapping which rect is the AABB.
 
-		const cv::Point2d tl = rect.tl();
-		const cv::Point2d br = rect.br();
+		const cv::Point2d rect_tl = transform.apply(rect.tl());
+		const cv::Point2d rect_br = transform.apply(rect.br());
+		const cv::Point2d rect_bl = transform.apply({rect.tl().x, rect.br().y});
 
-		const cv::Point2d rect_tl = transform.apply(tl);
-		const cv::Point2d rect_bl = transform.apply({tl.x, br.y});
-		const cv::Point2d rect_br = transform.apply(br);
-		const cv::Point2d rect_tr = transform.apply({br.x, tl.y});
+		const cv::Rect2d local_rect({0.0, 0.0}, cv::Size2d(rect.size()) * transform.scale);
 
-		const cv::Point2d aabb_tl = aabb.tl();
-		const cv::Point2d aabb_br = aabb.br();
-		const cv::Point2d aabb_tr(aabb_br.x, aabb_tl.y);
-		const cv::Point2d aabb_bl(aabb_tl.x, aabb_br.y);
+		const cv::Point2d unit_x = (rect_br - rect_bl) / local_rect.width;
+		const cv::Point2d unit_y = (rect_bl - rect_tl) / local_rect.height;
 
-		// The AABB is enclosed if all of its points fall on the side of each edge of the rect.
-		const bool all_right = sign_2d(aabb_tl, rect_tl, rect_tr) >= 0
-							&& sign_2d(aabb_tl, rect_tr, rect_br) >= 0
-							&& sign_2d(aabb_tl, rect_br, rect_bl) >= 0
-							&& sign_2d(aabb_tl, rect_bl, rect_tl) >= 0
-							&& sign_2d(aabb_tr, rect_tl, rect_tr) >= 0
-							&& sign_2d(aabb_tr, rect_tr, rect_br) >= 0
-							&& sign_2d(aabb_tr, rect_br, rect_bl) >= 0
-							&& sign_2d(aabb_tr, rect_bl, rect_tl) >= 0
-							&& sign_2d(aabb_br, rect_tl, rect_tr) >= 0
-							&& sign_2d(aabb_br, rect_tr, rect_br) >= 0
-							&& sign_2d(aabb_br, rect_br, rect_bl) >= 0
-							&& sign_2d(aabb_br, rect_bl, rect_tl) >= 0
-							&& sign_2d(aabb_bl, rect_tl, rect_tr) >= 0
-							&& sign_2d(aabb_bl, rect_tr, rect_br) >= 0
-							&& sign_2d(aabb_bl, rect_br, rect_bl) >= 0
-							&& sign_2d(aabb_bl, rect_bl, rect_tl) >= 0;
+		const cv::Point2d rel_aabb_tl = cv::Point2d(aabb.tl()) - rect_tl;
+		const cv::Point2d rel_aabb_br = cv::Point2d(aabb.br()) - rect_tl;
+		const cv::Point2d rel_aabb_tr(rel_aabb_br.x, rel_aabb_tl.y);
+		const cv::Point2d rel_aabb_bl(rel_aabb_tl.x, rel_aabb_br.y);
 
-		const bool all_left  = sign_2d(aabb_tl, rect_tl, rect_tr) <= 0
-							&& sign_2d(aabb_tl, rect_tr, rect_br) <= 0
-							&& sign_2d(aabb_tl, rect_br, rect_bl) <= 0
-							&& sign_2d(aabb_tl, rect_bl, rect_tl) <= 0
-							&& sign_2d(aabb_tr, rect_tl, rect_tr) <= 0
-							&& sign_2d(aabb_tr, rect_tr, rect_br) <= 0
-							&& sign_2d(aabb_tr, rect_br, rect_bl) <= 0
-							&& sign_2d(aabb_tr, rect_bl, rect_tl) <= 0
-							&& sign_2d(aabb_br, rect_tl, rect_tr) <= 0
-							&& sign_2d(aabb_br, rect_tr, rect_br) <= 0
-							&& sign_2d(aabb_br, rect_br, rect_bl) <= 0
-							&& sign_2d(aabb_br, rect_bl, rect_tl) <= 0
-							&& sign_2d(aabb_bl, rect_tl, rect_tr) <= 0
-							&& sign_2d(aabb_bl, rect_tr, rect_br) <= 0
-							&& sign_2d(aabb_bl, rect_br, rect_bl) <= 0
-							&& sign_2d(aabb_bl, rect_bl, rect_tl) <= 0;
-
-		return all_left || all_right;
+		return local_rect.contains({unit_x.dot(rel_aabb_tl), unit_y.dot(rel_aabb_tl)})
+			&& local_rect.contains({unit_x.dot(rel_aabb_br), unit_y.dot(rel_aabb_br)})
+			&& local_rect.contains({unit_x.dot(rel_aabb_tr), unit_y.dot(rel_aabb_tr)})
+			&& local_rect.contains({unit_x.dot(rel_aabb_bl), unit_y.dot(rel_aabb_bl)});
 	}
 
 }

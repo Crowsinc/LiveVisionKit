@@ -31,8 +31,6 @@ namespace lvk
 
 		Transform apply(const Transform& transform) const;
 
-		Transform flip() const;
-
 		cv::Mat as_matrix() const;
 
 	};
