@@ -27,6 +27,13 @@ static void on_vs_destroy(void* data)
 
 //-------------------------------------------------------------------------------------
 
+static void on_vs_remove(void* data, obs_source_t* parent)
+{
+	static_cast<lvk::VSFilter*>(data)->reset();
+}
+
+//-------------------------------------------------------------------------------------
+
 static void on_vs_configure(void* data, obs_data_t* settings)
 {
 	static_cast<lvk::VSFilter*>(data)->configure(settings);
@@ -102,6 +109,7 @@ extern void register_vs_source()
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
+	config.filter_remove = on_vs_remove;
 	config.update = on_vs_configure;
 	config.video_tick = on_vs_tick;
 	config.video_render = on_vs_render;

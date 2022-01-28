@@ -118,6 +118,8 @@ namespace lvk
 		  m_TestMode(false),
 		  m_CropProportion(0),
 		  m_SmoothingRadius(0),
+		  m_BuffersOutdated(true),
+		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FrameTracker(TRACKING_PROPERTIES)
@@ -152,7 +154,10 @@ namespace lvk
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 
 		if(m_SmoothingRadius != new_radius)
-			prepare_buffers(new_radius);
+		{
+			m_SmoothingRadius = new_radius;
+			m_BuffersOutdated = true;
+		}
 
 		obs_video_info video_info;
 		obs_get_video_info(&video_info);
@@ -214,6 +219,10 @@ namespace lvk
 
 	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
 	{
+		// TODO: check for timing as well
+		if(m_BuffersOutdated)
+			reset_buffers();
+
 		const uint64_t start_time = os_gettime_ns();
 
 		auto& buffer = m_FrameQueue.advance();
@@ -228,7 +237,7 @@ namespace lvk
 
 		if(stabilisation_ready())
 		{
-			const auto& [frame, output] = m_FrameQueue.oldest();
+			const auto [frame, output] = m_FrameQueue.oldest();
 			const auto& [displacement, velocity] = m_Trajectory.centre();
 
 			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
@@ -243,6 +252,10 @@ namespace lvk
 
 			if(m_TestMode)
 				draw_test_mode(m_WarpFrame, end_time - start_time) >> output;
+
+			// Forcibly remove the OBS frame to avoid accidentally releasing
+			// it later and causing a hard to find double free issue :)
+			m_FrameQueue.oldest().output = nullptr;
 
 			return output;
 		}
@@ -296,41 +309,6 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void VSFilter::prepare_buffers(const uint32_t smoothing_radius)
-	{
-		LVK_ASSERT(smoothing_radius >= SMOOTHING_RADIUS_MIN && smoothing_radius % 2 == 0);
-
-		// NOTE: Stabalisation is achieved by applying a windowed low pass filter
-		// to the frame/camera's path to remove high frequency 'shaking'. Effective
-		// filtering requires a full sized window which takes into account both past
-		// and future frames, obtained by delaying the stream. Delay is introduced
-		// via half-sized sliding buffers. Such that the oldest element corresponds
-		// with the centre element in the full sized path buffer.
-
-		m_SmoothingRadius = smoothing_radius;
-		const uint32_t queue_size = smoothing_radius + 2;
-		const uint32_t window_size = 2 * smoothing_radius + 1;
-
-		//TODO: causes memory leak if smaller then before, because frames are dropped!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		m_FrameQueue.resize(queue_size);
-		m_Trajectory.resize(window_size);
-		m_Filter.resize(window_size);
-
-		// We use a low pass Gaussian filter because it has both decent time domain
-		// and frequency domain performance. Unlike an average or windowed sinc filter.
-		// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
-		const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size/6.0);
-
-		m_Filter.clear();
-		for(uint32_t i = 0; i < window_size; i++)
-			m_Filter.push(gaussian_kernel.at<double>(i));
-
-		// Enforces synchronisation.
-		reset_buffers();
-	}
-
-	//-------------------------------------------------------------------------------------
-
 	void VSFilter::reset()
 	{
 		reset_buffers();
@@ -341,7 +319,7 @@ namespace lvk
 
 	void VSFilter::reset_buffers()
 	{
-		LVK_ASSERT(m_Trajectory.window_size() > m_FrameQueue.window_size());
+		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN && m_SmoothingRadius % 2 == 0);
 
 		// Need to release all the OBS frames to prevent memory leaks
 		obs_source_t* parent = obs_filter_get_parent(m_Context);
@@ -351,15 +329,38 @@ namespace lvk
 		m_FrameQueue.clear();
 		m_Trajectory.clear();
 
+		const uint32_t queue_size = m_SmoothingRadius + 2;
+		const uint32_t sync_offset = m_SmoothingRadius - 1;
+		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
+
+		// If the smoothing radius has changed, update buffer sizing
+		if(window_size != m_Trajectory.window_size())
+		{
+
+			m_FrameQueue.resize(queue_size);
+			m_Trajectory.resize(window_size);
+			m_Filter.resize(window_size);
+
+			// We use a low pass Gaussian filter because it has both decent time domain
+			// and frequency domain performance. Unlike an average or windowed sinc filter.
+			// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
+			const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size/6.0);
+
+			m_Filter.clear();
+			for(uint32_t i = 0; i < window_size; i++)
+				m_Filter.push(gaussian_kernel.at<double>(i));
+		}
+
 		// The vector data for the oldest frame in the frame queue should
 		// be synchronised so that it is always at the centre of the trajectory.
 		// The frame tracker always gives the vector from the previous to current
 		// frame, while we want the vector from the current to the next frame instead.
 		// So lag the tracjectory by one.
 		m_Trajectory.advance(Transform::Identity());
-		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
+		while(m_Trajectory.elements() < sync_offset)
 			m_Trajectory.advance(m_Trajectory.newest() + Transform::Identity());
 
+		m_BuffersOutdated = false;
 	}
 
 	//-------------------------------------------------------------------------------------

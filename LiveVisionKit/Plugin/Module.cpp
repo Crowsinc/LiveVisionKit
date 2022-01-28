@@ -29,6 +29,7 @@ void register_fsr_source();
 
 void register_vs_source();
 
+void register_test();
 
 bool obs_module_load()
 {
@@ -36,8 +37,10 @@ bool obs_module_load()
 
 	// Only enable the video stabalisation filter if the user has OpenCL.
 	// It will run without it, but it will run too slow to be real-time.
-//	TODO: if(cv::ocl::haveOpenCL())
-	register_vs_source();
+	if(cv::ocl::haveOpenCL())
+		register_vs_source();
+
+	register_test();
 
 	return true;
 }

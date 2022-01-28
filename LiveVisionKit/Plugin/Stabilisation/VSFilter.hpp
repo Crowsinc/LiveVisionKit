@@ -63,9 +63,11 @@ namespace lvk
 		gs_effect_t* m_Shader;
 		gs_eparam_t* m_CropParam;
 
+
 		bool m_TestMode;
 		float m_CropProportion;
 		uint32_t m_SmoothingRadius;
+		bool m_BuffersOutdated;
 
 		cv::Rect m_CropRegion;
 		cv::Size m_OutputSize;
@@ -74,8 +76,7 @@ namespace lvk
 		SlidingBuffer<FrameVector> m_Trajectory;
 		SlidingBuffer<FrameBuffer> m_FrameQueue;
 
-		cv::UMat m_WarpFrame;
-		cv::UMat m_TrackingFrame;
+		cv::UMat m_WarpFrame, m_TrackingFrame;
 		FrameTracker m_FrameTracker;
 
 		VSFilter(obs_source_t* context);
@@ -83,8 +84,6 @@ namespace lvk
 		Transform enclose_crop(const cv::UMat& frame, const Transform& transform);
 
 		cv::UMat draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns);
-
-		void prepare_buffers(const uint32_t smoothing_radius);
 
 		void reset_buffers();
 
