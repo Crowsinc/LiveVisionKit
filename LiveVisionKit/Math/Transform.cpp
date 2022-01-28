@@ -1,9 +1,8 @@
-#include "Transform.hpp"
+#include "../Math/Transform.hpp"
 
 #include "../Utility/Algorithm.hpp"
-#include "../Utility/Math.hpp"
-
 #include "../Diagnostics/Assert.hpp"
+#include "../Math/Math.hpp"
 
 namespace lvk
 {

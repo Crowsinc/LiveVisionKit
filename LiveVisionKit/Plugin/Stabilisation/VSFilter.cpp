@@ -4,7 +4,6 @@
 #include <opencv2/core/ocl.hpp>
 
 #include <util/platform.h>
-#include <util/threading.h>
 
 namespace lvk
 {
@@ -22,7 +21,7 @@ namespace lvk
 
 	static constexpr auto PROP_FRAME_DELAY_INFO = "FRAME_DELAY_INFO";
 	static constexpr auto FRAME_DELAY_INFO_MIN = 0;
-	static constexpr auto FRAME_DELAY_INFO_MAX = 10000;
+	static constexpr auto FRAME_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
 
 	static constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	static constexpr auto CROP_PERCENTAGE_DEFAULT = 5;
@@ -35,8 +34,6 @@ namespace lvk
 	//===================================================================================
 	//		FILTER IMPLEMENTATION
 	//===================================================================================
-
-
 
 	obs_properties_t* VSFilter::Properties()
 	{
@@ -142,13 +139,18 @@ namespace lvk
 		if(m_SmoothingRadius != new_radius)
 			prepare_buffers(new_radius);
 
-		// Update frame delay
 		obs_video_info video_info;
 		obs_get_video_info(&video_info);
-
 		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
-		obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
-		obs_source_update_properties(m_Context);
+
+		const uint32_t frame_delay = obs_data_get_int(settings, PROP_FRAME_DELAY_INFO);
+		const uint32_t new_frame_delay = frame_ms * m_FrameQueue.window_size();
+
+		if(frame_delay != new_frame_delay)
+		{
+			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
+			obs_source_update_properties(m_Context);
+		}
 
 		// Crop proportion is shared by opposite edges, so we also divide by 2
 		m_EdgeCropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 200.0f;
@@ -227,13 +229,14 @@ namespace lvk
 		constexpr int max_iterations = 100;
 		constexpr double step = max_t/max_iterations;
 		const auto identity = Transform::Identity();
-		const cv::Rect frame_boundary({0, 0}, frame.size());
 
 		double t = step;
 		auto reduced_transform = transform;
-		while(t <= max_t && !encloses(frame_boundary, reduced_transform, crop_region))
+		BoundingBox frame_bounds(frame.size(), reduced_transform);
+		while(t <= max_t && !frame_bounds.encloses(crop_region))
 		{
 			reduced_transform = lerp(transform, identity, t);
+			frame_bounds.transform(reduced_transform);
 			t += step;
 		}
 
