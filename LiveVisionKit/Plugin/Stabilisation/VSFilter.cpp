@@ -203,15 +203,15 @@ namespace lvk
 
 	void VSFilter::render() const
 	{
-		if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
-				return;
+		if(obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
+		{
+			if(m_TestMode)
+				gs_effect_set_float(m_CropParam, 0.0f);
+			else
+				gs_effect_set_float(m_CropParam, m_CropProportion);
 
-		if(m_TestMode)
-			gs_effect_set_float(m_CropParam, 0.0f);
-		else
-			gs_effect_set_float(m_CropParam, m_CropProportion);
-
-		obs_source_process_filter_end(m_Context, m_Shader, m_OutputSize.width, m_OutputSize.height);
+			obs_source_process_filter_end(m_Context, m_Shader, m_OutputSize.width, m_OutputSize.height);
+		}
 	}
 
 	//-------------------------------------------------------------------------------------
