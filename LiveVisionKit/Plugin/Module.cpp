@@ -29,8 +29,6 @@ void register_fsr_source();
 
 void register_vs_source();
 
-void register_test();
-
 bool obs_module_load()
 {
 	register_fsr_source();
@@ -39,8 +37,6 @@ bool obs_module_load()
 	// It will run without it, but it will run too slow to be real-time.
 	if(cv::ocl::haveOpenCL())
 		register_vs_source();
-
-	register_test();
 
 	return true;
 }
