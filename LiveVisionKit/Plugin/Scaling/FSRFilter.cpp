@@ -27,7 +27,6 @@ namespace lvk
 	static constexpr auto OUTPUT_SIZE_720P   = "720P";
 	static constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_CANVAS;
 
-
 	//===================================================================================
 	//		FILTER IMPLEMENTATION
 	//===================================================================================
@@ -96,7 +95,8 @@ namespace lvk
 		  m_EASUConstParam1(nullptr),
 		  m_EASUConstParam2(nullptr),
 		  m_EASUConstParam3(nullptr),
-		  m_RCASConstParam0(nullptr)
+		  m_RCASConstParam0(nullptr),
+		  m_EASURenderTarget(nullptr)
 
 	{
 		obs_video_info video_info;
@@ -162,7 +162,7 @@ namespace lvk
 	{
 		m_EASUMatchCanvas = false;
 
-		std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
+		const std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
 		if(output_size == OUTPUT_SIZE_CANVAS)
 			m_EASUMatchCanvas = true; // Match canvas size on tick()
 		else if(output_size == OUTPUT_SIZE_2160P)
@@ -189,11 +189,10 @@ namespace lvk
 
 	void FSRFilter::tick()
 	{
-		auto filter_target = obs_filter_get_target(m_Context);
+		const auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);
 		const uint32_t input_height = obs_source_get_base_height(filter_target);
 
-		// Update EASU output size if necessary
 		if(m_EASUMatchCanvas)
 		{
 			obs_video_info video_info;
@@ -202,14 +201,16 @@ namespace lvk
 			vec2_set(&m_NewOutputSize, video_info.base_width, video_info.base_height);
 		}
 
-		const bool output_size_changed = m_OutputSize.x != m_NewOutputSize.x
-									  || m_OutputSize.y != m_NewOutputSize.y;
+		const bool easu_outdated = m_OutputSize.x != m_NewOutputSize.x
+								|| m_OutputSize.y != m_NewOutputSize.y
+								|| input_width != m_InputSize.x
+								|| input_height != m_InputSize.y;
 
-		// Update EASU constants, we do this regardless of if EASU is bypassed or not
-		if(output_size_changed || input_width != m_InputSize.x || input_height != m_InputSize.y)
+		m_OutputSize = m_NewOutputSize;
+
+		if(easu_outdated)
 		{
 			vec2_set(&m_InputSize, input_width, input_height);
-			m_OutputSize = m_NewOutputSize;
 
 			// The EASU constants are a vector of four uint32_t but their bits actually represent floats.
 			// Normally this conversion happens in the FSR shader. However due to compatibility issues,

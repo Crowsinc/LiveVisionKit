@@ -36,12 +36,11 @@ namespace lvk
 
 		obs_source_t* m_Context;
 		gs_effect_t* m_Shader;
-		gs_texrender_t* m_EASURenderTarget;
 
 		bool m_EASUMatchCanvas;
-
-		vec2 m_NewOutputSize;
 		vec2 m_InputSize, m_OutputSize;
+		vec2 m_NewOutputSize;
+
 		vec4 m_EASUConst0, m_EASUConst1;
 		vec4 m_EASUConst2, m_EASUConst3;
 		vec4 m_RCASConst0;
@@ -52,6 +51,7 @@ namespace lvk
 		gs_eparam_t* m_EASUConstParam2;
 		gs_eparam_t* m_EASUConstParam3;
 		gs_eparam_t* m_RCASConstParam0;
+		gs_texrender_t* m_EASURenderTarget;
 
 		FSRFilter(obs_source_t* context);
 
