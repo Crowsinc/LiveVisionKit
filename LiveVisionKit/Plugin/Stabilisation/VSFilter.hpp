@@ -67,7 +67,6 @@ namespace lvk
 		bool m_TestMode;
 		float m_CropProportion;
 		uint32_t m_SmoothingRadius;
-		bool m_BuffersOutdated;
 
 		cv::Rect m_CropRegion;
 		cv::Size m_OutputSize;
@@ -86,6 +85,8 @@ namespace lvk
 		cv::UMat draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		void reset_buffers();
+
+		bool queue_outdated(const obs_source_frame* new_frame) const;
 
 		bool stabilisation_ready() const;
 

@@ -118,7 +118,6 @@ namespace lvk
 		  m_TestMode(false),
 		  m_CropProportion(0),
 		  m_SmoothingRadius(0),
-		  m_BuffersOutdated(true),
 		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -156,7 +155,7 @@ namespace lvk
 		if(m_SmoothingRadius != new_radius)
 		{
 			m_SmoothingRadius = new_radius;
-			m_BuffersOutdated = true;
+			reset_buffers();
 		}
 
 		obs_video_info video_info;
@@ -219,8 +218,7 @@ namespace lvk
 
 	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
 	{
-		// TODO: check for timing as well
-		if(m_BuffersOutdated)
+		if(queue_outdated(obs_frame))
 			reset_buffers();
 
 		const uint64_t start_time = os_gettime_ns();
@@ -359,8 +357,16 @@ namespace lvk
 		m_Trajectory.advance(Transform::Identity());
 		while(m_Trajectory.elements() < sync_offset)
 			m_Trajectory.advance(m_Trajectory.newest() + Transform::Identity());
+	}
 
-		m_BuffersOutdated = false;
+	//-------------------------------------------------------------------------------------
+
+	bool VSFilter::queue_outdated(const obs_source_frame* new_frame) const
+	{
+		// If the newest frame is over a second away from the last frame
+		// in the queue then we say that the queue is outdated.
+		return !m_FrameQueue.empty()
+			&& new_frame->timestamp - m_FrameQueue.newest().output->timestamp > 1e9;
 	}
 
 	//-------------------------------------------------------------------------------------
