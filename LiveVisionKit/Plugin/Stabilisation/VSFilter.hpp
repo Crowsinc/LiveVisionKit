@@ -23,9 +23,17 @@ namespace lvk
 
 		~VSFilter();
 
-		void configure(obs_data_t* settings);
+		void tick();
+
+		void render() const;
 
 		obs_source_frame* process(obs_source_frame* obs_frame);
+
+		void configure(obs_data_t* settings);
+
+		uint32_t width() const;
+
+		uint32_t height() const;
 
 		void reset();
 
@@ -52,9 +60,15 @@ namespace lvk
 		};
 
 		obs_source_t* m_Context;
-		uint32_t m_SmoothingRadius;
-		float m_EdgeCropProportion;
+		gs_effect_t* m_Shader;
+		gs_eparam_t* m_CropParam;
+
 		bool m_TestMode;
+		float m_CropProportion;
+		uint32_t m_SmoothingRadius;
+
+		cv::Rect m_CropRegion;
+		cv::Size m_OutputSize;
 
 		SlidingBuffer<double> m_Filter;
 		SlidingBuffer<FrameVector> m_Trajectory;
@@ -62,16 +76,13 @@ namespace lvk
 
 		cv::UMat m_WarpFrame;
 		cv::UMat m_TrackingFrame;
-		cv::UMat m_StabilisedFrame;
 		FrameTracker m_FrameTracker;
 
 		VSFilter(obs_source_t* context);
 
-		cv::Rect find_crop_region(const cv::UMat& frame);
+		Transform enclose_crop(const cv::UMat& frame, const Transform& transform);
 
-		Transform enclose_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region);
-
-		cv::UMat draw_test_mode(cv::UMat& frame, const cv::Rect& crop, const uint64_t frame_time_ns);
+		cv::UMat draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		void prepare_buffers(const uint32_t smoothing_radius);
 

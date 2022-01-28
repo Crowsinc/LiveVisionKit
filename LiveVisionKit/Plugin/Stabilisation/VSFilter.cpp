@@ -61,11 +61,10 @@ namespace lvk
 		obs_property_set_enabled(property, false);
 
 		// Slider for total proportion of allowable crop along each dimension.
-		// The amount of pixels to crop at each edge is: dimension * (crop/2/100)
 		property = obs_properties_add_int_slider(
 				properties,
 				PROP_CROP_PERCENTAGE,
-				"Crop Percentage",
+				"Crop",
 				CROP_PERCENTAGE_MIN,
 				CROP_PERCENTAGE_MAX,
 				1
@@ -114,14 +113,30 @@ namespace lvk
 
 	VSFilter::VSFilter(obs_source_t* context)
 		: m_Context(context),
-		  m_SmoothingRadius(0),
-		  m_EdgeCropProportion(0),
+		  m_Shader(nullptr),
+		  m_CropParam(nullptr),
 		  m_TestMode(false),
+		  m_CropProportion(0),
+		  m_SmoothingRadius(0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_StabilisedFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FrameTracker(TRACKING_PROPERTIES)
-	{}
+	{
+
+		char* shader_path = obs_module_file("effects/vs.effect");
+		if(shader_path != nullptr)
+		{
+			obs_enter_graphics();
+
+			m_Shader = gs_effect_create_from_file(shader_path, nullptr);
+			bfree(shader_path);
+
+			if(m_Shader)
+				m_CropParam = gs_effect_get_param_by_name(m_Shader, "crop_proportion");
+
+			obs_leave_graphics();
+		}
+	}
 
 	//-------------------------------------------------------------------------------------
 
@@ -152,10 +167,47 @@ namespace lvk
 			obs_source_update_properties(m_Context);
 		}
 
-		// Crop proportion is shared by opposite edges, so we also divide by 2
-		m_EdgeCropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 200.0f;
+		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	void VSFilter::tick()
+	{
+		if(stabilisation_ready())
+		{
+			auto frame_size = m_FrameQueue.oldest().frame.size();
+
+			const uint32_t total_horz_crop = frame_size.width * m_CropProportion;
+			const uint32_t total_vert_crop = frame_size.height * m_CropProportion;
+
+			m_CropRegion.x = total_horz_crop / 2;
+			m_CropRegion.y = total_vert_crop / 2;
+			m_CropRegion.width = frame_size.width - total_horz_crop;
+			m_CropRegion.height = frame_size.height - total_vert_crop;
+
+			if(m_TestMode)
+				m_OutputSize = frame_size;
+			else
+				m_OutputSize = m_CropRegion.size();
+		}
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	void VSFilter::render() const
+	{
+		if(!obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
+				return;
+
+		if(m_TestMode)
+			gs_effect_set_float(m_CropParam, 0.0f);
+		else
+			gs_effect_set_float(m_CropParam, m_CropProportion);
+
+		obs_source_process_filter_end(m_Context, m_Shader, m_OutputSize.width, m_OutputSize.height);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -179,22 +231,18 @@ namespace lvk
 			const auto& [frame, output] = m_FrameQueue.oldest();
 			const auto& [displacement, velocity] = m_Trajectory.centre();
 
-			const auto crop_region = find_crop_region(frame);
-
 			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
 			const auto smooth_warp = velocity + correction;
-
-			const auto cropped_warp = enclose_crop(frame, smooth_warp, crop_region);
+			const auto cropped_warp = enclose_crop(frame, smooth_warp);
 
 			cv::warpAffine(frame, m_WarpFrame, cropped_warp.as_matrix(), frame.size());
 
-			cv::resize(m_WarpFrame(crop_region), m_StabilisedFrame, frame.size(), 0, 0, cv::INTER_LINEAR);
-			m_StabilisedFrame >> output;
+			m_WarpFrame >> output;
 
 			const uint64_t end_time = os_gettime_ns();
 
 			if(m_TestMode)
-				draw_test_mode(m_WarpFrame, crop_region, end_time - start_time) >> output;
+				draw_test_mode(m_WarpFrame, end_time - start_time) >> output;
 
 			return output;
 		}
@@ -204,22 +252,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	cv::Rect VSFilter::find_crop_region(const cv::UMat& frame)
-	{
-		const uint32_t horz_edge_crop = frame.cols * m_EdgeCropProportion;
-		const uint32_t vert_edge_crop = frame.rows * m_EdgeCropProportion;
-
-		return cv::Rect(
-			horz_edge_crop,
-			vert_edge_crop,
-			frame.cols - 2 * horz_edge_crop,
-			frame.rows - 2 * vert_edge_crop
-		);
-	}
-
-	//-------------------------------------------------------------------------------------
-
-	Transform VSFilter::enclose_crop(const cv::UMat& frame, const Transform& transform, const cv::Rect& crop_region)
+	Transform VSFilter::enclose_crop(const cv::UMat& frame, const Transform& transform)
 	{
 		// Reduce the magnitude of the transform until the crop region is
 		// fully enclosed within the warped frame. We reduce the magnitude
@@ -233,7 +266,7 @@ namespace lvk
 		double t = step;
 		auto reduced_transform = transform;
 		BoundingBox frame_bounds(frame.size(), reduced_transform);
-		while(t <= max_t && !frame_bounds.encloses(crop_region))
+		while(t <= max_t && !frame_bounds.encloses(m_CropRegion))
 		{
 			reduced_transform = lerp(transform, identity, t);
 			frame_bounds.transform(reduced_transform);
@@ -245,7 +278,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	cv::UMat VSFilter::draw_test_mode(cv::UMat& frame, const cv::Rect& crop, const uint64_t frame_time_ns)
+	cv::UMat VSFilter::draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const double frame_time_ms = frame_time_ns * 1.0e-6;
 
@@ -255,8 +288,8 @@ namespace lvk
 		text << frame_time_ms << "ms";
 
 		const cv::Scalar magenta_yuv(105, 212, 234);
-		cv::rectangle(frame, crop, magenta_yuv, 2);
-		cv::putText(frame, text.str(), crop.tl() + cv::Point(5, 40), cv::FONT_HERSHEY_DUPLEX, 1.5, magenta_yuv, 2);
+		cv::rectangle(frame, m_CropRegion, magenta_yuv, 2);
+		cv::putText(frame, text.str(), m_CropRegion.tl() + cv::Point(5, 40), cv::FONT_HERSHEY_DUPLEX, 1.5, magenta_yuv, 2);
 
 		return frame;
 	}
@@ -341,10 +374,26 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
+	uint32_t VSFilter::width() const
+	{
+		return m_OutputSize.width;
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	uint32_t VSFilter::height() const
+	{
+		return m_OutputSize.height;
+	}
+
+	//-------------------------------------------------------------------------------------
+
 	bool VSFilter::validate() const
 	{
 		// NOTE: Must run through OpenCL for performance reasons.
-		return cv::ocl::haveOpenCL();
+		return cv::ocl::haveOpenCL()
+			&& m_Shader != nullptr
+			&& m_CropParam != nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------

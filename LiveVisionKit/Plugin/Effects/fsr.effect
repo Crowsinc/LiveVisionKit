@@ -1,14 +1,14 @@
 #include "ffx_a_mod.h"
 
 //=====================================================================================
-//		OBS Parameters & Callbacks
+//		OBS PARAMETERS
 //=====================================================================================
 
 uniform float4x4 ViewProj;
 uniform texture2d image; 
 
 //=====================================================================================
-//		FSR Parameters & Callbacks
+//		FSR PARAMETERS
 //=====================================================================================
 
 uniform AF2 output_size;
@@ -32,26 +32,26 @@ sampler_state PointSampler
     AddressV    = Clamp;
 };
 
+// For GLSL we should use the textureGather function here, however that 
+// required GLSL 400+ while we are stuck with 330 for OBS. So we instead
+// mimic the functionality by using point sampling.  
+//
+// For a given point p in normalized texture coordinates. We want to grab neighbouring
+// texels x, y, z, and w in the listed order.
+//
+//                                  +---+---+
+//                                  | w | z |
+//                                  +--(p)--+
+//                                  | x | y |
+//                                  +---+---+
+//
+// The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
+// of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
+// To get the normalized texture coordinates for each required texel, we then offset 
+// point p by half the texel size using addition/subtraction as necessary.
 AF4 FsrEasuRF(AF2 p)
 {
 #ifdef GLSL
-    // For GLSL we should use the textureGather function here, however that 
-    // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using point sampling.  
-    //
-    // For a given point p in normalized texture coordinates. We want to grab neighbouring
-    // texels x, y, z, and w in the listed order.
-    //
-    //                                  +---+---+
-    //                                  | w | z |
-    //                                  +--(p)--+
-    //                                  | x | y |
-    //                                  +---+---+
-    //
-    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
-    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
-    // To get the normalized texture coordinates for each required texel, we then offset 
-    // point p by half the texel size using addition/subtraction as necessary.
     AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).r,
@@ -67,23 +67,6 @@ AF4 FsrEasuRF(AF2 p)
 AF4 FsrEasuGF(AF2 p)
 {
 #ifdef GLSL
-    // For GLSL we should use the textureGather function here, however that 
-    // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using point sampling.  
-    //
-    // For a given point p in normalized texture coordinates. We want to grab neighbouring
-    // texels x, y, z, and w in the listed order.
-    //
-    //                                  +---+---+
-    //                                  | w | z |
-    //                                  +--(p)--+
-    //                                  | x | y |
-    //                                  +---+---+
-    //
-    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
-    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
-    // To get the normalized texture coordinates for each required texel, we then offset 
-    // point p by half the texel size using addition/subtraction as necessary.
     AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).g,
@@ -99,23 +82,6 @@ AF4 FsrEasuGF(AF2 p)
 AF4 FsrEasuBF(AF2 p)
 {
 #ifdef GLSL
-    // For GLSL we should use the textureGather function here, however that 
-    // required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-    // mimic the functionality by using point sampling.  
-    //
-    // For a given point p in normalized texture coordinates. We want to grab neighbouring
-    // texels x, y, z, and w in the listed order.
-    //
-    //                                  +---+---+
-    //                                  | w | z |
-    //                                  +--(p)--+
-    //                                  | x | y |
-    //                                  +---+---+
-    //
-    // The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
-    // of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
-    // To get the normalized texture coordinates for each required texel, we then offset 
-    // point p by half the texel size using addition/subtraction as necessary.
     AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).b,
@@ -145,15 +111,15 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b)
 #define FSR_RCAS_DENOISE
 #include "ffx_fsr1_mod.h"
 
-//=====================================================================================
-//		VERTEX SHADER
-//=====================================================================================
-
 struct VSData 
 {
     float4 pos : POSITION;
     float2 uv  : TEXCOORD0;
 };
+
+//=====================================================================================
+//		VERTEX SHADER
+//=====================================================================================
 
 VSData VSMain(VSData vs_in)
 {

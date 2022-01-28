@@ -115,7 +115,7 @@ namespace lvk
 		// Due to inadequate HLSL to GLSL conversion by the OBS shader parser along with
 		// being constrained to GLSL version 330, we must use a different FSR shader whenever
 		// OBS is using the OpenGL API for rendering.
-		const char* shader_path = nullptr;
+		char* shader_path = nullptr;
 		if(graphics_api.find("opengl") != std::string::npos)
 			shader_path = obs_module_file("effects/fsr_glsl.effect");
 		else
@@ -126,7 +126,8 @@ namespace lvk
 		{
 			obs_enter_graphics();
 
-			m_Shader = gs_effect_create_from_file(shader_path, NULL);
+			m_Shader = gs_effect_create_from_file(shader_path, nullptr);
+			bfree(shader_path);
 
 			if(m_Shader)
 			{
