@@ -8,6 +8,10 @@
 #include "../Effects/ffx_a.h"
 #include "../Effects/ffx_fsr1.h"
 
+// NOTE: The FSR effect fully supports RCAS, but is no longer ran alongside EASU
+// in favour of running the standalone CAS filter instead. Not to mention performing
+// a multipass render through OBS is currently a bit of an ugly hack, more so when the
+// first pass must also perform scaling of the render target.
 
 namespace lvk
 {
@@ -15,9 +19,6 @@ namespace lvk
 	//===================================================================================
 	//		CONSTANT PROPERTIES/SETTINGS
 	//===================================================================================
-
-	static constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
-	static constexpr auto SHARPNESS_DEFAULT = 0.8f;
 
 	static constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
 	static constexpr auto OUTPUT_SIZE_CANVAS = "CANVAS";
@@ -50,15 +51,6 @@ namespace lvk
 		obs_property_list_add_string(property, "1920x1080   (1080p)", OUTPUT_SIZE_1080P);
 		obs_property_list_add_string(property, "1280x720     (720p)", OUTPUT_SIZE_720P);
 
-		// Slider for selecting sharpness (0.0 to 1.0)
-		obs_properties_add_float_slider(
-				properties,
-				PROP_SHARPNESS,
-				"Sharpness",
-				0,
-				1,
-				0.05
-		);
 		return properties;
 	}
 
@@ -67,7 +59,6 @@ namespace lvk
 	void FSRFilter::LoadDefaults(obs_data_t* settings)
 	{
 		obs_data_set_default_string(settings, PROP_OUTPUT_SIZE, OUTPUT_SIZE_DEFAULT);
-		obs_data_set_default_double(settings, PROP_SHARPNESS, SHARPNESS_DEFAULT);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -95,10 +86,7 @@ namespace lvk
 		  m_EASUConstParam0(nullptr),
 		  m_EASUConstParam1(nullptr),
 		  m_EASUConstParam2(nullptr),
-		  m_EASUConstParam3(nullptr),
-		  m_RCASConstParam0(nullptr),
-		  m_EASURenderTarget(nullptr)
-
+		  m_EASUConstParam3(nullptr)
 	{
 		char* shader_path = obs_module_file("effects/fsr.effect");
 		if(shader_path != nullptr)
@@ -115,10 +103,7 @@ namespace lvk
 				m_EASUConstParam1 = gs_effect_get_param_by_name(m_Shader, "easu_const_1");
 				m_EASUConstParam2 = gs_effect_get_param_by_name(m_Shader, "easu_const_2");
 				m_EASUConstParam3 = gs_effect_get_param_by_name(m_Shader, "easu_const_3");
-				m_RCASConstParam0 = gs_effect_get_param_by_name(m_Shader, "rcas_const_0");
 			}
-
-			m_EASURenderTarget = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 
 			obs_leave_graphics();
 		}
@@ -137,9 +122,6 @@ namespace lvk
 
 		if(m_Shader != nullptr)
 			gs_effect_destroy(m_Shader);
-
-		if(m_EASURenderTarget != nullptr)
-			gs_texrender_destroy(m_EASURenderTarget);
 
 		obs_leave_graphics();
 	}
@@ -161,21 +143,11 @@ namespace lvk
 			vec2_set(&m_NewOutputSize, 1920, 1080);
 		else if(output_size == OUTPUT_SIZE_720P)
 			vec2_set(&m_NewOutputSize, 1280, 720);
-
-		// NOTE: the sharpness is presented as a value from 0-1 with 1 at max sharpness.
-		// However, we internally interpret it as 0-2 with 0 being max sharpness.
-		const float sharpness = 2.0 * (1.0 - obs_data_get_double(settings, PROP_SHARPNESS));
-
-		// The RCAS constant is a vector of four uint32_t but its bits actually represent floats.
-		// Normally this conversion happens in the FSR shader. However due to compatibility issues,
-		// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
-		// to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
-		FsrRcasCon((AU1*)m_RCASConst0.ptr, sharpness);
 	}
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::prepare_scaling()
+	void FSRFilter::update_scaling()
 	{
 		const auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);
@@ -214,35 +186,17 @@ namespace lvk
 
 	void FSRFilter::render()
 	{
-		prepare_scaling();
+		update_scaling();
 
-		gs_texrender_reset(m_EASURenderTarget);
-		if(gs_texrender_begin(m_EASURenderTarget, m_OutputSize.x, m_OutputSize.y))
+		if(obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		{
-			if(obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
-			{
-				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
-				gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
-				gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
-				gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
-				gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
+			gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
+			gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
+			gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
+			gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
+			gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
 
-				obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "EASU");
-			}
-			else obs_source_skip_video_filter(m_Context);
-
-
-			gs_texrender_end(m_EASURenderTarget);
-
-
-			auto easu_render_texture = gs_texrender_get_texture(m_EASURenderTarget);
-			while(gs_effect_loop(m_Shader,"RCAS"))
-			{
-				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
-				gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
-
-				obs_source_draw(easu_render_texture, 0, 0, 0, 0, false);
-			}
+			obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "EASU");
 		}
 		else obs_source_skip_video_filter(m_Context);
 	}
@@ -268,9 +222,7 @@ namespace lvk
 		// Ensure we have no nulls for key filter members
 		return m_Context != nullptr
 			&& m_Shader != nullptr
-			&& m_EASURenderTarget != nullptr
 			&& m_OutputSizeParam != nullptr
-			&& m_RCASConstParam0 != nullptr
 			&& m_EASUConstParam0 != nullptr
 			&& m_EASUConstParam1 != nullptr
 			&& m_EASUConstParam2 != nullptr

@@ -38,19 +38,16 @@ namespace lvk
 
 		vec4 m_EASUConst0, m_EASUConst1;
 		vec4 m_EASUConst2, m_EASUConst3;
-		vec4 m_RCASConst0;
 
 		gs_eparam_t* m_OutputSizeParam;
 		gs_eparam_t* m_EASUConstParam0;
 		gs_eparam_t* m_EASUConstParam1;
 		gs_eparam_t* m_EASUConstParam2;
 		gs_eparam_t* m_EASUConstParam3;
-		gs_eparam_t* m_RCASConstParam0;
-		gs_texrender_t* m_EASURenderTarget;
 
 		FSRFilter(obs_source_t* context);
 
-		void prepare_scaling();
+		void update_scaling();
 
 		bool validate() const;
 	};
