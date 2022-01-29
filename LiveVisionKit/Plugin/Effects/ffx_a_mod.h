@@ -15,7 +15,7 @@
 //     OBS' shaders are written in HLSL, with built in conversion to GLSL when needed. 
 //
 //   > Certain required functionality which OBS' shader parser does not properly convert to its GLSL counter part 
-//     has been converted manually. Define 'GLSL' in order to use the conversions for use with OpenGL. 
+//     has been converted manually. The OBS define _OPENGL is used to switch between the two.
 //
 //   > #if macros are not supported so have been swapped for simple #ifdef HLSL and #ifdef GLSL macros.
 //
@@ -76,7 +76,7 @@
 #define AF3 float3
 #define AF4 float4
 //------------------------------------------------------------------------------------------------------------------------------
-#ifdef GLSL
+#ifdef _OPENGL
     #define AU1 uint
     #define AU2 uvec2
     #define AU3 uvec3
@@ -141,7 +141,7 @@ AF2 AMin3F2(AF2 x,AF2 y,AF2 z){return min(x,min(y,z));}
 AF3 AMin3F3(AF3 x,AF3 y,AF3 z){return min(x,min(y,z));}
 AF4 AMin3F4(AF4 x,AF4 y,AF4 z){return min(x,min(y,z));}
 //------------------------------------------------------------------------------------------------------------------------------
-#ifdef GLSL
+#ifdef _OPENGL
     AF1 ARcpF1(AF1 x){return AF1_x(1.0f)/x;}
     AF2 ARcpF2(AF2 x){return AF2_x(1.0f)/x;} 
     AF3 ARcpF3(AF3 x){return AF3_x(1.0f)/x;} 

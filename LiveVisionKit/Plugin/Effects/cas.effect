@@ -16,7 +16,7 @@ uniform AF4 cas_const_1;
 
 AF3 CasLoad(ASU2 p)
 {   
-#ifdef GLSL
+#ifdef _OPENGL
     return texelFetch(image, p, 0).rgb;
 #else
     return image.Load(ASU3(p, 0)).rgb;

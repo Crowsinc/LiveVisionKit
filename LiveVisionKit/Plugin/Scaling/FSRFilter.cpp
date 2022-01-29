@@ -100,20 +100,7 @@ namespace lvk
 		  m_EASURenderTarget(nullptr)
 
 	{
-		obs_video_info video_info;
-		obs_get_video_info(&video_info);
-		const std::string graphics_api = video_info.graphics_module;
-
-		// Due to inadequate HLSL to GLSL conversion by the OBS shader parser along with
-		// being constrained to GLSL version 330, we must use a different FSR shader whenever
-		// OBS is using the OpenGL API for rendering.
-		char* shader_path = nullptr;
-		if(graphics_api.find("opengl") != std::string::npos)
-			shader_path = obs_module_file("effects/fsr_glsl.effect");
-		else
-			shader_path = obs_module_file("effects/fsr.effect");
-
-		// Load FSR shader
+		char* shader_path = obs_module_file("effects/fsr.effect");
 		if(shader_path != nullptr)
 		{
 			obs_enter_graphics();
@@ -254,9 +241,8 @@ namespace lvk
 				gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
 				gs_effect_set_vec4(m_RCASConstParam0, &m_RCASConst0);
 
-				obs_source_draw(easu_render_texture, 0, 0, m_OutputSize.x, m_OutputSize.y, false);
+				obs_source_draw(easu_render_texture, 0, 0, 0, 0, false);
 			}
-
 		}
 		else obs_source_skip_video_filter(m_Context);
 	}
