@@ -94,7 +94,7 @@ static uint32_t vs_output_height(void* data)
 
 static const char* vs_filter_name(void* _)
 {
-	return "(LVK) Video Stabiliser";
+	return "LVK Video Stabiliser";
 }
 
 //=====================================================================================

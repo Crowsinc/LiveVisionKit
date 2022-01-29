@@ -397,9 +397,7 @@ namespace lvk
 
 	bool VSFilter::validate() const
 	{
-		// NOTE: Must run through OpenCL for performance reasons.
-		return cv::ocl::haveOpenCL()
-			&& m_Shader != nullptr
+		return m_Shader != nullptr
 			&& m_CropParam != nullptr;
 	}
 

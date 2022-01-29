@@ -1,0 +1,78 @@
+#include "ffx_a_mod.h"
+
+//=====================================================================================
+//		OBS PARAMETERS
+//=====================================================================================
+
+uniform float4x4 ViewProj;
+uniform texture2d image; 
+
+//=====================================================================================
+//		CAS PARAMETERS
+//=====================================================================================
+
+uniform AF2 output_size;
+uniform AF4 cas_const_1;
+
+AF3 CasLoad(ASU2 p)
+{   
+#ifdef GLSL
+    return texelFetch(image, p, 0).rgb;
+#else
+    return image.Load(ASU3(p, 0)).rgb;
+#endif
+}
+
+void CasInput(inout AF1 r, inout AF1 g, inout AF1 b)
+{
+    // NOT USED
+}
+
+#define CAS_SLOW
+#define CAS_BETTER_DIAGONALS
+#include "ffx_cas_mod.h"
+
+struct VSData 
+{
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+//=====================================================================================
+//		VERTEX SHADER
+//=====================================================================================
+
+VSData VSMain(VSData vs_in)
+{
+    VSData vs_out;
+    vs_out.pos = mul(float4(vs_in.pos.xyz, 1.0), ViewProj);
+    vs_out.uv  = vs_in.uv;
+    return vs_out;
+}
+
+//=====================================================================================
+//		PIXEL SHADER
+//=====================================================================================
+
+float4 PSMain(VSData vs_in) : TARGET
+{
+    AF3 out_col = AF3(0, 0, 0);
+    AF2 out_pos = floor(vs_in.uv * output_size.xy); 
+
+    CasFilter(out_col.r, out_col.g, out_col.b, out_pos, cas_const_1);
+
+    return float4(out_col, 1.0);
+}
+
+//=====================================================================================
+//		TECHNIQUES
+//=====================================================================================
+
+technique Draw
+{
+    pass
+    {
+        vertex_shader = VSMain(vs_in);
+        pixel_shader  = PSMain(vs_in);
+    }
+}

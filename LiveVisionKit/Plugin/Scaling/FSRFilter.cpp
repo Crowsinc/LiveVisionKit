@@ -1,4 +1,4 @@
-#include "../Scaling/FSRFilter.hpp"
+#include "FSRFilter.hpp"
 
 #include <obs/obs-module.h>
 #include <filesystem>
@@ -17,7 +17,7 @@ namespace lvk
 	//===================================================================================
 
 	static constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
-	static constexpr auto SHARPNESS_DEFAULT = 0.9f;
+	static constexpr auto SHARPNESS_DEFAULT = 0.8f;
 
 	static constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
 	static constexpr auto OUTPUT_SIZE_CANVAS = "CANVAS";
@@ -89,6 +89,7 @@ namespace lvk
 
 	FSRFilter::FSRFilter(obs_source_t* context)
 		: m_Context(context),
+		  m_Shader(nullptr),
 		  m_EASUMatchCanvas(false),
 		  m_OutputSizeParam(nullptr),
 		  m_EASUConstParam0(nullptr),
@@ -278,14 +279,14 @@ namespace lvk
 	{
 		// Ensure we have no nulls for key filter members
 		return m_Context != nullptr
-				&& m_Shader  != nullptr
-				&& m_EASURenderTarget != nullptr
-				&& m_OutputSizeParam != nullptr
-				&& m_RCASConstParam0 != nullptr
-				&& m_EASUConstParam0 != nullptr
-				&& m_EASUConstParam1 != nullptr
-				&& m_EASUConstParam2 != nullptr
-				&& m_EASUConstParam3 != nullptr;
+			&& m_Shader != nullptr
+			&& m_EASURenderTarget != nullptr
+			&& m_OutputSizeParam != nullptr
+			&& m_RCASConstParam0 != nullptr
+			&& m_EASUConstParam0 != nullptr
+			&& m_EASUConstParam1 != nullptr
+			&& m_EASUConstParam2 != nullptr
+			&& m_EASUConstParam3 != nullptr;
 	}
 
 	//-------------------------------------------------------------------------------------

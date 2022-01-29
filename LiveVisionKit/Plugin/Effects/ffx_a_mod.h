@@ -10,12 +10,12 @@
 // 
 // The following modifications have been made:
 //
-//   > The file has been simplified by removing everything except what is strictly necessary for FSR has been removed to 
-//     aid in testing and compatibility with OBS's shader parser. Only the HLSL implementation has been left in as
+//   > The file has been simplified by removing everything except what is strictly necessary for FSR & CAS to  
+//     aid in testing and compatibility with OBS's shader parser. Mainly the HLSL implementation has been left in as
 //     OBS' shaders are written in HLSL, with built in conversion to GLSL when needed. 
 //
 //   > Certain required functionality which OBS' shader parser does not properly convert to its GLSL counter part 
-//     have been converted manually. Define 'GLSL' in order to use the conversions for use with OpenGL. 
+//     has been converted manually. Define 'GLSL' in order to use the conversions for use with OpenGL. 
 //
 //   > #if macros are not supported so have been swapped for simple #ifdef HLSL and #ifdef GLSL macros.
 //

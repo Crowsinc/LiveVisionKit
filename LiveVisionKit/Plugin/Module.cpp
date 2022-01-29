@@ -27,11 +27,14 @@ MODULE_EXPORT const char* obs_module_description(void)
 
 void register_fsr_source();
 
+void register_cas_source();
+
 void register_vs_source();
 
 bool obs_module_load()
 {
 	register_fsr_source();
+	register_cas_source();
 
 	// Only enable the video stabalisation filter if the user has OpenCL.
 	// It will run without it, but it will run too slow to be real-time.

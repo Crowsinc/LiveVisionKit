@@ -2,9 +2,6 @@
 
 #include <obs/obs.h>
 
-#include <cmath>
-#include <cstdint>
-
 namespace lvk
 {
 

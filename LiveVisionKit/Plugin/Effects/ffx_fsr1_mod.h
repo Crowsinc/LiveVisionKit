@@ -12,8 +12,8 @@
 //
 //   > The file has been simplified by removing everything except for the core EASU and RCAS float based implementations.
 //  
-//   > All uses of AU4 have been swapped for AF4 due to EASU failing to render properly in GLSL (not sure why). All instances
-//     of AU4 are ultimately converted to floats for use anyway. So they are not necessary in this version of FSR.   
+//   > The AU4 constants have been swapped for AF4 for better OBS compatibility. All instances are ultimately converted
+//     to floats for use anyway. So they are not necessary in this version of FSR, however this may change in the future.   
 // 
 //   > #if macros are not supported so have been removed.
 //
@@ -41,6 +41,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+//
 //==============================================================================================================================
 //
 //                                        FSR - [EASU] EDGE ADAPTIVE SPATIAL UPSAMPLING
