@@ -34,13 +34,6 @@ static void on_fsr_configure(void* data, obs_data_t* settings)
 
 //-------------------------------------------------------------------------------------
 
-static void on_fsr_tick(void* data, float seconds)
-{
-	static_cast<lvk::FSRFilter*>(data)->tick();
-}
-
-//-------------------------------------------------------------------------------------
-
 static void on_fsr_render(void* data, gs_effect_t* _)
 {
 	static_cast<lvk::FSRFilter*>(data)->render();
@@ -96,7 +89,6 @@ extern void register_fsr_source()
 	config.create = on_fsr_create;
 	config.destroy = on_fsr_destroy;
 	config.update = on_fsr_configure;
-	config.video_tick = on_fsr_tick;
 	config.video_render = on_fsr_render;
 	config.get_name = fsr_filter_name;
 	config.get_width = fsr_output_width;

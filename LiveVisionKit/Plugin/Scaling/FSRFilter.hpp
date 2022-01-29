@@ -21,9 +21,7 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		void tick();
-
-		void render() const;
+		void render();
 
 		uint32_t width() const;
 
@@ -52,8 +50,9 @@ namespace lvk
 
 		FSRFilter(obs_source_t* context);
 
-		bool validate() const;
+		void prepare_scaling();
 
+		bool validate() const;
 	};
 
 }

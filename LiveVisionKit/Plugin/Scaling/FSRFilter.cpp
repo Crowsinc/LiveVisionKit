@@ -188,7 +188,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::tick()
+	void FSRFilter::prepare_scaling()
 	{
 		const auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);
@@ -225,8 +225,10 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::render() const
+	void FSRFilter::render()
 	{
+		prepare_scaling();
+
 		gs_texrender_reset(m_EASURenderTarget);
 		if(gs_texrender_begin(m_EASURenderTarget, m_OutputSize.x, m_OutputSize.y))
 		{
