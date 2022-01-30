@@ -51,6 +51,7 @@ namespace lvk
 		{
 			Transform displacement;
 			Transform velocity;
+			uint32_t trackers;
 
 			FrameVector(const Transform& displacement = Transform::Zero(), const Transform& velocity = Transform::Zero());
 
@@ -82,7 +83,7 @@ namespace lvk
 
 		Transform enclose_crop(const cv::UMat& frame, const Transform& transform);
 
-		cv::UMat draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns);
+		cv::UMat draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns, const uint32_t trackers);
 
 		void reset_buffers();
 
