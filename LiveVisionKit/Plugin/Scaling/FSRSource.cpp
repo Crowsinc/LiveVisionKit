@@ -86,10 +86,13 @@ extern void register_fsr_source()
 	config.id = "LVK~FSR";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
+
 	config.create = on_fsr_create;
 	config.destroy = on_fsr_destroy;
+
 	config.update = on_fsr_configure;
 	config.video_render = on_fsr_render;
+
 	config.get_name = fsr_filter_name;
 	config.get_width = fsr_output_width;
 	config.get_height = fsr_output_height;

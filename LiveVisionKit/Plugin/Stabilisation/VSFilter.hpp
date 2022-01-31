@@ -64,7 +64,6 @@ namespace lvk
 		gs_effect_t* m_Shader;
 		gs_eparam_t* m_CropParam;
 
-
 		bool m_TestMode;
 		float m_CropProportion;
 		uint32_t m_SmoothingRadius;

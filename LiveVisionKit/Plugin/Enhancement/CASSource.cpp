@@ -86,10 +86,13 @@ extern void register_cas_source()
 	config.id = "LVK~CAS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
+
 	config.create = on_cas_create;
 	config.destroy = on_cas_destroy;
+
 	config.update = on_cas_configure;
 	config.video_render = on_cas_render;
+
 	config.get_name = cas_filter_name;
 	config.get_width = cas_output_width;
 	config.get_height = cas_output_height;

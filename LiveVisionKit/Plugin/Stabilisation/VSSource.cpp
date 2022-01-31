@@ -55,7 +55,7 @@ static void on_vs_render(void* data, gs_effect_t* _)
 
 //-------------------------------------------------------------------------------------
 
-static obs_source_frame* on_vs_async_filter(void* data, obs_source_frame* frame)
+static obs_source_frame* on_vs_process(void* data, obs_source_frame* frame)
 {
 	return static_cast<lvk::VSFilter*>(data)->process(frame);
 }
@@ -94,7 +94,7 @@ static uint32_t vs_output_height(void* data)
 
 static const char* vs_filter_name(void* _)
 {
-	return "LVK Video Stabiliser";
+	return "(LVK) Video Stabiliser";
 }
 
 //=====================================================================================
@@ -107,13 +107,16 @@ extern void register_vs_source()
 	config.id = "LVK~VS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
+
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
 	config.filter_remove = on_vs_remove;
+
 	config.update = on_vs_configure;
 	config.video_tick = on_vs_tick;
 	config.video_render = on_vs_render;
-	config.filter_video = on_vs_async_filter;
+	config.filter_video = on_vs_process;
+
 	config.get_name = vs_filter_name;
 	config.get_width = vs_output_width;
 	config.get_height = vs_output_height;

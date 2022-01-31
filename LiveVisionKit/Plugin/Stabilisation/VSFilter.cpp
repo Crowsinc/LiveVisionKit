@@ -340,6 +340,8 @@ namespace lvk
 	{
 		reset_buffers();
 		m_FrameTracker.reset();
+		m_TrackingFrame.release();
+		m_WarpFrame.release();
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -426,7 +428,8 @@ namespace lvk
 
 	bool VSFilter::validate() const
 	{
-		return m_Shader != nullptr
+		return m_Context != nullptr
+			&& m_Shader != nullptr
 			&& m_CropParam != nullptr;
 	}
 
