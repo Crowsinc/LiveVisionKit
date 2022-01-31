@@ -94,12 +94,14 @@ namespace lvk
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Create detail and non-detail masks
-		const double hysteresis_upper = 255.0 * 0.2 * m_Strength;
-		const double hysteresis_lower = hysteresis_upper / 3.0;
 
-		cv::Canny(m_Mask, m_Mask, hysteresis_lower, hysteresis_upper, 3, true);
+		const int threshold = m_Strength * 40;
+
+		cv::Sobel(m_Mask, m_Mask, m_Mask.type(), 1, 1);
+		cv::equalizeHist(m_Mask, m_Mask);
+
 		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(11,11));
-		cv::threshold(m_Mask, m_Mask, 1, 255, cv::THRESH_BINARY);
+		cv::threshold(m_Mask, m_Mask, threshold, 255, cv::THRESH_BINARY);
 		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21,21));
 
 		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255);
