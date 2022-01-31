@@ -20,13 +20,14 @@ namespace lvk
 
 			// The maximum amount of tracking points to use per frame.
 			// A higher amount usually leads more robust tracking at the
-			// cost of computational performance.
-			uint32_t max_trackers = 3000;
+			// cost of computational performance. But going too high
+			// will introduce low quality tracking points.
+			uint32_t max_trackers = 1500;
 
 			// The minimum matched tracking points required for transform
 			// estimation as a percentage of the max trackers. If the
 			// threshold is not met, the tracker defaults to zero motion.
-			double match_proportion = 0.2;
+			double match_proportion = 0.33;
 
 			// The internal resolution used for the tracking. A lower
 			// resolution leads to a decrease in tracking points, but

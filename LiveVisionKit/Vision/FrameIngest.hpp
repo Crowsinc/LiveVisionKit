@@ -10,7 +10,7 @@ namespace lvk
 	bool import_frame(const obs_source_frame* src, cv::UMat& dst);
 
 	// Converts YUV UMat back to OBS frame
-	void export_frame(const cv::UMat& src, obs_source_frame* dst);
+	bool export_frame(const cv::UMat& src, obs_source_frame* dst);
 
 }
 
