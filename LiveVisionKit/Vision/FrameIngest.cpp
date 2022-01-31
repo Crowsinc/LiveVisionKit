@@ -23,9 +23,9 @@ bool operator<<(cv::UMat& dst, const obs_source_frame* src)
 	return lvk::import_frame(src, dst);
 }
 
-void operator>>(const cv::UMat& src, obs_source_frame* dst)
+bool operator>>(const cv::UMat& src, obs_source_frame* dst)
 {
-	lvk::export_frame(src, dst);
+	return lvk::export_frame(src, dst);
 }
 
 namespace lvk
@@ -532,7 +532,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void export_frame(const cv::UMat& src, obs_source_frame* dst)
+	bool export_frame(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(obs_frame_initialised(*dst));
@@ -593,11 +593,13 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				return;
+				return false;
 		}
 
 		frame.height = src.rows;
 		frame.width = src.cols;
+
+		return true;
 	}
 
 	//-------------------------------------------------------------------------------------

@@ -16,4 +16,4 @@ namespace lvk
 
 bool operator<<(cv::UMat& dst, const obs_source_frame* src);
 
-void operator>>(const cv::UMat& src, obs_source_frame* dst);
+bool operator>>(const cv::UMat& src, obs_source_frame* dst);
