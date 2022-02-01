@@ -93,9 +93,9 @@ namespace lvk
 		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
 
 		// Perform denoising
-		const cv::Size denoise_resolution(480, 270);
+		const cv::Size denoise_resolution(384, 216);
 		cv::resize(m_Frame, m_DenoiseFrame, denoise_resolution, 0, 0, cv::INTER_AREA);
-		cv::fastNlMeansDenoising(m_DenoiseFrame, m_DenoiseFrame, 5, 7, 11);
+		cv::fastNlMeansDenoising(m_DenoiseFrame, m_DenoiseFrame, 5, 5, 9);
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		const int threshold = m_Strength * 40;
