@@ -130,7 +130,7 @@ namespace lvk
 		// planes to the GPU/CPU at the same time then import the other planes through ROIs.
 		// However it is probably not worth the introduced dependency on implementation details.
 
-		// TODO: This is one of the slowers parts of all vision filters, so speeding this up would speed up everything
+		// TODO: This is one of the slower parts of all vision filters, so speeding this up would speed up everything
 		cv::Mat(height, width, CV_8UC(components), src, line_size).copyTo(dst);
 	}
 
