@@ -30,11 +30,14 @@ namespace lvk
 
 		obs_source_t* m_Context;
 
+		bool m_TestMode;
 		double m_Strength;
 		cv::UMat m_Frame, m_SmoothFrame, m_DenoiseFrame;
 		cv::UMat m_Mask, m_DetailBlendMask, m_DenoiseBlendMask;
 
 		ADNFilter(obs_source_t* context);
+
+		cv::UMat draw_test_mode(cv::UMat& frame, const cv::UMat& denoise_mask, const uint64_t frame_time_ns);
 
 		bool validate() const;
 

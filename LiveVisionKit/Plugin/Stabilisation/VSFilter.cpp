@@ -73,7 +73,7 @@ namespace lvk
 
 
 		// Toggle for test mode, used to help configure settings.
-		property = obs_properties_add_bool(
+		obs_properties_add_bool(
 				properties,
 				PROP_TEST_MODE,
 				"Test Mode"

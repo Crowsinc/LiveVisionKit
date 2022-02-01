@@ -20,6 +20,9 @@ namespace lvk
 	constexpr auto STRENGTH_MIN = 0;
 	constexpr auto STRENGTH_DEFAULT = 25;
 
+	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
+	static constexpr auto TEST_MODE_DEFAULT = false;
+
 	//===================================================================================
 	//		FILTER IMPLEMENTATION
 	//===================================================================================
@@ -38,6 +41,12 @@ namespace lvk
 		);
 		obs_property_int_set_suffix(property, "%");
 
+		obs_properties_add_bool(
+				properties,
+				PROP_TEST_MODE,
+				"Test Mode"
+		);
+
 		return properties;
 	}
 
@@ -46,6 +55,7 @@ namespace lvk
 	void ADNFilter::LoadDefaults(obs_data_t* settings)
 	{
 		obs_data_set_default_int(settings, PROP_STRENGTH, STRENGTH_DEFAULT);
+		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
 	//-------------------------------------------------------------------------------------
@@ -67,6 +77,7 @@ namespace lvk
 
 	ADNFilter::ADNFilter(obs_source_t* context)
 		: m_Context(context),
+		  m_TestMode(false),
 		  m_Strength(0),
 		  m_Frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_SmoothFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -81,12 +92,15 @@ namespace lvk
 	void ADNFilter::configure(obs_data_t* settings)
 	{
 		m_Strength = obs_data_get_int(settings, PROP_STRENGTH) / 100.0f;
+		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
 
 	//-------------------------------------------------------------------------------------
 
 	obs_source_frame* ADNFilter::process(obs_source_frame* obs_frame)
 	{
+		const auto start_time = os_gettime_ns();
+
 		m_Frame << obs_frame;
 
 		cv::extractChannel(m_Frame, m_Mask, 0);
@@ -119,7 +133,43 @@ namespace lvk
 
 		m_Frame >> obs_frame;
 
+		const auto end_time = os_gettime_ns();
+
+		if(m_TestMode)
+			draw_test_mode(m_Frame, m_Mask, end_time - start_time) >> obs_frame;
+
 		return obs_frame;
+	}
+
+	//-------------------------------------------------------------------------------------
+
+	cv::UMat ADNFilter::draw_test_mode(cv::UMat& frame, const cv::UMat& denoise_mask,  const uint64_t frame_time_ns)
+	{
+		const cv::Scalar magenta_yuv(105, 212, 234);
+		const cv::Scalar green_yuv(149, 43, 21);
+		const cv::Scalar red_yuv(76, 84, 255);
+
+		frame.setTo(magenta_yuv, denoise_mask);
+
+		const double bad_time_threshold_ms = 5.0;
+		const double frame_time_ms = frame_time_ns * 1.0e-6;
+
+		//TODO: switch to C++20 fmt as soon as GCC supports it.
+		std::stringstream time_text;
+		time_text << std::fixed << std::setprecision(2);
+		time_text << frame_time_ms << "ms";
+
+		cv::putText(
+			frame,
+			time_text.str(),
+			cv::Point(5, 40),
+			cv::FONT_HERSHEY_DUPLEX,
+			1.5,
+			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
+			2
+		);
+
+		return frame;
 	}
 
 	//-------------------------------------------------------------------------------------
