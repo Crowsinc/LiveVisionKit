@@ -6,8 +6,6 @@
 
 #include "../../Vision/FrameIngest.hpp"
 
-
-
 namespace lvk
 {
 
@@ -18,7 +16,7 @@ namespace lvk
 	constexpr auto PROP_STRENGTH = "STRENGTH";
 	constexpr auto STRENGTH_MAX = 100;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 25;
+	constexpr auto STRENGTH_DEFAULT = 30;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
@@ -126,6 +124,9 @@ namespace lvk
 		cv::bitwise_not(m_Mask, m_Mask);
 		m_Mask.convertTo(m_DenoiseBlendMask, CV_32FC1, 1.0/255);
 
+		if(m_TestMode)
+			m_SmoothFrame.setTo(cv::Scalar(255, 0, 255));
+
 		// Blend denoised and original frame
 		cv::blendLinear(m_Frame, m_SmoothFrame, m_DetailBlendMask, m_DenoiseBlendMask, m_Frame);
 
@@ -136,20 +137,18 @@ namespace lvk
 		const auto end_time = os_gettime_ns();
 
 		if(m_TestMode)
-			draw_test_mode(m_Frame, m_Mask, end_time - start_time) >> obs_frame;
+			draw_debug_info(m_Frame, end_time - start_time) >> obs_frame;
 
 		return obs_frame;
 	}
 
 	//-------------------------------------------------------------------------------------
 
-	cv::UMat ADNFilter::draw_test_mode(cv::UMat& frame, const cv::UMat& denoise_mask,  const uint64_t frame_time_ns)
+	cv::UMat ADNFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);
 		const cv::Scalar red_yuv(76, 84, 255);
-
-		frame.setTo(magenta_yuv, denoise_mask);
 
 		const double bad_time_threshold_ms = 5.0;
 		const double frame_time_ms = frame_time_ns * 1.0e-6;

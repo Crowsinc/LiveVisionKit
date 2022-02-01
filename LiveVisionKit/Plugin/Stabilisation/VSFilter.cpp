@@ -250,7 +250,7 @@ namespace lvk
 			const uint64_t end_time = os_gettime_ns();
 
 			if(m_TestMode)
-				draw_test_mode(m_WarpFrame, end_time - start_time, trackers) >> output;
+				draw_debug_info(m_WarpFrame, end_time - start_time, trackers) >> output;
 
 			// Forcibly remove the OBS frame to avoid accidentally releasing
 			// it later and causing a hard to find double free issue :)
@@ -290,7 +290,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	cv::UMat VSFilter::draw_test_mode(cv::UMat& frame, const uint64_t frame_time_ns, const uint32_t trackers)
+	cv::UMat VSFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns, const uint32_t trackers)
 	{
 		const auto properties = m_FrameTracker.properties();
 		const cv::Scalar magenta_yuv(105, 212, 234);

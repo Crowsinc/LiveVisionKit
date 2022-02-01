@@ -37,7 +37,7 @@ namespace lvk
 
 		ADNFilter(obs_source_t* context);
 
-		cv::UMat draw_test_mode(cv::UMat& frame, const cv::UMat& denoise_mask, const uint64_t frame_time_ns);
+		cv::UMat draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		bool validate() const;
 
