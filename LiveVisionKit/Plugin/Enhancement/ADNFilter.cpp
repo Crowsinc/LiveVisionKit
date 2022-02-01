@@ -14,9 +14,9 @@ namespace lvk
 	//===================================================================================
 
 	constexpr auto PROP_STRENGTH = "STRENGTH";
-	constexpr auto STRENGTH_MAX = 100;
+	constexpr auto STRENGTH_MAX = 10;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 30;
+	constexpr auto STRENGTH_DEFAULT = 5;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
@@ -29,7 +29,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
-		auto property = obs_properties_add_int_slider(
+		obs_properties_add_int_slider(
 			properties,
 			PROP_STRENGTH,
 			"Strength",
@@ -37,7 +37,6 @@ namespace lvk
 			STRENGTH_MAX,
 			1
 		);
-		obs_property_int_set_suffix(property, "%");
 
 		obs_properties_add_bool(
 				properties,
@@ -80,6 +79,7 @@ namespace lvk
 		  m_Frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_SmoothFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DenoiseFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_Edges(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_Mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DetailBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DenoiseBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
@@ -110,16 +110,17 @@ namespace lvk
 		cv::medianBlur(m_DenoiseFrame, m_DenoiseFrame, 5);
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
-		const int threshold = m_Strength * 40;
+		// Create detail mask
+		cv::Sobel(m_Mask, m_Edges, m_Mask.type(), 1, 0);
+		cv::Sobel(m_Mask, m_Mask, m_Mask.type(), 0, 1);
+		cv::bitwise_or(m_Mask, m_Edges, m_Mask);
+		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
 
-		// Create detail and non-detail masks
-		cv::Sobel(m_Mask, m_Mask, m_Mask.type(), 1, 1);
-		cv::equalizeHist(m_Mask, m_Mask);
-
-		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(11,11));
+		const int threshold = m_Strength * 80;
 		cv::threshold(m_Mask, m_Mask, threshold, 255, cv::THRESH_BINARY);
-		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21,21));
 
+		// Add fall-off and linear blend
+		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(11, 11));
 		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255);
 		cv::bitwise_not(m_Mask, m_Mask);
 		m_Mask.convertTo(m_DenoiseBlendMask, CV_32FC1, 1.0/255);
@@ -181,6 +182,7 @@ namespace lvk
 		m_DenoiseFrame.release();
 
 		m_Mask.release();
+		m_Edges.release();
 		m_DetailBlendMask.release();
 		m_DenoiseBlendMask.release();
 	}

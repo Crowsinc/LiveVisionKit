@@ -33,7 +33,7 @@ namespace lvk
 		bool m_TestMode;
 		double m_Strength;
 		cv::UMat m_Frame, m_SmoothFrame, m_DenoiseFrame;
-		cv::UMat m_Mask, m_DetailBlendMask, m_DenoiseBlendMask;
+		cv::UMat m_Edges, m_Mask, m_DetailBlendMask, m_DenoiseBlendMask;
 
 		ADNFilter(obs_source_t* context);
 
