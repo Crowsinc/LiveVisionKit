@@ -2,7 +2,11 @@
 
 #include <obs/obs-module.h>
 
+#include <util/platform.h>
+
 #include "../../Vision/FrameIngest.hpp"
+
+
 
 namespace lvk
 {
@@ -84,19 +88,19 @@ namespace lvk
 	obs_source_frame* ADNFilter::process(obs_source_frame* obs_frame)
 	{
 		m_Frame << obs_frame;
+
 		cv::extractChannel(m_Frame, m_Mask, 0);
 		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
 
 		// Perform denoising
 		const cv::Size denoise_resolution(480, 270);
 		cv::resize(m_Frame, m_DenoiseFrame, denoise_resolution, 0, 0, cv::INTER_AREA);
-		cv::fastNlMeansDenoising(m_DenoiseFrame, m_DenoiseFrame, 5, 7, 15);
+		cv::fastNlMeansDenoising(m_DenoiseFrame, m_DenoiseFrame, 5, 7, 11);
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
-
-		// Create detail and non-detail masks
 
 		const int threshold = m_Strength * 40;
 
+		// Create detail and non-detail masks
 		cv::Sobel(m_Mask, m_Mask, m_Mask.type(), 1, 1);
 		cv::equalizeHist(m_Mask, m_Mask);
 

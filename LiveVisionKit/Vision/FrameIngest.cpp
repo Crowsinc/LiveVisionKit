@@ -1,6 +1,9 @@
 #include "FrameIngest.hpp"
 
 #include "../Diagnostics/Assert.hpp"
+#include <util/platform.h>
+
+#include <opencv2/core/ocl.hpp>
 
 /* NOTE:
  *  All upload conversion operations are to YUV, and are performed on the GPU using thread
@@ -122,13 +125,12 @@ namespace lvk
 		LVK_ASSERT(components > 0 && components <= 4);
 		LVK_ASSERT(line_size >= width * components);
 
-		// NOTE: This is what ultimately uploads OBS plane data to the GPU/CPU UMats
-		// and is the bottleneck of the ingest operation. OBS frame planes are actually
-		// just pointer offsets to a large contiguous piece of memory starting at the first
-		// plane. So it is possible to upload all planes to the GPU/CPU at the same time
-		// then import the other planes through ROIs. In testing this saves around .2 ms
-		// when ingesting a 3 plane I420 frame. It is definitely not worth the dependency
-		// on implementation details.
+		// NOTE: OBS frame planes are actually just pointer offsets to a large contiguous
+		// piece of memory starting at the first plane. So it is possible to upload all
+		// planes to the GPU/CPU at the same time then import the other planes through ROIs.
+		// However it is probably not worth the introduced dependency on implementation details.
+
+		// TODO: This is one of the slowers parts of all vision filters, so speeding this up would speed up everything
 		cv::Mat(height, width, CV_8UC(components), src, line_size).copyTo(dst);
 	}
 
@@ -140,6 +142,8 @@ namespace lvk
 
 		// Wrap the destination data in a Mat header and perform the download using an optimised OpenCV copy.
 		// This assumes that the destination is large enough to actually hold all the src data.
+
+		// TODO: This is the bottleneck of all vision filters, so speeding this up would dramatically speed up everything
 		src.copyTo(cv::Mat(src.size(), src.type(), dst));
 	}
 
@@ -398,9 +402,7 @@ namespace lvk
 		// Planar 4xx consists of a full Y plane and potentially subsampled U and V planes.
 		// So split the packed source into planes, export the Y plane, and subsample the
 		// U and V planes before also exporting them.
-
 		split_planes(src, plane_y, plane_u, plane_v);
-
 		export_plane(plane_y, dst, 0);
 
 		if(subsample_width || subsample_height)
@@ -419,6 +421,7 @@ namespace lvk
 			export_plane(plane_u, dst, 1);
 			export_plane(plane_v, dst, 2);
 		}
+
 	}
 
 	//-------------------------------------------------------------------------------------
