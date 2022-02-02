@@ -113,7 +113,7 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-	T SlidingBuffer<T>::filter(const SlidingBuffer<K>& kernel, T initial) const
+	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
 		LVK_ASSERT(!this->empty() && !kernel.empty());
 		LVK_ASSERT(this->elements() == kernel.elements());
