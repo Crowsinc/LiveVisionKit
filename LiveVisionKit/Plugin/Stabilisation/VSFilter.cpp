@@ -24,7 +24,7 @@ namespace lvk
 	static constexpr auto FRAME_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
 
 	static constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
-	static constexpr auto CROP_PERCENTAGE_DEFAULT = 5;
+	static constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
 	static constexpr auto CROP_PERCENTAGE_MIN = 1;
 	static constexpr auto CROP_PERCENTAGE_MAX = 25;
 
