@@ -14,9 +14,9 @@ namespace lvk
 	//===================================================================================
 
 	constexpr auto PROP_STRENGTH = "STRENGTH";
-	constexpr auto STRENGTH_MAX = 10;
+	constexpr auto STRENGTH_MAX = 100;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 5;
+	constexpr auto STRENGTH_DEFAULT = 30;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
@@ -38,11 +38,12 @@ namespace lvk
 			1
 		);
 
-		obs_properties_add_bool(
+		auto property = obs_properties_add_bool(
 				properties,
 				PROP_TEST_MODE,
 				"Test Mode"
 		);
+		obs_property_int_set_suffix(property, "%");
 
 		return properties;
 	}
@@ -110,20 +111,19 @@ namespace lvk
 		cv::medianBlur(m_DenoiseFrame, m_DenoiseFrame, 5);
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
-		// Create detail mask
-		cv::Sobel(m_Mask, m_Edges, m_Mask.type(), 1, 0);
-		cv::Sobel(m_Mask, m_Mask, m_Mask.type(), 0, 1);
+		// Create continuous detail mask
+		cv::Scharr(m_Mask, m_Edges, m_Mask.type(), 1, 0);
+		cv::Scharr(m_Mask, m_Mask, m_Mask.type(), 0, 1);
 		cv::bitwise_or(m_Mask, m_Edges, m_Mask);
-		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
+		cv::dilate(m_Mask, m_Mask, cv::noArray(), cv::Point(-1,-1), 3);
 
-		const int threshold = m_Strength * 80;
-		cv::threshold(m_Mask, m_Mask, threshold, 255, cv::THRESH_BINARY);
+		const double threshold = (1 + m_Strength * 200.0) / 255.0;
 
 		// Add fall-off and linear blend
-		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(11, 11));
-		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255);
+		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
+		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255 * (1.0 - threshold));
 		cv::bitwise_not(m_Mask, m_Mask);
-		m_Mask.convertTo(m_DenoiseBlendMask, CV_32FC1, 1.0/255);
+		m_Mask.convertTo(m_DenoiseBlendMask, CV_32FC1, 1.0/255 * threshold);
 
 		if(m_TestMode)
 			m_SmoothFrame.setTo(cv::Scalar(255, 0, 255));
