@@ -23,7 +23,7 @@ namespace lvk
 		void resize(const uint32_t window_size);
 
 		template<typename K>
-		T convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
+		T filter(const SlidingBuffer<K>& kernel, T initial = T()) const;
 
 		T& at(const uint32_t index);
 

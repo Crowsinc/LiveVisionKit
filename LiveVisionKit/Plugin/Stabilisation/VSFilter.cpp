@@ -239,7 +239,7 @@ namespace lvk
 			const auto [frame, output] = m_FrameQueue.oldest();
 			const auto& [displacement, velocity, trackers] = m_Trajectory.centre();
 
-			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
+			const auto correction = m_Trajectory.filter(m_Filter).displacement - displacement;
 			const auto smooth_warp = velocity + correction;
 			const auto cropped_warp = enclose_crop(frame, smooth_warp);
 
