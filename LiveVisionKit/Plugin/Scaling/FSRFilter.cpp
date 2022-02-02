@@ -147,7 +147,7 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	void FSRFilter::update_scaling()
+	bool FSRFilter::update_scaling()
 	{
 		const auto filter_target = obs_filter_get_target(m_Context);
 		const uint32_t input_width = obs_source_get_base_width(filter_target);
@@ -180,15 +180,15 @@ namespace lvk
 					m_InputSize.x, m_InputSize.y, m_InputSize.x, m_InputSize.y,
 					m_OutputSize.x, m_OutputSize.y);
 		}
+
+		return input_width != m_OutputSize.x || input_height != m_OutputSize.y;
 	}
 
 	//-------------------------------------------------------------------------------------
 
 	void FSRFilter::render()
 	{
-		update_scaling();
-
-		if(obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
+		if(update_scaling() && obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		{
 			gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
 			gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);

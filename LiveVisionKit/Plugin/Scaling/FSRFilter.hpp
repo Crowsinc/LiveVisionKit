@@ -47,7 +47,7 @@ namespace lvk
 
 		FSRFilter(obs_source_t* context);
 
-		void update_scaling();
+		bool update_scaling();
 
 		bool validate() const;
 	};
