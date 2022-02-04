@@ -13,8 +13,7 @@ namespace lvk
 
 	FrameTracker::FrameTracker(const Properties properties)
 		: m_Properties(properties),
-		  m_MatchThreshold(properties.max_trackers * properties.min_matches),
-		  m_TrackThreshold(std::max(properties.tracker_quality * 255, 1.0)),
+		  m_FeatureThreshold(std::max(properties.tracker_quality * 255, 1.0)),
 		  m_MaxRegionTrackers(properties.max_trackers / properties.grid.area()),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
@@ -25,7 +24,7 @@ namespace lvk
 		LVK_ASSERT(properties.grid.width < properties.resolution.width/2 && properties.grid.height < properties.resolution.height/2);
 		LVK_ASSERT(properties.tracker_quality >= 0 && properties.tracker_quality <= 1.0);
 		LVK_ASSERT(properties.crop_proportion >= 0 && properties.crop_proportion <= 0.25);
-		LVK_ASSERT(properties.min_matches * properties.max_trackers >= 3 && properties.min_matches <= 1.0);
+		LVK_ASSERT(properties.min_matches >= 0 && properties.min_matches <= properties.max_trackers);
 
 		reset();
 
@@ -83,7 +82,7 @@ namespace lvk
 			cv::FAST(
 				m_PrevFrame(region),
 				m_KeyPoints,
-				m_TrackThreshold,
+				m_FeatureThreshold,
 				true
 			);
 
@@ -94,7 +93,7 @@ namespace lvk
 		}
 
 		// Return identity transform if we don't have enough trackers
-		if(m_TrackPoints.size() < m_MatchThreshold)
+		if(m_TrackPoints.size() < m_Properties.min_matches)
 		{
 			std::swap(m_PrevFrame, m_NextFrame);
 			return Transform::Identity();
@@ -117,7 +116,7 @@ namespace lvk
 		fast_filter(m_TrackPoints, m_MatchedPoints, m_MatchStatus);
 
 		// Return identity transform if we don't have enough matches
-		if(m_MatchedPoints.size() < m_MatchThreshold)
+		if(m_MatchedPoints.size() < m_Properties.min_matches)
 			return Transform::Identity();
 
 		// Re-scale all the points to original frame size otherwise the motion won't correspond

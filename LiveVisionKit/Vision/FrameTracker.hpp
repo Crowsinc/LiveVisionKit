@@ -25,9 +25,9 @@ namespace lvk
 			uint32_t max_trackers = 1200;
 
 			// The minimum matched tracking points required for transform
-			// estimation as a percentage of the max trackers. If the
-			// threshold is not met, the tracker defaults to zero motion.
-			double min_matches = 0.3;
+			// estimation. If the threshold is not met, the tracker defaults
+			// to zero motion.
+			uint32_t min_matches = 400;
 
 			// The internal resolution used for the tracking. A lower
 			// resolution leads to a decrease in tracking points, but
@@ -66,8 +66,7 @@ namespace lvk
 	private:
 
 		const Properties m_Properties;
-		const uint32_t m_MatchThreshold;
-		const uint32_t m_TrackThreshold;
+		const uint32_t m_FeatureThreshold;
 		const uint32_t m_MaxRegionTrackers;
 
 		std::vector<cv::Rect> m_GridRegions;

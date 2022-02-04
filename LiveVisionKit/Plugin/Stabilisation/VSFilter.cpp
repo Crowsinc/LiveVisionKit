@@ -184,13 +184,7 @@ namespace lvk
 		{
 			auto frame_size = m_FrameQueue.oldest().frame.size();
 
-			const uint32_t total_horz_crop = frame_size.width * m_CropProportion;
-			const uint32_t total_vert_crop = frame_size.height * m_CropProportion;
-
-			m_CropRegion.x = total_horz_crop / 2;
-			m_CropRegion.y = total_vert_crop / 2;
-			m_CropRegion.width = frame_size.width - total_horz_crop;
-			m_CropRegion.height = frame_size.height - total_vert_crop;
+			m_CropRegion = crop(frame_size, m_CropProportion);
 
 			if(m_TestMode)
 				m_OutputSize = frame_size;
@@ -327,7 +321,7 @@ namespace lvk
 			m_CropRegion.tl() + cv::Point(250, 40),
 			cv::FONT_HERSHEY_DUPLEX,
 			1.5,
-			trackers >= properties.max_trackers * properties.match_proportion ? green_yuv : red_yuv,
+			trackers >= properties.min_matches ? green_yuv : red_yuv,
 			2
 		);
 
