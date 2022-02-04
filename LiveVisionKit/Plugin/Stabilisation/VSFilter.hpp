@@ -67,6 +67,7 @@ namespace lvk
 		bool m_TestMode;
 		float m_CropProportion;
 		uint32_t m_SmoothingRadius;
+		bool m_StabilisationEnabled;
 
 		cv::Rect m_CropRegion;
 		cv::Size m_OutputSize;

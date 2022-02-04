@@ -15,9 +15,9 @@ namespace lvk
 	static const FrameTracker::Properties TRACKING_PROPERTIES = {/* Use defaults */};
 
 	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
-	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 14;
+	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
-	static constexpr auto SMOOTHING_RADIUS_MAX = 30;
+	static constexpr auto SMOOTHING_RADIUS_MAX = 20;
 
 	static constexpr auto PROP_FRAME_DELAY_INFO = "FRAME_DELAY_INFO";
 	static constexpr auto FRAME_DELAY_INFO_MIN = 0;
@@ -27,6 +27,9 @@ namespace lvk
 	static constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
 	static constexpr auto CROP_PERCENTAGE_MIN = 1;
 	static constexpr auto CROP_PERCENTAGE_MAX = 25;
+
+	static constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
+	static constexpr auto STAB_DISABLED_DEFAULT = false;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
@@ -71,6 +74,11 @@ namespace lvk
 		);
 		obs_property_int_set_suffix(property, "%");
 
+		obs_properties_add_bool(
+				properties,
+				PROP_STAB_DISABLED,
+				"Disable Stabilisation"
+		);
 
 		// Toggle for test mode, used to help configure settings.
 		obs_properties_add_bool(
@@ -88,6 +96,7 @@ namespace lvk
 	{
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
+		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
@@ -118,6 +127,7 @@ namespace lvk
 		  m_TestMode(false),
 		  m_CropProportion(0),
 		  m_SmoothingRadius(0),
+		  m_StabilisationEnabled(true),
 		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -172,7 +182,7 @@ namespace lvk
 		}
 
 		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
-
+		m_StabilisationEnabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
 
@@ -233,11 +243,15 @@ namespace lvk
 			const auto [frame, output] = m_FrameQueue.oldest();
 			const auto& [displacement, velocity, trackers] = m_Trajectory.centre();
 
-			const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
-			const auto smooth_warp = velocity + correction;
-			const auto cropped_warp = enclose_crop(frame, smooth_warp);
+			if(m_StabilisationEnabled)
+			{
+				const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
+				const auto smooth_warp = velocity + correction;
+				const auto cropped_warp = enclose_crop(frame, smooth_warp);
 
-			cv::warpAffine(frame, m_WarpFrame, cropped_warp.as_matrix(), frame.size());
+				cv::warpAffine(frame, m_WarpFrame, cropped_warp.as_matrix(), frame.size());
+			}
+			else frame.copyTo(m_WarpFrame);
 
 			m_WarpFrame >> output;
 
