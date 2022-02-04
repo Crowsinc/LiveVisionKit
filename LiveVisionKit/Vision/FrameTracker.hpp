@@ -22,17 +22,29 @@ namespace lvk
 			// A higher amount usually leads more robust tracking at the
 			// cost of computational performance. But going too high
 			// will introduce low quality tracking points.
-			uint32_t max_trackers = 1500;
+			uint32_t max_trackers = 1200;
 
 			// The minimum matched tracking points required for transform
 			// estimation as a percentage of the max trackers. If the
 			// threshold is not met, the tracker defaults to zero motion.
-			double match_proportion = 0.4;
+			double min_matches = 0.3;
 
 			// The internal resolution used for the tracking. A lower
 			// resolution leads to a decrease in tracking points, but
 			// much faster computation speed.
 			cv::Size resolution = cv::Size(960, 540);
+
+			// The amount to crop the edges of the frame (up to 0.25) when
+			// detecting tracking points. This focusses the trackers onto the
+			// centre of the frame, where they are less likely to go out of frame
+			// with sufficient motion, thus improving tracking efficiency.
+			double crop_proportion = 0.05;
+
+			// The columns and rows of the grid that partitions the internal
+			// resolution and max trackers to help enforce better tracker distribution.
+			// Increasing the grid decreases computational performance. Set the grid
+			// to (1,1) to remove its use.
+			cv::Size grid = cv::Size(3,2);
 		};
 
 	public:
@@ -56,7 +68,9 @@ namespace lvk
 		const Properties m_Properties;
 		const uint32_t m_MatchThreshold;
 		const uint32_t m_TrackThreshold;
+		const uint32_t m_MaxRegionTrackers;
 
+		std::vector<cv::Rect> m_GridRegions;
 		std::vector<cv::KeyPoint> m_KeyPoints;
 		std::vector<cv::Point2f> m_TrackPoints;
 		std::vector<cv::Point2f> m_MatchedPoints;
@@ -64,7 +78,7 @@ namespace lvk
 		cv::UMat m_PrevFrame, m_NextFrame;
 		uint64_t m_FrameCount;
 
-		void import_next(const cv::UMat& frame);
+		cv::Point2f import_next(const cv::UMat& frame);
 
 	};
 

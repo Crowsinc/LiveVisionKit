@@ -42,4 +42,19 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
+	template<typename T>
+	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion)
+	{
+		const T total_horz_crop = region.width * proportion;
+		const T total_vert_crop = region.height * proportion;
+
+		return cv::Rect_<T>(
+				total_horz_crop / 2,
+				total_vert_crop / 2,
+				region.width - total_horz_crop,
+				region.height - total_vert_crop
+		);
+	}
+
+	//-------------------------------------------------------------------------------------
 }

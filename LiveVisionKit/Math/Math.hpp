@@ -17,6 +17,9 @@ namespace lvk
 	template<typename V, typename T>
 	inline V lerp(const V from, const V to, const T t);
 
+	template<typename T>
+	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion);
+
 }
 
 #include "../Math/Math.tpp"
