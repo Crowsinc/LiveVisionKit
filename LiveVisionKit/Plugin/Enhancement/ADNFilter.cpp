@@ -16,7 +16,7 @@ namespace lvk
 	constexpr auto PROP_STRENGTH = "STRENGTH";
 	constexpr auto STRENGTH_MAX = 100;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 30;
+	constexpr auto STRENGTH_DEFAULT = 60;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
@@ -117,7 +117,7 @@ namespace lvk
 		cv::bitwise_or(m_Mask, m_Edges, m_Mask);
 		cv::dilate(m_Mask, m_Mask, cv::noArray(), cv::Point(-1,-1), 3);
 
-		const double threshold = (1 + m_Strength * 200.0) / 255.0;
+		const double threshold = (1 + m_Strength * 100.0) / 255.0;
 
 		// Add fall-off and linear blend
 		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
