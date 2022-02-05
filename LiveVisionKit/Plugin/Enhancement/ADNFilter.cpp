@@ -16,7 +16,7 @@ namespace lvk
 	constexpr auto PROP_STRENGTH = "STRENGTH";
 	constexpr auto STRENGTH_MAX = 100;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 60;
+	constexpr auto STRENGTH_DEFAULT = 30;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
