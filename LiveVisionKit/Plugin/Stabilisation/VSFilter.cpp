@@ -12,8 +12,6 @@ namespace lvk
 	//		CONSTANT PROPERTIES/SETTINGS
 	//===================================================================================
 
-	static const FrameTracker::Properties TRACKING_PROPERTIES = {/* Use defaults */};
-
 	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
 	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
@@ -131,7 +129,7 @@ namespace lvk
 		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FrameTracker(TRACKING_PROPERTIES)
+		  m_FrameTracker(/* Use defaults */)
 	{
 
 		char* shader_path = obs_module_file("effects/vs.effect");
@@ -236,12 +234,11 @@ namespace lvk
 		auto& motion = m_Trajectory.advance();
 		motion.velocity = m_FrameTracker.track(m_TrackingFrame);
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
-		motion.trackers = m_FrameTracker.tracking_points().size();
 
 		if(stabilisation_ready())
 		{
 			const auto [frame, output] = m_FrameQueue.oldest();
-			const auto& [displacement, velocity, trackers] = m_Trajectory.centre();
+			const auto& [displacement, velocity] = m_Trajectory.centre();
 
 			if(m_StabilisationEnabled)
 			{
@@ -258,7 +255,7 @@ namespace lvk
 			const uint64_t end_time = os_gettime_ns();
 
 			if(m_TestMode)
-				draw_debug_info(m_WarpFrame, end_time - start_time, trackers) >> output;
+				draw_debug_info(m_WarpFrame, end_time - start_time) >> output;
 
 			// Forcibly remove the OBS frame to avoid accidentally releasing
 			// it later and causing a hard to find double free issue :)
@@ -298,9 +295,8 @@ namespace lvk
 
 	//-------------------------------------------------------------------------------------
 
-	cv::UMat VSFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns, const uint32_t trackers)
+	cv::UMat VSFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
-		const auto properties = m_FrameTracker.properties();
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);
 		const cv::Scalar red_yuv(76, 84, 255);
@@ -325,20 +321,6 @@ namespace lvk
 			2
 		);
 
-		//TODO: switch to C++20 fmt as soon as GCC supports it.
-		std::stringstream tracker_text;
-		tracker_text << trackers  << "/" << properties.max_trackers;
-
-		cv::putText(
-			frame,
-			tracker_text.str(),
-			m_CropRegion.tl() + cv::Point(250, 40),
-			cv::FONT_HERSHEY_DUPLEX,
-			1.5,
-			trackers >= properties.min_matches ? green_yuv : red_yuv,
-			2
-		);
-
 		return frame;
 	}
 
@@ -347,7 +329,7 @@ namespace lvk
 	void VSFilter::reset()
 	{
 		reset_buffers();
-		m_FrameTracker.reset();
+		m_FrameTracker.restart();
 		m_TrackingFrame.release();
 		m_WarpFrame.release();
 	}
@@ -452,8 +434,7 @@ namespace lvk
 
 	VSFilter::FrameVector::FrameVector(const Transform& displacement, const Transform& velocity)
 		: displacement(displacement),
-		  velocity(velocity),
-		  trackers(0)
+		  velocity(velocity)
 	{}
 
 	//-------------------------------------------------------------------------------------
