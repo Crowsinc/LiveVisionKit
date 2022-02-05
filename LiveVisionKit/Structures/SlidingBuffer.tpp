@@ -1,11 +1,26 @@
-
-#include <stdint.h>
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
 
 #include "../Diagnostics/Assert.hpp"
 
 namespace lvk
 {
-	//-------------------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	SlidingBuffer<T>::SlidingBuffer(const uint32_t window_size)
@@ -19,8 +34,7 @@ namespace lvk
 		clear();
 	}
 
-
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	void SlidingBuffer<T>::advance_window()
@@ -33,7 +47,7 @@ namespace lvk
 		else m_EndIndex = m_InternalBuffer.size();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	void SlidingBuffer<T>::push(const T& element)
@@ -46,7 +60,7 @@ namespace lvk
 			m_InternalBuffer[m_EndIndex] = element;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	template<typename... Args>
@@ -64,7 +78,7 @@ namespace lvk
 			return m_InternalBuffer[m_EndIndex];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	void SlidingBuffer<T>::clear()
@@ -74,7 +88,7 @@ namespace lvk
 		m_InternalBuffer.clear();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	void SlidingBuffer<T>::resize(const uint32_t window_size)
@@ -109,7 +123,7 @@ namespace lvk
 		m_WindowSize = window_size;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	template<typename K>
@@ -124,7 +138,7 @@ namespace lvk
 		return initial;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::at(const uint32_t index)
@@ -134,7 +148,7 @@ namespace lvk
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::operator[](const uint32_t index)
@@ -142,7 +156,7 @@ namespace lvk
 		return at(index);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::at(const uint32_t index) const
@@ -152,7 +166,7 @@ namespace lvk
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::operator[](const uint32_t index) const
@@ -160,7 +174,7 @@ namespace lvk
 		return at(index);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::centre() const
@@ -172,7 +186,7 @@ namespace lvk
 		return at(centre_index());
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::oldest() const
@@ -181,7 +195,7 @@ namespace lvk
 		return m_InternalBuffer[m_StartIndex];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::newest() const
@@ -190,7 +204,7 @@ namespace lvk
 		return m_InternalBuffer[m_EndIndex];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	const T& SlidingBuffer<T>::previous() const
@@ -199,7 +213,7 @@ namespace lvk
 		return this->at(this->elements() - 2);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::centre()
@@ -210,7 +224,7 @@ namespace lvk
 		return at(centre_index());
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::oldest()
@@ -220,7 +234,7 @@ namespace lvk
 		return m_InternalBuffer[m_StartIndex];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::newest()
@@ -229,7 +243,7 @@ namespace lvk
 		return m_InternalBuffer[m_EndIndex];
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T& SlidingBuffer<T>::previous()
@@ -238,7 +252,7 @@ namespace lvk
 		return this->at(this->elements() - 2);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	bool SlidingBuffer<T>::full() const
@@ -246,7 +260,7 @@ namespace lvk
 		return elements() == window_size();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	bool SlidingBuffer<T>::empty() const
@@ -254,7 +268,7 @@ namespace lvk
 		return m_InternalBuffer.empty();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	uint32_t SlidingBuffer<T>::elements() const
@@ -262,7 +276,7 @@ namespace lvk
 		return m_InternalBuffer.size();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	uint32_t SlidingBuffer<T>::window_size() const
@@ -270,7 +284,7 @@ namespace lvk
 		return m_WindowSize;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	uint32_t SlidingBuffer<T>::centre_index() const
@@ -278,11 +292,10 @@ namespace lvk
 		LVK_ASSERT(!this->empty());
 
 		// NOTE: Gets lower centre index for even sizing.
-		// NOTE: This is an external 0-N index not an internal
-		// one which wraps from start index to end index.
+		// NOTE: This is an external 0-N index to be used with SlidingBuffer at() and [] operations.
 		return (elements() - 1) / 2;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 }

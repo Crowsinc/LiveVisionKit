@@ -1,7 +1,21 @@
-#include "FrameTracker.hpp"
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
 
-#include <algorithm>
-#include <util/platform.h>
+#include "FrameTracker.hpp"
 
 #include "../Math/Math.hpp"
 #include "../Utility/Algorithm.hpp"
@@ -10,15 +24,15 @@
 namespace lvk
 {
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	static constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
 	static constexpr double MAX_FEATURE_THRESHOLD = 250;
 	static constexpr double MIN_FEATURE_THRESHOLD = 30;
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-	FrameTracker::FrameTracker(const float estimation_threshold, const cv::Size resolution, const cv::Size block_size)
+	FrameTracker::FrameTracker(const float estimation_threshold, const cv::Size& resolution, const cv::Size& block_size)
 		: m_TrackingResolution(resolution),
 		  m_BlockSize(block_size),
 		  m_GridSize(
@@ -38,39 +52,43 @@ namespace lvk
 		m_Features.reserve(5000);
 		m_Grid.resize(m_GridSize.area());
 
-		// Split the internal resolution in vertical thirds to
-		// more evenly distribute points across the frames.
+		// Manually add tracking regions to split the internal resolution into
+		// vertical thirds to more evenly distribute feature detection across the frame.
+
+		// TODO: Experiment with different feature targets for the regions
+		const uint32_t feature_target = 3000;
+
 		auto& left_region = m_TrackingRegions.emplace_back();
 		left_region.region = cv::Rect(
 			cv::Point(0, 0),
 			cv::Size(resolution.width/3, resolution.height)
 		);
-		left_region.feature_target = std::min(4 * m_GridSize.area(), 3000);
+		left_region.feature_target = feature_target;
 
 		auto& middle_region = m_TrackingRegions.emplace_back();
 		middle_region.region = cv::Rect(
 			cv::Point(resolution.width/3, 0),
 			cv::Size(resolution.width/3, resolution.height)
 		);
-		middle_region.feature_target = std::min(4 * m_GridSize.area(), 3000);
+		middle_region.feature_target = feature_target;
 
 		auto& right_region = m_TrackingRegions.emplace_back();
 		right_region.region = cv::Rect(
 			cv::Point(2 * resolution.width/3, 0),
 			cv::Size(resolution.width/3, resolution.height)
 		);
-		right_region.feature_target = std::min(4 * m_GridSize.area(), 3000);
+		right_region.feature_target = feature_target;
 
 		restart();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	cv::Point2f FrameTracker::import_next(const cv::UMat& frame)
 	{
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
-		cv::resize(frame, m_NextFrame, m_TrackingResolution, 0, 0, cv::INTER_NEAREST);
+		cv::resize(frame, m_NextFrame, m_TrackingResolution, 0, 0, cv::INTER_AREA);
 
 		const cv::Mat sharpening_kernel({3,3}, {
 				 0.0f, -0.5f, 0.0f,
@@ -79,7 +97,7 @@ namespace lvk
 		});
 
 		cv::equalizeHist(m_NextFrame, m_NextFrame);
-		cv::filter2D(m_NextFrame, m_NextFrame, -1, sharpening_kernel);
+		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), sharpening_kernel);
 
 		return cv::Point2f(
 			static_cast<float>(frame.cols) / m_TrackingResolution.width,
@@ -87,7 +105,7 @@ namespace lvk
 		);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	Transform FrameTracker::track(const cv::UMat& next_frame)
 	{
@@ -102,16 +120,22 @@ namespace lvk
 			return Transform::Identity();
 		}
 
-		// NOTE: With normal translational camera motion, there is a good chance
-		// that the next frame's scenery is a subset of the previous frame, but
-		// the opposite does not always hold. Especially around the borders of
-		// the image. So we perform tracking backwards, then reverse the points
-		// when performing transform estimation to keep time flowing forwards.
-
 		m_TrackedPoints.clear();
+		m_MatchedPoints.clear();
+		m_MatchStatus.clear();
+
+		// NOTE: With normal translational camera motion, there is a good chance that the
+		// next frame's scenery is a subset of the previous frame. The opposite commonly
+		// does not always hold, especially around the borders of the frame. So we perform
+		// tracking backwards, then reverse the points when performing transform estimation
+		// to keep time flowing forwards.
+
+		// Feature detection
+
 		for(auto& [region, feature_threshold, feature_target] : m_TrackingRegions)
 		{
 			m_Features.clear();
+
 			cv::FAST(
 				m_NextFrame(region),
 				m_Features,
@@ -121,20 +145,18 @@ namespace lvk
 
 			process_features(m_Features, m_TrackedPoints, region.tl());
 
-			// Dynamically adjust threshold
+			// Dynamically adjust feature threshold to meet target
 			if(m_Features.size() > feature_target)
 				feature_threshold = lerp(feature_threshold, MAX_FEATURE_THRESHOLD, 0.1);
 			else
 				feature_threshold = lerp(feature_threshold, MIN_FEATURE_THRESHOLD, 0.1);
 		}
 
-		// Return identity transform if we don't have enough trackers
 		if(m_TrackedPoints.size() < m_MinMatchThreshold)
 			return Transform::Identity();
 
-		// Match tracking points in next frame
-		m_MatchedPoints.clear();
-		m_MatchStatus.clear();
+		// Feature matching
+
 		cv::calcOpticalFlowPyrLK(
 			m_NextFrame,
 			m_PrevFrame,
@@ -144,11 +166,12 @@ namespace lvk
 			cv::noArray()
 		);
 
-		// Filter out non-matches
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
 		if(m_MatchedPoints.size() < m_MinMatchThreshold)
 			return Transform::Identity();
+
+		// Motion Estimation
 
 		// Re-scale all the points to original frame size otherwise the motion will be downscaled
 		for(size_t i = 0; i < m_TrackedPoints.size(); i++)
@@ -163,17 +186,21 @@ namespace lvk
 		}
 
 		const auto affine_estimate = cv::estimateAffinePartial2D(m_MatchedPoints, m_TrackedPoints);
-		if(affine_estimate.empty())
-			return Transform::Identity();
 
-		return Transform::FromAffine2D(affine_estimate);
+		return affine_estimate.empty() ? Transform::Identity() : Transform::FromAffine2D(affine_estimate);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-	void FrameTracker::process_features(const std::vector<cv::KeyPoint>& features, std::vector<cv::Point2f>& points, const cv::Point2f& offset)
+	void FrameTracker::process_features(
+			const std::vector<cv::KeyPoint>& features,
+			std::vector<cv::Point2f>& points,
+			const cv::Point2f& offset
+	)
 	{
-		// Sort all the best features into the grid
+		// Process all the features into the grid, keeping only the best for each block
+		// This enforces better tracking point distribution across the frame, hopefully
+		// leading to a better estimation of global motion.
 		for(auto& feature : features)
 		{
 			const auto point = feature.pt + offset;
@@ -189,7 +216,7 @@ namespace lvk
 			}
 		}
 
-		// Push all resulting features to the points vector
+		// Push all resulting best features to the points vector
 		for(auto& feature : m_Grid)
 		{
 			if(feature.has_value())
@@ -200,7 +227,7 @@ namespace lvk
 		}
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void FrameTracker::restart()
 	{
@@ -209,6 +236,6 @@ namespace lvk
 			feature_threshold = DEFAULT_FEATURE_THRESHOLD;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 }

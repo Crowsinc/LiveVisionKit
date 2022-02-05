@@ -1,5 +1,21 @@
-#pragma once
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
 
+#pragma once
 
 #include <opencv2/opencv.hpp>
 #include <optional>
@@ -13,7 +29,11 @@ namespace lvk
 	{
 	public:
 
-		FrameTracker(const float estimation_threshold = 0.05, const cv::Size resolution = cv::Size(960,540), const cv::Size block_size = cv::Size(30, 30));
+		FrameTracker(
+				const float estimation_threshold = 0.05,
+				const cv::Size& resolution = cv::Size(960,540),
+				const cv::Size& block_size = cv::Size(30, 30)
+		);
 
 		Transform track(const cv::UMat& next_frame);
 
@@ -43,7 +63,12 @@ namespace lvk
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;
 
-		void process_features(const std::vector<cv::KeyPoint>& features, std::vector<cv::Point2f>& points, const cv::Point2f& offset);
+
+		void process_features(
+				const std::vector<cv::KeyPoint>& features,
+				std::vector<cv::Point2f>& points,
+				const cv::Point2f& offset
+		);
 
 		cv::Point2f import_next(const cv::UMat& frame);
 

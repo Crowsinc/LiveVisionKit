@@ -1,9 +1,26 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include "../Math/BoundingBox.hpp"
 
 namespace lvk
 {
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	BoundingBox::BoundingBox(const cv::Size2d& size, const Transform& transform)
 		: m_Rect({0.0, 0.0}, size),
@@ -12,7 +29,7 @@ namespace lvk
 		this->transform(transform);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void BoundingBox::transform(const Transform& transform)
 	{
@@ -33,7 +50,7 @@ namespace lvk
 		m_YUnitNormal = (m_BottomLeft - m_TopLeft) / m_LocalExtent.height;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool BoundingBox::encloses(const cv::Rect2d& rect) const
 	{
@@ -48,7 +65,7 @@ namespace lvk
 			&& m_LocalExtent.contains(to_local_space(bl));
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool BoundingBox::encloses(const BoundingBox& box) const
 	{
@@ -58,7 +75,7 @@ namespace lvk
 			&& m_LocalExtent.contains(to_local_space(box.m_BottomLeft));
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	cv::Point2d BoundingBox::to_local_space(cv::Point2d point) const
 	{
@@ -66,6 +83,6 @@ namespace lvk
 		return cv::Point2d(m_XUnitNormal.dot(point), m_YUnitNormal.dot(point));
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 }
