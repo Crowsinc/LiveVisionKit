@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <obs/obs-module.h>
+#include <obs-module.h>
 #include <opencv2/opencv.hpp>
 
 namespace lvk

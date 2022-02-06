@@ -15,8 +15,8 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs/obs-module.h>
-#include <obs/obs-source.h>
+#include <obs-module.h>
+#include <obs-source.h>
 
 #include "ADNFilter.hpp"
 

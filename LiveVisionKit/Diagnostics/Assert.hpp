@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <obs/obs.h>
+#include <obs.h>
 
 #ifndef DISABLE_ASSERTS
 

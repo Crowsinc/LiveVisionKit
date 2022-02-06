@@ -16,10 +16,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -29,10 +25,7 @@
 # Executables
 *.exe
 *.out
-*.app
-
-# Test Resources (Non-Source)
-*_*.mp4
+*.a
 
 # Eclipse CDT 
 **/.project
@@ -42,3 +35,63 @@
 .metadata/
 **/Debug/
 **/Release/
+
+# Visual Studio
+*.sln
+*.vcxproj*
+**/.vs/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/ipch/
+*.suo
+*.csproj.user
+*.vbproj.user
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.coverage
+*.coveragexml
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+
