@@ -25,12 +25,7 @@
 
 static void* on_vs_create(obs_data_t* settings, obs_source_t* context)
 {
-	auto filter = lvk::VSFilter::Create(context);
-
-	if(filter)
-		filter->configure(settings);
-
-	return filter;
+	return lvk::VSFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -30,7 +30,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static ADNFilter* Create(obs_source_t* context);
+		static ADNFilter* Create(obs_source_t* context, obs_data_t* settings);
 
 		void configure(obs_data_t* settings);
 

@@ -24,12 +24,7 @@
 
 static void* on_cas_create(obs_data_t* settings, obs_source_t* context)
 {
-	auto filter = lvk::CASFilter::Create(context);
-
-	if(filter)
-		filter->configure(settings);
-
-	return filter;
+	return lvk::CASFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------

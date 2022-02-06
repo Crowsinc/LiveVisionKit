@@ -100,6 +100,8 @@ namespace lvk
 
 	void VSFilter::LoadDefault(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
@@ -108,8 +110,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter* VSFilter::Create(obs_source_t* context)
+	VSFilter* VSFilter::Create(obs_source_t* context, obs_data_t* settings)
 	{
+		LVK_ASSERT(context != nullptr && settings != nullptr);
+
 		auto filter = new VSFilter(context);
 
 		if(!filter->validate())
@@ -119,6 +123,8 @@ namespace lvk
 		}
 
 		cv::ocl::setUseOpenCL(true);
+
+		filter->configure(settings);
 
 		return filter;
 	}
@@ -138,6 +144,7 @@ namespace lvk
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FrameTracker(/* Use defaults */)
 	{
+		LVK_ASSERT(context != nullptr);
 
 		char* shader_path = obs_module_file("effects/vs.effect");
 		if(shader_path != nullptr)
@@ -165,6 +172,8 @@ namespace lvk
 
 	void VSFilter::configure(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 
 		if(m_SmoothingRadius != new_radius)
@@ -231,6 +240,8 @@ namespace lvk
 
 	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
 	{
+		LVK_ASSERT(obs_frame != nullptr);
+
 		if(is_queue_outdated(obs_frame))
 			reset();
 

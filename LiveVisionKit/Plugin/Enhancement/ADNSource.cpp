@@ -24,12 +24,7 @@
 
 static void* on_adn_create(obs_data_t* settings, obs_source_t* context)
 {
-	auto filter = lvk::ADNFilter::Create(context);
-
-	if(filter)
-		filter->configure(settings);
-
-	return filter;
+	return lvk::ADNFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------

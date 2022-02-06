@@ -30,7 +30,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static CASFilter* Create(obs_source_t* context);
+		static CASFilter* Create(obs_source_t* context, obs_data_t* settings);
 
 		~CASFilter();
 

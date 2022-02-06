@@ -30,7 +30,7 @@ namespace lvk
 
 		static void LoadDefault(obs_data_t* settings);
 
-		static VSFilter* Create(obs_source_t* context);
+		static VSFilter* Create(obs_source_t* context, obs_data_t* settings);
 
 		~VSFilter();
 

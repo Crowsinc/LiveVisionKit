@@ -25,12 +25,7 @@
 
 static void* on_fsr_create(obs_data_t* settings, obs_source_t* context)
 {
-	auto filter = lvk::FSRFilter::Create(context);
-
-	if(filter)
-		filter->configure(settings);
-
-	return filter;
+	return lvk::FSRFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------

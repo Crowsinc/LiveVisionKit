@@ -68,13 +68,17 @@ namespace lvk
 
 	void FSRFilter::LoadDefaults(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		obs_data_set_default_string(settings, PROP_OUTPUT_SIZE, OUTPUT_SIZE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FSRFilter* FSRFilter::Create(obs_source_t* context)
+	FSRFilter* FSRFilter::Create(obs_source_t* context, obs_data_t* settings)
 	{
+		LVK_ASSERT(context != nullptr && settings != nullptr);
+
 		auto filter = new FSRFilter(context);
 
 		if(!filter->validate())
@@ -82,6 +86,8 @@ namespace lvk
 			delete filter;
 			return nullptr;
 		}
+
+		filter->configure(settings);
 
 		return filter;
 	}
@@ -98,6 +104,8 @@ namespace lvk
 		  m_EASUConstParam2(nullptr),
 		  m_EASUConstParam3(nullptr)
 	{
+		LVK_ASSERT(context != nullptr);
+
 		char* shader_path = obs_module_file("effects/fsr.effect");
 		if(shader_path != nullptr)
 		{
@@ -140,6 +148,8 @@ namespace lvk
 
 	void FSRFilter::configure(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		m_EASUMatchCanvas = false;
 
 		const std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);

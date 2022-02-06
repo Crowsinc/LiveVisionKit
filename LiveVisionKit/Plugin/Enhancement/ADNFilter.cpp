@@ -59,14 +59,18 @@ namespace lvk
 
 	void ADNFilter::LoadDefaults(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		obs_data_set_default_int(settings, PROP_STRENGTH, STRENGTH_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	ADNFilter* ADNFilter::Create(obs_source_t* context)
+	ADNFilter* ADNFilter::Create(obs_source_t* context, obs_data_t* settings)
 	{
+		LVK_ASSERT(context != nullptr && settings != nullptr);
+
 		auto filter = new ADNFilter(context);
 
 		if(!filter->validate())
@@ -74,6 +78,8 @@ namespace lvk
 			delete filter;
 			return nullptr;
 		}
+
+		filter->configure(settings);
 
 		return filter;
 	}
@@ -91,12 +97,16 @@ namespace lvk
 		  m_Mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DetailBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DenoiseBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
-	{}
+	{
+		LVK_ASSERT(context != nullptr);
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void ADNFilter::configure(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		m_Strength = obs_data_get_int(settings, PROP_STRENGTH) / 100.0f;
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
@@ -105,6 +115,8 @@ namespace lvk
 
 	obs_source_frame* ADNFilter::process(obs_source_frame* obs_frame)
 	{
+		LVK_ASSERT(obs_frame != nullptr);
+
 		const auto start_time = os_gettime_ns();
 
 		m_Frame << obs_frame;

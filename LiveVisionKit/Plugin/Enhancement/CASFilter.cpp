@@ -53,13 +53,17 @@ namespace lvk
 
 	void CASFilter::LoadDefaults(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		obs_data_set_default_double(settings, PROP_SHARPNESS, SHARPNESS_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	CASFilter* CASFilter::Create(obs_source_t* context)
+	CASFilter* CASFilter::Create(obs_source_t* context, obs_data_t* settings)
 	{
+		LVK_ASSERT(context != nullptr && settings != nullptr);
+
 		auto filter = new CASFilter(context);
 
 		if(!filter->validate())
@@ -67,6 +71,8 @@ namespace lvk
 			delete filter;
 			return nullptr;
 		}
+
+		filter->configure(settings);
 
 		return filter;
 	}
@@ -79,6 +85,8 @@ namespace lvk
 		  m_CASConstParam1(nullptr),
 		  m_OutputSizeParam(nullptr)
 	{
+		LVK_ASSERT(context != nullptr);
+
 		char* shader_path = obs_module_file("effects/cas.effect");
 		if(shader_path != nullptr)
 		{
@@ -116,6 +124,8 @@ namespace lvk
 
 	void CASFilter::configure(obs_data_t* settings)
 	{
+		LVK_ASSERT(settings != nullptr);
+
 		const float sharpness = obs_data_get_double(settings, PROP_SHARPNESS);
 
 		// NOTE: The CAS constant is a vector of four uint32_t but its bits actually represent floats.
