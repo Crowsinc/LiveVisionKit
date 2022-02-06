@@ -1,4 +1,3 @@
-
 //    *************************** LiveVisionKit ****************************
 //    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
 //
@@ -31,7 +30,6 @@ namespace lvk
 		LVK_ASSERT(index < data.size());
 
 		// Removes an element by first swapping it with the final element to avoid re-shuffling.
-		// NOTE: Changes ordering of the vector data so should be used with caution.
 		std::swap(data[index], data.back());
 		data.pop_back();
 	}
@@ -42,8 +40,6 @@ namespace lvk
 	void fast_filter(std::vector<T>& data, const std::vector<P>& keep)
 	{
 		LVK_ASSERT(data.size() == keep.size());
-
-		// NOTE: Changes ordering of the vector data so should be used with caution.
 
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// data/keep element correspondence of unprocessed elements.
@@ -59,8 +55,6 @@ namespace lvk
 	{
 		LVK_ASSERT(data_1.size() == keep.size());
 		LVK_ASSERT(data_2.size() == keep.size());
-
-		// NOTE: Changes ordering of the vector data so should be used with caution.
 
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// vector element correspondence of unprocessed elements.

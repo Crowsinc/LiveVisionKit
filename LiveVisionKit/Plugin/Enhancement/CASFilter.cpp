@@ -1,7 +1,22 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include "CASFilter.hpp"
 
-#include <obs/obs-module.h>
-#include <filesystem>
 #include <string>
 
 #define A_CPU 1
@@ -11,16 +26,12 @@
 namespace lvk
 {
 
-	//===================================================================================
-	//		CONSTANT PROPERTIES/SETTINGS
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	static constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
 	static constexpr auto SHARPNESS_DEFAULT = 0.8f;
 
-	//===================================================================================
-	//		FILTER IMPLEMENTATION
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* CASFilter::Properties()
 	{
@@ -38,14 +49,14 @@ namespace lvk
 		return properties;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void CASFilter::LoadDefaults(obs_data_t* settings)
 	{
 		obs_data_set_default_double(settings, PROP_SHARPNESS, SHARPNESS_DEFAULT);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	CASFilter* CASFilter::Create(obs_source_t* context)
 	{
@@ -60,7 +71,7 @@ namespace lvk
 		return filter;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	CASFilter::CASFilter(obs_source_t* context)
 		: m_Context(context),
@@ -68,7 +79,6 @@ namespace lvk
 		  m_CASConstParam1(nullptr),
 		  m_OutputSizeParam(nullptr)
 	{
-		// Load CAS shader
 		char* shader_path = obs_module_file("effects/cas.effect");
 		if(shader_path != nullptr)
 		{
@@ -86,11 +96,11 @@ namespace lvk
 			obs_leave_graphics();
 		}
 
-		// Should get updated before first render
+		// NOTE: Must get configured() by Create() before first update
 		vec2_zero(&m_OutputSize);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	CASFilter::~CASFilter()
 	{
@@ -102,23 +112,23 @@ namespace lvk
 		obs_leave_graphics();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void CASFilter::configure(obs_data_t* settings)
 	{
 		const float sharpness = obs_data_get_double(settings, PROP_SHARPNESS);
 
-		// The CAS constant is a vector of four uint32_t but its bits actually represent floats.
+		// NOTE: The CAS constant is a vector of four uint32_t but its bits actually represent floats.
 		// Normally this conversion happens in the CAS shader. However due to compatibility issues,
 		// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
 		// to uint32_t pointers to facilitate the uint32_t to float re-interpretation. Additionally
 		// we only care about const1 and the sharpness input, as the rest are for the CAS scaling
-		// functionality, which isn't used.
+		// functionality which isn't used.
 		varAU4(const_0);
 		CasSetup(const_0, (AU1*)m_CASConst1.ptr, sharpness, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void CASFilter::render()
 	{
@@ -139,21 +149,21 @@ namespace lvk
 		else obs_source_skip_video_filter(m_Context);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t CASFilter::width() const
 	{
 		return m_OutputSize.x;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t CASFilter::height() const
 	{
 		return m_OutputSize.y;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool CASFilter::validate() const
 	{
@@ -164,5 +174,5 @@ namespace lvk
 			&& m_CASConstParam1 != nullptr;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 }

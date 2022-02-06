@@ -15,6 +15,14 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#include <obs/obs-module.h>
+#include <obs/obs-source.h>
+#include <obs/obs.h>
+
+#include <util/platform.h>
+
+#include <opencv2/opencv.hpp>
+
 #include "Diagnostics/Assert.hpp"
 
 #include "Math/Math.hpp"

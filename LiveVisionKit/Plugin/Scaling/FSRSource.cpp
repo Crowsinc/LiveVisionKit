@@ -1,12 +1,27 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include <obs/obs-module.h>
 #include <obs/obs-source.h>
 #include <obs/obs.h>
 
 #include "FSRFilter.hpp"
 
-//=====================================================================================
-//		EVENT HANDLING
-//=====================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 static void* on_fsr_create(obs_data_t* settings, obs_source_t* context)
 {
@@ -18,67 +33,63 @@ static void* on_fsr_create(obs_data_t* settings, obs_source_t* context)
 	return filter;
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 static void on_fsr_destroy(void* data)
 {
 	delete static_cast<lvk::FSRFilter*>(data);
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 static void on_fsr_configure(void* data, obs_data_t* settings)
 {
 	static_cast<lvk::FSRFilter*>(data)->configure(settings);
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-static void on_fsr_render(void* data, gs_effect_t* _)
+static void on_fsr_render(void* data, gs_effect_t* effect)
 {
 	static_cast<lvk::FSRFilter*>(data)->render();
 }
 
-//=====================================================================================
-//		FILTER GETTERS
-//=====================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 static obs_properties_t* fsr_filter_properties(void* data)
 {
 	return lvk::FSRFilter::Properties();
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 static void fsr_filter_default_settings(obs_data_t* settings)
 {
 	lvk::FSRFilter::LoadDefaults(settings);
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 static uint32_t fsr_output_width(void* data)
 {
 	return static_cast<lvk::FSRFilter*>(data)->width();
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 static uint32_t fsr_output_height(void* data)
 {
 	return static_cast<lvk::FSRFilter*>(data)->height();
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-static const char* fsr_filter_name(void* _)
+static const char* fsr_filter_name(void* data)
 {
 	return "(LVK) FidelityFX Super Resolution 1.0";
 }
 
-//=====================================================================================
-//		PLUGIN REGISTRATION
-//=====================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 extern void register_fsr_source()
 {
@@ -102,4 +113,4 @@ extern void register_fsr_source()
 	obs_register_source(&config);
 }
 
-//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------

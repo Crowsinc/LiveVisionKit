@@ -1,17 +1,26 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include "ADNFilter.hpp"
-
-#include <obs/obs-module.h>
-
-#include <util/platform.h>
-
-#include "../../Vision/FrameIngest.hpp"
 
 namespace lvk
 {
 
-	//===================================================================================
-	//		CONSTANT PROPERTIES/SETTINGS
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_STRENGTH = "STRENGTH";
 	constexpr auto STRENGTH_MAX = 100;
@@ -21,9 +30,7 @@ namespace lvk
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
 
-	//===================================================================================
-	//		FILTER IMPLEMENTATION
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* ADNFilter::Properties()
 	{
@@ -48,7 +55,7 @@ namespace lvk
 		return properties;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void ADNFilter::LoadDefaults(obs_data_t* settings)
 	{
@@ -56,7 +63,7 @@ namespace lvk
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	ADNFilter* ADNFilter::Create(obs_source_t* context)
 	{
@@ -71,7 +78,7 @@ namespace lvk
 		return filter;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	ADNFilter::ADNFilter(obs_source_t* context)
 		: m_Context(context),
@@ -86,7 +93,7 @@ namespace lvk
 		  m_DenoiseBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void ADNFilter::configure(obs_data_t* settings)
 	{
@@ -94,7 +101,7 @@ namespace lvk
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_source_frame* ADNFilter::process(obs_source_frame* obs_frame)
 	{
@@ -102,16 +109,28 @@ namespace lvk
 
 		m_Frame << obs_frame;
 
+		// Extract Y channel from YUV frame to use for tracking.
 		cv::extractChannel(m_Frame, m_Mask, 0);
-		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
 
-		// Perform denoising
+		// NOTE: Denoising is performed in BGR via median filtering.
+		// The frame is significantly downscaled to improve performance
+		// and to make the median filtering act upon a larger, 'non-local',
+		// area of the frame. Further improving denoising performance.
+		// The scaling introduces significant degredation of quality,
+		// so the denoised frame is linearly blended back to the original
+		// frame based on a detail map, which lowers denoising in high
+		// detail areas (edges etc.)
+
+		// Construct denoised frame.
+
 		const cv::Size denoise_resolution(480, 270);
+		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
 		cv::resize(m_Frame, m_DenoiseFrame, denoise_resolution, 0, 0, cv::INTER_AREA);
 		cv::medianBlur(m_DenoiseFrame, m_DenoiseFrame, 5);
 		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
-		// Create continuous detail mask
+		// Construct detail mask, preserving as many edges as possible.
+
 		cv::Scharr(m_Mask, m_Edges, m_Mask.type(), 1, 0);
 		cv::Scharr(m_Mask, m_Mask, m_Mask.type(), 0, 1);
 		cv::bitwise_or(m_Mask, m_Edges, m_Mask);
@@ -119,7 +138,8 @@ namespace lvk
 
 		const double threshold = (1 + m_Strength * 100.0) / 255.0;
 
-		// Add fall-off and linear blend
+		// Attenuate the edges of the detail mask and perform blending
+
 		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
 		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255 * (1.0 - threshold));
 		cv::bitwise_not(m_Mask, m_Mask);
@@ -143,7 +163,7 @@ namespace lvk
 		return obs_frame;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	cv::UMat ADNFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
@@ -172,11 +192,11 @@ namespace lvk
 		return frame;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void ADNFilter::reset()
 	{
-		// Release all GPU memory
+		// Release GPU buffers to save memory
 		m_Frame.release();
 		m_SmoothFrame.release();
 		m_DenoiseFrame.release();
@@ -187,12 +207,13 @@ namespace lvk
 		m_DenoiseBlendMask.release();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool ADNFilter::validate() const
 	{
 		return m_Context != nullptr;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
+
 }

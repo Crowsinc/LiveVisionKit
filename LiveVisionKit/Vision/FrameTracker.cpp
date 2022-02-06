@@ -52,8 +52,10 @@ namespace lvk
 		m_Features.reserve(5000);
 		m_Grid.resize(m_GridSize.area());
 
-		// Manually add tracking regions to split the internal resolution into
-		// vertical thirds to more evenly distribute feature detection across the frame.
+		// NOTE: We divide the frame across multiple tracking regions to more evenly
+		// distribute feature detection across the frame. Vertical thirds are used
+		// to account for differing scenery across the frame, allowing for better
+		// utilisation of the dynamic feature thresholds.
 
 		// TODO: Experiment with different feature targets for the regions
 		const uint32_t feature_target = 3000;

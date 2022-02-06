@@ -493,7 +493,7 @@ namespace lvk
 		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
 		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		// NOTE: need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
+		// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
 		cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {1,0,  2,1});
 		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 0.5, cv::INTER_NEAREST);
 

@@ -1,7 +1,22 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include "FSRFilter.hpp"
 
-#include <obs/obs-module.h>
-#include <filesystem>
 #include <string>
 
 #define A_CPU 1
@@ -16,9 +31,7 @@
 namespace lvk
 {
 
-	//===================================================================================
-	//		CONSTANT PROPERTIES/SETTINGS
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	static constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
 	static constexpr auto OUTPUT_SIZE_CANVAS = "CANVAS";
@@ -28,15 +41,12 @@ namespace lvk
 	static constexpr auto OUTPUT_SIZE_720P   = "720P";
 	static constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_CANVAS;
 
-	//===================================================================================
-	//		FILTER IMPLEMENTATION
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* FSRFilter::Properties()
 	{
 		obs_properties_t* properties = obs_properties_create();
 
-		// Output resolution list
 		auto property = obs_properties_add_list(
 				properties,
 				PROP_OUTPUT_SIZE,
@@ -54,14 +64,14 @@ namespace lvk
 		return properties;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void FSRFilter::LoadDefaults(obs_data_t* settings)
 	{
 		obs_data_set_default_string(settings, PROP_OUTPUT_SIZE, OUTPUT_SIZE_DEFAULT);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	FSRFilter* FSRFilter::Create(obs_source_t* context)
 	{
@@ -76,7 +86,7 @@ namespace lvk
 		return filter;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	FSRFilter::FSRFilter(obs_source_t* context)
 		: m_Context(context),
@@ -108,13 +118,13 @@ namespace lvk
 			obs_leave_graphics();
 		}
 
-		// These should get updated to their proper values before the first render.
+		// NOTE: Must get configured() by Create() before first update
 		vec2_zero(&m_NewOutputSize);
 		vec2_zero(&m_OutputSize);
 		vec2_zero(&m_InputSize);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	FSRFilter::~FSRFilter()
 	{
@@ -126,7 +136,7 @@ namespace lvk
 		obs_leave_graphics();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void FSRFilter::configure(obs_data_t* settings)
 	{
@@ -134,7 +144,7 @@ namespace lvk
 
 		const std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
 		if(output_size == OUTPUT_SIZE_CANVAS)
-			m_EASUMatchCanvas = true; // Match canvas size on tick()
+			m_EASUMatchCanvas = true;
 		else if(output_size == OUTPUT_SIZE_2160P)
 			vec2_set(&m_NewOutputSize, 3840, 2160);
 		else if(output_size == OUTPUT_SIZE_1440P)
@@ -145,7 +155,7 @@ namespace lvk
 			vec2_set(&m_NewOutputSize, 1280, 720);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool FSRFilter::update_scaling()
 	{
@@ -172,10 +182,10 @@ namespace lvk
 		{
 			vec2_set(&m_InputSize, input_width, input_height);
 
-			// The EASU constants are a vector of four uint32_t but their bits actually represent floats.
-			// Normally this conversion happens in the FSR shader. However due to compatibility issues,
-			// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
-			// to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
+			// NOTE: The EASU constants are a vector of four uint32_t but their bits actually represent
+			// floats. Normally this conversion happens in the FSR shader. However due to compatibility
+			// issues, we perform the conversion on the CPU instead. So here we pass in float pointers,
+			// casted to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
 			FsrEasuCon((AU1*)m_EASUConst0.ptr, (AU1*)m_EASUConst1.ptr, (AU1*)m_EASUConst2.ptr, (AU1*)m_EASUConst3.ptr,
 					m_InputSize.x, m_InputSize.y, m_InputSize.x, m_InputSize.y,
 					m_OutputSize.x, m_OutputSize.y);
@@ -184,7 +194,7 @@ namespace lvk
 		return input_width != m_OutputSize.x || input_height != m_OutputSize.y;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void FSRFilter::render()
 	{
@@ -201,25 +211,24 @@ namespace lvk
 		else obs_source_skip_video_filter(m_Context);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t FSRFilter::width() const
 	{
 		return m_OutputSize.x;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t FSRFilter::height() const
 	{
 		return m_OutputSize.y;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool FSRFilter::validate() const
 	{
-		// Ensure we have no nulls for key filter members
 		return m_Context != nullptr
 			&& m_Shader != nullptr
 			&& m_OutputSizeParam != nullptr
@@ -229,5 +238,5 @@ namespace lvk
 			&& m_EASUConstParam3 != nullptr;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 }

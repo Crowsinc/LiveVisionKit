@@ -1,16 +1,29 @@
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
+
 #include "VSFilter.hpp"
 
-#include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
-
-#include <util/platform.h>
+#include <sstream>
 
 namespace lvk
 {
 
-	//===================================================================================
-	//		CONSTANT PROPERTIES/SETTINGS
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
 	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
@@ -32,15 +45,12 @@ namespace lvk
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
 
-	//===================================================================================
-	//		FILTER IMPLEMENTATION
-	//===================================================================================
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* VSFilter::Properties()
 	{
 		obs_properties_t* properties = obs_properties_create();
 
-		// Slider for window radius.
 		auto property = obs_properties_add_int(
 				properties,
 				PROP_SMOOTHING_RADIUS,
@@ -61,7 +71,6 @@ namespace lvk
 		obs_property_int_set_suffix(property, "ms");
 		obs_property_set_enabled(property, false);
 
-		// Slider for total proportion of allowable crop along each dimension.
 		property = obs_properties_add_int_slider(
 				properties,
 				PROP_CROP_PERCENTAGE,
@@ -78,7 +87,6 @@ namespace lvk
 				"Disable Stabilisation"
 		);
 
-		// Toggle for test mode, used to help configure settings.
 		obs_properties_add_bool(
 				properties,
 				PROP_TEST_MODE,
@@ -88,7 +96,7 @@ namespace lvk
 		return properties;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::LoadDefault(obs_data_t* settings)
 	{
@@ -98,7 +106,7 @@ namespace lvk
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter* VSFilter::Create(obs_source_t* context)
 	{
@@ -110,13 +118,12 @@ namespace lvk
 			return nullptr;
 		}
 
-		// Configure OpenCV to use OpenCL
 		cv::ocl::setUseOpenCL(true);
 
 		return filter;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::VSFilter(obs_source_t* context)
 		: m_Context(context),
@@ -147,14 +154,14 @@ namespace lvk
 		}
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::~VSFilter()
 	{
-		reset_buffers();
+		release_frame_queue();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::configure(obs_data_t* settings)
 	{
@@ -166,6 +173,11 @@ namespace lvk
 			reset_buffers();
 		}
 
+		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
+		m_StabilisationEnabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+
+		// Update frame delay indication for the user
 		obs_video_info video_info;
 		obs_get_video_info(&video_info);
 		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
@@ -173,18 +185,17 @@ namespace lvk
 		const uint32_t frame_delay = obs_data_get_int(settings, PROP_FRAME_DELAY_INFO);
 		const uint32_t new_frame_delay = frame_ms * m_FrameQueue.window_size();
 
+		// NOTE: Need to update the property UI to push a frame delay update because
+		// the UI element is disabled. But only if the delay has changed, otherwise
+		// the sliders are interrupted and won't smoothly drag anymore.
 		if(frame_delay != new_frame_delay)
 		{
-			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, frame_ms * m_FrameQueue.window_size());
+			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, new_frame_delay);
 			obs_source_update_properties(m_Context);
 		}
-
-		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
-		m_StabilisationEnabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
-		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::tick()
 	{
@@ -201,7 +212,7 @@ namespace lvk
 		}
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::render() const
 	{
@@ -216,12 +227,12 @@ namespace lvk
 		}
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
 	{
-		if(queue_outdated(obs_frame))
-			reset_buffers();
+		if(is_queue_outdated(obs_frame))
+			reset();
 
 		const uint64_t start_time = os_gettime_ns();
 
@@ -229,6 +240,7 @@ namespace lvk
 		buffer.frame << obs_frame;
 		buffer.output = obs_frame;
 
+		// Extract Y channel from YUV frame to use for tracking.
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
 
 		auto& motion = m_Trajectory.advance();
@@ -242,11 +254,10 @@ namespace lvk
 
 			if(m_StabilisationEnabled)
 			{
-				const auto correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
-				const auto smooth_warp = velocity + correction;
-				const auto cropped_warp = enclose_crop(frame, smooth_warp);
+				const auto trajectory_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
+				const auto stabilised_velocity = clamp_velocity(frame, velocity + trajectory_correction);
 
-				cv::warpAffine(frame, m_WarpFrame, cropped_warp.as_matrix(), frame.size());
+				cv::warpAffine(frame, m_WarpFrame, stabilised_velocity.as_matrix(), frame.size());
 			}
 			else frame.copyTo(m_WarpFrame);
 
@@ -257,23 +268,22 @@ namespace lvk
 			if(m_TestMode)
 				draw_debug_info(m_WarpFrame, end_time - start_time) >> output;
 
-			// Forcibly remove the OBS frame to avoid accidentally releasing
-			// it later and causing a hard to find double free issue :)
+			// NOTE: Must forcibly remove the OBS frame to avoid accidentally
+			// releasing it later and causing a hard to find double free issue :)
 			m_FrameQueue.oldest().output = nullptr;
 
 			return output;
 		}
-
 		return nullptr;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-	Transform VSFilter::enclose_crop(const cv::UMat& frame, const Transform& transform)
+	Transform VSFilter::clamp_velocity(const cv::UMat& frame, const Transform& velocity)
 	{
-		// Reduce the magnitude of the transform until the crop region is
-		// fully enclosed within the warped frame. We reduce the magnitude
-		// by iteratively lerping the transform back to identity in small steps.
+		// Clamp the velocity to keep the crop enclosed within the transformed
+		// frame to ensure no 'black bars' are present. This is done by iteratively
+		// reducing the velocity by lerping it back to identity in small steps.
 
 		constexpr double max_t = 1.0;
 		constexpr int max_iterations = 100;
@@ -281,19 +291,20 @@ namespace lvk
 		const auto identity = Transform::Identity();
 
 		double t = step;
-		auto reduced_transform = transform;
-		BoundingBox frame_bounds(frame.size(), reduced_transform);
+		auto reduced_velocity = velocity;
+		BoundingBox frame_bounds(frame.size(), reduced_velocity);
+
 		while(t <= max_t && !frame_bounds.encloses(m_CropRegion))
 		{
-			reduced_transform = lerp(transform, identity, t);
-			frame_bounds.transform(reduced_transform);
+			reduced_velocity = lerp(velocity, identity, t);
+			frame_bounds.transform(reduced_velocity);
 			t += step;
 		}
 
-		return reduced_transform;
+		return reduced_velocity;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	cv::UMat VSFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
@@ -324,43 +335,45 @@ namespace lvk
 		return frame;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::reset()
 	{
 		reset_buffers();
 		m_FrameTracker.restart();
+
+		// Release GPU buffers to save memory
 		m_TrackingFrame.release();
 		m_WarpFrame.release();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::reset_buffers()
 	{
 		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN && m_SmoothingRadius % 2 == 0);
 
-		// Need to release all the OBS frames to prevent memory leaks
-		obs_source_t* parent = obs_filter_get_parent(m_Context);
-		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
-			obs_source_release_frame(parent, m_FrameQueue[i].output);
-
-		m_FrameQueue.clear();
+		// NOTE: Must release all OBS frames before clearing
+		// the frame buffer queue to avoid leaking memory.
+		release_frame_queue();
 		m_Trajectory.clear();
 
+		// NOTE: Trajectory uses a full window for stabilising the centre element,
+		// so the frame queue needs to supply delayed frames up to the centre.
+		// Tracking is performed on the newest frame but the tracked velocity
+		// has to be associated with the previous frame, so we add another frame
+		// to the queue to introduce an offset.
+
 		const uint32_t queue_size = m_SmoothingRadius + 2;
-		const uint32_t sync_offset = m_SmoothingRadius - 1;
 		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
 
-		// If the smoothing radius has changed, update buffer sizing
 		if(window_size != m_Trajectory.window_size())
 		{
-
 			m_FrameQueue.resize(queue_size);
 			m_Trajectory.resize(window_size);
 			m_Filter.resize(window_size);
 
-			// We use a low pass Gaussian filter because it has both decent time domain
+			// NOTE: A low pass Gaussian filter is used because it has both decent time domain
 			// and frequency domain performance. Unlike an average or windowed sinc filter.
 			// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
 			const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size/6.0);
@@ -370,27 +383,39 @@ namespace lvk
 				m_Filter.push(gaussian_kernel.at<double>(i));
 		}
 
-		// The vector data for the oldest frame in the frame queue should
-		// be synchronised so that it is always at the centre of the trajectory.
-		// The frame tracker always gives the vector from the previous to current
-		// frame, while we want the vector from the current to the next frame instead.
-		// So lag the tracjectory by one.
+		// Fill the trajectory to bring the buffers into synchronisation.
 		m_Trajectory.advance(Transform::Identity());
-		while(m_Trajectory.elements() < sync_offset)
+		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
 			m_Trajectory.advance(m_Trajectory.newest() + Transform::Identity());
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
-	bool VSFilter::queue_outdated(const obs_source_frame* new_frame) const
+	void VSFilter::release_frame_queue()
 	{
-		// If the newest frame is over a second away from the last frame
-		// in the queue then we say that the queue is outdated.
+		// Release all frames to save GPU memory and prevent memory leaks
+		obs_source_t* parent = obs_filter_get_parent(m_Context);
+		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
+		{
+			auto& [frame, obs_frame] = m_FrameQueue[i];
+
+			frame.release();
+			obs_source_release_frame(parent, obs_frame);
+		}
+		m_FrameQueue.clear();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VSFilter::is_queue_outdated(const obs_source_frame* new_frame) const
+	{
+		// If the frame is over a second away from the last frame
+		// then we consider the trajectory and frame data to be outdated.
 		return !m_FrameQueue.empty()
 			&& new_frame->timestamp - m_FrameQueue.newest().output->timestamp > 1e9;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool VSFilter::stabilisation_ready() const
 	{
@@ -400,21 +425,21 @@ namespace lvk
 			&& m_FrameQueue.full();
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t VSFilter::width() const
 	{
 		return m_OutputSize.width;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	uint32_t VSFilter::height() const
 	{
 		return m_OutputSize.height;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	bool VSFilter::validate() const
 	{
@@ -423,35 +448,35 @@ namespace lvk
 			&& m_CropParam != nullptr;
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::FrameBuffer::FrameBuffer()
 		: frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  output(nullptr)
 	{}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::FrameVector::FrameVector(const Transform& displacement, const Transform& velocity)
 		: displacement(displacement),
 		  velocity(velocity)
 	{}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::FrameVector VSFilter::FrameVector::operator+(const VSFilter::FrameVector& other) const
 	{
 		return FrameVector(displacement + other.displacement, velocity + other.velocity);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::FrameVector VSFilter::FrameVector::operator*(const double scaling) const
 	{
 		return FrameVector(displacement * scaling, velocity * scaling);
 	}
 
-	//-------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 
 }
 
