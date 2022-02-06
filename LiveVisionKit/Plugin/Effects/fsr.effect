@@ -41,9 +41,9 @@ sampler_state PointSampler
     AddressV    = Clamp;
 };
 
-// For GLSL we should use the textureGather function here, however that 
-// required GLSL 400+ while we are stuck with 330 for OBS. So we instead
-// mimic the functionality by using point sampling.  
+// The textureGather (GLSL 400) and Gather*** (HLSL 5+) functions which are ideally
+// required for these functions are not supported. So we instead mimic the functionality 
+// by using point sampling.  
 //
 // For a given point p in normalized texture coordinates. We want to grab neighbouring
 // texels x, y, z, and w in the listed order.
@@ -54,53 +54,39 @@ sampler_state PointSampler
 //                                  | x | y |
 //                                  +---+---+
 //
-// The size of a texel is pre-computed by the FsrEasuCon call and stored within the .xy
-// of con1. This is called on the CPU side and passed in via uniform to easu_const_1. 
-// To get the normalized texture coordinates for each required texel, we then offset 
+// To get the normalized texture coordinates for each required texel, we offset 
 // point p by half the texel size using addition/subtraction as necessary.
 AF4 FsrEasuRF(AF2 p)
 {
-#ifdef _OPENGL
-    AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
+    AF2 half_texel_size = AF2_(0.5) / output_size;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).r,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).r,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).r,
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).r
     );
-#else
-    return GatherRed(LinearSampler, p, ASU2(0, 0));
-#endif  
 }
 
 AF4 FsrEasuGF(AF2 p)
 {
-#ifdef _OPENGL
-    AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
+    AF2 half_texel_size = AF2_(0.5) / output_size;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).g,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).g,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).g,
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).g
     );
-#else
-    return GatherGreen(LinearSampler, p, ASU2(0, 0));
-#endif  
 }
 
 AF4 FsrEasuBF(AF2 p)
 {
-#ifdef _OPENGL
-    AF2 half_texel_size = AF2_(0.5) * easu_const_1.xy;
+    AF2 half_texel_size = AF2_(0.5) / output_size;
     return AF4(
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).b,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).b,
         image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).b,
         image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).b
     );
-#else
-    return GatherBlue(LinearSampler, p, ASU2(0, 0));
-#endif  
 }
 
 AF4 FsrRcasLoadF(ASU2 p)

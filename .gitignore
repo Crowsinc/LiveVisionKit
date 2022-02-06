@@ -42,6 +42,8 @@
 **/.vs/
 **/[Dd]ebug/
 **/[Rr]elease/
+**/x64/
+**/x86/
 **/ipch/
 *.suo
 *.csproj.user
