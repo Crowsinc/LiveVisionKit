@@ -1,13 +1,22 @@
-//=====================================================================================
-//		OBS PARAMETERS
-//=====================================================================================
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
 
 uniform float4x4 ViewProj;
 uniform texture2d image; 
-
-//=====================================================================================
-//		VS PARAMETERS
-//=====================================================================================
 
 uniform float crop_proportion;
 
@@ -24,9 +33,6 @@ struct VSData
     float2 uv  : TEXCOORD0;
 };
 
-//=====================================================================================
-//		VERTEX SHADER
-//=====================================================================================
 
 VSData VSMain(VSData vs_in)
 {
@@ -36,18 +42,10 @@ VSData VSMain(VSData vs_in)
     return vs_out;
 }
 
-//=====================================================================================
-//		PIXEL SHADER
-//=====================================================================================
-
 float4 PSMain(VSData vs_in) : TARGET
 {
   	return image.Sample(LinearSampler, vs_in.uv);
 }
-
-//=====================================================================================
-//		TECHNIQUES
-//=====================================================================================
 
 technique Draw
 {

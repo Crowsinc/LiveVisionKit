@@ -1,15 +1,24 @@
-#include "ffx_a_mod.h"
+//    *************************** LiveVisionKit ****************************
+//    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
+//
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+//
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+//
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// 	  **********************************************************************
 
-//=====================================================================================
-//		OBS PARAMETERS
-//=====================================================================================
+#include "ffx_a_mod.h"
 
 uniform float4x4 ViewProj;
 uniform texture2d image; 
-
-//=====================================================================================
-//		FSR PARAMETERS
-//=====================================================================================
 
 uniform AF2 output_size;
 uniform AF4 easu_const_0;
@@ -108,7 +117,6 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b)
     // NOT USED
 }
 
-#define FSR_RCAS_DENOISE
 #include "ffx_fsr1_mod.h"
 
 struct VSData 
@@ -117,10 +125,6 @@ struct VSData
     float2 uv  : TEXCOORD0;
 };
 
-//=====================================================================================
-//		VERTEX SHADER
-//=====================================================================================
-
 VSData VSMain(VSData vs_in)
 {
     VSData vs_out;
@@ -128,10 +132,6 @@ VSData VSMain(VSData vs_in)
     vs_out.uv  = vs_in.uv;
     return vs_out;
 }
-
-//=====================================================================================
-//		PIXEL SHADER
-//=====================================================================================
 
 float4 PSEASUMain(VSData vs_in) : TARGET
 {
@@ -152,10 +152,6 @@ float4 PSRCASMain(VSData vs_in) : TARGET
 
     return float4(out_col, 1.0);
 }
-
-//=====================================================================================
-//		TECHNIQUES
-//=====================================================================================
 
 technique EASU
 {
