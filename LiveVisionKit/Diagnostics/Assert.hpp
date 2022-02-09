@@ -21,7 +21,7 @@
 
 #ifndef DISABLE_ASSERTS
 
-#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("\e[1;31m" "LVK@" __FILE__ "@%s(..) FAILED " #assertion "\n \e[0m" , __func__);}
+#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@" __FILE__ "@%s(..) FAILED " #assertion, __func__);}
 
 #else
 
