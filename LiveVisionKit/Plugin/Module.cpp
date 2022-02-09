@@ -37,7 +37,7 @@ void register_cas_source();
 
 void register_vs_source();
 
-void register_adn_source();
+void register_adb_source();
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ bool obs_module_load()
 	if(cv::ocl::haveOpenCL())
 	{
 		register_vs_source();
-		register_adn_source();
+		register_adb_source();
 	}
 
 	return true;

@@ -22,7 +22,7 @@
 namespace lvk
 {
 
-	class ADNFilter
+	class ADBFilter
 	{
 	public:
 
@@ -30,7 +30,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static ADNFilter* Create(obs_source_t* context, obs_data_t* settings);
+		static ADBFilter* Create(obs_source_t* context, obs_data_t* settings);
 
 		void configure(obs_data_t* settings);
 
@@ -43,12 +43,15 @@ namespace lvk
 		obs_source_t* m_Context;
 
 		bool m_TestMode;
-		double m_Strength;
-		cv::UMat m_Frame, m_SmoothFrame, m_DenoiseFrame;
-		cv::UMat m_Edges, m_Mask, m_DetailBlendMask, m_DenoiseBlendMask;
+		int m_KeepThreshold;
+
+		cv::UMat m_Frame, m_FilteredFrame;
+		cv::UMat m_Buffer, m_FloatBuffer;
+		cv::UMat m_BlockGrid, m_GridMask;
+		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
 
 
-		ADNFilter(obs_source_t* context);
+		ADBFilter(obs_source_t* context);
 
 		cv::UMat draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
 

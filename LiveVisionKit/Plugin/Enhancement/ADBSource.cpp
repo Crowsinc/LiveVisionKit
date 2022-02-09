@@ -18,83 +18,83 @@
 #include <obs-module.h>
 #include <obs-source.h>
 
-#include "ADNFilter.hpp"
+#include "ADBFilter.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void* on_adn_create(obs_data_t* settings, obs_source_t* context)
+static void* on_adb_create(obs_data_t* settings, obs_source_t* context)
 {
-	return lvk::ADNFilter::Create(context, settings);
+	return lvk::ADBFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_adn_destroy(void* data)
+static void on_adb_destroy(void* data)
 {
-	delete static_cast<lvk::ADNFilter*>(data);
+	delete static_cast<lvk::ADBFilter*>(data);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_adn_remove(void* data, obs_source_t* parent)
+static void on_adb_remove(void* data, obs_source_t* parent)
 {
-	static_cast<lvk::ADNFilter*>(data)->reset();
+	static_cast<lvk::ADBFilter*>(data)->reset();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_adn_configure(void* data, obs_data_t* settings)
+static void on_adb_configure(void* data, obs_data_t* settings)
 {
-	static_cast<lvk::ADNFilter*>(data)->configure(settings);
+	static_cast<lvk::ADBFilter*>(data)->configure(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static obs_source_frame* on_adn_process(void* data, obs_source_frame* frame)
+static obs_source_frame* on_adb_process(void* data, obs_source_frame* frame)
 {
-	return static_cast<lvk::ADNFilter*>(data)->process(frame);
+	return static_cast<lvk::ADBFilter*>(data)->process(frame);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static obs_properties_t* adn_filter_properties(void* data)
+static obs_properties_t* adb_filter_properties(void* data)
 {
-	return lvk::ADNFilter::Properties();
+	return lvk::ADBFilter::Properties();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void adn_filter_default_settings(obs_data_t* settings)
+static void adb_filter_default_settings(obs_data_t* settings)
 {
-	lvk::ADNFilter::LoadDefaults(settings);
+	lvk::ADBFilter::LoadDefaults(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static const char* adn_filter_name(void* data)
+static const char* adb_filter_name(void* data)
 {
-	return "(LVK) Adapative Denoiser";
+	return "(LVK) Adapative De-Blocking";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-extern void register_adn_source()
+extern void register_adb_source()
 {
 	obs_source_info config = {0};
-	config.id = "LVK~ADN";
+	config.id = "LVK~ADB";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 
-	config.create = on_adn_create;
-	config.destroy = on_adn_destroy;
-	config.filter_remove = on_adn_remove;
+	config.create = on_adb_create;
+	config.destroy = on_adb_destroy;
+	config.filter_remove = on_adb_remove;
 
-	config.filter_video = on_adn_process;
-	config.update = on_adn_configure;
+	config.filter_video = on_adb_process;
+	config.update = on_adb_configure;
 
-	config.get_properties = adn_filter_properties;
-	config.get_defaults = adn_filter_default_settings;
-	config.get_name = adn_filter_name;
+	config.get_properties = adb_filter_properties;
+	config.get_defaults = adb_filter_default_settings;
+	config.get_name = adb_filter_name;
 
 	obs_register_source(&config);
 }

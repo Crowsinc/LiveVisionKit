@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "ADNFilter.hpp"
+#include "ADBFilter.hpp"
 
 namespace lvk
 {
@@ -23,16 +23,16 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_STRENGTH = "STRENGTH";
-	constexpr auto STRENGTH_MAX = 100;
+	constexpr auto STRENGTH_MAX = 5;
 	constexpr auto STRENGTH_MIN = 0;
-	constexpr auto STRENGTH_DEFAULT = 30;
+	constexpr auto STRENGTH_DEFAULT = 1;
 
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_properties_t* ADNFilter::Properties()
+	obs_properties_t* ADBFilter::Properties()
 	{
 		obs_properties_t* properties = obs_properties_create();
 
@@ -45,19 +45,18 @@ namespace lvk
 			1
 		);
 
-		auto property = obs_properties_add_bool(
+		obs_properties_add_bool(
 				properties,
 				PROP_TEST_MODE,
 				"Test Mode"
 		);
-		obs_property_int_set_suffix(property, "%");
 
 		return properties;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADNFilter::LoadDefaults(obs_data_t* settings)
+	void ADBFilter::LoadDefaults(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
 
@@ -67,11 +66,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	ADNFilter* ADNFilter::Create(obs_source_t* context, obs_data_t* settings)
+	ADBFilter* ADBFilter::Create(obs_source_t* context, obs_data_t* settings)
 	{
 		LVK_ASSERT(context != nullptr && settings != nullptr);
 
-		auto filter = new ADNFilter(context);
+		auto filter = new ADBFilter(context);
 
 		if(!filter->validate())
 		{
@@ -86,85 +85,87 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	ADNFilter::ADNFilter(obs_source_t* context)
+	ADBFilter::ADBFilter(obs_source_t* context)
 		: m_Context(context),
 		  m_TestMode(false),
-		  m_Strength(0),
+		  m_KeepThreshold(0),
 		  m_Frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_SmoothFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DenoiseFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_Edges(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_Mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DetailBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DenoiseBlendMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
+		  m_FilteredFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_Buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_FloatBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_BlockGrid(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_GridMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_KeepBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_DeblockBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
+
 	{
 		LVK_ASSERT(context != nullptr);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADNFilter::configure(obs_data_t* settings)
+	void ADBFilter::configure(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		m_Strength = obs_data_get_int(settings, PROP_STRENGTH) / 100.0f;
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+		m_KeepThreshold = obs_data_get_int(settings, PROP_STRENGTH);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* ADNFilter::process(obs_source_frame* obs_frame)
+	obs_source_frame* ADBFilter::process(obs_source_frame* obs_frame)
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
 		const auto start_time = os_gettime_ns();
 
 		m_Frame << obs_frame;
-
-		// Extract Y channel from YUV frame to use for tracking.
-		cv::extractChannel(m_Frame, m_Mask, 0);
-
-		// NOTE: Denoising is performed in BGR via median filtering.
-		// The frame is significantly downscaled to improve performance
-		// and to make the median filtering act upon a larger, 'non-local',
-		// area of the frame. Further improving denoising performance.
-		// The scaling introduces significant degredation of quality,
-		// so the denoised frame is linearly blended back to the original
-		// frame based on a detail map, which lowers denoising in high
-		// detail areas (edges etc.)
-
-		// Construct denoised frame.
-
-		const cv::Size denoise_resolution(480, 270);
 		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
-		cv::resize(m_Frame, m_DenoiseFrame, denoise_resolution, 0, 0, cv::INTER_AREA);
-		cv::medianBlur(m_DenoiseFrame, m_DenoiseFrame, 5);
-		cv::resize(m_DenoiseFrame, m_SmoothFrame, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
-		// Construct detail mask, preserving as many edges as possible.
+		// NOTE: De-blocking is achieved by adaptively blending a smooth
+		// median filtered frame with the original detailed frame. Median
+		// filtering is performed on a smaller frame to boost performance,
+		// and artificially increase the effective area it acts upon. Blend
+		// maps are generated by comparing the original frame with an artifically
+		// blocked version of the frame. Blocks which are similar are assumed to
+		// either contain blocking artifacts or have low enough detail to not be
+		// affected by the smoothing. Blocks whose difference surpasses the keep
+		// threshold across all color channels are assumed to contain detail that
+		// would be unnacceptably degraded from smoothing.
 
-		cv::Scharr(m_Mask, m_Edges, m_Mask.type(), 1, 0);
-		cv::Scharr(m_Mask, m_Mask, m_Mask.type(), 0, 1);
-		cv::bitwise_or(m_Mask, m_Edges, m_Mask);
-		cv::dilate(m_Mask, m_Mask, cv::noArray(), cv::Point(-1,-1), 3);
+		constexpr int block_size = 16;
+		const cv::Size block_grid_size = m_Frame.size() / block_size;
 
-		const double threshold = (1 + m_Strength * 100.0) / 255.0;
+		// Produce the detail block mask
+		cv::resize(m_Frame, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
+		cv::resize(m_BlockGrid, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_NEAREST);
+		cv::absdiff(m_Frame, m_Buffer, m_Buffer);
 
-		// Attenuate the edges of the detail mask and perform blending
+		cv::resize(m_Buffer, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
+		cv::threshold(m_BlockGrid, m_BlockGrid, m_KeepThreshold, 255, cv::THRESH_BINARY);
+		cv::inRange(m_BlockGrid, cv::Scalar::all(255), cv::Scalar::all(255), m_GridMask);
 
-		cv::boxFilter(m_Mask, m_Mask, m_Mask.type(), cv::Size(21, 21));
-		m_Mask.convertTo(m_DetailBlendMask, CV_32FC1, 1.0/255 * (1.0 - threshold));
-		cv::bitwise_not(m_Mask, m_Mask);
-		m_Mask.convertTo(m_DenoiseBlendMask, CV_32FC1, 1.0/255 * threshold);
+		// Produce the blend maps
+		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1,1.0/255);
+		cv::resize(m_FloatBuffer, m_KeepBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::bitwise_not(m_GridMask, m_GridMask);
+		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1,1.0/255);
+		cv::resize(m_FloatBuffer, m_DeblockBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+
+		// Produce the filtered frame.
+		const cv::Size filter_resolution(480, 270);
+		cv::resize(m_Frame, m_FilteredFrame, filter_resolution, 0, 0, cv::INTER_AREA);
+		cv::medianBlur(m_FilteredFrame, m_FilteredFrame, 5);
+		cv::resize(m_FilteredFrame, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		if(m_TestMode)
-			m_SmoothFrame.setTo(cv::Scalar(255, 0, 255));
+			m_Buffer.setTo(cv::Scalar(255, 0, 255));
 
-		// Blend denoised and original frame
-		cv::blendLinear(m_Frame, m_SmoothFrame, m_DetailBlendMask, m_DenoiseBlendMask, m_Frame);
+		// Perform de-blocking
+		cv::blendLinear(m_Frame, m_Buffer, m_KeepBlendMap, m_DeblockBlendMap, m_Frame);
 
 		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_BGR2YUV);
-
 		m_Frame >> obs_frame;
 
 		const auto end_time = os_gettime_ns();
@@ -177,7 +178,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::UMat ADNFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
+	cv::UMat ADBFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);
@@ -206,22 +207,22 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADNFilter::reset()
+	void ADBFilter::reset()
 	{
 		// Release GPU buffers to save memory
+		m_DeblockBlendMap.release();
+		m_FilteredFrame.release();
+		m_KeepBlendMap.release();
+		m_FloatBuffer.release();
+		m_BlockGrid.release();
+		m_GridMask.release();
+		m_Buffer.release();
 		m_Frame.release();
-		m_SmoothFrame.release();
-		m_DenoiseFrame.release();
-
-		m_Mask.release();
-		m_Edges.release();
-		m_DetailBlendMask.release();
-		m_DenoiseBlendMask.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool ADNFilter::validate() const
+	bool ADBFilter::validate() const
 	{
 		return m_Context != nullptr;
 	}
