@@ -31,7 +31,7 @@ namespace lvk
 
 		FrameTracker(
 				const float estimation_threshold = 0.05,
-				const cv::Size& resolution = cv::Size(960,540),
+				const cv::Size& resolution = cv::Size(640, 360),
 				const cv::Size& block_size = cv::Size(30, 30)
 		);
 

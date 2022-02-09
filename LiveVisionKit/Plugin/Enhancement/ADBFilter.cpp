@@ -134,8 +134,8 @@ namespace lvk
 		// threshold across all color channels are assumed to contain detail that
 		// would be unnacceptably degraded from smoothing.
 
-		constexpr int block_size = 16;
-		const cv::Size block_grid_size = m_Frame.size() / block_size;
+		constexpr int macro_block_size = 16;
+		const cv::Size block_grid_size = m_Frame.size() / macro_block_size;
 
 		// Produce the detail block mask
 		cv::resize(m_Frame, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
