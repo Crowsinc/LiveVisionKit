@@ -149,6 +149,7 @@ namespace lvk
 		// Produce the blend maps
 		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1, 1.0/255);
 		cv::resize(m_FloatBuffer, m_KeepBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::boxFilter(m_KeepBlendMap, m_KeepBlendMap, m_KeepBlendMap.type(), cv::Size(17,17));
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Produce the filtered frame.
