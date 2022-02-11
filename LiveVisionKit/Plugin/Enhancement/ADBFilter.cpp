@@ -90,8 +90,8 @@ namespace lvk
 		  m_TestMode(false),
 		  m_KeepThreshold(0),
 		  m_Frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FilteredFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_Buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_DeblockBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FloatBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_BlockGrid(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_GridMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -154,9 +154,9 @@ namespace lvk
 
 		// Produce the filtered frame.
 		const cv::Size filter_resolution(480, 270);
-		cv::resize(m_Frame, m_FilteredFrame, filter_resolution, 0, 0, cv::INTER_AREA);
-		cv::medianBlur(m_FilteredFrame, m_FilteredFrame, 5);
-		cv::resize(m_FilteredFrame, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_Frame, m_DeblockBuffer, filter_resolution, 0, 0, cv::INTER_AREA);
+		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, 5);
+		cv::resize(m_DeblockBuffer, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		if(m_TestMode)
 			m_Buffer.setTo(cv::Scalar(255, 0, 255));
@@ -210,7 +210,7 @@ namespace lvk
 	{
 		// Release GPU buffers to save memory
 		m_DeblockBlendMap.release();
-		m_FilteredFrame.release();
+		m_DeblockBuffer.release();
 		m_KeepBlendMap.release();
 		m_FloatBuffer.release();
 		m_BlockGrid.release();

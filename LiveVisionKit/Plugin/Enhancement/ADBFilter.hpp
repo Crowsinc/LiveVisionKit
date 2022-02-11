@@ -45,8 +45,8 @@ namespace lvk
 		bool m_TestMode;
 		int m_KeepThreshold;
 
-		cv::UMat m_Frame, m_FilteredFrame;
-		cv::UMat m_Buffer, m_FloatBuffer;
+		cv::UMat m_Frame, m_Buffer;
+		cv::UMat m_DeblockBuffer, m_FloatBuffer;
 		cv::UMat m_BlockGrid, m_GridMask;
 		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
 
