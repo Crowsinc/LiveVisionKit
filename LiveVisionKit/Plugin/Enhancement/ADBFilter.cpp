@@ -147,11 +147,9 @@ namespace lvk
 		cv::inRange(m_BlockGrid, cv::Scalar::all(255), cv::Scalar::all(255), m_GridMask);
 
 		// Produce the blend maps
-		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1,1.0/255);
+		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1, 1.0/255);
 		cv::resize(m_FloatBuffer, m_KeepBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
-		cv::bitwise_not(m_GridMask, m_GridMask);
-		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1,1.0/255);
-		cv::resize(m_FloatBuffer, m_DeblockBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Produce the filtered frame.
 		const cv::Size filter_resolution(480, 270);
