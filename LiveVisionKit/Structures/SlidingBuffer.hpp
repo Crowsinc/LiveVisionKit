@@ -78,6 +78,14 @@ namespace lvk
 
 		bool empty() const;
 
+		T average() const;
+
+		T variance() const;
+
+		T variance2() const;
+
+		T variance(const T& reference) const;
+
 		uint32_t elements() const;
 
 		uint32_t window_size() const;

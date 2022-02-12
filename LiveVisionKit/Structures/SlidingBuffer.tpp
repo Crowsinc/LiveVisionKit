@@ -113,7 +113,7 @@ namespace lvk
 			const auto copy_count = std::min(window_size, elements());
 			const auto copy_start = elements() - copy_count;
 			for(uint32_t i = 0; i < copy_count; i++)
-				new_buffer.push_back(this->at(copy_start + i));
+				new_buffer.push_back(at(copy_start + i));
 
 			m_InternalBuffer = std::move(new_buffer);
 		}
@@ -129,11 +129,11 @@ namespace lvk
 	template<typename K>
 	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
-		LVK_ASSERT(!this->empty() && !kernel.empty());
-		LVK_ASSERT(this->elements() == kernel.elements());
+		LVK_ASSERT(!empty() && !kernel.empty());
+		LVK_ASSERT(elements() == kernel.elements());
 
 		for(uint32_t i = 0; i < elements(); i++)
-			initial = initial + this->at(i) * kernel.at(i);
+			initial = initial + at(i) * kernel.at(i);
 
 		return initial;
 	}
@@ -143,7 +143,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::at(const uint32_t index)
 	{
-		LVK_ASSERT(index < this->elements());
+		LVK_ASSERT(index < elements());
 
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
@@ -161,7 +161,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::at(const uint32_t index) const
 	{
-		LVK_ASSERT(index < this->elements());
+		LVK_ASSERT(index < elements());
 
 		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
 	}
@@ -179,7 +179,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::centre() const
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre for even sizing.
 		// Use at() method to automatically handle wrapping.
@@ -191,7 +191,8 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::oldest() const
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
+
 		return m_InternalBuffer[m_StartIndex];
 	}
 
@@ -200,7 +201,8 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::newest() const
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
+
 		return m_InternalBuffer[m_EndIndex];
 	}
 
@@ -209,8 +211,9 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::previous() const
 	{
-		LVK_ASSERT(this->elements() > 1);
-		return this->at(this->elements() - 2);
+		LVK_ASSERT(elements() > 1);
+
+		return at(elements() - 2);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -218,7 +221,8 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::centre()
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
+
 		// NOTE: Gets lower centre for even sizing.
 		// Use at() method to automatically handle wrapping.
 		return at(centre_index());
@@ -229,7 +233,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::oldest()
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
 
 		return m_InternalBuffer[m_StartIndex];
 	}
@@ -239,7 +243,8 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::newest()
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
+
 		return m_InternalBuffer[m_EndIndex];
 	}
 
@@ -248,8 +253,9 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::previous()
 	{
-		LVK_ASSERT(this->elements() > 1);
-		return this->at(this->elements() - 2);
+		LVK_ASSERT(elements() > 1);
+
+		return at(elements() - 2);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -266,6 +272,63 @@ namespace lvk
 	bool SlidingBuffer<T>::empty() const
 	{
 		return m_InternalBuffer.empty();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	T SlidingBuffer<T>::average() const
+	{
+		LVK_ASSERT(!empty());
+
+		// Kick start calculation with element 0 to avoid
+		// requirement of a default initialisation of T.
+		T avg = at(0);
+		for(uint32_t i = 1; i < elements(); i++)
+			avg = avg + at(i);
+
+		return avg / elements();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	T SlidingBuffer<T>::variance() const
+	{
+		LVK_ASSERT(!empty());
+
+		return variance(average());
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	T SlidingBuffer<T>::variance2() const
+	{
+		LVK_ASSERT(!empty());
+
+		return variance(variance());
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	T SlidingBuffer<T>::variance(const T& reference) const
+	{
+		LVK_ASSERT(!empty());
+
+		// Kick start calculation with element 0 to avoid
+		// requirement of a default initialisation of T.
+		T diff = at(0) - reference;
+		T var = diff * diff;
+
+		for(uint32_t i = 1; i < elements(); i++)
+		{
+			diff = at(i) - reference;
+			var = var + diff * diff;
+		}
+
+		return var / elements();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -289,7 +352,7 @@ namespace lvk
 	template<typename T>
 	uint32_t SlidingBuffer<T>::centre_index() const
 	{
-		LVK_ASSERT(!this->empty());
+		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre index for even sizing.
 		// NOTE: This is an external 0-N index to be used with SlidingBuffer at() and [] operations.
