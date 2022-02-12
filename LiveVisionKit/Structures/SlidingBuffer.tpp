@@ -297,39 +297,21 @@ namespace lvk
 	{
 		LVK_ASSERT(!empty());
 
-		return variance(average());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	T SlidingBuffer<T>::variance2() const
-	{
-		LVK_ASSERT(!empty());
-
-		return variance(variance());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	T SlidingBuffer<T>::variance(const T& reference) const
-	{
-		LVK_ASSERT(!empty());
-
 		// Kick start calculation with element 0 to avoid
 		// requirement of a default initialisation of T.
-		T diff = at(0) - reference;
+		const T avg = average();
+		T diff = at(0) - avg;
 		T var = diff * diff;
 
 		for(uint32_t i = 1; i < elements(); i++)
 		{
-			diff = at(i) - reference;
+			diff = at(i) - avg;
 			var = var + diff * diff;
 		}
 
 		return var / elements();
 	}
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
