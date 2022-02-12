@@ -482,9 +482,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	VSFilter::FrameVector VSFilter::FrameVector::operator-(const VSFilter::FrameVector& other) const
+	{
+		return FrameVector(displacement - other.displacement, velocity - other.velocity);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VSFilter::FrameVector VSFilter::FrameVector::operator*(const VSFilter::FrameVector& other) const
+	{
+		return FrameVector(displacement * other.displacement, velocity * other.velocity);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	VSFilter::FrameVector VSFilter::FrameVector::operator*(const double scaling) const
 	{
 		return FrameVector(displacement * scaling, velocity * scaling);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VSFilter::FrameVector VSFilter::FrameVector::operator/(const double scaling) const
+	{
+		return FrameVector(displacement / scaling, velocity / scaling);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -67,7 +67,14 @@ namespace lvk
 
 			FrameVector operator+(const FrameVector& other) const;
 
+			FrameVector operator-(const FrameVector& other) const;
+
+			FrameVector operator*(const FrameVector& other) const;
+
 			FrameVector operator*(const double scaling) const;
+
+			FrameVector operator/(const double scaling) const;
+
 		};
 
 		obs_source_t* m_Context;
