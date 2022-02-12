@@ -15,7 +15,7 @@
 //     in debugging and to maximise compatibility.
 //
 //   > The AU4 constants have been swapped for AF4 for better OBS compatibility. All instances are ultimately converted
-//     to floats for use anyway. So they are not necessary in this version of FSR, however this may change in the future.   
+//     to floats for use anyway. So they are not necessary in this version of CAS, however this may change in the future.   
 // 
 // Please see the original ffx_cas.h file for proper implementation. 
 //
