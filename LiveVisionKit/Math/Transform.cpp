@@ -60,6 +60,13 @@ namespace lvk
 		return Transform({0.0, 0.0}, 0.0, 0.0);
 	}
 
+//---------------------------------------------------------------------------------------------------------------------
+
+	Transform::Transform(const cv::Point2d& translation, const double rotation, const double scale)
+	: translation(translation),
+	  rotation(rotation),
+	  scale(scale)
+	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
