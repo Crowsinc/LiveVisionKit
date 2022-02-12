@@ -36,7 +36,7 @@ namespace lvk
 		static Transform Zero();
 
 
-		Transform(const cv::Point2d& translation, const double rotation, const double scale);
+		Transform(const cv::Point2d& translation = {0, 0}, const double rotation = 0, const double scale = 0);
 
 		cv::Point2d apply(const cv::Point2d& point) const;
 
@@ -49,6 +49,10 @@ namespace lvk
 
 		void operator-=(const Transform& other);
 
+		void operator*=(const Transform& other);
+
+		void operator/=(const Transform& other);
+
 		void operator*=(const double scaling);
 
 		void operator/=(const double scaling);
@@ -58,6 +62,10 @@ namespace lvk
 	Transform operator+(const Transform& left, const Transform& right);
 
 	Transform operator-(const Transform& left, const Transform& right);
+
+	Transform operator*(const Transform& left, const Transform& right);
+
+	Transform operator/(const Transform& left, const Transform& right);
 
 	Transform operator*(const Transform& transform, const double scaling);
 

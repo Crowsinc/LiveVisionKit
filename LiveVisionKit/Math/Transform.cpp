@@ -60,12 +60,6 @@ namespace lvk
 		return Transform({0.0, 0.0}, 0.0, 0.0);
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	Transform::Transform(const cv::Point2d& translation, const double rotation, const double scale)
-		: translation(translation),
-		  rotation(rotation),
-		  scale(scale) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -96,7 +90,6 @@ namespace lvk
 		return cv::Mat({2, 3}, {cos, -sin, translation.x, sin, cos, translation.y});
 	}
 
-
 //---------------------------------------------------------------------------------------------------------------------
 
 	void Transform::operator+=(const Transform& other)
@@ -113,6 +106,31 @@ namespace lvk
 		translation -= other.translation;
 		rotation -= other.rotation;
 		scale -= other.scale;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void Transform::operator*=(const Transform& other)
+	{
+		translation.x *= other.translation.x;
+		translation.y *= other.translation.y;
+		rotation *= other.rotation;
+		scale *= other.scale;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void Transform::operator/=(const Transform& other)
+	{
+		LVK_ASSERT(other.translation.x != 0.0);
+		LVK_ASSERT(other.translation.y != 0.0);
+		LVK_ASSERT(other.rotation != 0.0);
+		LVK_ASSERT(other.scale != 0.0);
+
+		translation.x /= other.translation.x;
+		translation.y /= other.translation.y;
+		rotation /= other.rotation;
+		scale /= other.scale;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -147,6 +165,39 @@ namespace lvk
 	Transform operator-(const Transform& left, const Transform& right)
 	{
 		return {left.translation - right.translation, left.rotation - right.rotation, left.scale - right.scale};
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	Transform operator*(const Transform& left, const Transform& right)
+	{
+		return {
+			cv::Point2d(
+				left.translation.x * right.translation.x,
+				left.translation.y * right.translation.y
+			),
+			left.rotation * right.rotation,
+			left.scale * right.scale
+		};
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	Transform operator/(const Transform& left, const Transform& right)
+	{
+		LVK_ASSERT(right.translation.x != 0.0);
+		LVK_ASSERT(right.translation.y != 0.0);
+		LVK_ASSERT(right.rotation != 0.0);
+		LVK_ASSERT(right.scale != 0.0);
+
+		return {
+			cv::Point2d(
+				left.translation.x / right.translation.x,
+				left.translation.y / right.translation.y
+			),
+			left.rotation / right.rotation,
+			left.scale / right.scale
+		};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
