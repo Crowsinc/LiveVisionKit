@@ -73,7 +73,7 @@ static void adb_filter_default_settings(obs_data_t* settings)
 
 static const char* adb_filter_name(void* data)
 {
-	return "(LVK) Adapative De-Blocking";
+	return "(LVK) Adapative De-Blocker";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
