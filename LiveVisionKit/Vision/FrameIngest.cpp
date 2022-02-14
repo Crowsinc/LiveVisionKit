@@ -269,7 +269,7 @@ namespace lvk
 		import_plane(src, buffer, 1, 0.5, 0.5, 2);
 		cv::resize(buffer, plane_uv, plane_y.size(), 0, 0, cv::INTER_NEAREST);
 
-		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
+		// Must be pre-allocated for the mixChannels function.
 		dst.create(plane_y.size(), CV_8UC3);
 
 		// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
@@ -299,6 +299,48 @@ namespace lvk
 
 		cv::cvtColor(buffer, dst, bgr_conversion);
 		cv::cvtColor(dst, dst, cv::COLOR_BGR2YUV);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void import_packed_444(const obs_source_frame& src, cv::UMat& dst, const bool has_alpha)
+	{
+		LVK_ASSERT(obs_frame_check_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr);
+
+		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// Packed 444 can be directly loaded into the destination. If the frame has an
+		// alpha channel, then it is AYUV, so the front alpha channel needs to be removed.
+
+		if(has_alpha)
+		{
+			import_data(
+				src.data[0],
+				buffer,
+				src.width,
+				src.height,
+				src.linesize[0],
+				4
+			);
+
+			// Must be pre-allocated for the mixChannels function.
+			dst.create(src.height, src.width, CV_8UC3);
+
+			// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
+			cv::mixChannels({buffer}, std::vector<cv::UMat>(1, dst), {1,0,  2,1,  3,2});
+		}
+		else
+		{
+			import_data(
+				src.data[0],
+				dst,
+				src.width,
+				src.height,
+				src.linesize[0],
+				3
+			);
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -391,7 +433,7 @@ namespace lvk
 				import_semi_planar_nv12(frame, dst);
 				break;
 
-			// Packed 42x formats
+			// Packed 42x YUV formats
 			case video_format::VIDEO_FORMAT_YVYU:
 				import_packed_422(frame, dst, true, false);
 				break;
@@ -400,6 +442,11 @@ namespace lvk
 				break;
 			case video_format::VIDEO_FORMAT_UYVY:
 				import_packed_422(frame, dst, false, true);
+				break;
+
+			// Packed 444 YUV formats
+			case video_format::VIDEO_FORMAT_AYUV:
+				import_packed_444(frame, dst, true);
 				break;
 
 			// Packed uncompressed non-YUV formats
@@ -419,6 +466,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
+				LVK_ASSERT(false && "Unsupported Format (please ask LVK developers to add support)");
 				return false;
 		}
 		return true;
@@ -490,7 +538,7 @@ namespace lvk
 		cv::extractChannel(src, plane_y, 0);
 		export_plane(plane_y, dst, 0);
 
-		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
+		// Must be pre-allocated for the mixChannels function.
 		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
@@ -522,7 +570,7 @@ namespace lvk
 
 		cv::extractChannel(src, plane_y, 0);
 
-		// Must be pre-allocated for the mixChannels function (doesn't unnecessarily re-allocate).
+		// Must be pre-allocated for the mixChannels function.
 		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		if(u_first)
@@ -539,6 +587,37 @@ namespace lvk
 			cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>{buffer}, {0,1,  1,0});
 
 		export_plane(buffer, dst, 0);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void export_packed_444(const cv::UMat& src, obs_source_frame& dst, const bool has_alpha)
+	{
+		LVK_ASSERT(obs_frame_check_initialised(dst));
+		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
+		LVK_ASSERT(dst.data[0] != nullptr);
+		LVK_ASSERT(!src.empty());
+
+		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat alpha_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// Packed 444 can be directly loaded into the destination. If the frame has an
+		// alpha channel, then it is AYUV, so a front alpha plane has to be inserted.
+
+		if(has_alpha)
+		{
+			if(alpha_buffer.empty() || alpha_buffer.size() != src.size())
+			{
+				alpha_buffer.create(src.size(), CV_8UC1);
+				alpha_buffer.setTo(cv::Scalar(255));
+			}
+
+			buffer.create(src.size(), CV_8UC4);
+
+			cv::mixChannels({{alpha_buffer, src}}, std::vector<cv::UMat>{buffer}, {0,0,  1,1,  2,2,  3,3});
+
+			export_plane(buffer, dst, 0);
+		} else export_plane(src, dst, 0);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -565,6 +644,7 @@ namespace lvk
 		cv::cvtColor(buffer_1, buffer_2, conversion_2);
 		export_plane(buffer_2, dst, 0);
 	}
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -630,6 +710,11 @@ namespace lvk
 				export_packed_422(src, frame, false, true);
 				break;
 
+				// Packed 444 YUV formats
+			case video_format::VIDEO_FORMAT_AYUV:
+				export_packed_444(src, frame, true);
+				break;
+
 			// Packed uncompressed non-YUV formats
 			case video_format::VIDEO_FORMAT_Y800:
 				export_packed_direct_stepped(src, frame, cv::COLOR_YUV2BGR, cv::COLOR_BGR2GRAY);
@@ -647,6 +732,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
+				LVK_ASSERT(false && "Unsupported Format (please ask LVK developers to add support)");
 				return false;
 		}
 
