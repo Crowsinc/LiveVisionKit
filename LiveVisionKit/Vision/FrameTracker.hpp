@@ -67,6 +67,7 @@ namespace lvk
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;
 
+		cv::Point2f import_next(const cv::UMat& frame);
 
 		void process_features(
 			const std::vector<cv::KeyPoint>& features,
@@ -76,7 +77,7 @@ namespace lvk
 
 		void update_grid_mask(const std::vector<cv::Point2f>& outliers, const cv::Point2f& scaling);
 
-		cv::Point2f import_next(const cv::UMat& frame);
+		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t feature_target);
 
 	};
 

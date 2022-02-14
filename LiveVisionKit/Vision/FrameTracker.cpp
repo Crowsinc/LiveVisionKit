@@ -32,6 +32,10 @@ namespace lvk
 
 	static constexpr double MAX_TRACKING_ERROR = 20;
 
+	static constexpr uint32_t REGION_ROWS = 1;
+	static constexpr uint32_t REGION_COLUMNS = 3;
+	static constexpr uint32_t REGION_FEATURE_TARGET = 2000;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(const float estimation_threshold, const cv::Size& resolution, const cv::Size& block_size)
@@ -61,35 +65,11 @@ namespace lvk
 		m_Grid.resize(m_GridSize.area());
 		m_GridMask.resize(m_GridSize.area(), true);
 
-		// NOTE: We divide the frame across multiple tracking regions to more evenly
-		// distribute feature detection across the frame. Vertical sections are used
-		// to account for differing scenery across the frame, allowing for better
-		// utilisation of the dynamic feature thresholds.
-
-		// TODO: Experiment with different feature targets for the regions
-		const uint32_t region_feature_target = 2000;
-		const uint32_t region_width = resolution.width / 3;
-
-		auto& left_region = m_TrackingRegions.emplace_back();
-		left_region.region = cv::Rect(
-			cv::Point(0, 0),
-			cv::Size(region_width, resolution.height)
+		initialise_regions(
+			REGION_ROWS,
+			REGION_COLUMNS,
+			REGION_FEATURE_TARGET
 		);
-		left_region.feature_target = region_feature_target;
-
-		auto& middle_region = m_TrackingRegions.emplace_back();
-		middle_region.region = cv::Rect(
-			cv::Point(region_width, 0),
-			cv::Size(region_width, resolution.height)
-		);
-		middle_region.feature_target = region_feature_target;
-
-		auto& right_region = m_TrackingRegions.emplace_back();
-		right_region.region = cv::Rect(
-			cv::Point(2 * region_width, 0),
-			cv::Size(region_width, resolution.height)
-		);
-		right_region.feature_target = region_feature_target;
 
 		restart();
 	}
@@ -196,8 +176,7 @@ namespace lvk
 
 		const auto affine_estimate = cv::estimateAffinePartial2D(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
 
-		// Feed outliers from the next frame into the grid mask
-		// to avoid re-tracking them in the next pass.
+		// Block outliers of the next frame in the grid mask to avoid re-tracking them next pass.
 		fast_filter(m_MatchedPoints, m_InlierStatus, true);
 		update_grid_mask(m_MatchedPoints, scaling);
 
@@ -246,6 +225,8 @@ namespace lvk
 
 	void FrameTracker::update_grid_mask(const std::vector<cv::Point2f>& outliers, const cv::Point2f& scaling)
 	{
+		// Update the grid mask to disable blocks which contained outliers.
+
 		for(uint32_t i = 0; i < m_GridMask.size(); i++)
 			m_GridMask[i] = true;
 
@@ -259,6 +240,36 @@ namespace lvk
 			const uint32_t index = grid_y * m_GridSize.width + grid_x;
 
 			m_GridMask[index] = false;
+		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameTracker::initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t feature_target)
+	{
+		// NOTE: We divide the frame across multiple tracking regions to more evenly
+		// distribute feature detection across the frame. Using regions alsoaccounts
+		// for differing scenery across the frame, by allowing them to dynamically
+		// adjust their threshold to meet a feature target.
+
+		m_TrackingRegions.clear();
+
+		const cv::Size region_size(
+			m_TrackingResolution.width / cols,
+			m_TrackingResolution.height / rows
+		);
+
+		for(uint32_t r = 0; r < rows; r++)
+		{
+			for(uint32_t c = 0; c < cols; c++)
+			{
+				auto& region = m_TrackingRegions.emplace_back();
+				region.region = cv::Rect(
+					cv::Point(c * region_size.width, r * region_size.height),
+					region_size
+				);
+				region.feature_target = feature_target;
+			}
 		}
 	}
 
