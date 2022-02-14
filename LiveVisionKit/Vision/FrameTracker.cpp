@@ -59,7 +59,7 @@ namespace lvk
 
 		// TODO: Experiment with different feature targets for the regions
 		const uint32_t region_feature_target = 2000;
-		const uint32_t region_width = resolution.width/3;
+		const uint32_t region_width = resolution.width / 3;
 
 		auto& left_region = m_TrackingRegions.emplace_back();
 		left_region.region = cv::Rect(
@@ -99,7 +99,6 @@ namespace lvk
 				 0.0f, -0.5f, 0.0f
 		});
 
-		cv::equalizeHist(m_NextFrame, m_NextFrame);
 		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), sharpening_kernel);
 
 		return cv::Point2f(
