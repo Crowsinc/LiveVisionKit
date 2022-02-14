@@ -30,6 +30,8 @@ namespace lvk
 	static constexpr double MAX_FEATURE_THRESHOLD = 250;
 	static constexpr double MIN_FEATURE_THRESHOLD = 20;
 
+	static constexpr double MAX_TRACKING_ERROR = 20;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(const float estimation_threshold, const cv::Size& resolution, const cv::Size& block_size)
@@ -50,6 +52,11 @@ namespace lvk
 		LVK_ASSERT(block_size.height > 0 && block_size.height <= resolution.height);
 
 		m_Features.reserve(5000);
+		m_TrackedPoints.reserve(m_GridSize.area());
+		m_MatchedPoints.reserve(m_GridSize.area());
+		m_MatchStatus.reserve(m_GridSize.area());
+		m_TrackingError.reserve(m_GridSize.area());
+
 		m_Grid.resize(m_GridSize.area());
 
 		// NOTE: We divide the frame across multiple tracking regions to more evenly
@@ -124,6 +131,7 @@ namespace lvk
 
 		m_TrackedPoints.clear();
 		m_MatchedPoints.clear();
+		m_TrackingError.clear();
 		m_MatchStatus.clear();
 
 		// NOTE: With normal translational camera motion, there is a good chance that the
@@ -165,8 +173,11 @@ namespace lvk
 			m_TrackedPoints,
 			m_MatchedPoints,
 			m_MatchStatus,
-			cv::noArray()
+			m_TrackingError
 		);
+
+		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
+			m_MatchStatus[i] = m_MatchStatus[i] && m_TrackingError[i] < MAX_TRACKING_ERROR;
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 

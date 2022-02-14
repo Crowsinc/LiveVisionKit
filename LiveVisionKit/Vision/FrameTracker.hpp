@@ -59,6 +59,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackedPoints;
 		std::vector<cv::Point2f> m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus;
+		std::vector<float> m_TrackingError;
 
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;
