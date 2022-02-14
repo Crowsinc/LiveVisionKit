@@ -34,6 +34,8 @@
  * YUV to RGB conversion result in different colors than OBS.
  */
 
+#include <initializer_list>
+
 //---------------------------------------------------------------------------------------------------------------------
 
 bool operator<<(cv::UMat& dst, const obs_source_frame* src)
@@ -280,25 +282,36 @@ namespace lvk
 
 	void import_packed_422(const obs_source_frame& src, cv::UMat& dst, const bool y_first, const bool u_first)
 	{
-		LVK_ASSERT(!(y_first == false && u_first == false));
 		LVK_ASSERT(obs_frame_check_initialised(src));
 		LVK_ASSERT(src.data[0] != nullptr);
 
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		// Packed 422 contains interleaved sets of YU and YV for every two pixels. It is equivalent
-		// to a two component image where the first component is Y and second component is interleaved
-		// U and V; similar to NV12 but in a single plane and with only horizontal sub-sampling.
-		// We can use OpenCV to directly convert it to BGR, and then convert it back to YUV
+		// Packed 422 contains interleaved sets of YU and YV for every two pixels. We can use OpenCV
+		// to directly convert it to BGR, and then convert it back to YUV however this leads to
+		// incorrect colors in practice. Instead we import the frame into two channels, one Y, one
+		// interleaved U/V. Re-interpret the interleaved channels as two separate channels, upsample
+		// them and merge everything into YUV.
 
-		const auto bgr_conversion = y_first ?
-				(u_first ? cv::COLOR_YUV2BGR_YUYV : cv::COLOR_YUV2BGR_YVYU) :
-				(u_first ? cv::COLOR_YUV2BGR_UYVY : -1 /* VYUY UNSUPPORTED */);
+		import_plane(src, buffer_1, 0, 1.0, 1.0, 2);
 
-		import_plane(src, buffer, 0, 1.0, 1.0, 2);
+		cv::extractChannel(buffer_1, buffer_2, y_first ? 1 : 0);
+		buffer_2 = buffer_2.reshape(2, buffer_2.rows);
+		cv::resize(buffer_2, plane_uv, buffer_1.size(), 0, 0, cv::INTER_NEAREST);
 
-		cv::cvtColor(buffer, dst, bgr_conversion);
-		cv::cvtColor(dst, dst, cv::COLOR_BGR2YUV);
+		std::vector<int> from_to(6);
+		if(u_first)
+			from_to = {(y_first ? 0 : 1),0,  2,1,  3,2};
+		else
+			from_to = {(y_first ? 0 : 1),0,  2,2,  3,1};
+
+		// Must be pre-allocated for the mixChannels function.
+		dst.create(buffer_1.size(), CV_8UC3);
+
+		// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
+		cv::mixChannels({{buffer_1, plane_uv}}, std::vector<cv::UMat>(1, dst), from_to);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
