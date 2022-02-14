@@ -37,21 +37,21 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename P>
-	void fast_filter(std::vector<T>& data, const std::vector<P>& keep)
+	void fast_filter(std::vector<T>& data, const std::vector<P>& keep, bool invert)
 	{
 		LVK_ASSERT(data.size() == keep.size());
 
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// data/keep element correspondence of unprocessed elements.
 		for(int k = keep.size() - 1; k >= 0; k--)
-			if(!keep[k])
+			if(invert == static_cast<bool>(keep[k]))
 				fast_erase(data, k);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename P>
-	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep)
+	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert)
 	{
 		LVK_ASSERT(data_1.size() == keep.size());
 		LVK_ASSERT(data_2.size() == keep.size());
@@ -59,7 +59,7 @@ namespace lvk
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// vector element correspondence of unprocessed elements.
 		for(int k = keep.size() - 1; k >= 0; k--)
-			if(!keep[k])
+			if(invert == static_cast<bool>(keep[k]))
 			{
 				fast_erase(data_1, k);
 				fast_erase(data_2, k);
@@ -69,13 +69,13 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename P>
-	void filter(std::vector<T>& data, const std::vector<P>& keep)
+	void filter(std::vector<T>& data, const std::vector<P>& keep, bool invert)
 	{
 		LVK_ASSERT(data.size() == keep.size());
 
 		// https://stackoverflow.com/a/33494518
-		const auto predicate = [&data, &keep](const T& value) {
-			return !keep.at(&value - &data[0]);
+		const auto predicate = [&](const T& value) {
+			return invert == static_cast<bool>(keep.at(&value - &data[0]));
 		};
 
 		data.erase(std::remove_if(data.begin(), data.end(), predicate), data.end());
