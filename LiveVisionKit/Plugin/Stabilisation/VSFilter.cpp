@@ -135,10 +135,10 @@ namespace lvk
 		: m_Context(context),
 		  m_Shader(nullptr),
 		  m_CropParam(nullptr),
+		  m_Enabled(true),
 		  m_TestMode(false),
-		  m_CropProportion(0),
 		  m_SmoothingRadius(0),
-		  m_StabilisationEnabled(true),
+		  m_CropProportion(0),
 		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -183,7 +183,7 @@ namespace lvk
 		}
 
 		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
-		m_StabilisationEnabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+		m_Enabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
 		// Update frame delay indication for the user
@@ -255,33 +255,35 @@ namespace lvk
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
 
 		auto& motion = m_Trajectory.advance();
-		motion.velocity = m_FrameTracker.track(m_TrackingFrame);
+		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Transform::Identity();
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
 
 		if(stabilisation_ready())
 		{
-			const auto [frame, output] = m_FrameQueue.oldest();
-			const auto& [displacement, velocity] = m_Trajectory.centre();
+			// NOTE: Must forcibly remove the OBS frame to avoid accidentally
+			// releasing it later and causing a hard to find double free issue :)
+			auto [frame, output] = m_FrameQueue.oldest();
+			m_FrameQueue.oldest().output = nullptr;
 
-			if(m_StabilisationEnabled)
+			if(m_Enabled)
 			{
+				const auto& [displacement, velocity] = m_Trajectory.centre();
+
 				const auto trajectory_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
 				const auto stabilised_velocity = clamp_velocity(frame, velocity + trajectory_correction);
 
 				cv::warpAffine(frame, m_WarpFrame, stabilised_velocity.as_matrix(), frame.size());
+
+				m_WarpFrame >> output;
 			}
-			else frame.copyTo(m_WarpFrame);
-
-			m_WarpFrame >> output;
-
-			const uint64_t end_time = os_gettime_ns();
 
 			if(m_TestMode)
-				draw_debug_info(m_WarpFrame, end_time - start_time) >> output;
-
-			// NOTE: Must forcibly remove the OBS frame to avoid accidentally
-			// releasing it later and causing a hard to find double free issue :)
-			m_FrameQueue.oldest().output = nullptr;
+			{
+				draw_debug_info(
+					m_Enabled ? m_WarpFrame : frame,
+					os_gettime_ns() - start_time
+				) >> output;
+			}
 
 			return output;
 		}

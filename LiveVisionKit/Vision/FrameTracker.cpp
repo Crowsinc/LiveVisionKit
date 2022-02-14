@@ -248,8 +248,8 @@ namespace lvk
 	void FrameTracker::initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t feature_target)
 	{
 		// NOTE: We divide the frame across multiple tracking regions to more evenly
-		// distribute feature detection across the frame. Using regions alsoaccounts
-		// for differing scenery across the frame, by allowing them to dynamically
+		// distribute feature detection across the frame. Using regions also accounts
+		// for differing scenery across the frame by allowing them to dynamically
 		// adjust their threshold to meet a feature target.
 
 		m_TrackingRegions.clear();

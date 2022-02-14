@@ -82,10 +82,9 @@ namespace lvk
 		gs_effect_t* m_Shader;
 		gs_eparam_t* m_CropParam;
 
-		bool m_TestMode;
-		float m_CropProportion;
+		bool m_Enabled, m_TestMode;
 		uint32_t m_SmoothingRadius;
-		bool m_StabilisationEnabled;
+		float m_CropProportion;
 
 		cv::Rect m_CropRegion;
 		cv::Size m_OutputSize;
