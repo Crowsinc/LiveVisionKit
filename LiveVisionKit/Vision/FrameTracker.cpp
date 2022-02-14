@@ -56,8 +56,10 @@ namespace lvk
 		m_MatchedPoints.reserve(m_GridSize.area());
 		m_MatchStatus.reserve(m_GridSize.area());
 		m_TrackingError.reserve(m_GridSize.area());
+		m_InlierStatus.reserve(m_GridSize.area());
 
 		m_Grid.resize(m_GridSize.area());
+		m_GridMask.resize(m_GridSize.area(), true);
 
 		// NOTE: We divide the frame across multiple tracking regions to more evenly
 		// distribute feature detection across the frame. Vertical sections are used
@@ -120,6 +122,12 @@ namespace lvk
 	{
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
+		m_TrackedPoints.clear();
+		m_MatchedPoints.clear();
+		m_TrackingError.clear();
+		m_InlierStatus.clear();
+		m_MatchStatus.clear();
+
 		std::swap(m_PrevFrame, m_NextFrame);
 		const auto scaling = import_next(next_frame);
 
@@ -129,25 +137,13 @@ namespace lvk
 			return Transform::Identity();
 		}
 
-		m_TrackedPoints.clear();
-		m_MatchedPoints.clear();
-		m_TrackingError.clear();
-		m_MatchStatus.clear();
-
-		// NOTE: With normal translational camera motion, there is a good chance that the
-		// next frame's scenery is a subset of the previous frame. The opposite commonly
-		// does not always hold, especially around the borders of the frame. So we perform
-		// tracking backwards, then reverse the points when performing transform estimation
-		// to keep time flowing forwards.
-
 		// Feature detection
-
 		for(auto& [region, feature_threshold, feature_target] : m_TrackingRegions)
 		{
 			m_Features.clear();
 
 			cv::FAST(
-				m_NextFrame(region),
+				m_PrevFrame(region),
 				m_Features,
 				feature_threshold,
 				true
@@ -168,8 +164,8 @@ namespace lvk
 		// Feature matching
 
 		cv::calcOpticalFlowPyrLK(
-			m_NextFrame,
 			m_PrevFrame,
+			m_NextFrame,
 			m_TrackedPoints,
 			m_MatchedPoints,
 			m_MatchStatus,
@@ -198,7 +194,12 @@ namespace lvk
 			matched_point.y *= scaling.y;
 		}
 
-		const auto affine_estimate = cv::estimateAffinePartial2D(m_MatchedPoints, m_TrackedPoints);
+		const auto affine_estimate = cv::estimateAffinePartial2D(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
+
+		// Feed outliers from the next frame into the grid mask
+		// to avoid re-tracking them in the next pass.
+		fast_filter(m_MatchedPoints, m_InlierStatus, true);
+		update_grid_mask(m_MatchedPoints, scaling);
 
 		return affine_estimate.empty() ? Transform::Identity() : Transform::FromAffine2D(affine_estimate);
 	}
@@ -213,7 +214,8 @@ namespace lvk
 	{
 		// Process all the features into the grid, keeping only the best for each block
 		// This enforces better tracking point distribution across the frame, hopefully
-		// leading to a better estimation of global motion.
+		// leading to a better estimation of global motion. Skip blocks which aren't
+		// asserted in the grid mask.
 		for(auto& feature : features)
 		{
 			const auto point = feature.pt + offset;
@@ -222,7 +224,7 @@ namespace lvk
 			const uint32_t index = grid_y * m_GridSize.width + grid_x;
 
 			std::optional<cv::KeyPoint>& curr_feature = m_Grid[index];
-			if(!curr_feature.has_value() || curr_feature->response < feature.response)
+			if(m_GridMask[index] && (!curr_feature.has_value() || curr_feature->response < feature.response))
 			{
 				curr_feature = feature;
 				curr_feature->pt = point;
@@ -242,11 +244,35 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	void FrameTracker::update_grid_mask(const std::vector<cv::Point2f>& outliers, const cv::Point2f& scaling)
+	{
+		for(uint32_t i = 0; i < m_GridMask.size(); i++)
+			m_GridMask[i] = true;
+
+		const uint32_t scaled_block_width = m_BlockSize.width * scaling.x;
+		const uint32_t scaled_block_height = m_BlockSize.height * scaling.y;
+
+		for(auto& outlier : outliers)
+		{
+			const uint32_t grid_x = outlier.x / scaled_block_width;
+			const uint32_t grid_y = outlier.y / scaled_block_height;
+			const uint32_t index = grid_y * m_GridSize.width + grid_x;
+
+			m_GridMask[index] = false;
+		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void FrameTracker::restart()
 	{
 		m_FirstFrame = true;
+
 		for(auto& [region, feature_threshold, feature_target] : m_TrackingRegions)
 			feature_threshold = DEFAULT_FEATURE_THRESHOLD;
+
+		for(uint32_t i = 0; i < m_GridMask.size(); i++)
+			m_GridMask[i] = true;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -32,7 +32,7 @@ namespace lvk
 		FrameTracker(
 				const float estimation_threshold = 0.05,
 				const cv::Size& resolution = cv::Size(640, 360),
-				const cv::Size& block_size = cv::Size(20, 20)
+				const cv::Size& block_size = cv::Size(10, 10)
 		);
 
 		Transform track(const cv::UMat& next_frame);
@@ -54,22 +54,27 @@ namespace lvk
 
 		std::vector<cv::KeyPoint> m_Features;
 		std::vector<TrackingRegion> m_TrackingRegions;
+
 		std::vector<std::optional<cv::KeyPoint>> m_Grid;
+		std::vector<bool> m_GridMask;
 
 		std::vector<cv::Point2f> m_TrackedPoints;
 		std::vector<cv::Point2f> m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus;
 		std::vector<float> m_TrackingError;
+		std::vector<uint8_t> m_InlierStatus;
 
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;
 
 
 		void process_features(
-				const std::vector<cv::KeyPoint>& features,
-				std::vector<cv::Point2f>& points,
-				const cv::Point2f& offset
+			const std::vector<cv::KeyPoint>& features,
+			std::vector<cv::Point2f>& points,
+			const cv::Point2f& offset
 		);
+
+		void update_grid_mask(const std::vector<cv::Point2f>& outliers, const cv::Point2f& scaling);
 
 		cv::Point2f import_next(const cv::UMat& frame);
 
