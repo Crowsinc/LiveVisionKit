@@ -43,7 +43,7 @@ namespace lvk
 
 		// We need to filter in reverse so that the fast erase doesn't affect the
 		// data/keep element correspondence of unprocessed elements.
-		for(auto k = keep.size() - 1; k >= 0; k--)
+		for(int k = keep.size() - 1; k >= 0; k--)
 			if(!keep[k])
 				fast_erase(data, k);
 	}
