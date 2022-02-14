@@ -235,10 +235,10 @@ namespace lvk
 			const float chroma_height_scale = subsampled_height ? 0.5 : 1.0;
 
 			import_plane(src, buffer, 1, chroma_width_scale, chroma_height_scale, 1);
-			cv::resize(buffer, plane_u, plane_y.size(), 0, 0, cv::INTER_NEAREST);
+			cv::resize(buffer, plane_u, plane_y.size(), 0, 0, cv::INTER_LINEAR);
 
 			import_plane(src, buffer, 2, chroma_width_scale, chroma_height_scale, 1);
-			cv::resize(buffer, plane_v, plane_y.size(), 0, 0, cv::INTER_NEAREST);
+			cv::resize(buffer, plane_v, plane_y.size(), 0, 0, cv::INTER_LINEAR);
 		}
 		else
 		{
@@ -269,7 +269,7 @@ namespace lvk
 		import_plane(src, plane_y, 0, 1.0, 1.0, 1);
 
 		import_plane(src, buffer, 1, 0.5, 0.5, 2);
-		cv::resize(buffer, plane_uv, plane_y.size(), 0, 0, cv::INTER_NEAREST);
+		cv::resize(buffer, plane_uv, plane_y.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Must be pre-allocated for the mixChannels function.
 		dst.create(plane_y.size(), CV_8UC3);
@@ -296,10 +296,10 @@ namespace lvk
 		// them and merge everything into YUV.
 
 		import_plane(src, buffer_1, 0, 1.0, 1.0, 2);
-
 		cv::extractChannel(buffer_1, buffer_2, y_first ? 1 : 0);
+
 		buffer_2 = buffer_2.reshape(2, buffer_2.rows);
-		cv::resize(buffer_2, plane_uv, buffer_1.size(), 0, 0, cv::INTER_NEAREST);
+		cv::resize(buffer_2, plane_uv, buffer_1.size(), 0, 0, cv::INTER_LINEAR);
 
 		std::vector<int> from_to(6);
 		if(u_first)
@@ -518,10 +518,10 @@ namespace lvk
 			const auto chroma_width_scale = subsample_width ? 0.5 : 1.0;
 			const auto chroma_height_scale = subsample_height ? 0.5 : 1.0;
 
-			cv::resize(plane_u, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_NEAREST);
+			cv::resize(plane_u, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
 			export_plane(buffer, dst, 1);
 
-			cv::resize(plane_v, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_NEAREST);
+			cv::resize(plane_v, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
 			export_plane(buffer, dst, 2);
 		}
 		else
@@ -556,7 +556,7 @@ namespace lvk
 
 		// NOTE: Need to explicitly set destination as a UMat vector to invoke OpenCL optimisations.
 		cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {1,0,  2,1});
-		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 0.5, cv::INTER_NEAREST);
+		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
 
 		export_plane(plane_uv, dst, 1);
 	}
@@ -591,7 +591,7 @@ namespace lvk
 		else
 			cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {2,0,  1,1});
 
-		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 1.0, cv::INTER_NEAREST);
+		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 1.0, cv::INTER_AREA);
 		plane_uv = plane_uv.reshape(1, plane_uv.rows);
 
 		if(y_first)
