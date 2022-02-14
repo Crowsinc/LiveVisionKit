@@ -28,7 +28,7 @@ namespace lvk
 
 	static constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
 	static constexpr double MAX_FEATURE_THRESHOLD = 250;
-	static constexpr double MIN_FEATURE_THRESHOLD = 30;
+	static constexpr double MIN_FEATURE_THRESHOLD = 20;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -53,26 +53,34 @@ namespace lvk
 		m_Grid.resize(m_GridSize.area());
 
 		// NOTE: We divide the frame across multiple tracking regions to more evenly
-		// distribute feature detection across the frame. Vertical halves are used
+		// distribute feature detection across the frame. Vertical sections are used
 		// to account for differing scenery across the frame, allowing for better
 		// utilisation of the dynamic feature thresholds.
 
 		// TODO: Experiment with different feature targets for the regions
-		const uint32_t feature_target = 4000;
+		const uint32_t region_feature_target = 2000;
+		const uint32_t region_width = resolution.width/3;
 
 		auto& left_region = m_TrackingRegions.emplace_back();
 		left_region.region = cv::Rect(
 			cv::Point(0, 0),
-			cv::Size(resolution.width/2, resolution.height)
+			cv::Size(region_width, resolution.height)
 		);
-		left_region.feature_target = feature_target;
+		left_region.feature_target = region_feature_target;
+
+		auto& middle_region = m_TrackingRegions.emplace_back();
+		middle_region.region = cv::Rect(
+			cv::Point(region_width, 0),
+			cv::Size(region_width, resolution.height)
+		);
+		middle_region.feature_target = region_feature_target;
 
 		auto& right_region = m_TrackingRegions.emplace_back();
 		right_region.region = cv::Rect(
-			cv::Point(resolution.width/2, 0),
-			cv::Size(resolution.width/2, resolution.height)
+			cv::Point(2 * region_width, 0),
+			cv::Size(region_width, resolution.height)
 		);
-		right_region.feature_target = feature_target;
+		right_region.feature_target = region_feature_target;
 
 		restart();
 	}
