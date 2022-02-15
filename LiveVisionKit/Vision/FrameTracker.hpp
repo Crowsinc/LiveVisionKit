@@ -21,6 +21,7 @@
 #include <optional>
 
 #include "../Math/Transform.hpp"
+#include "TrackingGrid.hpp"
 
 namespace lvk
 {
@@ -30,12 +31,14 @@ namespace lvk
 	public:
 
 		FrameTracker(
-				const float estimation_threshold = 0.05,
-				const cv::Size& resolution = cv::Size(640, 360),
-				const cv::Size& block_size = cv::Size(10, 10)
+			const float estimation_threshold = 0.05,
+			const cv::Size& resolution = cv::Size(640, 360),
+			const cv::Size& block_size = cv::Size(20, 20)
 		);
 
 		Transform track(const cv::UMat& next_frame);
+
+		const std::vector<cv::Point2f> tracking_points() const;
 
 		void restart();
 
@@ -45,39 +48,30 @@ namespace lvk
 		{
 			cv::Rect region;
 			double feature_threshold;
-			uint32_t feature_target;
+			uint32_t detection_target;
 		};
 
-		const cv::Size m_TrackingResolution;
-		const cv::Size m_BlockSize, m_GridSize;
-		const uint32_t m_MinMatchThreshold;
-
+		TrackingGrid m_TrackingGrid;
 		std::vector<cv::KeyPoint> m_Features;
 		std::vector<TrackingRegion> m_TrackingRegions;
 
-		std::vector<std::optional<cv::KeyPoint>> m_Grid;
-		std::vector<bool> m_GridMask;
+		const int m_TrackingPointTarget;
+		const uint32_t m_MinMatchThreshold;
+		const cv::Size m_TrackingResolution;
 
-		std::vector<cv::Point2f> m_TrackedPoints;
-		std::vector<cv::Point2f> m_MatchedPoints;
-		std::vector<uint8_t> m_MatchStatus;
+		std::vector<cv::Point2f> m_TrackedPoints, m_ScaledTrackedPoints;
+		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
+		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 		std::vector<float> m_TrackingError;
-		std::vector<uint8_t> m_InlierStatus;
 
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;
 
+		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target);
+
 		cv::Point2f import_next(const cv::UMat& frame);
 
-		void process_features(
-			const std::vector<cv::KeyPoint>& features,
-			std::vector<cv::Point2f>& points,
-			const cv::Point2f& offset
-		);
-
-		void update_grid_mask(const std::vector<cv::Point2f>& outliers, const cv::Point2f& scaling);
-
-		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t feature_target);
+		void prepare_state();
 
 	};
 
