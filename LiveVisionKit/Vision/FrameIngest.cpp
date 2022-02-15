@@ -427,14 +427,20 @@ namespace lvk
 
 		if(has_alpha)
 		{
-			if(alpha_buffer.empty() || alpha_buffer.size() != src.size())
-			{
-				alpha_buffer.create(src.size(), CV_8UC1);
-				alpha_buffer.setTo(cv::Scalar(255));
-			}
+			// NOTE: To preserve alpha we need to import the frame and mix the
+			// original alpha channel back in. This is slow, don't use AYUV.
+
+			import_data(
+				dst.data[0],
+				alpha_buffer,
+				dst.width,
+				dst.height,
+				dst.linesize[0],
+				4
+			);
 
 			buffer.create(src.size(), CV_8UC4, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-			cv::mixChannels({{alpha_buffer, src}}, std::vector<cv::UMat>{buffer}, {0,0,  1,1,  2,2,  3,3});
+			cv::mixChannels({{src, alpha_buffer}}, std::vector<cv::UMat>{buffer}, {3,0,  0,1,  1,2,  2,3});
 
 			export_plane(buffer, dst, 0);
 		} else export_plane(src, dst, 0);
@@ -617,17 +623,14 @@ namespace lvk
 		{
 			// Planar 4xx formats
 			case video_format::VIDEO_FORMAT_YUVA:
-				fill_plane(frame, 3, 255);
 			case video_format::VIDEO_FORMAT_I444:
 				export_planar_4xx(src, frame, false, false);
 				break;
 			case video_format::VIDEO_FORMAT_I42A:
-				fill_plane(frame, 3, 255);
 			case video_format::VIDEO_FORMAT_I422:
 				export_planar_4xx(src, frame, true, false);
 				break;
 			case video_format::VIDEO_FORMAT_I40A:
-				fill_plane(frame, 3, 255);
 			case video_format::VIDEO_FORMAT_I420:
 				export_planar_4xx(src, frame, true, true);
 				break;
@@ -648,7 +651,7 @@ namespace lvk
 				export_packed_422(src, frame, false, true);
 				break;
 
-				// Packed 444 YUV formats
+			// Packed 444 YUV formats
 			case video_format::VIDEO_FORMAT_AYUV:
 				export_packed_444(src, frame, true);
 				break;
