@@ -16,7 +16,11 @@
 // 	  **********************************************************************
 
 #include "TrackingGrid.hpp"
+
+#include "../Math/Math.hpp"
 #include "../Diagnostics/Assert.hpp"
+
+#include <iostream>
 
 namespace lvk
 {
@@ -30,6 +34,10 @@ namespace lvk
 			  tracking_resolution.height/ block_size.height
 		  )
 	{
+		LVK_ASSERT(tracking_resolution.width > 0 && tracking_resolution.height > 0);
+		LVK_ASSERT(between(block_size.width, 1, tracking_resolution.width + 1));
+		LVK_ASSERT(between(block_size.height, 1, tracking_resolution.height + 1));
+
 		m_Grid.resize(m_GridSize.area());
 		m_Mask.resize(m_GridSize.area(), true);
 	}
@@ -50,13 +58,13 @@ namespace lvk
 				kp.pt.y * scaling.y + offset.y
 			);
 
-			LVK_ASSERT(point.x >= 0 && point.y >= 0);
-
 			const uint32_t grid_x = point.x / m_BlockSize.width;
 			const uint32_t grid_y = point.y / m_BlockSize.height;
-			const uint32_t index = grid_y * m_GridSize.width + grid_x;
+			const size_t index = grid_y * m_GridSize.width + grid_x;
 
-			LVK_ASSERT((int)grid_x < m_GridSize.width && (int)grid_y < m_GridSize.height);
+			// Silently skip points that land outside the grid
+			if(!between<size_t>(index, 0, m_Grid.size()))
+				continue;
 
 			auto& block = m_Grid[index];
 			bool block_mask = m_Mask[index];
@@ -71,38 +79,54 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	void TrackingGrid::mask(
-		const std::vector<cv::Point>& blocks,
+		const std::vector<cv::Point2f>& points,
 		const bool mask_value,
 		const cv::Point2f& scaling,
 		const cv::Point2f& offset
 	)
 	{
 		// Update the mask state of the provided blocks
-		for(auto block : blocks)
+		for(auto point : points)
 		{
-			block.x = block.x * scaling.x + offset.x;
-			block.y = block.y * scaling.y + offset.y;
+			std::cout << point << std::endl;
 
-			LVK_ASSERT(block.x >= 0 && block.y >= 0);
-			LVK_ASSERT(block.x < m_GridSize.width && block.y < m_GridSize.height);
+			point.x = point.x * scaling.x + offset.x;
+			point.y = point.y * scaling.y + offset.y;
 
-			m_Mask[block.y * m_GridSize.width + block.x] = mask_value;
+			const uint32_t grid_x = point.x / m_BlockSize.width;
+			const uint32_t grid_y = point.y / m_BlockSize.height;
+			const size_t index = grid_y * m_GridSize.width + grid_x;
+
+			// Silently skip points that land outside the grid
+			if(!between<size_t>(index, 0, m_Grid.size()))
+				continue;
+
+			m_Mask[index] = mask_value;
 		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void TrackingGrid::extract(std::vector<cv::Point2f>& points, const uint32_t amount)
+	void TrackingGrid::extract(std::vector<cv::Point2f>& points, const int amount)
 	{
 		std::vector<cv::KeyPoint> kps;
 		for(const auto& kp : m_Grid)
 			if(kp.has_value())
 				kps.push_back(kp.value());
 
-		if(amount != 0)
+		if(amount >= 0)
 			cv::KeyPointsFilter::retainBest(kps, amount);
 
-		cv::KeyPoint::convert(kps, points);
+		for(const auto& kp : kps)
+			points.push_back(kp.pt);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void TrackingGrid::reset_mask(const bool state)
+	{
+		for(uint32_t i = 0; i < m_Mask.size(); i++)
+			m_Mask[i] = state;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -111,14 +135,6 @@ namespace lvk
 	{
 		for(auto& kp : m_Grid)
 			kp.reset();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void TrackingGrid::reset_mask()
-	{
-		for(uint32_t i = 0; i < m_Mask.size(); i++)
-			m_Mask[i] = true;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

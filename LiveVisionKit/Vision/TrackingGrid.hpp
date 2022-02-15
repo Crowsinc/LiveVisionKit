@@ -36,17 +36,17 @@ namespace lvk
 		);
 
 		void mask(
-			const std::vector<cv::Point>& blocks,
-			const bool mask_value,
+			const std::vector<cv::Point2f>& points,
+			const bool mask_value = false,
 			const cv::Point2f& scaling = {1, 1},
 			const cv::Point2f& offset = {0, 0}
 		);
 
-		void extract(std::vector<cv::Point2f>& points, const uint32_t amount = 0);
+		void extract(std::vector<cv::Point2f>& points, const int amount = -1);
+
+		void reset_mask(const bool state = true);
 
 		void reset_grid();
-
-		void reset_mask();
 
 		void reset();
 
