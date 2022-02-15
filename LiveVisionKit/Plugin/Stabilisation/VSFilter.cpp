@@ -258,6 +258,18 @@ namespace lvk
 		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Transform::Identity();
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
 
+// 		TOGGLE TO VISUALISE TRACKING POINTS
+//		if(m_TestMode)
+//		{
+//			cv::Mat tmp;
+//			buffer.frame.copyTo(tmp);
+//
+//			for(auto p : m_FrameTracker.tracking_points())
+//				cv::circle(tmp, p, 3, cv::Scalar(149, 43, 21), 3);
+//
+//			tmp.copyTo(buffer.frame);
+//		}
+
 		if(stabilisation_ready())
 		{
 			// NOTE: Must forcibly remove the OBS frame to avoid accidentally

@@ -88,8 +88,6 @@ namespace lvk
 		// Update the mask state of the provided blocks
 		for(auto point : points)
 		{
-			std::cout << point << std::endl;
-
 			point.x = point.x * scaling.x + offset.x;
 			point.y = point.y * scaling.y + offset.y;
 
