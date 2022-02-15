@@ -41,7 +41,7 @@ namespace lvk
 	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion);
 
 	template<typename T>
-	bool is_between(const T value, const T min, const T max);
+	bool between(const T& value, const T& min, const T& max);
 
 }
 

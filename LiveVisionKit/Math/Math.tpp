@@ -73,7 +73,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	bool is_between(const T value, const T min, const T max)
+	bool between(const T& value, const T& min, const T& max)
 	{
 		LVK_ASSERT(min < max);
 
