@@ -67,7 +67,7 @@ namespace lvk
 				continue;
 
 			auto& block = m_Grid[index];
-			bool block_mask = m_Mask[index];
+			const bool block_mask = m_Mask[index];
 			if(block_mask == true && (!block.has_value() || block->response < kp.response))
 			{
 				block = kp;
