@@ -38,9 +38,9 @@ namespace lvk
 
 		Transform track(const cv::UMat& next_frame);
 
-		const std::vector<cv::Point2f> tracking_points() const;
-
 		void restart();
+
+		const std::vector<cv::Point2f> tracking_points() const;
 
 	private:
 

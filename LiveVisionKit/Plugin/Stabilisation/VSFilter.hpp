@@ -63,7 +63,10 @@ namespace lvk
 			Transform displacement;
 			Transform velocity;
 
-			FrameVector(const Transform& displacement = Transform::Zero(), const Transform& velocity = Transform::Zero());
+			FrameVector(
+				const Transform& displacement = Transform::Zero(),
+				const Transform& velocity = Transform::Zero()
+			);
 
 			FrameVector operator+(const FrameVector& other) const;
 
@@ -103,7 +106,9 @@ namespace lvk
 
 		Transform clamp_velocity(const cv::UMat& frame, const Transform& transform);
 
-		cv::UMat draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
+		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
+
+		cv::UMat draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		bool is_queue_outdated(const obs_source_frame* new_frame) const;
 

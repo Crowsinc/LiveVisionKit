@@ -242,10 +242,10 @@ namespace lvk
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
+		uint64_t start_time = os_gettime_ns();
+
 		if(is_queue_outdated(obs_frame))
 			reset();
-
-		const uint64_t start_time = os_gettime_ns();
 
 		auto& buffer = m_FrameQueue.advance();
 		buffer.frame << obs_frame;
@@ -258,17 +258,8 @@ namespace lvk
 		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Transform::Identity();
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
 
-// 		TOGGLE TO VISUALISE TRACKING POINTS
-//		if(m_TestMode)
-//		{
-//			cv::Mat tmp;
-//			buffer.frame.copyTo(tmp);
-//
-//			for(auto p : m_FrameTracker.tracking_points())
-//				cv::circle(tmp, p, 3, cv::Scalar(149, 43, 21), 3);
-//
-//			tmp.copyTo(buffer.frame);
-//		}
+		if(m_TestMode && m_Enabled)
+			start_time += draw_debug_frame(buffer.frame, m_FrameTracker.tracking_points());
 
 		if(stabilisation_ready())
 		{
@@ -291,7 +282,7 @@ namespace lvk
 
 			if(m_TestMode)
 			{
-				draw_debug_info(
+				draw_debug_hud(
 					m_Enabled ? m_WarpFrame : frame,
 					os_gettime_ns() - start_time
 				) >> output;
@@ -331,7 +322,27 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::UMat VSFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
+	uint64_t VSFilter::draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers)
+	{
+		const uint64_t start_time = os_gettime_ns();
+
+		const cv::Scalar green_yuv(149, 43, 21);
+
+		plot_markers(
+			frame,
+			m_FrameTracker.tracking_points(),
+			green_yuv,
+			cv::MarkerTypes::MARKER_CROSS,
+			8,
+			2
+		);
+
+		return os_gettime_ns() - start_time;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::UMat VSFilter::draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);

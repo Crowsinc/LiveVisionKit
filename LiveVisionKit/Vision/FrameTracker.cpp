@@ -223,8 +223,8 @@ namespace lvk
 		fast_filter(m_MatchedPoints, m_InlierStatus);
 		m_TrackedPoints = m_MatchedPoints;
 
-		m_TrackingGrid.reset_mask();
-		m_TrackingGrid.mask(m_TrackedPoints);
+		m_TrackingGrid.reset_mask(true);
+		m_TrackingGrid.mask(m_TrackedPoints, false);
 
 		return affine_estimate.empty() ? Transform::Identity() : Transform::FromAffine2D(affine_estimate);
 	}
