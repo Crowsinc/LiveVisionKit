@@ -30,9 +30,9 @@ namespace lvk
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
 	static constexpr auto SMOOTHING_RADIUS_MAX = 16;
 
-	static constexpr auto PROP_FRAME_DELAY_INFO = "FRAME_DELAY_INFO";
-	static constexpr auto FRAME_DELAY_INFO_MIN = 0;
-	static constexpr auto FRAME_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
+	static constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
+	static constexpr auto STREAM_DELAY_INFO_MIN = 0;
+	static constexpr auto STREAM_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
 
 	static constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	static constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
@@ -67,10 +67,10 @@ namespace lvk
 
 		property = obs_properties_add_int(
 			properties,
-			PROP_FRAME_DELAY_INFO,
-			"Frame Delay",
-			FRAME_DELAY_INFO_MIN,
-			FRAME_DELAY_INFO_MAX,
+			PROP_STREAM_DELAY_INFO,
+			"Stream Delay",
+			STREAM_DELAY_INFO_MIN,
+			STREAM_DELAY_INFO_MAX,
 			1
 		);
 		obs_property_int_set_suffix(property, "ms");
@@ -213,20 +213,20 @@ namespace lvk
 		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
-		// Update frame delay indication for the user
+		// Update stream delay indication for the user
 		obs_video_info video_info;
 		obs_get_video_info(&video_info);
 		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
 
-		const uint32_t frame_delay = obs_data_get_int(settings, PROP_FRAME_DELAY_INFO);
-		const uint32_t new_frame_delay = frame_ms * m_FrameQueue.window_size();
+		const uint32_t stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
+		const uint32_t new_stream_delay = frame_ms * m_FrameQueue.window_size();
 
-		// NOTE: Need to update the property UI to push a frame delay update because
+		// NOTE: Need to update the property UI to push a stream delay update because
 		// the UI element is disabled. But only if the delay has changed, otherwise
 		// the sliders are interrupted and won't smoothly drag anymore.
-		if(frame_delay != new_frame_delay)
+		if(stream_delay != new_stream_delay)
 		{
-			obs_data_set_int(settings, PROP_FRAME_DELAY_INFO, new_frame_delay);
+			obs_data_set_int(settings, PROP_STREAM_DELAY_INFO, new_stream_delay);
 			obs_source_update_properties(m_Context);
 		}
 	}
