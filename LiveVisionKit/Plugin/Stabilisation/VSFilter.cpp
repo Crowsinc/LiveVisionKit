@@ -203,8 +203,14 @@ namespace lvk
 		else if(new_model == MOTION_MODEL_HOMOGRAPHY)
 			m_FrameTracker.set_model(MotionModel::HOMOGRAPHY);
 
-		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
+		// NOTE: If stabilisation is disabled, we need to restart the FrameTracker
+		// so that is starts from scratch when its turned on again. Otherwise it
+		// will try compare an old frame with a new one leading to bad output.
 		m_Enabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+		if(!m_Enabled)
+			m_FrameTracker.restart();
+
+		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
 		// Update frame delay indication for the user
