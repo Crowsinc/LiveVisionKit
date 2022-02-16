@@ -255,7 +255,7 @@ namespace lvk
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
 
 		auto& motion = m_Trajectory.advance();
-		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Transform::Identity();
+		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Homography::Identity();
 		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
 
 		if(m_TestMode && m_Enabled)
@@ -275,7 +275,7 @@ namespace lvk
 				const auto trajectory_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
 				const auto stabilised_velocity = clamp_velocity(frame, velocity + trajectory_correction);
 
-				cv::warpAffine(frame, m_WarpFrame, stabilised_velocity.as_matrix(), frame.size());
+				stabilised_velocity.warp(frame, m_WarpFrame);
 
 				m_WarpFrame >> output;
 			}
@@ -295,20 +295,20 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Transform VSFilter::clamp_velocity(const cv::UMat& frame, const Transform& velocity)
+	Homography VSFilter::clamp_velocity(const cv::UMat& frame, const Homography& velocity)
 	{
-		// Clamp the velocity to keep the crop enclosed within the transformed
-		// frame to ensure no 'black bars' are present. This is done by iteratively
+		// Clamp the velocity to keep the crop enclosed within the warped frame
+		// ensuring that no 'green bars' are present. This is done by iteratively
 		// reducing the velocity by lerping it back to identity in small steps.
 
 		constexpr double max_t = 1.0;
 		constexpr int max_iterations = 100;
 		constexpr double step = max_t/max_iterations;
-		const auto identity = Transform::Identity();
+		const auto identity = Homography::Identity();
 
 		double t = step;
 		auto reduced_velocity = velocity;
-		BoundingBox frame_bounds(frame.size(), reduced_velocity);
+		BoundingQuad frame_bounds(frame.size(), reduced_velocity);
 
 		while(t <= max_t && !frame_bounds.encloses(m_CropRegion))
 		{
@@ -420,9 +420,9 @@ namespace lvk
 		}
 
 		// Fill the trajectory to bring the buffers into synchronisation.
-		m_Trajectory.advance(Transform::Identity());
+		m_Trajectory.advance(Homography::Identity());
 		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
-			m_Trajectory.advance(m_Trajectory.newest() + Transform::Identity());
+			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -493,7 +493,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector::FrameVector(const Transform& displacement, const Transform& velocity)
+	VSFilter::FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
 		: displacement(displacement),
 		  velocity(velocity)
 	{}
@@ -512,12 +512,6 @@ namespace lvk
 		return FrameVector(displacement - other.displacement, velocity - other.velocity);
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	VSFilter::FrameVector VSFilter::FrameVector::operator*(const VSFilter::FrameVector& other) const
-	{
-		return FrameVector(displacement * other.displacement, velocity * other.velocity);
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

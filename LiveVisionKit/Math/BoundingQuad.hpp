@@ -19,33 +19,28 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "../Math/Transform.hpp"
+#include "Homography.hpp"
 
 namespace lvk
 {
 
-	class BoundingBox
+	class BoundingQuad
 	{
 	public:
 
-		BoundingBox(const cv::Size2d& size, const Transform& transform = Transform::Identity());
+		BoundingQuad(const cv::Size2d& size, const Homography& homography = Homography::Identity());
 
-		void transform(const Transform& transform);
+		void transform(const Homography& homography);
 
 		bool encloses(const cv::Rect2d& rect) const;
 
-		bool encloses(const BoundingBox& box) const;
+		bool encloses(const BoundingQuad& quad) const;
+
+		bool encloses(const cv::Point2d& point) const;
 
 	private:
 
-		cv::Rect2d m_Rect;
-		cv::Rect2d m_LocalExtent;
-		cv::Point2d m_TopLeft, m_TopRight;
-		cv::Point2d m_BottomLeft, m_BottomRight;
-		cv::Point2d m_XUnitNormal, m_YUnitNormal;
-
-
-		cv::Point2d to_local_space(cv::Point2d point) const;
+		std::vector<cv::Point2d> m_LocalVertices, m_Vertices;
 
 	};
 

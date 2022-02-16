@@ -24,10 +24,10 @@
 #include <opencv2/opencv.hpp>
 
 #include "Diagnostics/Assert.hpp"
+#include "Math/BoundingQuad.hpp"
 
 #include "Math/Math.hpp"
-#include "Math/Transform.hpp"
-#include "Math/BoundingBox.hpp"
+#include "Math/Homography.hpp"
 
 #include "Structures/SlidingBuffer.hpp"
 

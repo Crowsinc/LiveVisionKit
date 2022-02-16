@@ -135,7 +135,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Transform FrameTracker::track(const cv::UMat& next_frame)
+	Homography FrameTracker::track(const cv::UMat& next_frame)
 	{
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
@@ -147,7 +147,7 @@ namespace lvk
 		if(m_FirstFrame)
 		{
 			m_FirstFrame = false;
-			return Transform::Identity();
+			return Homography::Identity();
 		}
 
 		// Feature detection
@@ -177,7 +177,7 @@ namespace lvk
 		m_TrackingGrid.extract(m_TrackedPoints, points_to_add);
 
 		if(m_TrackedPoints.size() < m_MinMatchThreshold)
-			return Transform::Identity();
+			return Homography::Identity();
 
 		// Feature matching
 
@@ -196,7 +196,7 @@ namespace lvk
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
 		if(m_MatchedPoints.size() < m_MinMatchThreshold)
-			return Transform::Identity();
+			return Homography::Identity();
 
 		// Motion Estimation
 
@@ -226,7 +226,7 @@ namespace lvk
 		m_TrackingGrid.reset_mask(true);
 		m_TrackingGrid.mask(m_TrackedPoints, false);
 
-		return affine_estimate.empty() ? Transform::Identity() : Transform::FromAffine2D(affine_estimate);
+		return affine_estimate.empty() ? Homography::Identity() : Homography::FromAffineMatrix(affine_estimate);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

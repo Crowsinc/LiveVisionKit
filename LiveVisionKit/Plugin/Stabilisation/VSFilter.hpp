@@ -60,19 +60,17 @@ namespace lvk
 
 		struct FrameVector
 		{
-			Transform displacement;
-			Transform velocity;
+			Homography displacement;
+			Homography velocity;
 
 			FrameVector(
-				const Transform& displacement = Transform::Zero(),
-				const Transform& velocity = Transform::Zero()
+				const Homography& displacement = Homography::Zero(),
+				const Homography& velocity = Homography::Zero()
 			);
 
 			FrameVector operator+(const FrameVector& other) const;
 
 			FrameVector operator-(const FrameVector& other) const;
-
-			FrameVector operator*(const FrameVector& other) const;
 
 			FrameVector operator*(const double scaling) const;
 
@@ -104,7 +102,7 @@ namespace lvk
 
 		void reset_buffers();
 
-		Transform clamp_velocity(const cv::UMat& frame, const Transform& transform);
+		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
 		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
 

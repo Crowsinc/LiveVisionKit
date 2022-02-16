@@ -20,7 +20,7 @@
 #include <opencv2/opencv.hpp>
 #include <optional>
 
-#include "../Math/Transform.hpp"
+#include "../Math/Homography.hpp"
 #include "TrackingGrid.hpp"
 
 namespace lvk
@@ -36,7 +36,7 @@ namespace lvk
 			const cv::Size& block_size = cv::Size(20, 20)
 		);
 
-		Transform track(const cv::UMat& next_frame);
+		Homography track(const cv::UMat& next_frame);
 
 		void restart();
 
