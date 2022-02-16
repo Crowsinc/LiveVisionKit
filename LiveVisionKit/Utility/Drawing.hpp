@@ -15,25 +15,21 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-
-#include <util/platform.h>
-
 #include <opencv2/opencv.hpp>
 
-#include "Diagnostics/Assert.hpp"
+namespace lvk
+{
 
-#include "Math/Math.hpp"
-#include "Math/Transform.hpp"
-#include "Math/BoundingBox.hpp"
+	template<typename T>
+	void plot_markers(
+		cv::UMat& dst,
+		const std::vector<cv::Point_<T>>& markers,
+		const cv::Scalar& color,
+		const cv::MarkerTypes type = cv::MarkerTypes::MARKER_CROSS,
+		const int size = 10,
+		const int thickness = 2
+	);
 
-#include "Structures/SlidingBuffer.hpp"
+}
 
-#include "Utility/Algorithm.hpp"
-#include "Utility/Drawing.hpp"
-
-#include "Vision/FrameIngest.hpp"
-#include "Vision/FrameTracker.hpp"
-#include "Vision/TrackingGrid.hpp"
+#include "Drawing.tpp"

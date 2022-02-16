@@ -15,25 +15,36 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
+namespace lvk
+{
 
-#include <util/platform.h>
+//---------------------------------------------------------------------------------------------------------------------
 
-#include <opencv2/opencv.hpp>
+	template<typename T>
+	void plot_markers(
+		cv::UMat& dst,
+		const std::vector<cv::Point_<T>>& markers,
+		const cv::Scalar& color,
+		const cv::MarkerTypes type,
+		const int size,
+		const int thickness
+	)
+	{
+		thread_local cv::Mat mask;
 
-#include "Diagnostics/Assert.hpp"
+		// NOTE: Individually drawing lots of points on a UMat is very inefficient.
+		// Instead, draw the points to a mask and apply them in bulk to the UMat.
 
-#include "Math/Math.hpp"
-#include "Math/Transform.hpp"
-#include "Math/BoundingBox.hpp"
+		mask.create(dst.size(), CV_8UC1);
+		mask.setTo(cv::Scalar(0));
 
-#include "Structures/SlidingBuffer.hpp"
+		for(const auto& point : markers)
+			cv::drawMarker(mask, point, color, type, size, thickness);
 
-#include "Utility/Algorithm.hpp"
-#include "Utility/Drawing.hpp"
+		dst.setTo(color, mask);
+	}
 
-#include "Vision/FrameIngest.hpp"
-#include "Vision/FrameTracker.hpp"
-#include "Vision/TrackingGrid.hpp"
+
+//---------------------------------------------------------------------------------------------------------------------
+
+}
