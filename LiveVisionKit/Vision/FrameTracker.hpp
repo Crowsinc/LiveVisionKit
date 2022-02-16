@@ -25,6 +25,11 @@
 
 namespace lvk
 {
+	enum class MotionModel
+	{
+		AFFINE,
+		HOMOGRAPHY
+	};
 
 	class FrameTracker
 	{
@@ -32,6 +37,7 @@ namespace lvk
 
 		FrameTracker(
 			const float estimation_threshold = 0.05,
+			const MotionModel model = MotionModel::HOMOGRAPHY,
 			const cv::Size& resolution = cv::Size(640, 360),
 			const cv::Size& block_size = cv::Size(20, 20)
 		);
@@ -39,6 +45,10 @@ namespace lvk
 		Homography track(const cv::UMat& next_frame);
 
 		void restart();
+
+		void set_model(const MotionModel& model);
+
+		MotionModel model() const;
 
 		const std::vector<cv::Point2f> tracking_points() const;
 
@@ -63,6 +73,9 @@ namespace lvk
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 		std::vector<float> m_TrackingError;
+
+		MotionModel m_MotionModel;
+		cv::UsacParams m_USACParams;
 
 		cv::UMat m_PrevFrame, m_NextFrame;
 		bool m_FirstFrame;

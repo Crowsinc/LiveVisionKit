@@ -39,6 +39,11 @@ namespace lvk
 	static constexpr auto CROP_PERCENTAGE_MIN = 1;
 	static constexpr auto CROP_PERCENTAGE_MAX = 25;
 
+	static constexpr auto PROP_MOTION_MODEL = "MOTION_MODEL";
+	static constexpr auto MOTION_MODEL_AFFINE = "AFFINE";
+	static constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
+	static constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_HOMOGRAPHY;
+
 	static constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	static constexpr auto STAB_DISABLED_DEFAULT = false;
 
@@ -52,45 +57,55 @@ namespace lvk
 		obs_properties_t* properties = obs_properties_create();
 
 		auto property = obs_properties_add_int(
-				properties,
-				PROP_SMOOTHING_RADIUS,
-				"Smoothing Radius",
-				SMOOTHING_RADIUS_MIN,
-				SMOOTHING_RADIUS_MAX,
-				2
+			properties,
+			PROP_SMOOTHING_RADIUS,
+			"Smoothing Radius",
+			SMOOTHING_RADIUS_MIN,
+			SMOOTHING_RADIUS_MAX,
+			2
 		);
 
 		property = obs_properties_add_int(
-				properties,
-				PROP_FRAME_DELAY_INFO,
-				"Frame Delay",
-				FRAME_DELAY_INFO_MIN,
-				FRAME_DELAY_INFO_MAX,
-				1
+			properties,
+			PROP_FRAME_DELAY_INFO,
+			"Frame Delay",
+			FRAME_DELAY_INFO_MIN,
+			FRAME_DELAY_INFO_MAX,
+			1
 		);
 		obs_property_int_set_suffix(property, "ms");
 		obs_property_set_enabled(property, false);
 
 		property = obs_properties_add_int_slider(
-				properties,
-				PROP_CROP_PERCENTAGE,
-				"Crop",
-				CROP_PERCENTAGE_MIN,
-				CROP_PERCENTAGE_MAX,
-				1
+			properties,
+			PROP_CROP_PERCENTAGE,
+			"Crop",
+			CROP_PERCENTAGE_MIN,
+			CROP_PERCENTAGE_MAX,
+			1
 		);
 		obs_property_int_set_suffix(property, "%");
 
+		property = obs_properties_add_list(
+			properties,
+			PROP_MOTION_MODEL,
+			"Motion Model",
+			OBS_COMBO_TYPE_LIST,
+			OBS_COMBO_FORMAT_STRING
+		);
+		obs_property_list_add_string(property, "Affine", MOTION_MODEL_AFFINE);
+		obs_property_list_add_string(property, "Homography", MOTION_MODEL_HOMOGRAPHY);
+
 		obs_properties_add_bool(
-				properties,
-				PROP_STAB_DISABLED,
-				"Disable Stabilisation"
+			properties,
+			PROP_STAB_DISABLED,
+			"Disable Stabilisation"
 		);
 
 		obs_properties_add_bool(
-				properties,
-				PROP_TEST_MODE,
-				"Test Mode"
+			properties,
+			PROP_TEST_MODE,
+			"Test Mode"
 		);
 
 		return properties;
@@ -104,6 +119,7 @@ namespace lvk
 
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
+		obs_data_set_default_string(settings, PROP_MOTION_MODEL, MOTION_MODEL_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
@@ -175,12 +191,17 @@ namespace lvk
 		LVK_ASSERT(settings != nullptr);
 
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
-
 		if(m_SmoothingRadius != new_radius)
 		{
 			m_SmoothingRadius = new_radius;
 			reset_buffers();
 		}
+
+		const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
+		if(new_model == MOTION_MODEL_AFFINE)
+			m_FrameTracker.set_model(MotionModel::AFFINE);
+		else if(new_model == MOTION_MODEL_HOMOGRAPHY)
+			m_FrameTracker.set_model(MotionModel::HOMOGRAPHY);
 
 		m_CropProportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 		m_Enabled = !obs_data_get_bool(settings, PROP_STAB_DISABLED);

@@ -21,6 +21,8 @@
 #include "../Utility/Algorithm.hpp"
 #include "../Diagnostics/Assert.hpp"
 
+#include <util/platform.h>
+
 namespace lvk
 {
 
@@ -38,11 +40,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameTracker::FrameTracker(const float estimation_threshold, const cv::Size& resolution, const cv::Size& block_size)
+	FrameTracker::FrameTracker(
+		const float estimation_threshold,
+		const MotionModel model,
+		const cv::Size& resolution,
+		const cv::Size& block_size
+	)
 		: m_TrackingGrid(resolution, block_size),
 		  m_TrackingPointTarget(m_TrackingGrid.block_count()),
 		  m_MinMatchThreshold(estimation_threshold * m_TrackingPointTarget),
 		  m_TrackingResolution(resolution),
+		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FirstFrame(true)
@@ -65,6 +73,20 @@ namespace lvk
 			REGION_COLUMNS,
 			REGION_DETECTION_TARGET
 		);
+
+		// TODO: Test MAGSAC vs USAC_DEFAULT in terms of
+		// accuracy and performance. For now we default
+		// to MAGSAC for its threshold robustness.
+		m_USACParams.sampler = cv::SAMPLING_UNIFORM;
+		m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
+		m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
+		m_USACParams.maxIterations = 500;
+		m_USACParams.confidence = 0.99;
+		m_USACParams.loIterations = 10;
+		m_USACParams.loSampleSize = 50;
+
+		// Must set soft threshold for MAGSAC to converge quickly
+		m_USACParams.threshold = 4;
 
 		restart();
 	}
@@ -212,12 +234,26 @@ namespace lvk
 			scaled_matched_point.y *= scaling.y;
 		}
 
-		const auto affine_estimate = cv::estimateAffinePartial2D(
-			m_ScaledTrackedPoints,
-			m_ScaledMatchedPoints,
-			m_InlierStatus,
-			cv::RANSAC
-		);
+		cv::Mat motion;
+		switch(m_MotionModel)
+		{
+			case MotionModel::AFFINE:
+				motion = cv::estimateAffine2D(
+					m_ScaledTrackedPoints,
+					m_ScaledMatchedPoints,
+					m_InlierStatus,
+					m_USACParams
+				);
+				break;
+			case MotionModel::HOMOGRAPHY:
+				motion = cv::findHomography(
+					m_ScaledTrackedPoints,
+					m_ScaledMatchedPoints,
+					m_InlierStatus,
+					m_USACParams
+				);
+				break;
+		}
 
 		// Propogate good matched points to next pass
 		fast_filter(m_MatchedPoints, m_InlierStatus);
@@ -226,7 +262,7 @@ namespace lvk
 		m_TrackingGrid.reset_mask(true);
 		m_TrackingGrid.mask(m_TrackedPoints, false);
 
-		return affine_estimate.empty() ? Homography::Identity() : Homography::FromAffineMatrix(affine_estimate);
+		return motion.empty() ? Homography::Identity() : Homography::FromMatrix(motion);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -241,6 +277,20 @@ namespace lvk
 		m_MatchStatus.clear();
 
 		m_TrackingGrid.reset_grid();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameTracker::set_model(const MotionModel& model)
+	{
+		m_MotionModel = model;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	MotionModel FrameTracker::model() const
+	{
+		return m_MotionModel;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

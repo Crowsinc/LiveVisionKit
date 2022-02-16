@@ -41,7 +41,10 @@ namespace lvk
 
 	Homography Homography::FromMatrix(const cv::Mat& matrix)
 	{
-		return {matrix};
+		if(matrix.cols == 3 && matrix.rows == 2)
+			return FromAffineMatrix(matrix);
+		else
+			return {matrix};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
