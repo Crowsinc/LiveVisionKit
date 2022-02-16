@@ -28,7 +28,7 @@ namespace lvk
 	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
 	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
 	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
-	static constexpr auto SMOOTHING_RADIUS_MAX = 20;
+	static constexpr auto SMOOTHING_RADIUS_MAX = 16;
 
 	static constexpr auto PROP_FRAME_DELAY_INFO = "FRAME_DELAY_INFO";
 	static constexpr auto FRAME_DELAY_INFO_MIN = 0;
