@@ -259,8 +259,8 @@ namespace lvk
 		fast_filter(m_MatchedPoints, m_InlierStatus);
 		m_TrackedPoints = m_MatchedPoints;
 
-		m_TrackingGrid.reset_mask(true);
-		m_TrackingGrid.mask(m_TrackedPoints, false);
+		m_TrackingGrid.reset();
+		m_TrackingGrid.mask(m_TrackedPoints);
 
 		return motion.empty() ? Homography::Identity() : Homography::FromMatrix(motion);
 	}
