@@ -22,7 +22,7 @@
 namespace lvk
 {
 
-	class VSFilter
+	class VSFilter : public VisionFilter
 	{
 	public:
 
@@ -38,8 +38,6 @@ namespace lvk
 
 		void render() const;
 
-		obs_source_frame* process(obs_source_frame* obs_frame);
-
 		void configure(obs_data_t* settings);
 
 		uint32_t width() const;
@@ -49,14 +47,6 @@ namespace lvk
 		void reset();
 
 	private:
-
-		struct FrameBuffer
-		{
-			cv::UMat frame;
-			obs_source_frame* output;
-
-			FrameBuffer();
-		};
 
 		struct FrameVector
 		{
@@ -75,7 +65,6 @@ namespace lvk
 			FrameVector operator*(const double scaling) const;
 
 			FrameVector operator/(const double scaling) const;
-
 		};
 
 		obs_source_t* m_Context;
@@ -100,15 +89,17 @@ namespace lvk
 
 		VSFilter(obs_source_t* context);
 
+		virtual void filter(FrameBuffer& buffer) override;
+
 		void reset_buffers();
 
 		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
 		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
 
-		cv::UMat draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
+		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
-		bool is_queue_outdated(const obs_source_frame* new_frame) const;
+		bool is_queue_outdated(const FrameBuffer& new_frame) const;
 
 		void release_frame_queue();
 

@@ -20,8 +20,6 @@
 #include <opencv2/core/ocl.hpp>
 #include <sstream>
 
-#include "../../Interop/FrameIngest.hpp"
-
 namespace lvk
 {
 
@@ -150,7 +148,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	VSFilter::VSFilter(obs_source_t* context)
-		: m_Context(context),
+		: VisionFilter(context),
+		  m_Context(context),
 		  m_Shader(nullptr),
 		  m_CropParam(nullptr),
 		  m_Enabled(true),
@@ -177,9 +176,6 @@ namespace lvk
 
 			obs_leave_graphics();
 		}
-
-
-
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -242,7 +238,8 @@ namespace lvk
 	{
 		if(stabilisation_ready())
 		{
-			auto frame_size = m_FrameQueue.oldest().frame.size();
+			// NOTE: Next frame is the second oldest frame in the queue
+			auto frame_size = m_FrameQueue[1].frame.size();
 
 			m_CropRegion = crop(frame_size, m_CropProportion);
 
@@ -270,18 +267,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* VSFilter::process(obs_source_frame* obs_frame)
+	void VSFilter::filter(FrameBuffer& buffer)
 	{
-		LVK_ASSERT(obs_frame != nullptr);
-
 		uint64_t start_time = os_gettime_ns();
 
-		if(is_queue_outdated(obs_frame))
+		if(is_queue_outdated(buffer))
 			reset();
-
-		auto& buffer = m_FrameQueue.advance();
-		buffer.frame << obs_frame;
-		buffer.output = obs_frame;
 
 		// Extract Y channel from YUV frame to use for tracking.
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
@@ -293,36 +284,33 @@ namespace lvk
 		if(m_TestMode && m_Enabled)
 			start_time += draw_debug_frame(buffer.frame, m_FrameTracker.tracking_points());
 
+		m_FrameQueue.push(std::move(buffer));
+
 		if(stabilisation_ready())
 		{
-			// NOTE: Must forcibly remove the OBS frame to avoid accidentally
-			// releasing it later and causing a hard to find double free issue :)
-			auto [frame, output] = m_FrameQueue.oldest();
-			m_FrameQueue.oldest().output = nullptr;
+			FrameBuffer& output = m_FrameQueue.oldest();
 
 			if(m_Enabled)
 			{
 				const auto& [displacement, velocity] = m_Trajectory.centre();
 
 				const auto trajectory_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
-				const auto stabilised_velocity = clamp_velocity(frame, velocity + trajectory_correction);
+				const auto stabilised_velocity = clamp_velocity(output.frame, velocity + trajectory_correction);
 
-				stabilised_velocity.warp(frame, m_WarpFrame);
-
-				m_WarpFrame >> output;
+				stabilised_velocity.warp(output.frame, m_WarpFrame);
+				m_WarpFrame.copyTo(output.frame);
 			}
 
 			if(m_TestMode)
 			{
 				draw_debug_hud(
-					m_Enabled ? m_WarpFrame : frame,
+					output.frame,
 					os_gettime_ns() - start_time
-				) >> output;
+				);
 			}
 
-			return output;
+			buffer = std::move(output);
 		}
-		return nullptr;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -374,7 +362,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::UMat VSFilter::draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns)
+	void VSFilter::draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);
@@ -399,8 +387,6 @@ namespace lvk
 			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
 			2
 		);
-
-		return frame;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -464,23 +450,19 @@ namespace lvk
 		// Release all frames to save GPU memory and prevent memory leaks
 		obs_source_t* parent = obs_filter_get_parent(m_Context);
 		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
-		{
-			auto& [frame, obs_frame] = m_FrameQueue[i];
+			m_FrameQueue[i].release(parent);
 
-			frame.release();
-			obs_source_release_frame(parent, obs_frame);
-		}
 		m_FrameQueue.clear();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VSFilter::is_queue_outdated(const obs_source_frame* new_frame) const
+	bool VSFilter::is_queue_outdated(const FrameBuffer& new_frame) const
 	{
 		// If the frame is over a second away from the last frame
 		// then we consider the trajectory and frame data to be outdated.
 		return !m_FrameQueue.empty()
-			&& new_frame->timestamp - m_FrameQueue.newest().output->timestamp > 1e9;
+			&& new_frame.timestamp() - m_FrameQueue.newest().timestamp() > 1e9;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -515,13 +497,6 @@ namespace lvk
 			&& m_Shader != nullptr
 			&& m_CropParam != nullptr;
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	VSFilter::FrameBuffer::FrameBuffer()
-		: frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  output(nullptr)
-	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
