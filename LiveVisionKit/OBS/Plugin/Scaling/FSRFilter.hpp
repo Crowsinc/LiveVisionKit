@@ -17,12 +17,12 @@
 
 #pragma once
 
-#include "../../LiveVisionKit.hpp"
+#include "LiveVisionKit.hpp"
 
 namespace lvk
 {
 
-	class ADBFilter
+	class FSRFilter
 	{
 	public:
 
@@ -30,33 +30,42 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static ADBFilter* Create(obs_source_t* context, obs_data_t* settings);
+		static FSRFilter* Create(obs_source_t* context, obs_data_t* settings);
+
+		~FSRFilter();
 
 		void configure(obs_data_t* settings);
 
-		obs_source_frame* process(obs_source_frame* obs_frame);
+		void render();
 
-		void reset();
+		uint32_t width() const;
+
+		uint32_t height() const;
 
 	private:
 
 		obs_source_t* m_Context;
+		gs_effect_t* m_Shader;
 
-		bool m_TestMode;
-		int m_KeepThreshold;
+		bool m_EASUMatchCanvas;
+		vec2 m_InputSize, m_OutputSize;
+		vec2 m_NewOutputSize;
 
-		cv::UMat m_Frame, m_Buffer;
-		cv::UMat m_DeblockBuffer, m_FloatBuffer;
-		cv::UMat m_BlockGrid, m_GridMask;
-		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
+		vec4 m_EASUConst0, m_EASUConst1;
+		vec4 m_EASUConst2, m_EASUConst3;
+
+		gs_eparam_t* m_OutputSizeParam;
+		gs_eparam_t* m_EASUConstParam0;
+		gs_eparam_t* m_EASUConstParam1;
+		gs_eparam_t* m_EASUConstParam2;
+		gs_eparam_t* m_EASUConstParam3;
 
 
-		ADBFilter(obs_source_t* context);
+		FSRFilter(obs_source_t* context);
 
-		cv::UMat draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
+		bool update_scaling();
 
 		bool validate() const;
-
 	};
 
 }

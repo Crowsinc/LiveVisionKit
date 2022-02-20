@@ -15,95 +15,84 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-
-#include "FSRFilter.hpp"
+#include "LiveVisionKit.hpp"
+#include "ADBFilter.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void* on_fsr_create(obs_data_t* settings, obs_source_t* context)
+static void* on_adb_create(obs_data_t* settings, obs_source_t* context)
 {
-	return lvk::FSRFilter::Create(context, settings);
+	return lvk::ADBFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_fsr_destroy(void* data)
+static void on_adb_destroy(void* data)
 {
-	delete static_cast<lvk::FSRFilter*>(data);
+	delete static_cast<lvk::ADBFilter*>(data);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_fsr_configure(void* data, obs_data_t* settings)
+static void on_adb_remove(void* data, obs_source_t* parent)
 {
-	static_cast<lvk::FSRFilter*>(data)->configure(settings);
+	static_cast<lvk::ADBFilter*>(data)->reset();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_fsr_render(void* data, gs_effect_t* effect)
+static void on_adb_configure(void* data, obs_data_t* settings)
 {
-	static_cast<lvk::FSRFilter*>(data)->render();
+	static_cast<lvk::ADBFilter*>(data)->configure(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static obs_properties_t* fsr_filter_properties(void* data)
+static obs_source_frame* on_adb_process(void* data, obs_source_frame* frame)
 {
-	return lvk::FSRFilter::Properties();
+	return static_cast<lvk::ADBFilter*>(data)->process(frame);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void fsr_filter_default_settings(obs_data_t* settings)
+static obs_properties_t* adb_filter_properties(void* data)
 {
-	lvk::FSRFilter::LoadDefaults(settings);
+	return lvk::ADBFilter::Properties();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static uint32_t fsr_output_width(void* data)
+static void adb_filter_default_settings(obs_data_t* settings)
 {
-	return static_cast<lvk::FSRFilter*>(data)->width();
+	lvk::ADBFilter::LoadDefaults(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static uint32_t fsr_output_height(void* data)
+static const char* adb_filter_name(void* data)
 {
-	return static_cast<lvk::FSRFilter*>(data)->height();
+	return "(LVK) Adapative De-Blocker";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static const char* fsr_filter_name(void* data)
-{
-	return "(LVK) FidelityFX Super Resolution 1.0";
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-extern void register_fsr_source()
+extern void register_adb_source()
 {
 	obs_source_info config = {0};
-	config.id = "LVK~FSR";
+	config.id = "LVK~ADB";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
+	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 
-	config.create = on_fsr_create;
-	config.destroy = on_fsr_destroy;
+	config.create = on_adb_create;
+	config.destroy = on_adb_destroy;
+	config.filter_remove = on_adb_remove;
 
-	config.update = on_fsr_configure;
-	config.video_render = on_fsr_render;
+	config.filter_video = on_adb_process;
+	config.update = on_adb_configure;
 
-	config.get_name = fsr_filter_name;
-	config.get_width = fsr_output_width;
-	config.get_height = fsr_output_height;
-	config.get_properties = fsr_filter_properties;
-	config.get_defaults = fsr_filter_default_settings;
+	config.get_properties = adb_filter_properties;
+	config.get_defaults = adb_filter_default_settings;
+	config.get_name = adb_filter_name;
 
 	obs_register_source(&config);
 }

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "../../LiveVisionKit.hpp"
+#include "LiveVisionKit.hpp"
 
 namespace lvk
 {

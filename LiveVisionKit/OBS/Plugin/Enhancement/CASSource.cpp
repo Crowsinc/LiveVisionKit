@@ -15,119 +15,92 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-
-#include "VSFilter.hpp"
+#include "LiveVisionKit.hpp"
+#include "CASFilter.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void* on_vs_create(obs_data_t* settings, obs_source_t* context)
+static void* on_cas_create(obs_data_t* settings, obs_source_t* context)
 {
-	return lvk::VSFilter::Create(context, settings);
+	return lvk::CASFilter::Create(context, settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_destroy(void* data)
+static void on_cas_destroy(void* data)
 {
-	delete static_cast<lvk::VSFilter*>(data);
+	delete static_cast<lvk::CASFilter*>(data);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_remove(void* data, obs_source_t* parent)
+static void on_cas_configure(void* data, obs_data_t* settings)
 {
-	static_cast<lvk::VSFilter*>(data)->reset();
+	static_cast<lvk::CASFilter*>(data)->configure(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_configure(void* data, obs_data_t* settings)
+static void on_cas_render(void* data, gs_effect_t* effect)
 {
-	static_cast<lvk::VSFilter*>(data)->configure(settings);
+	static_cast<lvk::CASFilter*>(data)->render();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_tick(void* data, float seconds)
+static obs_properties_t* cas_filter_properties(void* data)
 {
-	static_cast<lvk::VSFilter*>(data)->tick();
+	return lvk::CASFilter::Properties();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_render(void* data, gs_effect_t* effect)
+static void cas_filter_default_settings(obs_data_t* settings)
 {
-	static_cast<lvk::VSFilter*>(data)->render();
+	lvk::CASFilter::LoadDefaults(settings);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static obs_source_frame* on_vs_process(void* data, obs_source_frame* frame)
+static uint32_t cas_output_width(void* data)
 {
-	return static_cast<lvk::VSFilter*>(data)->process(frame);
+	return static_cast<lvk::CASFilter*>(data)->width();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static obs_properties_t* vs_filter_properties(void* data)
+static uint32_t cas_output_height(void* data)
 {
-	return lvk::VSFilter::Properties();
+	return static_cast<lvk::CASFilter*>(data)->height();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void vs_filter_default_settings(obs_data_t* settings)
+static const char* cas_filter_name(void* data)
 {
-	lvk::VSFilter::LoadDefault(settings);
+	return "(LVK) FidelityFX Contrast Adaptive Sharpening";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static uint32_t vs_output_width(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->width();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static uint32_t vs_output_height(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->height();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static const char* vs_filter_name(void* data)
-{
-	return "(LVK) Video Stabiliser";
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-extern void register_vs_source()
+extern void register_cas_source()
 {
 	obs_source_info config = {0};
-	config.id = "LVK~VS";
+	config.id = "LVK~CAS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
 
-	config.create = on_vs_create;
-	config.destroy = on_vs_destroy;
-	config.filter_remove = on_vs_remove;
+	config.create = on_cas_create;
+	config.destroy = on_cas_destroy;
 
-	config.update = on_vs_configure;
-	config.video_tick = on_vs_tick;
-	config.video_render = on_vs_render;
-	config.filter_video = on_vs_process;
+	config.update = on_cas_configure;
+	config.video_render = on_cas_render;
 
-	config.get_name = vs_filter_name;
-	config.get_width = vs_output_width;
-	config.get_height = vs_output_height;
-	config.get_properties = vs_filter_properties;
-	config.get_defaults = vs_filter_default_settings;
+	config.get_name = cas_filter_name;
+	config.get_width = cas_output_width;
+	config.get_height = cas_output_height;
+	config.get_properties = cas_filter_properties;
+	config.get_defaults = cas_filter_default_settings;
 
 	obs_register_source(&config);
 }

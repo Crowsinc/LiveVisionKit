@@ -17,6 +17,8 @@
 
 #include "ADBFilter.hpp"
 
+#include "../../Interop/FrameIngest.hpp"
+
 namespace lvk
 {
 
@@ -100,6 +102,7 @@ namespace lvk
 
 	{
 		LVK_ASSERT(context != nullptr);
+
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

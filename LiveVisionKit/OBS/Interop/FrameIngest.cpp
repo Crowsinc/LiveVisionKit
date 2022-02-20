@@ -17,7 +17,7 @@
 
 #include "FrameIngest.hpp"
 
-#include "../Diagnostics/Assert.hpp"
+#include "Diagnostics/Assert.hpp"
 
 /* NOTE: All upload conversion operations are to YUV, and are performed on the GPU using thread
  * local cached buffers to maximise performance and avoid expensive GPU memory allocations.
