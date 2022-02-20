@@ -53,7 +53,9 @@ namespace lvk
 
 		const obs_source_t* m_Context;
 
-		bool is_last_in_chain() const;
+		const obs_source_t* find_next_async_filter() const;
+
+		bool is_vision_filter_next() const;
 
 	};
 

@@ -27,24 +27,24 @@ namespace lvk
 
 	FrameBuffer::FrameBuffer()
 		: frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_SourceFrame(nullptr)
+		  m_FrameHandle(nullptr)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameBuffer::FrameBuffer(FrameBuffer&& buffer)
 		: frame(buffer.frame),
-		  m_SourceFrame(buffer.m_SourceFrame)
+		  m_FrameHandle(buffer.m_FrameHandle)
 	{
+		buffer.reset();
 		buffer.frame.release();
-		buffer.m_SourceFrame = nullptr;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void FrameBuffer::reset()
 	{
-		m_SourceFrame = nullptr;
+		m_FrameHandle = nullptr;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -53,63 +53,90 @@ namespace lvk
 	{
 		LVK_ASSERT(owner != nullptr);
 
-		obs_source_release_frame(owner, m_SourceFrame);
-		m_SourceFrame = nullptr;
+		obs_source_release_frame(owner, m_FrameHandle);
+		m_FrameHandle = nullptr;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FrameBuffer::empty() const
 	{
-		return m_SourceFrame == nullptr;
+		return m_FrameHandle == nullptr;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::upload(obs_source_frame* source_frame)
+	uint64_t FrameBuffer::timestamp() const
 	{
-		LVK_ASSERT(source_frame != nullptr);
+		LVK_ASSERT(!empty());
 
-		frame << source_frame;
-		m_SourceFrame = source_frame;
+		return m_FrameHandle->timestamp;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	obs_source_frame* FrameBuffer::handle() const
+	{
+		return m_FrameHandle;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameBuffer::upload(obs_source_frame* frame_handle)
+	{
+		LVK_ASSERT(frame_handle != nullptr);
+
+		frame << frame_handle;
+		m_FrameHandle = frame_handle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	obs_source_frame* FrameBuffer::download() const
 	{
-		LVK_ASSERT(m_SourceFrame != nullptr && !frame.empty());
+		LVK_ASSERT(m_FrameHandle != nullptr && !frame.empty());
 
-		frame >> m_SourceFrame;
-		return m_SourceFrame;
+		frame >> m_FrameHandle;
+		return m_FrameHandle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool FrameBuffer::operator==(obs_source_frame* source_frame) const
+	void FrameBuffer::operator=(FrameBuffer&& buffer)
 	{
-		return m_SourceFrame == source_frame;
+		frame = buffer.frame;
+		m_FrameHandle = buffer.m_FrameHandle;
+
+		buffer.reset();
+		buffer.frame.release();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool FrameBuffer::operator==(obs_source_frame* frame_handle) const
+	{
+		return m_FrameHandle == frame_handle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FrameBuffer::operator==(const FrameBuffer& other) const
 	{
-		return m_SourceFrame == other.m_SourceFrame;
+		return m_FrameHandle == other.m_FrameHandle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool FrameBuffer::operator!=(obs_source_frame* source_frame) const
+	bool FrameBuffer::operator!=(obs_source_frame* frame_handle) const
 	{
-		return m_SourceFrame != source_frame;
+		return m_FrameHandle != frame_handle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FrameBuffer::operator!=(const FrameBuffer& other) const
 	{
-		return m_SourceFrame != other.m_SourceFrame;
+		return m_FrameHandle != other.m_FrameHandle;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

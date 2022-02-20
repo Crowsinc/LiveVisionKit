@@ -43,20 +43,26 @@ namespace lvk
 
 		bool empty() const;
 
+		uint64_t timestamp() const;
+
+		obs_source_frame* handle() const;
+
 		obs_source_frame* download() const;
 
-		void upload(obs_source_frame* source_frame);
+		void upload(obs_source_frame* frame_handle);
+
+		void operator=(FrameBuffer&& buffer);
 
 		bool operator==(const FrameBuffer& other) const;
 
-		bool operator==(obs_source_frame* source_frame) const;
+		bool operator==(obs_source_frame* frame_handle) const;
 
 		bool operator!=(const FrameBuffer& other) const;
 
-		bool operator!=(obs_source_frame* source_frame) const;
+		bool operator!=(obs_source_frame* frame_handle) const;
 
 	private:
-		obs_source_frame* m_SourceFrame;
+		obs_source_frame* m_FrameHandle;
 	};
 
 }

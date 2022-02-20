@@ -18,8 +18,6 @@
 #include "VisionFilter.hpp"
 #include "Diagnostics/Assert.hpp"
 
-#include <util/threading.h>
-
 namespace lvk
 {
 
@@ -49,17 +47,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* VisionFilter::process(obs_source_frame* frame)
+	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
 	{
 		const obs_source* parent = obs_filter_get_parent(m_Context);
 
 		s_FrameCache.try_emplace(parent);
 		FrameBuffer& buffer = s_FrameCache[parent];
 
-		// If this is a new frame, then we are at the start of
-		// a filter chain so upload the new frame into the buffer.
-		if(buffer != frame)
-			buffer.upload(frame);
+		// If this is a new frame, then we need to update the frame cache
+		if(buffer != input_frame)
+			buffer.upload(input_frame);
 
 		filter(buffer);
 
@@ -67,26 +64,53 @@ namespace lvk
 		if(buffer.empty())
 			return nullptr;
 
-		// If we are the last vision filter in the chain, then we need to download
-		// the buffer back into the OBS frame. If not, the next filter is a Vision
-		// filter so we can send OBS the outdated frame but pass the updated frame
-		// buffer directly to the next filter.
-		if(is_last_in_chain())
+		obs_source_frame* output_frame = buffer.handle();
+
+		// If the next filter is not a vision filter, then we need to download the
+		// cache back into the OBS frame for the filter. Otherwise, we can just
+		// have the next vision filter re-use the frame in the cache.
+		if(!is_vision_filter_next())
 		{
-			frame = buffer.download();
+			output_frame = buffer.download();
 			buffer.reset();
 		}
 
-		return frame;
+		return output_frame;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VisionFilter::is_last_in_chain() const
+	const obs_source_t* VisionFilter::find_next_async_filter() const
 	{
-		// We are last in the chain if the next filter is disabled or is not a vision filter
-		const auto next_filter = obs_filter_get_target(m_Context);
-		return !obs_source_enabled(next_filter) || s_Filters.count(next_filter) == 0;
+		using SearchData = std::tuple<const obs_source_t*, bool>;
+		SearchData search_data(m_Context, false);
+
+		const auto parent = obs_filter_get_parent(m_Context);
+		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param){
+			auto& [target, found] = *static_cast<SearchData*>(search_param);
+
+			const bool async = (obs_source_get_output_flags(filter) & OBS_SOURCE_ASYNC_VIDEO) == OBS_SOURCE_ASYNC_VIDEO;
+			const bool enabled = obs_source_enabled(filter);
+
+			if(!found && filter == target)
+				target = nullptr;
+			else if(target == nullptr && async && enabled)
+			{
+				target = filter;
+				found = true;
+			}
+		}, &search_data);
+
+		return std::get<0>(search_data);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VisionFilter::is_vision_filter_next() const
+	{
+		const obs_source_t* next_filter = find_next_async_filter();
+
+		return next_filter != nullptr && s_Filters.count(next_filter) > 0;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
