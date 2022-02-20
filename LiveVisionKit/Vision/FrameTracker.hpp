@@ -20,7 +20,7 @@
 #include <opencv2/opencv.hpp>
 #include <optional>
 
-#include "../Math/Homography.hpp"
+#include "Math/Homography.hpp"
 #include "TrackingGrid.hpp"
 
 namespace lvk

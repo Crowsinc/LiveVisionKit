@@ -15,9 +15,10 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "../Diagnostics/Assert.hpp"
-#include "../Math/Math.hpp"
 #include "Homography.hpp"
+
+#include "Diagnostics/Assert.hpp"
+#include "Math.hpp"
 
 namespace lvk
 {

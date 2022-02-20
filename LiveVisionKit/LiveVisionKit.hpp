@@ -15,9 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
+// Library
 
 #include <util/platform.h>
 
@@ -34,6 +32,13 @@
 #include "Utility/Algorithm.hpp"
 #include "Utility/Drawing.hpp"
 
-#include "Vision/FrameIngest.hpp"
 #include "Vision/FrameTracker.hpp"
 #include "Vision/TrackingGrid.hpp"
+
+// OBS Specific
+#include <obs-module.h>
+#include <obs-source.h>
+#include <obs.h>
+
+#include "OBS/Interop/VisionFilter.hpp"
+#include "OBS/Interop/FrameBuffer.hpp"

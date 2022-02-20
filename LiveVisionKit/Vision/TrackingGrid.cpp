@@ -17,8 +17,8 @@
 
 #include "TrackingGrid.hpp"
 
-#include "../Math/Math.hpp"
-#include "../Diagnostics/Assert.hpp"
+#include "Math/Math.hpp"
+#include "Diagnostics/Assert.hpp"
 
 #include <iostream>
 

@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-#include "../Diagnostics/Assert.hpp"
+#include "Diagnostics/Assert.hpp"
 
 namespace lvk
 {
