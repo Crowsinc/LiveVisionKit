@@ -88,18 +88,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	ADBFilter::ADBFilter(obs_source_t* context)
-		: m_Context(context),
+		: VisionFilter(context),
+		  m_Context(context),
 		  m_TestMode(false),
 		  m_KeepThreshold(0),
-		  m_Frame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_BlockGrid(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_GridMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_Buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DeblockBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FloatBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_BlockGrid(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_GridMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_KeepBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_DeblockBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
-
 	{
 		LVK_ASSERT(context != nullptr);
 
@@ -117,14 +116,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* ADBFilter::process(obs_source_frame* obs_frame)
+	void ADBFilter::filter(cv::UMat& frame)
 	{
-		LVK_ASSERT(obs_frame != nullptr);
-
 		const auto start_time = os_gettime_ns();
 
-		m_Frame << obs_frame;
-		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_YUV2BGR);
+		cv::cvtColor(frame, frame, cv::COLOR_YUV2BGR);
 
 		// NOTE: De-blocking is achieved by adaptively blending a smooth
 		// median filtered frame with the original detailed frame. Median
@@ -138,12 +134,12 @@ namespace lvk
 		// would be unnacceptably degraded from smoothing.
 
 		constexpr int macro_block_size = 16;
-		const cv::Size block_grid_size = m_Frame.size() / macro_block_size;
+		const cv::Size block_grid_size = frame.size() / macro_block_size;
 
 		// Produce the detail block mask
-		cv::resize(m_Frame, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
-		cv::resize(m_BlockGrid, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_NEAREST);
-		cv::absdiff(m_Frame, m_Buffer, m_Buffer);
+		cv::resize(frame, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
+		cv::resize(m_BlockGrid, m_Buffer, frame.size(), 0, 0, cv::INTER_NEAREST);
+		cv::absdiff(frame, m_Buffer, m_Buffer);
 
 		cv::resize(m_Buffer, m_BlockGrid, block_grid_size, 0, 0, cv::INTER_AREA);
 		cv::threshold(m_BlockGrid, m_BlockGrid, m_KeepThreshold, 255, cv::THRESH_BINARY);
@@ -151,36 +147,33 @@ namespace lvk
 
 		// Produce the blend maps
 		m_GridMask.convertTo(m_FloatBuffer, CV_32FC1, 1.0/255);
-		cv::resize(m_FloatBuffer, m_KeepBlendMap, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_FloatBuffer, m_KeepBlendMap, frame.size(), 0, 0, cv::INTER_LINEAR);
 		cv::boxFilter(m_KeepBlendMap, m_KeepBlendMap, m_KeepBlendMap.type(), cv::Size(17,17));
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Produce the filtered frame.
 		const cv::Size filter_resolution(480, 270);
-		cv::resize(m_Frame, m_DeblockBuffer, filter_resolution, 0, 0, cv::INTER_AREA);
+		cv::resize(frame, m_DeblockBuffer, filter_resolution, 0, 0, cv::INTER_AREA);
 		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, 5);
-		cv::resize(m_DeblockBuffer, m_Buffer, m_Frame.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_DeblockBuffer, m_Buffer, frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		if(m_TestMode)
 			m_Buffer.setTo(cv::Scalar(255, 0, 255));
 
 		// Perform de-blocking
-		cv::blendLinear(m_Frame, m_Buffer, m_KeepBlendMap, m_DeblockBlendMap, m_Frame);
+		cv::blendLinear(frame, m_Buffer, m_KeepBlendMap, m_DeblockBlendMap, frame);
 
-		cv::cvtColor(m_Frame, m_Frame, cv::COLOR_BGR2YUV);
-		m_Frame >> obs_frame;
+		cv::cvtColor(frame, frame, cv::COLOR_BGR2YUV);
 
 		const auto end_time = os_gettime_ns();
 
 		if(m_TestMode)
-			draw_debug_info(m_Frame, end_time - start_time) >> obs_frame;
-
-		return obs_frame;
+			draw_debug_info(frame, end_time - start_time);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::UMat ADBFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
+	void ADBFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
 		const cv::Scalar magenta_yuv(105, 212, 234);
 		const cv::Scalar green_yuv(149, 43, 21);
@@ -203,8 +196,6 @@ namespace lvk
 			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
 			2
 		);
-
-		return frame;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -219,7 +210,6 @@ namespace lvk
 		m_BlockGrid.release();
 		m_GridMask.release();
 		m_Buffer.release();
-		m_Frame.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

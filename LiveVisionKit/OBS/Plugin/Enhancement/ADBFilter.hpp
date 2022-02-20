@@ -22,7 +22,7 @@
 namespace lvk
 {
 
-	class ADBFilter
+	class ADBFilter : public VisionFilter
 	{
 	public:
 
@@ -34,8 +34,6 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		obs_source_frame* process(obs_source_frame* obs_frame);
-
 		void reset();
 
 	private:
@@ -45,15 +43,15 @@ namespace lvk
 		bool m_TestMode;
 		int m_KeepThreshold;
 
-		cv::UMat m_Frame, m_Buffer;
-		cv::UMat m_DeblockBuffer, m_FloatBuffer;
 		cv::UMat m_BlockGrid, m_GridMask;
+		cv::UMat m_Buffer, m_DeblockBuffer, m_FloatBuffer;
 		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
-
 
 		ADBFilter(obs_source_t* context);
 
-		cv::UMat draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
+		virtual void filter(cv::UMat& frame) override;
+
+		void draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		bool validate() const;
 
