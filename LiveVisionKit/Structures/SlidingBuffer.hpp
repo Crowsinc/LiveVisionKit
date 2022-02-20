@@ -31,6 +31,8 @@ namespace lvk
 
 		void push(const T& element);
 
+		void push(T&& element);
+
 		template<typename... Args>
 		T& advance(Args&&... args);
 

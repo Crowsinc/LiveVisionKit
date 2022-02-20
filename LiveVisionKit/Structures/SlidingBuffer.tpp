@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "../Diagnostics/Assert.hpp"
+#include "Diagnostics/Assert.hpp"
 
 namespace lvk
 {
@@ -58,6 +58,19 @@ namespace lvk
 			m_InternalBuffer.push_back(element);
 		else
 			m_InternalBuffer[m_EndIndex] = element;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	void SlidingBuffer<T>::push(T&& element)
+	{
+		advance_window();
+
+		if(!full())
+			m_InternalBuffer.push_back(std::move(element));
+		else
+			m_InternalBuffer[m_EndIndex] = std::move(element);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -113,7 +126,11 @@ namespace lvk
 			const auto copy_count = std::min(window_size, elements());
 			const auto copy_start = elements() - copy_count;
 			for(uint32_t i = 0; i < copy_count; i++)
-				new_buffer.push_back(at(copy_start + i));
+				if constexpr (std::is_move_constructible_v<T>)
+					new_buffer.push_back(std::move(at(copy_start + i)));
+				else
+					new_buffer.push_back(at(copy_start + i));
+
 
 			m_InternalBuffer = std::move(new_buffer);
 		}
@@ -182,7 +199,6 @@ namespace lvk
 		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre for even sizing.
-		// Use at() method to automatically handle wrapping.
 		return at(centre_index());
 	}
 
@@ -193,7 +209,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!empty());
 
-		return m_InternalBuffer[m_StartIndex];
+		return at(0);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -203,7 +219,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!empty());
 
-		return m_InternalBuffer[m_EndIndex];
+		return at(elements() - 1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -224,7 +240,6 @@ namespace lvk
 		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre for even sizing.
-		// Use at() method to automatically handle wrapping.
 		return at(centre_index());
 	}
 
@@ -235,7 +250,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!empty());
 
-		return m_InternalBuffer[m_StartIndex];
+		return at(0);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -245,7 +260,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!empty());
 
-		return m_InternalBuffer[m_EndIndex];
+		return at(elements() - 1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
