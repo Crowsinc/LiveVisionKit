@@ -74,9 +74,14 @@ namespace lvk
 			REGION_DETECTION_TARGET
 		);
 
-		// TODO: Test MAGSAC vs USAC_DEFAULT in terms of
-		// accuracy and performance. For now we default
-		// to MAGSAC for its threshold robustness.
+		// Use light-weight sharpening kernel for filtering input frames
+		cv::Mat({3, 3}, {
+			 0.0f, -0.5f, 0.0f,
+			-0.5f, 3.0f, -0.5f,
+			 0.0f, -0.5f, 0.0f
+		}).copyTo(m_FilterKernel);
+
+		// Use MAGSAC for its threshold robustness.
 		m_USACParams.sampler = cv::SAMPLING_UNIFORM;
 		m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
 		m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
@@ -84,8 +89,6 @@ namespace lvk
 		m_USACParams.confidence = 0.99;
 		m_USACParams.loIterations = 10;
 		m_USACParams.loSampleSize = 50;
-
-		// Must set soft threshold for MAGSAC to converge quickly
 		m_USACParams.threshold = 4;
 
 		restart();
@@ -140,14 +143,7 @@ namespace lvk
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
 		cv::resize(frame, m_NextFrame, m_TrackingResolution, 0, 0, cv::INTER_AREA);
-
-		const cv::Mat sharpening_kernel({3,3}, {
-				 0.0f, -0.5f, 0.0f,
-				-0.5f, 3.0f, -0.5f,
-				 0.0f, -0.5f, 0.0f
-		});
-
-		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), sharpening_kernel);
+		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
 
 		return cv::Point2f(
 			static_cast<float>(frame.cols) / m_TrackingResolution.width,
@@ -213,7 +209,7 @@ namespace lvk
 		);
 
 		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
-			m_MatchStatus[i] = m_MatchStatus[i] && m_TrackingError[i] < MAX_TRACKING_ERROR;
+			m_MatchStatus[i] = m_MatchStatus[i] && (m_TrackingError[i] < MAX_TRACKING_ERROR);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
