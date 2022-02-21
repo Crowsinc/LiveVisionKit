@@ -25,7 +25,6 @@
 
 namespace lvk
 {
-
 //---------------------------------------------------------------------------------------------------------------------
 
 	static constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
@@ -35,8 +34,8 @@ namespace lvk
 	static constexpr double MAX_TRACKING_ERROR = 15;
 
 	static constexpr uint32_t REGION_ROWS = 1;
-	static constexpr uint32_t REGION_COLUMNS = 3;
-	static constexpr uint32_t REGION_DETECTION_TARGET = 1000;
+	static constexpr uint32_t REGION_COLUMNS = 2;
+	static constexpr uint32_t REGION_DETECTION_TARGET = 1500;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -57,7 +56,7 @@ namespace lvk
 	{
 		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.001f));
 
-		m_Features.reserve(5000);
+		m_Features.reserve(3 * REGION_DETECTION_TARGET);
 
 		m_TrackedPoints.reserve(m_TrackingPointTarget);
 		m_MatchedPoints.reserve(m_TrackingPointTarget);
@@ -74,18 +73,18 @@ namespace lvk
 			REGION_DETECTION_TARGET
 		);
 
-		// Use light-weight sharpening kernel for filtering input frames
-		cv::Mat({3, 3}, {
-			 0.0f, -0.5f, 0.0f,
-			-0.5f, 3.0f, -0.5f,
-			 0.0f, -0.5f, 0.0f
-		}).copyTo(m_FilterKernel);
+		// Use light sharpening kernel
+		m_FilterKernel = cv::Mat({3, 3}, {
+			0.0f, -0.5f,  0.0f,
+		   -0.5f,  3.0f, -0.5f,
+			0.0f, -0.5f,  0.0f
+		});
 
 		// Use MAGSAC for its threshold robustness.
 		m_USACParams.sampler = cv::SAMPLING_UNIFORM;
 		m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
 		m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
-		m_USACParams.maxIterations = 500;
+		m_USACParams.maxIterations = 250;
 		m_USACParams.confidence = 0.99;
 		m_USACParams.loIterations = 10;
 		m_USACParams.loSampleSize = 50;
@@ -168,8 +167,7 @@ namespace lvk
 			return Homography::Identity();
 		}
 
-		// Feature detection
-
+		// Add new tracking points
 		for(auto& [region, feature_threshold, detection_target] : m_TrackingRegions)
 		{
 			m_Features.clear();
@@ -190,33 +188,29 @@ namespace lvk
 				feature_threshold = lerp(feature_threshold, MIN_FEATURE_THRESHOLD, 0.1);
 		}
 
-		// Add new tracking points to meet the tracking point target
-		const int points_to_add = std::max(m_TrackingPointTarget - static_cast<int>(m_TrackedPoints.size()), 0);
-		m_TrackingGrid.extract(m_TrackedPoints, points_to_add);
+		m_TrackingGrid.extract(m_TrackedPoints);
 
 		if(m_TrackedPoints.size() < m_MinMatchThreshold)
 			return Homography::Identity();
 
-		// Feature matching
-
+		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
 			m_PrevFrame,
 			m_NextFrame,
 			m_TrackedPoints,
 			m_MatchedPoints,
 			m_MatchStatus,
-			m_TrackingError
+			m_TrackingError,
+			cv::Size(7, 7)
 		);
 
-		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
+		for (uint32_t i = 0; i < m_MatchStatus.size(); i++)
 			m_MatchStatus[i] = m_MatchStatus[i] && (m_TrackingError[i] < MAX_TRACKING_ERROR);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
 		if(m_MatchedPoints.size() < m_MinMatchThreshold)
 			return Homography::Identity();
-
-		// Motion Estimation
 
 		// Re-scale all the points to original frame size otherwise the motion will be downscaled
 		for(size_t i = 0; i < m_TrackedPoints.size(); i++)
@@ -234,11 +228,12 @@ namespace lvk
 		switch(m_MotionModel)
 		{
 			case MotionModel::AFFINE:
-				motion = cv::estimateAffine2D(
+				//TODO: switch to USAC when partial is supported
+				motion = cv::estimateAffinePartial2D(
 					m_ScaledTrackedPoints,
 					m_ScaledMatchedPoints,
 					m_InlierStatus,
-					m_USACParams
+					cv::RANSAC
 				);
 				break;
 			case MotionModel::HOMOGRAPHY:
@@ -271,8 +266,6 @@ namespace lvk
 		m_TrackingError.clear();
 		m_InlierStatus.clear();
 		m_MatchStatus.clear();
-
-		m_TrackingGrid.reset_grid();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

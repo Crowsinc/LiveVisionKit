@@ -78,7 +78,7 @@ namespace lvk
 		cv::UsacParams m_USACParams;
 
 		cv::UMat m_PrevFrame, m_NextFrame;
-		cv::UMat m_FilterKernel;
+		cv::Mat m_FilterKernel;
 		bool m_FirstFrame;
 
 		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target);
