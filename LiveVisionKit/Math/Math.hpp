@@ -43,6 +43,9 @@ namespace lvk
 	template<typename T>
 	bool between(const T& value, const T& min, const T& max);
 
+	template<typename T>
+	bool between_strict(const T& value, const T& min, const T& max);
+
 }
 
 #include "../Math/Math.tpp"

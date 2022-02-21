@@ -54,7 +54,7 @@ namespace lvk
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FirstFrame(true)
 	{
-		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.001f));
+		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.0f));
 
 		m_Features.reserve(3 * REGION_DETECTION_TARGET);
 
@@ -204,7 +204,7 @@ namespace lvk
 			cv::Size(7, 7)
 		);
 
-		for (uint32_t i = 0; i < m_MatchStatus.size(); i++)
+		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
 			m_MatchStatus[i] = m_MatchStatus[i] && (m_TrackingError[i] < MAX_TRACKING_ERROR);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);

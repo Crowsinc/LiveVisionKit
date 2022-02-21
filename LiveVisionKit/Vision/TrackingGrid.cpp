@@ -35,8 +35,8 @@ namespace lvk
 		  )
 	{
 		LVK_ASSERT(tracking_resolution.width > 0 && tracking_resolution.height > 0);
-		LVK_ASSERT(between(block_size.width, 1, tracking_resolution.width + 1));
-		LVK_ASSERT(between(block_size.height, 1, tracking_resolution.height + 1));
+		LVK_ASSERT(between(block_size.width, 1, tracking_resolution.width));
+		LVK_ASSERT(between(block_size.height, 1, tracking_resolution.height));
 
 		m_Grid.resize(m_GridSize.area());
 		m_Mask.resize(m_GridSize.area(), true);
@@ -63,7 +63,7 @@ namespace lvk
 			const size_t index = grid_y * m_GridSize.width + grid_x;
 
 			// Silently skip points that land outside the grid
-			if(!between<size_t>(index, 0, m_Grid.size()))
+			if(!between<size_t>(index, 0, m_Grid.size() - 1))
 				continue;
 
 			auto& block = m_Grid[index];
@@ -96,7 +96,7 @@ namespace lvk
 			const size_t index = grid_y * m_GridSize.width + grid_x;
 
 			// Silently skip points that land outside the grid
-			if(!between<size_t>(index, 0, m_Grid.size()))
+			if(!between<size_t>(index, 0, m_Grid.size() - 1))
 				continue;
 
 			m_Mask[index] = mask_value;
