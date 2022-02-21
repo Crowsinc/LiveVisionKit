@@ -30,20 +30,21 @@ namespace lvk
 		const int thickness
 	)
 	{
-		thread_local cv::Mat mask;
+		thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// NOTE: Individually drawing lots of points on a UMat is very inefficient.
 		// Instead, draw the points to a mask and apply them in bulk to the UMat.
 
-		mask.create(dst.size(), CV_8UC1);
-		mask.setTo(cv::Scalar(0));
+		thread_local cv::Mat draw_mask;
+		draw_mask.create(dst.size(), CV_8UC1);
+		draw_mask.setTo(cv::Scalar(0));
 
 		for(const auto& point : markers)
-			cv::drawMarker(mask, point, color, type, size, thickness);
+			cv::drawMarker(draw_mask, point, color, type, size, thickness);
 
-		dst.setTo(color, mask);
+		draw_mask.copyTo(gpu_draw_mask);
+		dst.setTo(color, gpu_draw_mask);
 	}
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
