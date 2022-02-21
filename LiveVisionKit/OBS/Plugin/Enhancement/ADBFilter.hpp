@@ -41,9 +41,9 @@ namespace lvk
 		obs_source_t* m_Context;
 
 		bool m_TestMode;
-		int m_KeepThreshold;
+		uint32_t m_DetectionLevels;
 
-		cv::UMat m_BlockGrid, m_GridMask;
+		cv::UMat m_BlockGrid, m_ChannelMask, m_BlockMask;
 		cv::UMat m_Buffer, m_DeblockBuffer, m_FloatBuffer;
 		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
 
