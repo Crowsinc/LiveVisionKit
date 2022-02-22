@@ -60,21 +60,20 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	CASFilter* CASFilter::Create(obs_source_t* context, obs_data_t* settings)
+	void CASFilter::configure(obs_data_t* settings)
 	{
-		LVK_ASSERT(context != nullptr && settings != nullptr);
+		LVK_ASSERT(settings != nullptr);
 
-		auto filter = new CASFilter(context);
+		const float sharpness = obs_data_get_double(settings, PROP_SHARPNESS);
 
-		if(!filter->validate())
-		{
-			delete filter;
-			return nullptr;
-		}
-
-		filter->configure(settings);
-
-		return filter;
+		// NOTE: The CAS constant is a vector of four uint32_t but its bits actually represent floats.
+		// Normally this conversion happens in the CAS shader. However due to compatibility issues,
+		// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
+		// to uint32_t pointers to facilitate the uint32_t to float re-interpretation. Additionally
+		// we only care about const1 and the sharpness input, as the rest are for the CAS scaling
+		// functionality which isn't used.
+		varAU4(const_0);
+		CasSetup(const_0, (AU1*)m_CASConst1.ptr, sharpness, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -118,24 +117,6 @@ namespace lvk
 			gs_effect_destroy(m_Shader);
 
 		obs_leave_graphics();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void CASFilter::configure(obs_data_t* settings)
-	{
-		LVK_ASSERT(settings != nullptr);
-
-		const float sharpness = obs_data_get_double(settings, PROP_SHARPNESS);
-
-		// NOTE: The CAS constant is a vector of four uint32_t but its bits actually represent floats.
-		// Normally this conversion happens in the CAS shader. However due to compatibility issues,
-		// we perform the conversion on the CPU instead. So here we pass in float pointers, casted
-		// to uint32_t pointers to facilitate the uint32_t to float re-interpretation. Additionally
-		// we only care about const1 and the sharpness input, as the rest are for the CAS scaling
-		// functionality which isn't used.
-		varAU4(const_0);
-		CasSetup(const_0, (AU1*)m_CASConst1.ptr, sharpness, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

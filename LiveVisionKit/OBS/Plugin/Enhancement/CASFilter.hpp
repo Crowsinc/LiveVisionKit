@@ -30,17 +30,19 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static CASFilter* Create(obs_source_t* context, obs_data_t* settings);
+		CASFilter(obs_source_t* context);
 
 		~CASFilter();
 
-		void configure(obs_data_t* settings);
-
 		void render();
+
+		void configure(obs_data_t* settings);
 
 		uint32_t width() const;
 
 		uint32_t height() const;
+
+		bool validate() const;
 
 	private:
 
@@ -51,11 +53,6 @@ namespace lvk
 		gs_eparam_t* m_CASConstParam1;
 		gs_eparam_t* m_OutputSizeParam;
 		vec2 m_OutputSize;
-
-
-		CASFilter(obs_source_t* context);
-
-		bool validate() const;
 
 	};
 
