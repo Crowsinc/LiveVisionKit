@@ -44,8 +44,6 @@ namespace lvk
 
 		uint32_t height() const;
 
-		void reset();
-
 	private:
 
 		struct FrameVector
@@ -91,8 +89,6 @@ namespace lvk
 
 		virtual void filter(FrameBuffer& buffer) override;
 
-		void reset_buffers();
-
 		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
 		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
@@ -100,6 +96,8 @@ namespace lvk
 		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
 		bool is_queue_outdated(const FrameBuffer& new_frame) const;
+
+		void reset_buffers();
 
 		void release_frame_queue();
 

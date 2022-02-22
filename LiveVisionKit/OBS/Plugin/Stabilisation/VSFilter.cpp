@@ -272,7 +272,10 @@ namespace lvk
 		uint64_t start_time = os_gettime_ns();
 
 		if(is_queue_outdated(buffer))
-			reset();
+		{
+			reset_buffers();
+			m_FrameTracker.restart();
+		}
 
 		// Extract Y channel from YUV frame to use for tracking.
 		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
@@ -387,18 +390,6 @@ namespace lvk
 			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
 			2
 		);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VSFilter::reset()
-	{
-		reset_buffers();
-		m_FrameTracker.restart();
-
-		// Release GPU buffers to save memory
-		m_TrackingFrame.release();
-		m_WarpFrame.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

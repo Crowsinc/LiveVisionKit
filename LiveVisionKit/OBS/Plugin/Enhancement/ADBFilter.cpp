@@ -203,21 +203,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADBFilter::reset()
-	{
-		// Release GPU buffers to save memory
-		m_DeblockBlendMap.release();
-		m_DeblockBuffer.release();
-		m_KeepBlendMap.release();
-		m_FloatBuffer.release();
-		m_ChannelMask.release();
-		m_BlockGrid.release();
-		m_BlockMask.release();
-		m_Buffer.release();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	bool ADBFilter::validate() const
 	{
 		return m_Context != nullptr;

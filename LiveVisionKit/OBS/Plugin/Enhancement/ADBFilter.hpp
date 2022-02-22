@@ -34,8 +34,6 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		void reset();
-
 	private:
 
 		obs_source_t* m_Context;

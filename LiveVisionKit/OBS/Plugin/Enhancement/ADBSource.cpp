@@ -34,13 +34,6 @@ static void on_adb_destroy(void* data)
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_adb_remove(void* data, obs_source_t* parent)
-{
-	static_cast<lvk::ADBFilter*>(data)->reset();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 static void on_adb_configure(void* data, obs_data_t* settings)
 {
 	static_cast<lvk::ADBFilter*>(data)->configure(settings);
@@ -85,7 +78,6 @@ extern void register_adb_source()
 
 	config.create = on_adb_create;
 	config.destroy = on_adb_destroy;
-	config.filter_remove = on_adb_remove;
 
 	config.filter_video = on_adb_process;
 	config.update = on_adb_configure;
