@@ -50,6 +50,8 @@ namespace lvk
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
 
+	constexpr auto TIMING_THRESHOLD_MS = 5.0;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* VSFilter::Properties()
@@ -349,12 +351,10 @@ namespace lvk
 	{
 		const uint64_t start_time = os_gettime_ns();
 
-		const cv::Scalar green_yuv(149, 43, 21);
-
-		plot_markers(
+		draw::plot_markers(
 			frame,
 			m_FrameTracker.tracking_points(),
-			green_yuv,
+			draw::YUV_GREEN,
 			cv::MarkerTypes::MARKER_CROSS,
 			8,
 			2
@@ -367,13 +367,8 @@ namespace lvk
 
 	void VSFilter::draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
-		const cv::Scalar magenta_yuv(105, 212, 234);
-		const cv::Scalar green_yuv(149, 43, 21);
-		const cv::Scalar red_yuv(76, 84, 255);
+		draw::rect(frame, m_CropRegion, draw::YUV_MAGENTA);
 
-		cv::rectangle(frame, m_CropRegion, magenta_yuv, 2);
-
-		const double bad_time_threshold_ms = 8.0;
 		const double frame_time_ms = frame_time_ns * 1.0e-6;
 
 		//TODO: switch to C++20 fmt as soon as GCC supports it.
@@ -381,15 +376,13 @@ namespace lvk
 		time_text << std::fixed << std::setprecision(2);
 		time_text << frame_time_ms << "ms";
 
-		cv::putText(
+		draw::text(
 			frame,
 			time_text.str(),
 			m_CropRegion.tl() + cv::Point(5, 40),
-			cv::FONT_HERSHEY_DUPLEX,
-			1.5,
-			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
-			2
+			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
 		);
+
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

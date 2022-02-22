@@ -32,6 +32,8 @@ namespace lvk
 	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	static constexpr auto TEST_MODE_DEFAULT = false;
 
+	constexpr auto TIMING_THRESHOLD_MS = 3.0;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* ADBFilter::Properties()
@@ -162,7 +164,7 @@ namespace lvk
 		cv::resize(m_DeblockBuffer, m_Buffer, frame.size(), 0, 0, cv::INTER_LINEAR);
 
 		if(m_TestMode)
-			m_Buffer.setTo(cv::Scalar(255, 0, 255));
+			m_Buffer.setTo(draw::BGR_MAGENTA);
 
 		cv::blendLinear(frame, m_Buffer, m_KeepBlendMap, m_DeblockBlendMap, frame);
 
@@ -178,11 +180,6 @@ namespace lvk
 
 	void ADBFilter::draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns)
 	{
-		const cv::Scalar magenta_yuv(105, 212, 234);
-		const cv::Scalar green_yuv(149, 43, 21);
-		const cv::Scalar red_yuv(76, 84, 255);
-
-		const double bad_time_threshold_ms = 5.0;
 		const double frame_time_ms = frame_time_ns * 1.0e-6;
 
 		//TODO: switch to C++20 fmt as soon as GCC supports it.
@@ -190,14 +187,11 @@ namespace lvk
 		time_text << std::fixed << std::setprecision(2);
 		time_text << frame_time_ms << "ms";
 
-		cv::putText(
+		draw::text(
 			frame,
 			time_text.str(),
 			cv::Point(5, 40),
-			cv::FONT_HERSHEY_DUPLEX,
-			1.5,
-			frame_time_ms < bad_time_threshold_ms ? green_yuv : red_yuv,
-			2
+			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
 		);
 	}
 
