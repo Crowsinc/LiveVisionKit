@@ -37,8 +37,6 @@
 
 // OBS Specific
 #include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
 
 #include "OBS/Interop/VisionFilter.hpp"
 #include "OBS/Interop/FrameBuffer.hpp"

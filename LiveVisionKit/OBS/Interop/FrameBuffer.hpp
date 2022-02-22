@@ -21,8 +21,6 @@
 #include <opencv2/core.hpp>
 
 #include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
 
 namespace lvk
 {
