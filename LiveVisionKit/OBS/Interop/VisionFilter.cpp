@@ -89,7 +89,7 @@ namespace lvk
 
 	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
 	{
-		const obs_source* parent = obs_filter_get_parent(m_Context);
+		const obs_source_t* parent = obs_filter_get_parent(m_Context);
 
 		if(s_FrameCache.count(parent) == 0)
 		{
