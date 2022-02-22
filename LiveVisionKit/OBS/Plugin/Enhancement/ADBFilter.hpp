@@ -30,9 +30,17 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static ADBFilter* Create(obs_source_t* context, obs_data_t* settings);
+		ADBFilter(obs_source_t* context);
 
 		void configure(obs_data_t* settings);
+
+		bool validate() const;
+
+	private:
+
+		virtual void filter(cv::UMat& frame) override;
+
+		void draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
 
 	private:
 
@@ -44,14 +52,6 @@ namespace lvk
 		cv::UMat m_BlockGrid, m_ChannelMask, m_BlockMask;
 		cv::UMat m_Buffer, m_DeblockBuffer, m_FloatBuffer;
 		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
-
-		ADBFilter(obs_source_t* context);
-
-		virtual void filter(cv::UMat& frame) override;
-
-		void draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
-
-		bool validate() const;
 
 	};
 

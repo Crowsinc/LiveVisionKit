@@ -20,52 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void* on_adb_create(obs_data_t* settings, obs_source_t* context)
-{
-	return lvk::ADBFilter::Create(context, settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_adb_destroy(void* data)
-{
-	delete static_cast<lvk::ADBFilter*>(data);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_adb_configure(void* data, obs_data_t* settings)
-{
-	static_cast<lvk::ADBFilter*>(data)->configure(settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static obs_source_frame* on_adb_process(void* data, obs_source_frame* frame)
-{
-	return static_cast<lvk::ADBFilter*>(data)->process(frame);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static obs_properties_t* adb_filter_properties(void* data)
-{
-	return lvk::ADBFilter::Properties();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void adb_filter_default_settings(obs_data_t* settings)
-{
-	lvk::ADBFilter::LoadDefaults(settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static const char* adb_filter_name(void* data)
-{
-	return "(LVK) Adapative De-Blocker";
-}
+constexpr auto ADB_NAME = "(LVK) Adapative De-Blocker";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -76,15 +31,15 @@ extern void register_adb_source()
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 
-	config.create = on_adb_create;
-	config.destroy = on_adb_destroy;
+	config.create = lvk::dispatch::filter_create_auto<lvk::ADBFilter>;
+	config.destroy = lvk::dispatch::filter_delete<lvk::ADBFilter>;
 
-	config.filter_video = on_adb_process;
-	config.update = on_adb_configure;
+	config.filter_video = lvk::dispatch::filter_process<lvk::ADBFilter>;
+	config.update = lvk::dispatch::filter_configure<lvk::ADBFilter>;
 
-	config.get_properties = adb_filter_properties;
-	config.get_defaults = adb_filter_default_settings;
-	config.get_name = adb_filter_name;
+	config.get_name = [](void* data){return ADB_NAME;};
+	config.get_properties = lvk::dispatch::filter_properties<lvk::ADBFilter>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::ADBFilter>;
 
 	obs_register_source(&config);
 }

@@ -17,8 +17,6 @@
 
 #include "ADBFilter.hpp"
 
-#include "../../Interop/FrameIngest.hpp"
-
 namespace lvk
 {
 
@@ -70,21 +68,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	ADBFilter* ADBFilter::Create(obs_source_t* context, obs_data_t* settings)
+	void ADBFilter::configure(obs_data_t* settings)
 	{
-		LVK_ASSERT(context != nullptr && settings != nullptr);
+		LVK_ASSERT(settings != nullptr);
 
-		auto filter = new ADBFilter(context);
-
-		if(!filter->validate())
-		{
-			delete filter;
-			return nullptr;
-		}
-
-		filter->configure(settings);
-
-		return filter;
+		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+		m_DetectionLevels = std::max<uint32_t>(obs_data_get_int(settings, PROP_STRENGTH), 1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -104,16 +93,6 @@ namespace lvk
 		  m_DeblockBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{
 		LVK_ASSERT(context != nullptr);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void ADBFilter::configure(obs_data_t* settings)
-	{
-		LVK_ASSERT(settings != nullptr);
-
-		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
-		m_DetectionLevels = std::max<uint32_t>(obs_data_get_int(settings, PROP_STRENGTH), 1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
