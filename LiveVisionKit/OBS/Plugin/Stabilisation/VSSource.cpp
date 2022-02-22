@@ -27,8 +27,13 @@ static void* on_vs_create(obs_data_t* settings, obs_source_t* context)
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void on_vs_destroy(void* data)
+static void on_vs_destroy(void* data){}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+static void on_vs_remove(void* data, obs_source_t* parent)
 {
+	// NOTE: must happen here for deletion to succeed
 	delete static_cast<lvk::VSFilter*>(data);
 }
 
@@ -106,6 +111,7 @@ extern void register_vs_source()
 
 	config.create = on_vs_create;
 	config.destroy = on_vs_destroy;
+	config.filter_remove = on_vs_remove;
 
 	config.update = on_vs_configure;
 	config.video_tick = on_vs_tick;
