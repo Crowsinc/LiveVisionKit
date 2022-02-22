@@ -23,8 +23,48 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	constexpr auto FILTER_REMOVE_SIGNAL = "filter_remove";
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	std::unordered_map<const obs_source_t*, FrameBuffer> VisionFilter::s_FrameCache;
 	std::unordered_set<const obs_source_t*> VisionFilter::s_Filters;
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void VisionFilter::on_filter_remove(void* data, calldata_t* call_data)
+	{
+		obs_source_t* source = static_cast<obs_source_t*>(calldata_ptr(call_data, "source"));
+		obs_source_t* removed_filter = static_cast<obs_source_t*>(calldata_ptr(call_data, "filter"));
+
+		// If the source has no more vision filters, then clean up its cache
+
+		using SearchData = std::tuple<
+			std::unordered_set<const obs_source_t*>*,
+			const obs_source_t*,
+			bool
+		>;
+
+		SearchData search_data(&s_Filters, removed_filter, false);
+		obs_source_enum_filters(source, [](obs_source_t* _, obs_source_t* filter, void* search_param){
+			auto& [filters, remove_filter, found] = *static_cast<SearchData*>(search_param);
+
+			if(filter != remove_filter && filters->count(filter) == 1)
+				found = true;
+
+		}, &search_data);
+
+		if(!std::get<2>(search_data))
+		{
+			s_FrameCache.erase(source);
+			signal_handler_disconnect(
+				obs_source_get_signal_handler(source),
+				FILTER_REMOVE_SIGNAL,
+				&on_filter_remove,
+				nullptr
+			);
+		}
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +91,17 @@ namespace lvk
 	{
 		const obs_source* parent = obs_filter_get_parent(m_Context);
 
-		s_FrameCache.try_emplace(parent);
+		if(s_FrameCache.count(parent) == 0)
+		{
+			s_FrameCache.emplace(parent, FrameBuffer());
+			signal_handler_connect(
+				obs_source_get_signal_handler(parent),
+				FILTER_REMOVE_SIGNAL,
+				&on_filter_remove,
+				nullptr
+			);
+		}
+
 		FrameBuffer& buffer = s_FrameCache[parent];
 
 		// If this is a new frame, then we need to update the frame cache

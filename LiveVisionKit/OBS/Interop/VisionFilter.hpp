@@ -51,6 +51,8 @@ namespace lvk
 
 		const obs_source_t* m_Context;
 
+		static void on_filter_remove(void* data, calldata_t* call_data);
+
 		const obs_source_t* find_next_async_filter() const;
 
 		bool is_vision_filter_next() const;
