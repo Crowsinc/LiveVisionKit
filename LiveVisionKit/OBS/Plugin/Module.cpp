@@ -49,6 +49,8 @@ bool obs_module_load()
 	// These filters must use OpenCL to run fast enough
 	if(cv::ocl::haveOpenCL())
 	{
+		cv::ocl::setUseOpenCL(true);
+
 		register_vs_source();
 		register_adb_source();
 	}

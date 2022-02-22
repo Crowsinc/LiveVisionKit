@@ -115,7 +115,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::LoadDefault(obs_data_t* settings)
+	void VSFilter::LoadDefaults(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
 
@@ -126,68 +126,7 @@ namespace lvk
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	VSFilter* VSFilter::Create(obs_source_t* context, obs_data_t* settings)
-	{
-		LVK_ASSERT(context != nullptr && settings != nullptr);
-
-		auto filter = new VSFilter(context);
-
-		if(!filter->validate())
-		{
-			delete filter;
-			return nullptr;
-		}
-
-		cv::ocl::setUseOpenCL(true);
-
-		filter->configure(settings);
-
-		return filter;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	VSFilter::VSFilter(obs_source_t* context)
-		: VisionFilter(context),
-		  m_Context(context),
-		  m_Shader(nullptr),
-		  m_CropParam(nullptr),
-		  m_Enabled(true),
-		  m_TestMode(false),
-		  m_SmoothingRadius(0),
-		  m_CropProportion(0),
-		  m_OutputSize(0, 0),
-		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FrameTracker(/* Use defaults */)
-	{
-		LVK_ASSERT(context != nullptr);
-
-		char* shader_path = obs_module_file("effects/vs.effect");
-		if(shader_path != nullptr)
-		{
-			obs_enter_graphics();
-
-			m_Shader = gs_effect_create_from_file(shader_path, nullptr);
-			bfree(shader_path);
-
-			if(m_Shader)
-				m_CropParam = gs_effect_get_param_by_name(m_Shader, "crop_proportion");
-
-			obs_leave_graphics();
-		}
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	VSFilter::~VSFilter()
-	{
-		release_frame_queue();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
+	//---------------------------------------------------------------------------------------------------------------------
 
 	void VSFilter::configure(obs_data_t* settings)
 	{
@@ -232,6 +171,46 @@ namespace lvk
 			obs_data_set_int(settings, PROP_STREAM_DELAY_INFO, new_stream_delay);
 			obs_source_update_properties(m_Context);
 		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VSFilter::VSFilter(obs_source_t* context)
+		: VisionFilter(context),
+		  m_Context(context),
+		  m_Shader(nullptr),
+		  m_CropParam(nullptr),
+		  m_Enabled(true),
+		  m_TestMode(false),
+		  m_SmoothingRadius(0),
+		  m_CropProportion(0),
+		  m_OutputSize(0, 0),
+		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_FrameTracker(/* Use defaults */)
+	{
+		LVK_ASSERT(context != nullptr);
+
+		char* shader_path = obs_module_file("effects/vs.effect");
+		if(shader_path != nullptr)
+		{
+			obs_enter_graphics();
+
+			m_Shader = gs_effect_create_from_file(shader_path, nullptr);
+			bfree(shader_path);
+
+			if(m_Shader)
+				m_CropParam = gs_effect_get_param_by_name(m_Shader, "crop_proportion");
+
+			obs_leave_graphics();
+		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VSFilter::~VSFilter()
+	{
+		release_frame_queue();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -484,21 +463,21 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
+	FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
 		: displacement(displacement),
 		  velocity(velocity)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector VSFilter::FrameVector::operator+(const VSFilter::FrameVector& other) const
+	FrameVector FrameVector::operator+(const FrameVector& other) const
 	{
 		return FrameVector(displacement + other.displacement, velocity + other.velocity);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector VSFilter::FrameVector::operator-(const VSFilter::FrameVector& other) const
+	FrameVector FrameVector::operator-(const FrameVector& other) const
 	{
 		return FrameVector(displacement - other.displacement, velocity - other.velocity);
 	}
@@ -506,14 +485,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector VSFilter::FrameVector::operator*(const double scaling) const
+	FrameVector FrameVector::operator*(const double scaling) const
 	{
 		return FrameVector(displacement * scaling, velocity * scaling);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::FrameVector VSFilter::FrameVector::operator/(const double scaling) const
+	FrameVector FrameVector::operator/(const double scaling) const
 	{
 		return FrameVector(displacement / scaling, velocity / scaling);
 	}

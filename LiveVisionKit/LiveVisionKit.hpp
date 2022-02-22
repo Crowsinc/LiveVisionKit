@@ -40,3 +40,4 @@
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
 #include "OBS/Interop/FrameBuffer.hpp"
+#include "OBS/Interop/OBSDispatch.hpp"

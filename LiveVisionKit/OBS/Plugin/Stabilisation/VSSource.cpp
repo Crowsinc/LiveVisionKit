@@ -20,85 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-static void* on_vs_create(obs_data_t* settings, obs_source_t* context)
-{
-	return lvk::VSFilter::Create(context, settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_vs_destroy(void* data){}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_vs_remove(void* data, obs_source_t* parent)
-{
-	// NOTE: must happen here for deletion to succeed
-	delete static_cast<lvk::VSFilter*>(data);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_vs_configure(void* data, obs_data_t* settings)
-{
-	static_cast<lvk::VSFilter*>(data)->configure(settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_vs_tick(void* data, float seconds)
-{
-	static_cast<lvk::VSFilter*>(data)->tick();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void on_vs_render(void* data, gs_effect_t* effect)
-{
-	static_cast<lvk::VSFilter*>(data)->render();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static obs_source_frame* on_vs_process(void* data, obs_source_frame* frame)
-{
-	return static_cast<lvk::VSFilter*>(data)->process(frame);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static obs_properties_t* vs_filter_properties(void* data)
-{
-	return lvk::VSFilter::Properties();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static void vs_filter_default_settings(obs_data_t* settings)
-{
-	lvk::VSFilter::LoadDefault(settings);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static uint32_t vs_output_width(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->width();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static uint32_t vs_output_height(void* data)
-{
-	return static_cast<lvk::VSFilter*>(data)->height();
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-static const char* vs_filter_name(void* data)
-{
-	return "(LVK) Video Stabiliser";
-}
+constexpr auto VS_NAME = "(LVK) Video Stabiliser";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -109,20 +31,20 @@ extern void register_vs_source()
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 
-	config.create = on_vs_create;
-	config.destroy = on_vs_destroy;
-	config.filter_remove = on_vs_remove;
+	config.create = lvk::dispatch::filter_create_auto<lvk::VSFilter>;
+	config.destroy = lvk::dispatch::skip<void*>;
+	config.filter_remove = lvk::dispatch::filter_delete<lvk::VSFilter, obs_source_t*>;
 
-	config.update = on_vs_configure;
-	config.video_tick = on_vs_tick;
-	config.video_render = on_vs_render;
-	config.filter_video = on_vs_process;
+	config.update = lvk::dispatch::filter_configure<lvk::VSFilter>;
+	config.video_tick = lvk::dispatch::filter_tick<lvk::VSFilter>;
+	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
+	config.filter_video = lvk::dispatch::filter_process<lvk::VSFilter>;
 
-	config.get_name = vs_filter_name;
-	config.get_width = vs_output_width;
-	config.get_height = vs_output_height;
-	config.get_properties = vs_filter_properties;
-	config.get_defaults = vs_filter_default_settings;
+	config.get_name = [](void* data){return VS_NAME;};
+	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
+	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
+	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::VSFilter>;
 
 	obs_register_source(&config);
 }

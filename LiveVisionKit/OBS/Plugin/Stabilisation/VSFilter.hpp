@@ -22,15 +22,34 @@
 namespace lvk
 {
 
+	struct FrameVector
+	{
+		Homography displacement;
+		Homography velocity;
+
+		FrameVector(
+			const Homography& displacement = Homography::Zero(),
+			const Homography& velocity = Homography::Zero()
+		);
+
+		FrameVector operator+(const FrameVector& other) const;
+
+		FrameVector operator-(const FrameVector& other) const;
+
+		FrameVector operator*(const double scaling) const;
+
+		FrameVector operator/(const double scaling) const;
+	};
+
 	class VSFilter : public VisionFilter
 	{
 	public:
 
 		static obs_properties_t* Properties();
 
-		static void LoadDefault(obs_data_t* settings);
+		static void LoadDefaults(obs_data_t* settings);
 
-		static VSFilter* Create(obs_source_t* context, obs_data_t* settings);
+		VSFilter(obs_source_t* context);
 
 		~VSFilter();
 
@@ -44,26 +63,27 @@ namespace lvk
 
 		uint32_t height() const;
 
+		bool validate() const;
+
 	private:
 
-		struct FrameVector
-		{
-			Homography displacement;
-			Homography velocity;
+		virtual void filter(FrameBuffer& buffer) override;
 
-			FrameVector(
-				const Homography& displacement = Homography::Zero(),
-				const Homography& velocity = Homography::Zero()
-			);
+		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
-			FrameVector operator+(const FrameVector& other) const;
+		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
 
-			FrameVector operator-(const FrameVector& other) const;
+		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
-			FrameVector operator*(const double scaling) const;
+		bool is_queue_outdated(const FrameBuffer& new_frame) const;
 
-			FrameVector operator/(const double scaling) const;
-		};
+		void reset_buffers();
+
+		void release_frame_queue();
+
+		bool stabilisation_ready() const;
+
+	private:
 
 		obs_source_t* m_Context;
 
@@ -83,27 +103,6 @@ namespace lvk
 
 		cv::UMat m_WarpFrame, m_TrackingFrame;
 		FrameTracker m_FrameTracker;
-
-
-		VSFilter(obs_source_t* context);
-
-		virtual void filter(FrameBuffer& buffer) override;
-
-		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
-
-		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
-
-		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
-
-		bool is_queue_outdated(const FrameBuffer& new_frame) const;
-
-		void reset_buffers();
-
-		void release_frame_queue();
-
-		bool stabilisation_ready() const;
-
-		bool validate() const;
 
 	};
 
