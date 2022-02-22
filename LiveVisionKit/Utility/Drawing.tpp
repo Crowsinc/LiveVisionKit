@@ -15,7 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-namespace lvk
+namespace lvk::draw
 {
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -48,4 +48,40 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	template<typename T>
+	void text(
+		cv::UMat& dst,
+		const std::string& text,
+		const cv::Point_<T>& position,
+		const cv::Scalar& color,
+		const double font_scale,
+		const int font_thickness,
+		const cv::HersheyFonts font
+	)
+	{
+		cv::putText(
+			dst,
+			text,
+			position,
+			font,
+			font_scale,
+			color,
+			font_thickness
+		);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	void rect(
+		cv::UMat& dst,
+		const cv::Rect_<T>& rect,
+		const cv::Scalar& color,
+		const int thickness
+	)
+	{
+		cv::rectangle(dst, rect, color, thickness);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
 }
