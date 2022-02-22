@@ -19,7 +19,7 @@
 
 #include <obs.h>
 
-#ifndef DISABLE_ASSERTS
+#ifndef DISABLE_DIRECTIVES
 
 #define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@" __FILE__ "@%s(..) FAILED " #assertion "\n", __func__);}
 

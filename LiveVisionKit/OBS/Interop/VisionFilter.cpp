@@ -16,7 +16,8 @@
 // 	  **********************************************************************
 
 #include "VisionFilter.hpp"
-#include "Diagnostics/Assert.hpp"
+
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

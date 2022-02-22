@@ -19,9 +19,8 @@
 
 #include "Math/Math.hpp"
 #include "Utility/Algorithm.hpp"
-#include "Diagnostics/Assert.hpp"
-
 #include <util/platform.h>
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

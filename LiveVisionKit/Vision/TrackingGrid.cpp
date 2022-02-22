@@ -18,9 +18,8 @@
 #include "TrackingGrid.hpp"
 
 #include "Math/Math.hpp"
-#include "Diagnostics/Assert.hpp"
-
 #include <iostream>
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

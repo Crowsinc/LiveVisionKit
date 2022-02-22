@@ -17,7 +17,7 @@
 
 #include "FrameBuffer.hpp"
 
-#include "Diagnostics/Assert.hpp"
+#include "Diagnostics/Directives.hpp"
 #include "FrameIngest.hpp"
 
 namespace lvk

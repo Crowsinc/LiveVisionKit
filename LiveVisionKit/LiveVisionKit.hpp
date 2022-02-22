@@ -21,7 +21,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Diagnostics/Assert.hpp"
 #include "Math/BoundingQuad.hpp"
 
 #include "Math/Math.hpp"
@@ -38,5 +37,6 @@
 // OBS Specific
 #include <obs-module.h>
 
+#include "Diagnostics/Directives.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
 #include "OBS/Interop/FrameBuffer.hpp"
