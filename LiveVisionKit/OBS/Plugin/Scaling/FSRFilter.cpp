@@ -75,21 +75,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FSRFilter* FSRFilter::Create(obs_source_t* context, obs_data_t* settings)
+	void FSRFilter::configure(obs_data_t* settings)
 	{
-		LVK_ASSERT(context != nullptr && settings != nullptr);
+		LVK_ASSERT(settings != nullptr);
 
-		auto filter = new FSRFilter(context);
+		m_EASUMatchCanvas = false;
 
-		if(!filter->validate())
-		{
-			delete filter;
-			return nullptr;
-		}
-
-		filter->configure(settings);
-
-		return filter;
+		const std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
+		if(output_size == OUTPUT_SIZE_CANVAS)
+			m_EASUMatchCanvas = true;
+		else if(output_size == OUTPUT_SIZE_2160P)
+			vec2_set(&m_NewOutputSize, 3840, 2160);
+		else if(output_size == OUTPUT_SIZE_1440P)
+			vec2_set(&m_NewOutputSize, 2560, 1440);
+		else if(output_size == OUTPUT_SIZE_1080P)
+			vec2_set(&m_NewOutputSize, 1920, 1080);
+		else if(output_size == OUTPUT_SIZE_720P)
+			vec2_set(&m_NewOutputSize, 1280, 720);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -144,28 +146,26 @@ namespace lvk
 		obs_leave_graphics();
 	}
 
+
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FSRFilter::configure(obs_data_t* settings)
+	void FSRFilter::render()
 	{
-		LVK_ASSERT(settings != nullptr);
+		if(update_scaling() && obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
+		{
+			gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
+			gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
+			gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
+			gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
+			gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
 
-		m_EASUMatchCanvas = false;
-
-		const std::string output_size = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
-		if(output_size == OUTPUT_SIZE_CANVAS)
-			m_EASUMatchCanvas = true;
-		else if(output_size == OUTPUT_SIZE_2160P)
-			vec2_set(&m_NewOutputSize, 3840, 2160);
-		else if(output_size == OUTPUT_SIZE_1440P)
-			vec2_set(&m_NewOutputSize, 2560, 1440);
-		else if(output_size == OUTPUT_SIZE_1080P)
-			vec2_set(&m_NewOutputSize, 1920, 1080);
-		else if(output_size == OUTPUT_SIZE_720P)
-			vec2_set(&m_NewOutputSize, 1280, 720);
+			obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "EASU");
+		}
+		else obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
+
 
 	bool FSRFilter::update_scaling()
 	{
@@ -202,23 +202,6 @@ namespace lvk
 		}
 
 		return input_width != m_OutputSize.x || input_height != m_OutputSize.y;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FSRFilter::render()
-	{
-		if(update_scaling() && obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
-		{
-			gs_effect_set_vec2(m_OutputSizeParam, &m_OutputSize);
-			gs_effect_set_vec4(m_EASUConstParam0, &m_EASUConst0);
-			gs_effect_set_vec4(m_EASUConstParam1, &m_EASUConst1);
-			gs_effect_set_vec4(m_EASUConstParam2, &m_EASUConst2);
-			gs_effect_set_vec4(m_EASUConstParam3, &m_EASUConst3);
-
-			obs_source_process_filter_tech_end(m_Context, m_Shader, m_OutputSize.x, m_OutputSize.y, "EASU");
-		}
-		else obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -30,17 +30,23 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		static FSRFilter* Create(obs_source_t* context, obs_data_t* settings);
+		FSRFilter(obs_source_t* context);
 
 		~FSRFilter();
 
-		void configure(obs_data_t* settings);
-
 		void render();
+
+		void configure(obs_data_t* settings);
 
 		uint32_t width() const;
 
 		uint32_t height() const;
+
+		bool validate() const;
+
+	private:
+
+		bool update_scaling();
 
 	private:
 
@@ -60,12 +66,6 @@ namespace lvk
 		gs_eparam_t* m_EASUConstParam2;
 		gs_eparam_t* m_EASUConstParam3;
 
-
-		FSRFilter(obs_source_t* context);
-
-		bool update_scaling();
-
-		bool validate() const;
 	};
 
 }
