@@ -33,13 +33,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	static constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
-	static constexpr auto OUTPUT_SIZE_CANVAS = "CANVAS";
-	static constexpr auto OUTPUT_SIZE_2160P  = "2160P";
-	static constexpr auto OUTPUT_SIZE_1440P  = "1440P";
-	static constexpr auto OUTPUT_SIZE_1080P  = "1080P";
-	static constexpr auto OUTPUT_SIZE_720P   = "720P";
-	static constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_CANVAS;
+	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
+	constexpr auto OUTPUT_SIZE_CANVAS = "CANVAS";
+	constexpr auto OUTPUT_SIZE_2160P  = "2160P";
+	constexpr auto OUTPUT_SIZE_1440P  = "1440P";
+	constexpr auto OUTPUT_SIZE_1080P  = "1080P";
+	constexpr auto OUTPUT_SIZE_720P   = "720P";
+	constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_CANVAS;
 
 //---------------------------------------------------------------------------------------------------------------------
 

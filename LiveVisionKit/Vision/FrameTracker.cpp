@@ -27,15 +27,15 @@ namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	static constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
-	static constexpr double MAX_FEATURE_THRESHOLD = 250;
-	static constexpr double MIN_FEATURE_THRESHOLD = 10;
+	constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
+	constexpr double MAX_FEATURE_THRESHOLD = 250;
+	constexpr double MIN_FEATURE_THRESHOLD = 10;
 
-	static constexpr double MAX_TRACKING_ERROR = 15;
+	constexpr double MAX_TRACKING_ERROR = 15;
 
-	static constexpr uint32_t REGION_ROWS = 1;
-	static constexpr uint32_t REGION_COLUMNS = 2;
-	static constexpr uint32_t REGION_DETECTION_TARGET = 1500;
+	constexpr uint32_t REGION_ROWS = 1;
+	constexpr uint32_t REGION_COLUMNS = 2;
+	constexpr uint32_t REGION_DETECTION_TARGET = 1500;
 
 //---------------------------------------------------------------------------------------------------------------------
 

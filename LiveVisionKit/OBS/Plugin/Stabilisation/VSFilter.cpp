@@ -25,30 +25,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	static constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
-	static constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
-	static constexpr auto SMOOTHING_RADIUS_MIN = 2;
-	static constexpr auto SMOOTHING_RADIUS_MAX = 16;
+	constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
+	constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
+	constexpr auto SMOOTHING_RADIUS_MIN = 2;
+	constexpr auto SMOOTHING_RADIUS_MAX = 16;
 
-	static constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
-	static constexpr auto STREAM_DELAY_INFO_MIN = 0;
-	static constexpr auto STREAM_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
+	constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
+	constexpr auto STREAM_DELAY_INFO_MIN = 0;
+	constexpr auto STREAM_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
 
-	static constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
-	static constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
-	static constexpr auto CROP_PERCENTAGE_MIN = 1;
-	static constexpr auto CROP_PERCENTAGE_MAX = 25;
+	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
+	constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
+	constexpr auto CROP_PERCENTAGE_MIN = 1;
+	constexpr auto CROP_PERCENTAGE_MAX = 25;
 
-	static constexpr auto PROP_MOTION_MODEL = "MOTION_MODEL";
-	static constexpr auto MOTION_MODEL_AFFINE = "AFFINE";
-	static constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
-	static constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_HOMOGRAPHY;
+	constexpr auto PROP_MOTION_MODEL = "MOTION_MODEL";
+	constexpr auto MOTION_MODEL_AFFINE = "AFFINE";
+	constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
+	constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_HOMOGRAPHY;
 
-	static constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
-	static constexpr auto STAB_DISABLED_DEFAULT = false;
+	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
+	constexpr auto STAB_DISABLED_DEFAULT = false;
 
-	static constexpr auto PROP_TEST_MODE = "TEST_MODE";
-	static constexpr auto TEST_MODE_DEFAULT = false;
+	constexpr auto PROP_TEST_MODE = "TEST_MODE";
+	constexpr auto TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 5.0;
 

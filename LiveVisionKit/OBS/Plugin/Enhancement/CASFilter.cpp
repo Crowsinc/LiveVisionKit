@@ -28,8 +28,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	static constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
-	static constexpr auto SHARPNESS_DEFAULT = 0.8f;
+	constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
+	constexpr auto SHARPNESS_DEFAULT = 0.8f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
