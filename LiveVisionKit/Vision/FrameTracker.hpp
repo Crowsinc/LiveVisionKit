@@ -54,6 +54,14 @@ namespace lvk
 
 	private:
 
+		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target);
+
+		cv::Point2f import_next(const cv::UMat& frame);
+
+		void prepare_state();
+
+	private:
+
 		struct TrackingRegion
 		{
 			cv::Rect region;
@@ -80,13 +88,6 @@ namespace lvk
 		cv::UMat m_PrevFrame, m_NextFrame;
 		cv::Mat m_FilterKernel;
 		bool m_FirstFrame;
-
-		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target);
-
-		cv::Point2f import_next(const cv::UMat& frame);
-
-		void prepare_state();
-
 	};
 
 }

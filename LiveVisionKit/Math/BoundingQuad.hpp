@@ -39,9 +39,7 @@ namespace lvk
 		bool encloses(const cv::Point2d& point) const;
 
 	private:
-
 		std::vector<cv::Point2d> m_LocalVertices, m_Vertices;
-
 	};
 
 }

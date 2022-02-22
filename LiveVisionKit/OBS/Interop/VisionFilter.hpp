@@ -46,17 +46,18 @@ namespace lvk
 
 	private:
 
-		static std::unordered_map<const obs_source_t*, FrameBuffer> s_FrameCache;
-		static std::unordered_set<const obs_source_t*> s_Filters;
-
-		const obs_source_t* m_Context;
-
 		static void on_filter_remove(void* data, calldata_t* call_data);
 
 		const obs_source_t* find_next_async_filter() const;
 
 		bool is_vision_filter_next() const;
 
+	private:
+
+		static std::unordered_map<const obs_source_t*, FrameBuffer> s_FrameCache;
+		static std::unordered_set<const obs_source_t*> s_Filters;
+
+		const obs_source_t* m_Context;
 	};
 
 }

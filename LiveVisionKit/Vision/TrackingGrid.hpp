@@ -62,7 +62,6 @@ namespace lvk
 
 		std::vector<std::optional<cv::KeyPoint>> m_Grid;
 		std::vector<bool> m_Mask;
-
 	};
 
 

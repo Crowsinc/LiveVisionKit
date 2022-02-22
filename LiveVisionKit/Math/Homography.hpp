@@ -61,9 +61,7 @@ namespace lvk
 		void operator/=(const double scaling);
 
 	private:
-
 		cv::Mat m_Matrix;
-
 	};
 
 	Homography operator+(const Homography& left, const Homography& right);

@@ -92,10 +92,13 @@ namespace lvk
 
 	private:
 
+		void advance_window();
+
+	private:
+
 		std::vector<T> m_InternalBuffer;
 		uint32_t m_StartIndex, m_EndIndex, m_WindowSize;
 
-		void advance_window();
 	};
 
 }
