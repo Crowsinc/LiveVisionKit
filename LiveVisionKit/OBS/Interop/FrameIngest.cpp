@@ -18,6 +18,9 @@
 #include "FrameIngest.hpp"
 
 #include "Diagnostics/Assert.hpp"
+#include "Math/Math.hpp"
+
+#include <tuple>
 
 /* NOTE: All upload conversion operations are to YUV, and are performed on the GPU using thread
  * local cached buffers to maximise performance and avoid expensive GPU memory allocations.
@@ -38,14 +41,14 @@
 
 bool operator<<(cv::UMat& dst, const obs_source_frame* src)
 {
-	return lvk::import_frame(src, dst);
+	return lvk::import_yuv(src, dst);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 bool operator>>(const cv::UMat& src, obs_source_frame* dst)
 {
-	return lvk::export_frame(src, dst);
+	return lvk::export_yuv(src, dst);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -122,72 +125,223 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void import_data(
-		uint8_t* src,
-		cv::UMat& dst,
-		const uint32_t width,
-		const uint32_t height,
-		const uint32_t line_size,
-		const uint32_t components
-	)
-	{
-		LVK_ASSERT(src != nullptr);
-		LVK_ASSERT(width > 0 && height > 0);
-		LVK_ASSERT(components > 0 && components <= 4);
-		LVK_ASSERT(line_size >= width * components);
-
-		// NOTE: This is one of the slowest parts of all vision filters, so speeding this up would speed up everything.
-		cv::Mat(height, width, CV_8UC(components), src, line_size).copyTo(dst);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void export_data(const cv::UMat& src, uint8_t* dst)
-	{
-		LVK_ASSERT(!src.empty() && dst != nullptr);
-
-		// NOTE: This assumes that the destination is large enough to actually hold all the src data.
-
-		// NOTE: This is one of the slowest parts of all vision filters, so speeding this up would speed up everything.
-		src.copyTo(cv::Mat(src.size(), src.type(), dst));
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void import_plane(
+	//NOTE: Returns ROI to internally uploaded planes, planes should be cloned for modification
+	cv::UMat upload_planes(
 		const obs_source_frame& src,
-		cv::UMat& dst,
-		const uint32_t plane,
-		const float width_scaling,
-		const float height_scaling,
-		const uint32_t components
+		const cv::Size plane_0_size,
+		const uint32_t plane_0_channels
 	)
 	{
-		LVK_ASSERT(plane < MAX_AV_PLANES);
 		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(width_scaling * src.width > 0.0 && width_scaling * src.width <= src.width);
-		LVK_ASSERT(height_scaling * src.height > 0.0 && height_scaling * src.height <= src.height);
+		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
 
-		import_data(
-			src.data[plane],
-			dst,
-			src.width * width_scaling,
-			src.height * height_scaling,
-			src.linesize[plane],
-			components
-		);
+		thread_local cv::UMat import_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		const uint64_t import_length = plane_0_size.area() * plane_0_channels;
+
+		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(import_buffer);
+
+		return import_buffer.reshape(plane_0_channels, plane_0_size.height);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void export_plane(const cv::UMat& src, obs_source_frame& dst, const uint32_t plane)
+	//NOTE: Returns ROI to internally uploaded planes, planes should be cloned for modification
+	 std::tuple<cv::UMat, cv::UMat>&  upload_planes(
+		const obs_source_frame& src,
+		const cv::Size plane_0_size,
+		const uint32_t plane_0_channels,
+		const cv::Size plane_1_size,
+		const uint32_t plane_1_channels
+	)
 	{
-		LVK_ASSERT(!src.empty());
-		LVK_ASSERT(plane < MAX_AV_PLANES);
-		LVK_ASSERT(is_frame_initialised(dst));
+		LVK_ASSERT(is_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr);
+		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
+		LVK_ASSERT(between<uint32_t>(plane_1_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_1_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_1_size.height, 1, src.height));
 
-		export_data(src, dst.data[plane]);
-		dst.linesize[plane] = src.step;
+
+		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
+		// are all stored in one contiguous span of memory starting at src.data[0].
+		// Padding exists between planes which must be avoided.
+
+		thread_local cv::UMat import_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local std::tuple<cv::UMat, cv::UMat> plane_regions;
+
+		const uint64_t plane_0_length = plane_0_size.area() * plane_0_channels;
+		const uint64_t plane_1_length = plane_1_size.area() * plane_1_channels;
+
+		const uint64_t plane_1_offset =  src.data[1] - src.data[0];
+		const uint64_t import_length = plane_1_offset + plane_1_length;
+
+		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(import_buffer);
+
+		std::get<0>(plane_regions) = import_buffer.colRange(0, plane_0_length)
+				.reshape(plane_0_channels, plane_0_size.height);
+
+		std::get<1>(plane_regions) = import_buffer.colRange(plane_1_offset, plane_1_offset + plane_1_length)
+				.reshape(plane_1_channels, plane_1_size.height);
+
+		return plane_regions;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	//NOTE: Returns ROI to internally uploaded planes, planes should be cloned for modification
+	std::tuple<cv::UMat, cv::UMat, cv::UMat>& upload_planes(
+		const obs_source_frame& src,
+		const cv::Size plane_0_size,
+		const uint32_t plane_0_channels,
+		const cv::Size plane_1_size,
+		const uint32_t plane_1_channels,
+		const cv::Size plane_2_size,
+		const uint32_t plane_2_channels
+	){
+		LVK_ASSERT(is_frame_initialised(src));
+		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr && src.data[2] != nullptr);
+		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
+		LVK_ASSERT(between<uint32_t>(plane_1_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_1_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_1_size.height, 1, src.height));
+		LVK_ASSERT(between<uint32_t>(plane_2_channels, 1, 4));
+		LVK_ASSERT(between<uint32_t>(plane_2_size.width, 1, src.width));
+		LVK_ASSERT(between<uint32_t>(plane_2_size.height, 1, src.height));
+
+		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
+		// are all stored in one contiguous span of memory starting at src.data[0].
+		// Padding exists between planes which must be avoided.
+
+		thread_local cv::UMat import_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local std::tuple<cv::UMat, cv::UMat, cv::UMat> plane_regions;
+
+		const uint64_t plane_0_length = plane_0_size.area() * plane_0_channels;
+		const uint64_t plane_1_length = plane_1_size.area() * plane_1_channels;
+		const uint64_t plane_2_length = plane_2_size.area() * plane_2_channels;
+
+		const uint64_t plane_1_offset =  src.data[1] - src.data[0];
+		const uint64_t plane_2_offset =  src.data[2] - src.data[0];
+		const uint64_t import_length = plane_2_offset + plane_2_length;
+
+		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(import_buffer);
+
+		std::get<0>(plane_regions) = import_buffer.colRange(0, plane_0_length)
+				.reshape(plane_0_channels, plane_0_size.height);
+
+		std::get<1>(plane_regions) = import_buffer.colRange(plane_1_offset, plane_1_offset + plane_1_length)
+				.reshape(plane_1_channels, plane_1_size.height);
+
+		std::get<2>(plane_regions) = import_buffer.colRange(plane_2_offset, plane_2_offset + plane_2_length)
+				.reshape(plane_2_channels, plane_2_size.height);
+
+		return plane_regions;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	//NOTE: Returns ROI to internally uploaded planes, planes should be cloned for modification
+	cv::UMat upload_planes(const obs_source_frame& src, const uint32_t channels)
+	{
+		return upload_planes(src, cv::Size(src.width, src.height), channels);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void download_planes(
+		const cv::UMat plane_0,
+		obs_source_frame& dst
+	){
+		LVK_ASSERT(!plane_0.empty());
+		LVK_ASSERT(is_frame_initialised(dst));
+		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
+
+		const uint64_t export_length = plane_0.total() * plane_0.elemSize();
+
+		plane_0.reshape(1, 1).copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void download_planes(
+		const cv::UMat plane_0,
+		const cv::UMat plane_1,
+		obs_source_frame& dst
+	){
+		LVK_ASSERT(is_frame_initialised(dst));
+		LVK_ASSERT(!plane_0.empty() && !plane_1.empty());
+		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr);
+		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
+		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_1.rows, 1, dst.height));
+
+		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
+		// are all stored in one contiguous span of memory starting at src.data[0].
+		// We must conserve the padding which exists between planes in memory.
+
+		thread_local cv::UMat export_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		const uint64_t plane_0_length = plane_0.total() * plane_0.elemSize();
+		const uint64_t plane_1_length = plane_1.total() * plane_1.elemSize();
+
+		const uint64_t plane_1_offset =  dst.data[1] - dst.data[0];
+		const uint64_t export_length = plane_1_offset + plane_1_length;
+
+		export_buffer.create(1, export_length, CV_8UC1);
+
+		plane_0.reshape(1, 1).copyTo(export_buffer.colRange(0, plane_0_length));
+		plane_1.reshape(1, 1).copyTo(export_buffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
+
+		export_buffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void download_planes(
+		const cv::UMat plane_0,
+		const cv::UMat plane_1,
+		const cv::UMat plane_2,
+		obs_source_frame& dst
+	){
+		LVK_ASSERT(is_frame_initialised(dst));
+		LVK_ASSERT(!plane_0.empty() && !plane_1.empty() && !plane_2.empty());
+		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr && dst.data[2] != nullptr);
+		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
+		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_1.rows, 1, dst.height));
+		LVK_ASSERT(between<uint32_t>(plane_2.cols, 1, dst.width));
+		LVK_ASSERT(between<uint32_t>(plane_2.rows, 1, dst.height));
+
+		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
+		// are all stored in one contiguous span of memory starting at src.data[0].
+		// We must conserve the padding which exists between planes in memory.
+
+		thread_local cv::UMat export_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		const uint64_t plane_0_length = plane_0.total() * plane_0.elemSize();
+		const uint64_t plane_1_length = plane_1.total() * plane_1.elemSize();
+		const uint64_t plane_2_length = plane_2.total() * plane_2.elemSize();
+
+		const uint64_t plane_1_offset =  dst.data[1] - dst.data[0];
+		const uint64_t plane_2_offset =  dst.data[2] - dst.data[0];
+		const uint64_t export_length = plane_2_offset + plane_2_length;
+
+		export_buffer.create(1, export_length, CV_8UC1);
+
+		plane_0.reshape(1, 1).copyTo(export_buffer.colRange(0, plane_0_length));
+		plane_1.reshape(1, 1).copyTo(export_buffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
+		plane_2.reshape(1, 1).copyTo(export_buffer.colRange(plane_2_offset, plane_2_offset + plane_2_length));
+
+		export_buffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -199,34 +353,32 @@ namespace lvk
 		const bool subsampled_height
 	)
 	{
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr && src.data[2] != nullptr);
+		thread_local cv::UMat plane_u_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat plane_v_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat plane_u(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat plane_v(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		const cv::Size frame_size(src.width, src.height);
+		const cv::Size chroma_size(
+			(subsampled_width ? 0.5 : 1.0) * frame_size.width,
+			(subsampled_height ? 0.5 : 1.0) * frame_size.height
+		);
 
-		import_plane(src, plane_y, 0, 1.0f, 1.0f, 1);
+		auto& [y_roi, u_roi, v_roi] = upload_planes(
+			src,
+			frame_size, 1,
+			chroma_size, 1,
+			chroma_size, 1
+		);
+
+		LVK_ASSERT(!y_roi.empty() && !u_roi.empty() && !v_roi.empty())
 
 		if(subsampled_width || subsampled_height)
 		{
-			const float chroma_width_scale = subsampled_width ? 0.5 : 1.0;
-			const float chroma_height_scale = subsampled_height ? 0.5 : 1.0;
+			cv::resize(u_roi, plane_u_buffer, frame_size, 0, 0, cv::INTER_LINEAR);
+			cv::resize(v_roi, plane_v_buffer, frame_size, 0, 0, cv::INTER_LINEAR);
 
-			import_plane(src, buffer, 1, chroma_width_scale, chroma_height_scale, 1);
-			cv::resize(buffer, plane_u, plane_y.size(), 0, 0, cv::INTER_LINEAR);
-
-			import_plane(src, buffer, 2, chroma_width_scale, chroma_height_scale, 1);
-			cv::resize(buffer, plane_v, plane_y.size(), 0, 0, cv::INTER_LINEAR);
+			merge_planes(y_roi, plane_u_buffer, plane_v_buffer, dst);
 		}
-		else
-		{
-			import_plane(src, plane_u, 1, 1.0, 1.0, 1);
-			import_plane(src, plane_v, 2, 1.0, 1.0, 1);
-		}
-
-		merge_planes(plane_y, plane_u, plane_v, dst);
+		else merge_planes(y_roi, u_roi, v_roi, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -238,101 +390,78 @@ namespace lvk
 		const bool subsample_height
 	)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr && dst.data[2] != nullptr);
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_u(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_v(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		split_planes(src, plane_y, plane_u, plane_v);
 
-		export_plane(plane_y, dst, 0);
-
 		if(subsample_width || subsample_height)
 		{
+			thread_local cv::UMat plane_sub_u(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+			thread_local cv::UMat plane_sub_v(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
 			const auto chroma_width_scale = subsample_width ? 0.5 : 1.0;
 			const auto chroma_height_scale = subsample_height ? 0.5 : 1.0;
 
-			cv::resize(plane_u, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
-			export_plane(buffer, dst, 1);
+			cv::resize(plane_u, plane_sub_u, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
+			cv::resize(plane_v, plane_sub_v, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
 
-			cv::resize(plane_v, buffer, cv::Size(), chroma_width_scale, chroma_height_scale, cv::INTER_AREA);
-			export_plane(buffer, dst, 2);
+			download_planes(plane_y, plane_sub_u, plane_sub_v, dst);
 		}
-		else
-		{
-			export_plane(plane_u, dst, 1);
-			export_plane(plane_v, dst, 2);
-		}
+		else download_planes(plane_y, plane_u, plane_v, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void import_semi_planar_nv12(const obs_source_frame& src, cv::UMat& dst)
 	{
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr);
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		// NOTE: OpenCV provides 'cvtColorTwoPlane' for directly converting NVXX,
-		// but the function takes around ~4ms to run (January 2022).
+		const cv::Size frame_size(src.width, src.height);
+		const cv::Size chroma_size(src.width * 0.5, src.height * 0.5);
 
-		import_plane(src, plane_y, 0, 1.0, 1.0, 1);
+		auto& [y_roi, uv_roi] = upload_planes(
+			src,
+			frame_size, 1,
+			chroma_size, 2
+		);
 
-		import_plane(src, buffer, 1, 0.5, 0.5, 2);
-		cv::resize(buffer, plane_uv, plane_y.size(), 0, 0, cv::INTER_LINEAR);
-
-		dst.create(plane_y.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>{dst}, {0,0,  1,1,  2,2});
+		cv::resize(uv_roi, plane_uv, frame_size, 0, 0, cv::INTER_LINEAR);
+		dst.create(frame_size, CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		cv::mixChannels({{y_roi, plane_uv}}, std::vector<cv::UMat>{dst}, {0,0,  1,1,  2,2});
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void export_semi_planar_nv12(const cv::UMat& src, obs_source_frame& dst)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr);
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat plane_sub_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		cv::extractChannel(src, plane_y, 0);
-		export_plane(plane_y, dst, 0);
+		plane_y.create(src.size(), CV_8UC1);
+		plane_uv.create(src.size(), CV_8UC2);
 
-		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {1,0,  2,1});
+		cv::mixChannels({src}, std::vector<cv::UMat>{plane_y, plane_uv}, {0,0, 1,1,  2,2});
 
-		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
+		cv::resize(plane_uv, plane_sub_uv, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
 
-		export_plane(plane_uv, dst, 1);
+		download_planes(plane_y, plane_sub_uv, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void import_packed_422(const obs_source_frame& src, cv::UMat& dst, const bool y_first, const bool u_first)
 	{
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr);
-
-		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat plane_sub_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		import_plane(src, buffer_1, 0, 1.0, 1.0, 2);
-		cv::extractChannel(buffer_1, buffer_2, y_first ? 1 : 0);
+		cv::UMat plane_roi = upload_planes(src, 2);
 
-		buffer_2 = buffer_2.reshape(2, buffer_2.rows);
-		cv::resize(buffer_2, plane_uv, buffer_1.size(), 0, 0, cv::INTER_LINEAR);
+		// Re-interpret uv plane as 2 components to remove interleaving, then upsample to correct size
+		cv::extractChannel(plane_roi, plane_sub_uv, y_first ? 1 : 0);
+		cv::resize(plane_sub_uv.reshape(2, plane_sub_uv.rows), plane_uv, plane_roi.size(), 0, 0, cv::INTER_LINEAR);
 
 		std::vector<int> from_to(6);
 		if(u_first)
@@ -340,110 +469,72 @@ namespace lvk
 		else
 			from_to = {(y_first ? 0 : 1),0,  2,2,  3,1};
 
-		dst.create(buffer_1.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		cv::mixChannels({{buffer_1, plane_uv}}, std::vector<cv::UMat>{dst}, from_to);
+		// Merge upsampled uv plane back with the y plane
+		dst.create(plane_roi.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		cv::mixChannels({{plane_roi, plane_uv}}, std::vector<cv::UMat>{dst}, from_to);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void export_packed_422(const cv::UMat& src, obs_source_frame& dst, const bool y_first, const bool u_first)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
-		LVK_ASSERT(dst.data[0] != nullptr);
-
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_y(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat plane_uv(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		cv::extractChannel(src, plane_y, 0);
+		buffer.create(src.size(), CV_8UC2);
 
-		buffer.create(src.size(), CV_8UC2, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
+		// Extract uv planes
 		if(u_first)
 			cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {1,0,  2,1});
 		else
 			cv::mixChannels({src}, std::vector<cv::UMat>{buffer}, {2,0,  1,1});
 
+		// Subsample uv plane width and re-interpret as one channel to interleave u and v components
 		cv::resize(buffer, plane_uv, cv::Size(), 0.5, 1.0, cv::INTER_AREA);
 		plane_uv = plane_uv.reshape(1, plane_uv.rows);
 
+		// Pack y and interleaved uv planes
+		cv::extractChannel(src, plane_y, 0);
 		if(y_first)
 			cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>{buffer}, {0,0,  1,1});
 		else
 			cv::mixChannels({{plane_y, plane_uv}}, std::vector<cv::UMat>{buffer}, {0,1,  1,0});
 
-		export_plane(buffer, dst, 0);
+		download_planes(buffer, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void import_packed_444(const obs_source_frame& src, cv::UMat& dst, const bool has_alpha)
 	{
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr);
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
 		if(has_alpha)
 		{
-			import_data(
-				src.data[0],
-				buffer,
-				src.width,
-				src.height,
-				src.linesize[0],
-				4
-			);
+			cv::UMat plane_roi = upload_planes(src, 4);
 
-			dst.create(buffer.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-			cv::mixChannels({buffer}, std::vector<cv::UMat>{dst}, {1,0,  2,1,  3,2});
+			dst.create(plane_roi.size(), CV_8UC3, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+			cv::mixChannels({plane_roi}, std::vector<cv::UMat>{dst}, {1,0,  2,1,  3,2});
 		}
-		else
-		{
-			import_data(
-				src.data[0],
-				dst,
-				src.width,
-				src.height,
-				src.linesize[0],
-				3
-			);
-		}
+		else upload_planes(src, 3).copyTo(dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void export_packed_444(const cv::UMat& src, obs_source_frame& dst, const bool has_alpha)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(dst.data[0] != nullptr);
-		LVK_ASSERT(!src.empty());
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat alpha_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
 		if(has_alpha)
 		{
+			thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
 			// NOTE: To preserve alpha we need to import the frame and mix the
 			// original alpha channel back in. This is slow, don't use AYUV.
+			cv::UMat dst_roi = upload_planes(dst, 4);
 
-			import_data(
-				dst.data[0],
-				alpha_buffer,
-				dst.width,
-				dst.height,
-				dst.linesize[0],
-				4
-			);
+			buffer.create(src.size(), CV_8UC4);
+			cv::mixChannels({{src, dst_roi}}, std::vector<cv::UMat>{buffer}, {3,0,  0,1,  1,2,  2,3});
 
-			buffer.create(src.size(), CV_8UC4, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-			cv::mixChannels({{src, alpha_buffer}}, std::vector<cv::UMat>{buffer}, {3,0,  0,1,  1,2,  2,3});
-
-			export_plane(buffer, dst, 0);
-		} else export_plane(src, dst, 0);
+			download_planes(buffer, dst);
+		} else download_planes(src, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -456,24 +547,10 @@ namespace lvk
 		const cv::ColorConversionCodes conversion_2
 	)
 	{
-		LVK_ASSERT(components > 0 && components <= 4);
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr);
+		thread_local cv::UMat converison_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
-		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		import_data(
-			src.data[0],
-			buffer_1,
-			src.width,
-			src.height,
-			src.linesize[0],
-			components
-		);
-
-		cv::cvtColor(buffer_1, buffer_2, conversion_1);
-		cv::cvtColor(buffer_2, dst, conversion_2);
+		cv::cvtColor(upload_planes(src, components), converison_buffer, conversion_1);
+		cv::cvtColor(converison_buffer, dst, conversion_2);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -485,17 +562,12 @@ namespace lvk
 		const cv::ColorConversionCodes conversion_2
 	)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(dst.data[0] != nullptr);
-		LVK_ASSERT(!src.empty());
-
 		thread_local cv::UMat buffer_1(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		thread_local cv::UMat buffer_2(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		cv::cvtColor(src, buffer_1, conversion_1);
 		cv::cvtColor(buffer_1, buffer_2, conversion_2);
-		export_plane(buffer_2, dst, 0);
+		download_planes(buffer_2, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -506,45 +578,24 @@ namespace lvk
 		const uint32_t components,
 		const cv::ColorConversionCodes conversion
 	){
-		LVK_ASSERT(components > 0 && components <= 4);
-		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr);
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		import_data(
-			src.data[0],
-			buffer,
-			src.width,
-			src.height,
-			src.linesize[0],
-			components
-		);
-
-		cv::cvtColor(buffer, dst, conversion);
+		cv::cvtColor(upload_planes(src, components), dst, conversion);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void export_packed_direct(const cv::UMat& src, obs_source_frame& dst, const cv::ColorConversionCodes conversion)
 	{
-		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(dst.width >= (uint32_t)src.cols && dst.height >= (uint32_t)src.rows);
-		LVK_ASSERT(dst.data[0] != nullptr);
-		LVK_ASSERT(!src.empty());
-
 		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		cv::cvtColor(src, buffer, conversion);
-		export_plane(buffer, dst, 0);
+		download_planes(buffer, dst);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool import_frame(const obs_source_frame* src, cv::UMat& dst)
+	bool import_yuv(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
-		LVK_ASSERT(is_frame_initialised(*src));
 
 		const auto& frame = *src;
 
@@ -610,11 +661,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool export_frame(const cv::UMat& src, obs_source_frame* dst)
+	bool export_yuv(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
-		LVK_ASSERT(is_frame_initialised(*dst));
-		LVK_ASSERT(dst->width >= (uint32_t)src.cols && dst->height >= (uint32_t)src.rows);
 		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
 
 		auto& frame = *dst;

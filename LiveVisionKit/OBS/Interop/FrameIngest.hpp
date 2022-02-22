@@ -24,13 +24,15 @@ namespace lvk
 {
 
 	// Converts OBS frame to YUV UMat
-	bool import_frame(const obs_source_frame* src, cv::UMat& dst);
+	bool import_yuv(const obs_source_frame* src, cv::UMat& dst);
 
-	// Converts YUV UMat back to OBS frame
-	bool export_frame(const cv::UMat& src, obs_source_frame* dst);
+	// Converts YUV UMat back to OBS frame, preserves dst alpha channel
+	bool export_yuv(const cv::UMat& src, obs_source_frame* dst);
 
 }
 
+// Calls import_yuv
 bool operator<<(cv::UMat& dst, const obs_source_frame* src);
 
+// Calls export_yuv
 bool operator>>(const cv::UMat& src, obs_source_frame* dst);
