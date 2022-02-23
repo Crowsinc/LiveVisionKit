@@ -15,50 +15,33 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <opencv2/core/ocl.hpp>
+#include "LiveVisionKit.hpp"
+#include "LCFilter.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
-OBS_DECLARE_MODULE()
+constexpr auto LC_FILTER_NAME = "(LVK) Lens Correction";
 
 //---------------------------------------------------------------------------------------------------------------------
 
-MODULE_EXPORT const char* obs_module_name(void)
+extern void register_lc_source()
 {
-	return "Live Vision Kit";
-}
+	obs_source_info config = {0};
+	config.id = "LVK~LC";
+	config.type = OBS_SOURCE_TYPE_FILTER;
+	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
 
-//---------------------------------------------------------------------------------------------------------------------
+	config.create = lvk::dispatch::filter_create_auto<lvk::LCFilter>;
+	config.destroy = lvk::dispatch::filter_delete<lvk::LCFilter>;
 
-void register_fsr_source();
+	config.update = lvk::dispatch::filter_configure<lvk::LCFilter>;
+	config.filter_video = lvk::dispatch::filter_process<lvk::LCFilter>;
 
-void register_cas_source();
+	config.get_name = [](void* data){return LC_FILTER_NAME;};
+	config.get_properties = lvk::dispatch::filter_properties<lvk::LCFilter>;;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::LCFilter>;;
 
-void register_vs_source();
-
-void register_adb_source();
-
-void register_lc_source();
-
-//---------------------------------------------------------------------------------------------------------------------
-
-bool obs_module_load()
-{
-	register_fsr_source();
-	register_cas_source();
-
-	// These filters must use OpenCL to run fast enough
-	if(cv::ocl::haveOpenCL())
-	{
-		cv::ocl::setUseOpenCL(true);
-
-		register_lc_source();
-		register_vs_source();
-		register_adb_source();
-	}
-
-	return true;
+	obs_register_source(&config);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
