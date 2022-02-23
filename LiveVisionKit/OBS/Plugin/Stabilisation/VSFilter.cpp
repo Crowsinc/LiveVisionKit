@@ -17,7 +17,7 @@
 
 #include "VSFilter.hpp"
 
-#include <opencv2/core/ocl.hpp>
+
 #include <sstream>
 
 namespace lvk
@@ -287,6 +287,7 @@ namespace lvk
 
 			if(m_TestMode)
 			{
+				cv::ocl::finish();
 				draw_debug_hud(
 					output.frame,
 					os_gettime_ns() - start_time

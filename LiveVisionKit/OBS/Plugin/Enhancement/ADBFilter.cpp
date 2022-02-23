@@ -152,7 +152,10 @@ namespace lvk
 		const auto end_time = os_gettime_ns();
 
 		if(m_TestMode)
+		{
+			cv::ocl::finish();
 			draw_debug_info(frame, end_time - start_time);
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
