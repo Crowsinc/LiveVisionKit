@@ -50,7 +50,7 @@ namespace lvk
 	constexpr auto PROP_TEST_MODE = "TEST_MODE";
 	constexpr auto TEST_MODE_DEFAULT = false;
 
-	constexpr auto TIMING_THRESHOLD_MS = 5.0;
+	constexpr auto TIMING_THRESHOLD_MS = 6.0;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -329,6 +329,7 @@ namespace lvk
 
 	uint64_t VSFilter::draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers)
 	{
+		cv::ocl::finish();
 		const uint64_t start_time = os_gettime_ns();
 
 		draw::plot_markers(
@@ -340,6 +341,7 @@ namespace lvk
 			2
 		);
 
+		cv::ocl::finish();
 		return os_gettime_ns() - start_time;
 	}
 
