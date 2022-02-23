@@ -20,7 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-constexpr auto ADB_NAME = "(LVK) Adapative De-Blocker";
+constexpr auto ADB_FILTER_NAME = "(LVK) Adapative De-Blocker";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ extern void register_adb_source()
 	config.filter_video = lvk::dispatch::filter_process<lvk::ADBFilter>;
 	config.update = lvk::dispatch::filter_configure<lvk::ADBFilter>;
 
-	config.get_name = [](void* data){return ADB_NAME;};
+	config.get_name = [](void* data){return ADB_FILTER_NAME;};
 	config.get_properties = lvk::dispatch::filter_properties<lvk::ADBFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::ADBFilter>;
 

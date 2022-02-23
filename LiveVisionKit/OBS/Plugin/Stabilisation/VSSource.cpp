@@ -20,7 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-constexpr auto VS_NAME = "(LVK) Video Stabiliser";
+constexpr auto VS_FILTER_NAME = "(LVK) Video Stabiliser";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +40,7 @@ extern void register_vs_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::VSFilter>;
 
-	config.get_name = [](void* data){return VS_NAME;};
+	config.get_name = [](void* data){return VS_FILTER_NAME;};
 	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
 	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;

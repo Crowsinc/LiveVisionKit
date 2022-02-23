@@ -20,7 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-constexpr auto FSR_NAME = "(LVK) FidelityFX Super Resolution 1.0";
+constexpr auto FSR_FILTER_NAME = "(LVK) FidelityFX Super Resolution 1.0";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ extern void register_fsr_source()
 	config.update = lvk::dispatch::filter_configure<lvk::FSRFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::FSRFilter>;
 
-	config.get_name = [](void* data){return FSR_NAME;};
+	config.get_name = [](void* data){return FSR_FILTER_NAME;};
 	config.get_width = lvk::dispatch::filter_width<lvk::FSRFilter>;
 	config.get_height = lvk::dispatch::filter_height<lvk::FSRFilter>;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::FSRFilter>;

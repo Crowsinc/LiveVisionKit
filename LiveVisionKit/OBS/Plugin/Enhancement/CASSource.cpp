@@ -20,7 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-constexpr auto CAS_NAME = "(LVK) FidelityFX Contrast Adaptive Sharpening";
+constexpr auto CAS_FILTER_NAME = "(LVK) FidelityFX Contrast Adaptive Sharpening";
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ extern void register_cas_source()
 	config.update = lvk::dispatch::filter_configure<lvk::CASFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::CASFilter>;
 
-	config.get_name = [](void* data){return CAS_NAME;};
+	config.get_name = [](void* data){return CAS_FILTER_NAME;};
 	config.get_width = lvk::dispatch::filter_width<lvk::CASFilter>;;
 	config.get_height = lvk::dispatch::filter_height<lvk::CASFilter>;;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::CASFilter>;;
