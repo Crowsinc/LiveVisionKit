@@ -35,7 +35,7 @@ namespace lvk
 		CameraCalibrator(const cv::Size& pattern_size);
 
 		// Expects YUV frame
-		bool feed(const cv::UMat& frame);
+		bool feed(cv::UMat& frame, const bool draw_corners = false);
 
 		CameraParameters calibrate(const uint32_t square_size = 1) const;
 

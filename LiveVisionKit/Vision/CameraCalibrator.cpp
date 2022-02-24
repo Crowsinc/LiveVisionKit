@@ -35,7 +35,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool CameraCalibrator::feed(const cv::UMat& frame)
+	bool CameraCalibrator::feed(cv::UMat& frame, const bool draw_corners)
 	{
 		if(m_ImageSize.empty())
 			m_ImageSize = frame.size();
@@ -65,6 +65,9 @@ namespace lvk
 
 			m_ImagePoints.emplace_back(corners);
 		}
+
+		if(draw_corners)
+			cv::drawChessboardCorners(frame, m_PatternSize, corners, found);
 
 		return found;
 	}
