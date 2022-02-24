@@ -653,7 +653,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				LVK_ASSERT(false && "Unsupported Format (please ask LVK developers to add support)");
+				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
 				return false;
 		}
 		return true;
@@ -722,7 +722,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				LVK_ASSERT(false && "Unsupported Format (please ask LVK developers to add support)");
+				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
 				return false;
 		}
 
