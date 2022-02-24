@@ -24,8 +24,8 @@ namespace lvk
 
 	struct CameraParameters
 	{
-		cv::Mat camera_matrix;
-		std::vector<float> distortion_coefficients;
+		cv::Mat camera_matrix = cv::Mat::eye(3,3, CV_64FC1);
+		std::vector<double> distortion_coefficients;
 	};
 
 	class CameraCalibrator
@@ -34,6 +34,7 @@ namespace lvk
 
 		CameraCalibrator(const cv::Size& pattern_size);
 
+		// Expects YUV frame
 		bool feed(const cv::UMat& frame);
 
 		CameraParameters calibrate(const uint32_t square_size = 1) const;
@@ -47,6 +48,7 @@ namespace lvk
 		const cv::Size m_PatternSize;
 
 		cv::Size m_ImageSize;
+		cv::UMat m_DetectionFrame;
 		std::vector<std::vector<cv::Point2f>> m_ImagePoints;
 
 	};

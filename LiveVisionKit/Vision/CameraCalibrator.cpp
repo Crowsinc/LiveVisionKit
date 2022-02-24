@@ -25,7 +25,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	CameraCalibrator::CameraCalibrator(const cv::Size& pattern_size)
-		: m_PatternSize(pattern_size)
+		: m_PatternSize(pattern_size),
+		  m_DetectionFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{
 		LVK_ASSERT(!pattern_size.empty());
 
@@ -41,13 +42,29 @@ namespace lvk
 
 		LVK_ASSERT(frame.size() == m_ImageSize);
 
+		// Extract Y plane for detection.
+		cv::extractChannel(frame, m_DetectionFrame, 0);
+
 		std::vector<cv::Point2f> corners;
-		const bool found = cv::findChessboardCornersSB(
-			frame,
+		const bool found = cv::findChessboardCorners(
+			m_DetectionFrame,
 			m_PatternSize,
 			corners,
-			cv::CALIB_CB_NORMALIZE_IMAGE
+			cv::CALIB_CB_ADAPTIVE_THRESH
 		);
+
+		if(found)
+		{
+			cv::cornerSubPix(
+				m_DetectionFrame,
+				corners,
+				cv::Size(11,11),
+				cv::Size(-1,-1),
+				cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001)
+			);
+
+			m_ImagePoints.emplace_back(corners);
+		}
 
 		return found;
 	}
@@ -89,6 +106,7 @@ namespace lvk
 	{
 		m_ImageSize = cv::Size(0, 0);
 		m_ImagePoints.clear();
+		m_DetectionFrame.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
