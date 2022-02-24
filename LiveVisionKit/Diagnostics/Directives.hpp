@@ -23,9 +23,17 @@
 
 #define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@" __FILE__ "@%s(..) FAILED " #assertion "\n", __func__);}
 
+#define LVK_CRASH(msg) bcrash("LVK@" __FILE__ "@%s(..) CRASHED " #msg "\n", __func__);
+
+#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@" __FILE__ "@%s(..) ERROR " #msg "\n", __func__);
+
 #else
 
 #define LVK_ASSERT(assertion)
+
+#define LVK_CRASH(msg)
+
+#define LVK_ERROR(msg)
 
 #endif
 
