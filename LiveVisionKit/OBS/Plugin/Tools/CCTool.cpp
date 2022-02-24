@@ -69,7 +69,7 @@ namespace lvk
 		config_t* config = nullptr;
 		if(config_open(&config, config_path, config_open_type::CONFIG_OPEN_ALWAYS) == CONFIG_ERROR)
 		{
-			LVK_ERROR("Failed to create config directory");
+			LVK_ERROR("Failed to load config file");
 			bfree(config_path);
 			return nullptr;
 		}
