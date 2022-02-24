@@ -18,6 +18,8 @@
 #include <obs-module.h>
 #include <opencv2/core/ocl.hpp>
 
+#include "Diagnostics/Directives.hpp"
+
 //---------------------------------------------------------------------------------------------------------------------
 
 OBS_DECLARE_MODULE()
@@ -26,7 +28,7 @@ OBS_DECLARE_MODULE()
 
 MODULE_EXPORT const char* obs_module_name(void)
 {
-	return "Live Vision Kit";
+	return "LiveVisionKit v0";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -41,6 +43,8 @@ void register_adb_source();
 
 void register_lc_source();
 
+void register_cct_source();
+
 //---------------------------------------------------------------------------------------------------------------------
 
 bool obs_module_load()
@@ -48,7 +52,7 @@ bool obs_module_load()
 	register_fsr_source();
 	register_cas_source();
 
-	// These filters must use OpenCL to run fast enough
+	// Vision filters must use OpenCL
 	if(cv::ocl::haveOpenCL())
 	{
 		cv::ocl::setUseOpenCL(true);
@@ -56,7 +60,11 @@ bool obs_module_load()
 		register_lc_source();
 		register_vs_source();
 		register_adb_source();
+
+		// Tool filters
+		register_cct_source();
 	}
+	else LVK_ERROR("OpenCL unsupported");
 
 	return true;
 }
