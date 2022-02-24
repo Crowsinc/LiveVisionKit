@@ -106,6 +106,7 @@ namespace lvk
 	{
 		m_ImageSize = cv::Size(0, 0);
 		m_ImagePoints.clear();
+
 		m_DetectionFrame.release();
 	}
 

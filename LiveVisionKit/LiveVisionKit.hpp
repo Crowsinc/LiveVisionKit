@@ -34,9 +34,12 @@
 
 #include "Vision/FrameTracker.hpp"
 #include "Vision/TrackingGrid.hpp"
+#include "Vision/CameraCalibrator.hpp"
 
 // OBS Specific
 #include <obs-module.h>
+#include <util/config-file.h>
+#include <util/platform.h>
 
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
