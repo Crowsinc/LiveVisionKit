@@ -17,78 +17,43 @@
 
 #include "LCFilter.hpp"
 
-#include <filesystem>
+#include "OBS/Plugin/Tools/CCTool.hpp"
 
 namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
-
-	constexpr auto REQ_CALIBRATION_FRAMES = 50;
+	constexpr auto PROP_PROFILE = "PROP_PROFILE";
+	constexpr auto PROFILE_DEFAULT = "";
 
 	constexpr auto PROP_CORRECT_DISTORTION = "PROP_DISTORTION";
 	constexpr auto CORRECT_DISTORTION_DEFAULT = false;
-
-	constexpr auto PROP_PROFILE_PATH = "PROP_PROFILE_PATH";
-	constexpr auto PROP_NEW_PROFILE_NAME = "PROP_PROFILE_NAME";
-
-	constexpr auto PROFILE_NAME_INVALID_CHARS = "><:\"\\/|?*";
-	constexpr auto PROFILE_FILE_TYPE = "*.lvkc";
-
-	constexpr auto GROUP_CALIBRATION = "GROUP_CALIBRATION";
-
-	constexpr auto PROP_CALIB_BTN = "PROP_CALIBRATE_BTN";
-	constexpr auto CALIB_BTN_CAP_MODE_TEXT = "Capture Frame";
-	constexpr auto CALIB_BTN_CALIB_MODE_TEXT = "Calibrate";
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	obs_properties_t* LCFilter::Properties()
 	{
-		// Filter properties
 		obs_properties_t* properties = obs_properties_create();
 
-		obs_properties_add_path(
+		auto property = obs_properties_add_list(
 			properties,
-			PROP_PROFILE_PATH,
+			PROP_PROFILE,
 			"Calibration Profile",
-			obs_path_type::OBS_PATH_FILE,
-			PROFILE_FILE_TYPE,
-			nullptr
+			obs_combo_type::OBS_COMBO_TYPE_LIST,
+			obs_combo_format::OBS_COMBO_FORMAT_STRING
 		);
+
+		obs_property_list_add_string(property, PROFILE_DEFAULT, PROFILE_DEFAULT);
+		const auto& profiles = CCTool::ListProfiles();
+		for(auto profile : profiles)
+			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
 
 		obs_properties_add_bool(
 			properties,
 			PROP_CORRECT_DISTORTION,
 			"Correct lens distortion"
 		);
-
-		// Calibration properties
-		obs_properties_t* calib_properties = obs_properties_create();
-
-		obs_properties_add_group(
-			properties,
-			GROUP_CALIBRATION,
-			"Start Calibration",
-			obs_group_type::OBS_GROUP_CHECKABLE,
-			calib_properties
-		);
-
-		obs_properties_add_text(
-			calib_properties,
-			PROP_NEW_PROFILE_NAME,
-			"New Profile Name",
-			obs_text_type::OBS_TEXT_DEFAULT
-		);
-
-		auto property = obs_properties_add_button(
-			calib_properties,
-			PROP_CALIB_BTN,
-			CALIB_BTN_CAP_MODE_TEXT,
-			LCFilter::advance_calibration
-		);
-		obs_property_button_set_type(property, obs_button_type::OBS_BUTTON_DEFAULT);
 
 		return properties;
 	}
@@ -97,61 +62,9 @@ namespace lvk
 
 	void LCFilter::LoadDefaults(obs_data_t* settings)
 	{
-		obs_data_set_bool(settings, PROP_CORRECT_DISTORTION, CORRECT_DISTORTION_DEFAULT);
-	}
+		obs_data_set_default_bool(settings, PROP_CORRECT_DISTORTION, CORRECT_DISTORTION_DEFAULT);
+		obs_data_set_default_string(settings, PROP_PROFILE, PROFILE_DEFAULT);
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool LCFilter::advance_calibration(
-		obs_properties_t* properties,
-		obs_property_t* button,
-		void* data
-	)
-	{
-		auto filter = static_cast<LCFilter*>(data);
-
-
-		if(filter->captures_left() == 0)
-		{
-			obs_data_t* settings = obs_source_get_settings(filter->m_Context);
-
-			// Block calibration until profile name is valid
-			const std::string profile_name = obs_data_get_string(settings, PROP_NEW_PROFILE_NAME);
-			if(is_profile_name_valid(profile_name))
-			{
-				auto path = filter->calibrate(profile_name);
-
-				// If the profile field is empty, automatically set the profile to this new one
-				if(std::string(obs_data_get_string(settings, PROP_PROFILE_PATH)).empty())
-					obs_data_set_string(settings, PROP_PROFILE_PATH, path.c_str());
-
-
-				// Switch back to calibration mode, and disable the group
-				obs_property_set_description(button, CALIB_BTN_CAP_MODE_TEXT);
-				obs_data_set_string(settings, PROP_NEW_PROFILE_NAME, "");
-				obs_data_set_bool(settings, GROUP_CALIBRATION, false);
-				return true;
-			}
-		}
-		else if(filter->captures_left() == 1)
-		{
-			// Capture last frame and switch to calibration button
-			obs_property_set_description(button, CALIB_BTN_CALIB_MODE_TEXT);
-			filter->capture_next();
-			return true;
-		}
-		else filter->capture_next();
-
-		return false;
-	}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool LCFilter::is_profile_name_valid(const std::string& profile_name)
-	{
-		return !profile_name.empty()
-			&& profile_name.find_first_of(PROFILE_NAME_INVALID_CHARS) == std::string::npos;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -159,9 +72,10 @@ namespace lvk
 	LCFilter::LCFilter(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
-		  m_CalibrationMode(false),
-		  m_CaptureNext(false),
-		  m_Captures(REQ_CALIBRATION_FRAMES)
+		  m_CorrectDistortion(false),
+		  m_UndistortFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_UndistortMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_AuxUndistortMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -171,87 +85,65 @@ namespace lvk
 
 	void LCFilter::configure(obs_data_t* settings)
 	{
-		m_CalibrationMode = obs_data_get_bool(settings, GROUP_CALIBRATION);
+		const std::string profile = obs_data_get_string(settings, PROP_PROFILE);
+		const bool profile_selected = profile != PROFILE_DEFAULT;
 
+		if(profile_selected && m_Profile != profile)
+		{
+			if(auto parameters = CCTool::LoadProfile(profile); parameters.has_value())
+			{
+				m_Parameters = parameters.value();
+				m_Profile = profile;
 
-		//TODO: ... load profile up if it has changed
+				// Reset the undistort maps to load in new profiles
+				m_UndistortMap.release();
+				m_AuxUndistortMap.release();
+			} else LVK_ERROR("Failed to load calibration profile");
+		}
 
-
+		m_CorrectDistortion = profile_selected && obs_data_get_bool(settings, PROP_CORRECT_DISTORTION);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void LCFilter::capture_next()
+	void LCFilter::prepare_undistort_maps(cv::UMat& frame)
 	{
-		m_CaptureNext = true;
-	}
+		// Update undistort map if it is outdated or missing
+		if(m_UndistortMap.empty() || m_UndistortMap.size() != frame.size())
+		{
+			cv::Mat optimal_camera_matrix = cv::getOptimalNewCameraMatrix(
+				m_Parameters.camera_matrix,
+				m_Parameters.distortion_coefficients,
+				frame.size(),
+				0,
+				frame.size(),
+				&m_UndistortCrop
+			);
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	void LCFilter::reset_captures()
-	{
-		m_Captures.clear();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t LCFilter::captures_left()
-	{
-		return m_Captures.window_size() - m_Captures.elements();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	std::filesystem::path LCFilter::calibrate(const std::string& profile_name)
-	{
-		LVK_ASSERT(is_profile_name_valid(profile_name));
-
-		char* config_path = obs_module_config_path(profile_name.c_str());
-
-		std::string full_path(config_path);
-
-		blog(LOG_INFO, config_path);
-
-		bfree(config_path);
-
-
-		return {full_path};
+			cv::initUndistortRectifyMap(
+				m_Parameters.camera_matrix,
+				m_Parameters.distortion_coefficients,
+				cv::noArray(),
+				optimal_camera_matrix,
+				frame.size(),
+				CV_16SC2,
+				m_UndistortMap,
+				m_AuxUndistortMap
+			);
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void LCFilter::filter(cv::UMat& frame)
 	{
-		if(m_CalibrationMode)
+		if(m_CorrectDistortion)
 		{
-			obs_data_t* calibration_settings = obs_source_get_settings(m_Context);
+			prepare_undistort_maps(frame);
 
-			const std::string profile_name = obs_data_get_string(
-				calibration_settings,
-				PROP_NEW_PROFILE_NAME
-			);
-
-			const bool name_valid = is_profile_name_valid(profile_name);
-
-			//TODO: switch to C++20 fmt as soon as GCC supports it.
-			std::stringstream calibration_text;
-			calibration_text << "Calibration Progress of " << m_Captures.elements() << "/" << REQ_CALIBRATION_FRAMES;
-			calibration_text << " for \'" << profile_name << "\'" << (name_valid ? "" : "  (INVALID NAME)");
-
-			draw::text(
-				frame,
-				calibration_text.str(),
-				cv::Point(5, 45),
-				name_valid ? draw::YUV_MAGENTA : draw::YUV_RED
-			);
-
-			if(m_CaptureNext)
-				frame.copyTo(m_Captures.advance());
-
-			m_CaptureNext = false;
+			cv::remap(frame, m_UndistortFrame, m_UndistortMap, m_AuxUndistortMap, cv::INTER_LINEAR);
+			cv::resize(m_UndistortFrame(m_UndistortCrop), frame, frame.size(), 0, 0, cv::INTER_LINEAR);
 		}
-
-
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

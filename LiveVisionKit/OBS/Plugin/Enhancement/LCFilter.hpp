@@ -18,7 +18,6 @@
 #pragma once
 
 #include <vector>
-#include <filesystem>
 
 #include "LiveVisionKit.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
@@ -38,26 +37,11 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-
 		bool validate() const;
 
 	private:
 
-		static bool advance_calibration(
-			obs_properties_t* properties,
-			obs_property_t* button,
-			void* data
-		);
-
-		static bool is_profile_name_valid(const std::string& profile_name);
-
-		void capture_next();
-
-		void reset_captures();
-
-		uint32_t captures_left();
-
-		std::filesystem::path calibrate(const std::string& profile_name);
+		void prepare_undistort_maps(cv::UMat& frame);
 
 		virtual void filter(cv::UMat& frame) override;
 
@@ -65,12 +49,14 @@ namespace lvk
 
 		obs_source_t* m_Context;
 
-		bool m_CalibrationMode, m_CaptureNext;
-		SlidingBuffer<cv::Mat> m_Captures;
+		bool m_CorrectDistortion;
 
-		cv::Mat m_CameraMatrix, m_OptimalCameraMatrix;
-		std::vector<double> m_DistortionCoeffs;
-		cv::UMat m_CorrectionMap;
+		std::string m_Profile;
+		CameraParameters m_Parameters;
+
+		cv::UMat m_UndistortFrame;
+		cv::UMat m_UndistortMap, m_AuxUndistortMap;
+		cv::Rect m_UndistortCrop;
 	};
 
 }
