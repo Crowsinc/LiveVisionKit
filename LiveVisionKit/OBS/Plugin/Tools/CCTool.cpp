@@ -17,66 +17,98 @@
 
 #include "CCTool.hpp"
 
-#include <util/config-file.h>
+
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	// 2 distances, 4 paths per distance, 5 frames per path
-	constexpr auto REQ_CALIBRATION_FRAMES = 2 * 4 * 5;
-	constexpr auto CALIBRATION_PATTERN_ROWS = 6;
+	// 4 angles, 5 shots per angle
+	constexpr auto REQ_CALIBRATION_FRAMES = 25;
 	constexpr auto CALIBRATION_PATTERN_COLS = 9;
+	constexpr auto CALIBRATION_PATTERN_ROWS = 6;
+
+	constexpr auto FRAME_HOLD_DURATION = 30;
 
 	constexpr auto PROP_UTILITY_BTN = "PROP_UTILITY_BTN";
-	constexpr auto UTILITY_BTN_CALIBRATE_TEXT = "Calibrate";
 	constexpr auto UTILITY_BTN_CAPTURE_TEXT = "Capture Frame";
+	constexpr auto UTILITY_BTN_CALIBRATE_TEXT = "Calibrate";
+
+	constexpr auto PROP_RESET_BTN = "PROP_RESET_BTN";
 
 	constexpr auto PROP_SQUARE_SIZE = "PROP_SQUARE_SIZE";
-	constexpr auto SQUARE_SIZE_MIN = 0;
-	constexpr auto SQUARE_SIZE_MAX = 1000;
+	constexpr auto SQUARE_SIZE_MIN = 1;
+	constexpr auto SQUARE_SIZE_MAX = 100;
 	constexpr auto SQUARE_SIZE_STEP = 1;
-	constexpr auto SQUARE_SIZE_DEFAULT = 0;
+	constexpr auto SQUARE_SIZE_DEFAULT = 24;
 
 	constexpr auto PROP_PROFILE_NAME = "PROP_PROFILE_NAME";
 	constexpr auto PROFILE_NAME_DEFAULT = "";
 
-	constexpr auto CONFIG_FILE = "LVK_CALIB_PROFILES.lvkp";
+	constexpr auto CONFIG_FILE = "calib-profiles.ini";
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	std::filesystem::path CCTool::config_file_path()
+	// NOTE: must be closed by the caller, returns nullptr on failure
+	config_t* CCTool::load_profile_config()
 	{
+		char* config_dir = obs_module_config_path("");
+		if(!std::filesystem::exists({config_dir}))
+		{
+			if(!std::filesystem::create_directory({config_dir}))
+			{
+				bfree(config_dir);
+				LVK_ERROR("Failed to create config directory");
+				return nullptr;
+			}
+		}
+		bfree(config_dir);
+
 		char* config_path = obs_module_config_path(CONFIG_FILE);
-		std::filesystem::path path = std::string(config_path);
+
+		config_t* config = nullptr;
+		if(config_open(&config, config_path, config_open_type::CONFIG_OPEN_ALWAYS) == CONFIG_ERROR)
+		{
+			LVK_ERROR("Failed to create config directory");
+			bfree(config_path);
+			return nullptr;
+		}
 		bfree(config_path);
-		return path;
+
+		return config;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool CCTool::HasProfile(const std::string& name)
+	const std::vector<std::string>& CCTool::ListProfiles()
+	{
+		// Keep local copy of strings to help with C API interfacing
+		thread_local std::vector<std::string> profiles;
+		profiles.clear();
+
+		config_t* config = load_profile_config();
+
+		if(config != nullptr)
+		{
+			size_t sections = config_num_sections(config);
+			for(size_t i = 0; i < sections; i++)
+				profiles.emplace_back(config_get_section(config, i));
+
+			config_close(config);
+		}
+
+		return profiles;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool CCTool::ContainsProfile(const std::string& name)
 	{
 		LVK_ASSERT(!name.empty());
 
-		auto config_path = config_file_path();
+		auto profiles = ListProfiles();
 
-		config_t* config = nullptr;
-		if(config_open(&config, config_path.c_str(), config_open_type::CONFIG_OPEN_EXISTING) == CONFIG_ERROR)
-			return false;
-
-		LVK_ASSERT(config != nullptr);
-
-		size_t sections = config_num_sections(config);
-		for(size_t i = 0; i < sections; i++)
-			if(std::string(config_get_section(config, i)) == name)
-			{
-				config_close(config);
-				return true;
-			}
-
-		config_close(config);
-		return false;
+		return std::find(profiles.begin(), profiles.end(), name) != profiles.end();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -85,25 +117,21 @@ namespace lvk
 	{
 		LVK_ASSERT(!name.empty());
 
-		config_t* config = nullptr;
-		auto config_path = config_file_path();
+		config_t* config = load_profile_config();
 
-		if(!HasProfile(name))
+		if(config == nullptr || !ContainsProfile(name))
 			return {};
-
-		if(config_open(&config, config_path.c_str(), config_open_type::CONFIG_OPEN_EXISTING) == CONFIG_ERROR)
-			return {};
-
-		LVK_ASSERT(config != nullptr);
 
 		CameraParameters parameters;
 
-		// Decompose & save camera matrix
+		// Load camera matrix
+		parameters.camera_matrix = cv::Mat::eye(cv::Size(3,3), CV_64FC1);
 		parameters.camera_matrix.at<double>(0, 0) = config_get_double(config, name.c_str(), "fx");
 		parameters.camera_matrix.at<double>(1, 1) = config_get_double(config, name.c_str(), "fy");
 		parameters.camera_matrix.at<double>(0, 2) = config_get_double(config, name.c_str(), "cx");
 		parameters.camera_matrix.at<double>(1, 2) = config_get_double(config, name.c_str(), "cy");
 
+		// Load distortion coefficients
 		parameters.distortion_coefficients.push_back(config_get_double(config, name.c_str(), "k1"));
 		parameters.distortion_coefficients.push_back(config_get_double(config, name.c_str(), "k2"));
 		parameters.distortion_coefficients.push_back(config_get_double(config, name.c_str(), "p1"));
@@ -117,18 +145,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool CCTool::save_profile(const CameraParameters& parameters, const std::string& name)
+	bool CCTool::SaveProfile(const CameraParameters& parameters, const std::string& name)
 	{
-		LVK_ASSERT(!parameters.camera_matrix.empty() && parameters.camera_matrix.size() == cv::Size(3,3));
-		LVK_ASSERT(parameters.distortion_coefficients.size() == 4);
+		LVK_ASSERT(parameters.camera_matrix.size() == cv::Size(3,3) && parameters.camera_matrix.type() == CV_64FC1);
+		LVK_ASSERT(parameters.distortion_coefficients.size() == 5);
 
-		auto config_path = config_file_path();
+		config_t* config = load_profile_config();
 
-		config_t* config = nullptr;
-		if(config_open(&config, config_path.c_str(), config_open_type::CONFIG_OPEN_ALWAYS) == CONFIG_ERROR)
+		if(config == nullptr)
 			return false;
-
-		LVK_ASSERT(config != nullptr);
 
 		// Decompose & save camera matrix
 		const double fx = parameters.camera_matrix.at<double>(0, 0);
@@ -190,6 +215,13 @@ namespace lvk
 			CCTool::on_utility_button
 		);
 
+		property = obs_properties_add_button(
+			properties,
+			PROP_RESET_BTN,
+			"Reset",
+			CCTool::on_reset_button
+		);
+
 		return properties;
 	}
 
@@ -197,8 +229,8 @@ namespace lvk
 
 	void CCTool::LoadDefaults(obs_data_t* settings)
 	{
-		obs_data_set_int(settings, PROP_SQUARE_SIZE, SQUARE_SIZE_DEFAULT);
-		obs_data_set_string(settings, PROP_PROFILE_NAME, PROFILE_NAME_DEFAULT);
+		obs_data_set_default_int(settings, PROP_SQUARE_SIZE, SQUARE_SIZE_DEFAULT);
+		obs_data_set_default_string(settings, PROP_PROFILE_NAME, PROFILE_NAME_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -207,10 +239,6 @@ namespace lvk
 	{
 		m_ProfileName = obs_data_get_string(settings, PROP_PROFILE_NAME);
 		m_SquareSize = obs_data_get_int(settings, PROP_SQUARE_SIZE);
-
-		// Reset calibration complete flag on any configuration changes
-		m_CalibrationSuccess = false;
-		m_CalibrationFail = false;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -218,6 +246,10 @@ namespace lvk
 	CCTool::CCTool(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
+		  m_CalibrationFail(false),
+		  m_CalibrationSuccess(false),
+		  m_HoldFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+		  m_FrameHoldCountdown(0),
 		  m_Calibrator({CALIBRATION_PATTERN_COLS, CALIBRATION_PATTERN_ROWS})
 	{
 		reset();
@@ -228,8 +260,10 @@ namespace lvk
 	void CCTool::reset()
 	{
 		m_Calibrator.reset();
-		m_CalibrationSuccess = false;
 		m_CaptureNext = false;
+		m_CalibrateNext = false;
+		m_CalibrationFail = false;
+		m_CalibrationSuccess = false;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -242,28 +276,44 @@ namespace lvk
 	{
 		CCTool* tool = static_cast<CCTool*>(data);
 
+		if(tool->calibration_complete())
+			return false;
+
 		if(tool->remaining_captures() == 0)
 		{
+			// Attempt to perform calibration
 			if(tool->request_calibration())
-			{
-				obs_property_set_description(button, UTILITY_BTN_CAPTURE_TEXT);
-				tool->reset();
-				return true;
-			}
+				obs_property_set_enabled(button, false);
 		}
 		else if(tool->remaining_captures() == 1)
 		{
+			// Switch to calibrate button
 			obs_property_set_description(button, UTILITY_BTN_CALIBRATE_TEXT);
 			tool->request_capture();
-			return true;
 		}
-		else
-		{
-			tool->request_capture();
-			return false;
-		}
+		else tool->request_capture();
 
-		return false;
+		return true;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool CCTool::on_reset_button(
+		obs_properties_t* properties,
+		obs_property_t* button,
+		void* data
+	)
+	{
+		CCTool* tool = static_cast<CCTool*>(data);
+
+		tool->reset();
+
+		// Reset back to start of new calibration
+		auto utility_button = obs_properties_get(properties, PROP_UTILITY_BTN);
+		obs_property_set_description(utility_button, UTILITY_BTN_CAPTURE_TEXT);
+		obs_property_set_enabled(utility_button, true);
+
+		return true;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -288,8 +338,14 @@ namespace lvk
 
 	bool CCTool::parameters_valid() const
 	{
-		return !m_ProfileName.empty()
-			 && m_SquareSize != SQUARE_SIZE_DEFAULT;
+		return !m_ProfileName.empty();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool CCTool::calibration_complete() const
+	{
+		return m_CalibrationFail || m_CalibrationSuccess;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -312,14 +368,11 @@ namespace lvk
 		if(m_ProfileName.empty())
 			return {std::string("invalid profile (empty)"), draw::YUV_RED};
 
-		if(m_SquareSize == SQUARE_SIZE_DEFAULT)
-			return {std::string("invalid square size (0mm)"), draw::YUV_RED};
-
 		if(remaining_captures() > 0)
 			return {std::string("more captures required"), draw::YUV_RED};
 
 		if(remaining_captures() == 0)
-			return {std::string("ready for calibration"), draw::YUV_GREEN};
+			return {std::string("ready for calibration"), draw::YUV_MAGENTA};
 
 		return {"unknown", draw::YUV_RED};
 	}
@@ -364,19 +417,29 @@ namespace lvk
 			text_origin,
 			status_color
 		);
-		text_origin += text_offset;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void CCTool::filter(cv::UMat& frame)
 	{
+		if(m_FrameHoldCountdown-- > 0)
+			m_HoldFrame.copyTo(frame);
+
 		if(m_CaptureNext)
 		{
 			if(m_ImageSize != frame.size())
 				reset();
 
-			m_Calibrator.feed(frame);
+			m_ImageSize = frame.size();
+
+			if(m_Calibrator.feed(frame, true))
+			{
+				// Hold the frame with the corners drawn on for user feedback
+				frame.copyTo(m_HoldFrame);
+				m_FrameHoldCountdown = FRAME_HOLD_DURATION;
+			}
+
 			m_CaptureNext = false;
 		}
 
@@ -384,7 +447,7 @@ namespace lvk
 		{
 			auto parameters = m_Calibrator.calibrate(m_SquareSize);
 
-			if(save_profile(parameters, m_ProfileName))
+			if(SaveProfile(parameters, m_ProfileName))
 				m_CalibrationSuccess = true;
 			else
 				m_CalibrationFail = true;

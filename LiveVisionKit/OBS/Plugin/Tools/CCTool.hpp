@@ -19,7 +19,7 @@
 
 #include "LiveVisionKit.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
-#include "Vision/CameraCalibrator.hpp"
+
 
 #include <filesystem>
 #include <optional>
@@ -30,13 +30,19 @@ namespace lvk
 
 	class CCTool : public VisionFilter
 	{
+	/* Calibration Profile Management */
 	public:
 
-//		static std::vector<std::string> ListProfiles();
+		static const std::vector<std::string>& ListProfiles();
 
-		static bool HasProfile(const std::string& name);
+		static bool ContainsProfile(const std::string& name);
 
 		static std::optional<CameraParameters> LoadProfile(const std::string& name);
+
+		static bool SaveProfile(const CameraParameters& parameters, const std::string& name);
+
+	/* Camera Calibration Tool  */
+	public:
 
 		static obs_properties_t* Properties();
 
@@ -56,9 +62,13 @@ namespace lvk
 			void* data
 		);
 
-		static std::filesystem::path config_file_path();
+		static bool on_reset_button(
+			obs_properties_t* properties,
+			obs_property_t* button,
+			void* data
+		);
 
-		static bool save_profile(const CameraParameters& parameters, const std::string& name);
+		static config_t* load_profile_config();
 
 		void reset();
 
@@ -67,6 +77,8 @@ namespace lvk
 		bool request_calibration();
 
 		bool parameters_valid() const;
+
+		bool calibration_complete() const;
 
 		uint32_t remaining_captures() const;
 
@@ -81,12 +93,16 @@ namespace lvk
 		obs_source_t* m_Context;
 
 		bool m_CaptureNext, m_CalibrateNext;
-		bool m_CalibrationSuccess, m_CalibrationFail;
+		bool m_CalibrationFail, m_CalibrationSuccess;
+
+		cv::UMat m_HoldFrame;
+		int m_FrameHoldCountdown;
 
 		CameraCalibrator m_Calibrator;
 		std::string m_ProfileName;
 		uint32_t m_SquareSize;
 		cv::Size m_ImageSize;
+
 
 	};
 
