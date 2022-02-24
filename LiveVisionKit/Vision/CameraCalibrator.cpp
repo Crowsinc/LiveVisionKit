@@ -24,10 +24,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	CameraCalibrator::CameraCalibrator(const cv::Size& chessboard_pattern_size)
-		: m_PatternSize(chessboard_pattern_size)
+	CameraCalibrator::CameraCalibrator(const cv::Size& pattern_size)
+		: m_PatternSize(pattern_size)
 	{
-		LVK_ASSERT(!chessboard_pattern_size.empty());
+		LVK_ASSERT(!pattern_size.empty());
 
 		reset();
 	}
@@ -42,24 +42,12 @@ namespace lvk
 		LVK_ASSERT(frame.size() == m_ImageSize);
 
 		std::vector<cv::Point2f> corners;
-		const bool found = cv::findChessboardCorners(
+		const bool found = cv::findChessboardCornersSB(
 			frame,
 			m_PatternSize,
 			corners,
-			cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE + cv::CALIB_CB_FAST_CHECK
+			cv::CALIB_CB_NORMALIZE_IMAGE
 		);
-
-		if(found)
-		{
-			cv::cornerSubPix(
-				frame,
-				corners,
-				cv::Size(11,11),
-				cv::Size(-1,-1),
-				cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001)
-			);
-			m_ImagePoints.emplace_back(std::move(corners));
-		}
 
 		return found;
 	}

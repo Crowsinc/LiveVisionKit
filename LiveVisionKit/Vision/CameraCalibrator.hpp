@@ -32,7 +32,7 @@ namespace lvk
 	{
 	public:
 
-		CameraCalibrator(const cv::Size& chessboard_pattern_size);
+		CameraCalibrator(const cv::Size& pattern_size);
 
 		bool feed(const cv::UMat& frame);
 
