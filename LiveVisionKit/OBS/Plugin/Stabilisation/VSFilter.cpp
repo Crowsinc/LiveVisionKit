@@ -28,7 +28,7 @@ namespace lvk
 	constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
 	constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
 	constexpr auto SMOOTHING_RADIUS_MIN = 2;
-	constexpr auto SMOOTHING_RADIUS_MAX = 16;
+	constexpr auto SMOOTHING_RADIUS_MAX = 30;
 
 	constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
 	constexpr auto STREAM_DELAY_INFO_MIN = 0;
