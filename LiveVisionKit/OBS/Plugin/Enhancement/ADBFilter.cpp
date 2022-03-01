@@ -149,12 +149,10 @@ namespace lvk
 
 		cv::cvtColor(frame, frame, cv::COLOR_BGR2YUV);
 
-		const auto end_time = os_gettime_ns();
-
 		if(m_TestMode)
 		{
 			cv::ocl::finish();
-			draw_debug_info(frame, end_time - start_time);
+			draw_debug_info(frame, os_gettime_ns() - start_time);
 		}
 	}
 
