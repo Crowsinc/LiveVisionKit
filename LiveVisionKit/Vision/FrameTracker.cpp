@@ -39,32 +39,34 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(
+		const float detection_threshold,
 		const float estimation_threshold,
 		const MotionModel model,
 		const cv::Size& resolution,
 		const cv::Size& block_size
 	)
 		: m_TrackingGrid(resolution, block_size),
-		  m_TrackingPointTarget(m_TrackingGrid.block_count()),
-		  m_MinMatchThreshold(estimation_threshold * m_TrackingPointTarget),
+		  m_TrackingPointTarget(detection_threshold * m_TrackingGrid.block_count()),
+		  m_MinMatchThreshold(estimation_threshold * m_TrackingGrid.block_count()),
 		  m_TrackingResolution(resolution),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FirstFrame(true)
 	{
-		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.0f));
+		LVK_ASSERT(between(detection_threshold, 0.0f, 1.0f));
+		LVK_ASSERT(between(estimation_threshold, 0.0f, detection_threshold));
 
 		m_Features.reserve(3 * REGION_DETECTION_TARGET);
 
-		m_TrackedPoints.reserve(m_TrackingPointTarget);
-		m_MatchedPoints.reserve(m_TrackingPointTarget);
-		m_ScaledTrackedPoints.reserve(m_TrackingPointTarget);
-		m_ScaledMatchedPoints.reserve(m_TrackingPointTarget);
+		m_TrackedPoints.reserve(m_TrackingGrid.block_count());
+		m_MatchedPoints.reserve(m_TrackingGrid.block_count());
+		m_ScaledTrackedPoints.reserve(m_TrackingGrid.block_count());
+		m_ScaledMatchedPoints.reserve(m_TrackingGrid.block_count());
 
-		m_MatchStatus.reserve(m_TrackingPointTarget);
-		m_InlierStatus.reserve(m_TrackingPointTarget);
-		m_TrackingError.reserve(m_TrackingPointTarget);
+		m_MatchStatus.reserve(m_TrackingGrid.block_count());
+		m_InlierStatus.reserve(m_TrackingGrid.block_count());
+		m_TrackingError.reserve(m_TrackingGrid.block_count());
 
 		initialise_regions(
 			REGION_ROWS,
@@ -86,7 +88,7 @@ namespace lvk
 		m_USACParams.maxIterations = 250;
 		m_USACParams.confidence = 0.99;
 		m_USACParams.loIterations = 10;
-		m_USACParams.loSampleSize = 50;
+		m_USACParams.loSampleSize = 20;
 		m_USACParams.threshold = 4;
 
 		restart();
@@ -166,28 +168,31 @@ namespace lvk
 			return Homography::Identity();
 		}
 
-		// Add new tracking points
-		for(auto& [region, feature_threshold, detection_target] : m_TrackingRegions)
+		// Add new tracking points if necessary
+		if(m_TrackedPoints.size() < m_TrackingPointTarget)
 		{
-			m_Features.clear();
+			for(auto& [region, feature_threshold, detection_target] : m_TrackingRegions)
+			{
+				m_Features.clear();
 
-			cv::FAST(
-				m_PrevFrame(region),
-				m_Features,
-				feature_threshold,
-				true
-			);
+				cv::FAST(
+					m_PrevFrame(region),
+					m_Features,
+					feature_threshold,
+					true
+				);
 
-			m_TrackingGrid.process(m_Features, {1, 1}, region.tl());
+				m_TrackingGrid.process(m_Features, {1, 1}, region.tl());
 
-			// Dynamically adjust feature threshold to try meet detection target next time
-			if(m_Features.size() > detection_target)
-				feature_threshold = lerp(feature_threshold, MAX_FEATURE_THRESHOLD, 0.1);
-			else
-				feature_threshold = lerp(feature_threshold, MIN_FEATURE_THRESHOLD, 0.1);
+				// Dynamically adjust feature threshold to try meet detection target next time
+				if(m_Features.size() > detection_target)
+					feature_threshold = lerp(feature_threshold, MAX_FEATURE_THRESHOLD, 0.1);
+				else
+					feature_threshold = lerp(feature_threshold, MIN_FEATURE_THRESHOLD, 0.1);
+			}
+
+			m_TrackingGrid.extract(m_TrackedPoints);
 		}
-
-		m_TrackingGrid.extract(m_TrackedPoints);
 
 		if(m_TrackedPoints.size() < m_MinMatchThreshold)
 			return Homography::Identity();
@@ -250,6 +255,13 @@ namespace lvk
 
 		if(!motion.empty())
 		{
+			// NOTE: If we really want to enforce the one tracking point
+			// per grid block, then we need to merge tracking points which
+			// have moved into the same block. This enforces a hard cap on
+			// the number of tracking points which is good for performance.
+			// On the other hand, good tracking points which are consistently
+			// inliers are may be better to keep around, even if not evenly spread.
+
 			// Propogate good matched points to next pass
 			fast_filter(m_MatchedPoints, m_InlierStatus);
 			m_TrackedPoints = m_MatchedPoints;

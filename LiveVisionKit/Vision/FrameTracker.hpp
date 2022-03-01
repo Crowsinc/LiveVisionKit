@@ -36,6 +36,7 @@ namespace lvk
 	public:
 
 		FrameTracker(
+			const float detection_threshold = 0.6,
 			const float estimation_threshold = 0.05,
 			const MotionModel model = MotionModel::HOMOGRAPHY,
 			const cv::Size& resolution = cv::Size(640, 360),
