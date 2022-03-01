@@ -8,7 +8,7 @@ LiveVisionKit (LVK) is an OBS Studio plugin which provides GPU accelerated real-
  * Real-Time Video Stabilisation: https://youtu.be/se3dSCvFdXc
  * Adaptive De-Blocker: https://youtu.be/LCrVeJ-H1IY
 
-**Please check out the [wiki](https://github.com/Crowsinc/LiveVisionKit/wiki) for information on what LiveVisionKit offers and how to use it.**
+**Please check out the [wiki](https://github.com/Crowsinc/LiveVisionKit/wiki) for more information on what LiveVisionKit offers and how to use it.**
 
 # Supporting the Project
 ### Partnerships & Collaborations
