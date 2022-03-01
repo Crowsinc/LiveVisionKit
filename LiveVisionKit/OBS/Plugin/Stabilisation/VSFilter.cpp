@@ -387,7 +387,7 @@ namespace lvk
 		const uint32_t queue_size = m_SmoothingRadius + 2;
 		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
 
-		if(window_size != m_Trajectory.window_size())
+		if(window_size != m_Trajectory.window_size() || queue_size != m_FrameQueue.window_size())
 		{
 			m_FrameQueue.resize(queue_size);
 			m_Trajectory.resize(window_size);
