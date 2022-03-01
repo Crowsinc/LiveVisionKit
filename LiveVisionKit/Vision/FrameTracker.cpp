@@ -245,14 +245,20 @@ namespace lvk
 				break;
 		}
 
-		// Propogate good matched points to next pass
-		fast_filter(m_MatchedPoints, m_InlierStatus);
-		m_TrackedPoints = m_MatchedPoints;
-
 		m_TrackingGrid.reset();
-		m_TrackingGrid.mask(m_TrackedPoints);
+		m_TrackedPoints.clear();
 
-		return motion.empty() ? Homography::Identity() : Homography::FromMatrix(motion);
+		if(!motion.empty())
+		{
+			// Propogate good matched points to next pass
+			fast_filter(m_MatchedPoints, m_InlierStatus);
+			m_TrackedPoints = m_MatchedPoints;
+
+			m_TrackingGrid.mask(m_TrackedPoints);
+
+			return Homography::FromMatrix(motion);
+		}
+		else return Homography::Identity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
