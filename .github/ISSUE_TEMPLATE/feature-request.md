@@ -16,7 +16,7 @@ assignees: ''
 *If it is related to an issue, reference it here.*
 
 
-**Possible use cases**
+**Possible Use Cases**
 *Describe at least three different use cases in which this feature is useful.*
 
 
