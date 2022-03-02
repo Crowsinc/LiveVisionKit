@@ -33,7 +33,7 @@
 #include "Utility/Drawing.hpp"
 
 #include "Vision/FrameTracker.hpp"
-#include "Vision/TrackingGrid.hpp"
+#include "Vision/GridDetector.hpp"
 #include "Vision/CameraCalibrator.hpp"
 
 // OBS Specific
