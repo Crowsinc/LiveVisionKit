@@ -173,7 +173,14 @@ namespace lvk
 
 		if(!motion.empty())
 		{
-			// Propogate good matched points to next pass
+			// NOTE: Propogate inlier matches on to the next detection.
+			// This means that we are using the same points for consecutive
+			// motion estimation which aids in consistency. It also allows
+			// the GridDetector to skip detection of new points if the
+			// propogated points alone meet the detection load. As we only
+			// propogate inliers, it also means that outliers are naturally
+			// filtered out until the detection load is too low.
+
 			fast_filter(m_MatchedPoints, m_InlierStatus);
 			m_GridDetector.propogate(m_MatchedPoints);
 
