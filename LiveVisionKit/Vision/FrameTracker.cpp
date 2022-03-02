@@ -19,60 +19,35 @@
 
 #include "Math/Math.hpp"
 #include "Utility/Algorithm.hpp"
-#include <util/platform.h>
 #include "Diagnostics/Directives.hpp"
+#include <util/platform.h>
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr double DEFAULT_FEATURE_THRESHOLD = 70;
-	constexpr double MAX_FEATURE_THRESHOLD = 250;
-	constexpr double MIN_FEATURE_THRESHOLD = 10;
-
 	constexpr double MAX_TRACKING_ERROR = 15;
-
-	constexpr uint32_t REGION_ROWS = 1;
-	constexpr uint32_t REGION_COLUMNS = 2;
-	constexpr uint32_t REGION_DETECTION_TARGET = 1500;
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameTracker::FrameTracker(
-		const float detection_threshold,
-		const float estimation_threshold,
-		const MotionModel model,
-		const cv::Size& resolution,
-		const cv::Size& block_size
-	)
-		: m_TrackingGrid(resolution, block_size),
-		  m_TrackingPointTarget(detection_threshold * m_TrackingGrid.block_count()),
-		  m_MinMatchThreshold(estimation_threshold * m_TrackingGrid.block_count()),
-		  m_TrackingResolution(resolution),
+	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
+		: m_GridDetector(detector),
+		  m_TrackingResolution(detector.resolution()),
+		  m_MinMatchThreshold(estimation_threshold * detector.detection_target()),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FirstFrame(true)
 	{
-		LVK_ASSERT(between(detection_threshold, 0.0f, 1.0f));
-		LVK_ASSERT(between(estimation_threshold, 0.0f, detection_threshold));
+		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.0f));
 
-		m_Features.reserve(3 * REGION_DETECTION_TARGET);
-
-		m_TrackedPoints.reserve(m_TrackingGrid.block_count());
-		m_MatchedPoints.reserve(m_TrackingGrid.block_count());
-		m_ScaledTrackedPoints.reserve(m_TrackingGrid.block_count());
-		m_ScaledMatchedPoints.reserve(m_TrackingGrid.block_count());
-
-		m_MatchStatus.reserve(m_TrackingGrid.block_count());
-		m_InlierStatus.reserve(m_TrackingGrid.block_count());
-		m_TrackingError.reserve(m_TrackingGrid.block_count());
-
-		initialise_regions(
-			REGION_ROWS,
-			REGION_COLUMNS,
-			REGION_DETECTION_TARGET
-		);
+		m_TrackedPoints.reserve(m_GridDetector.detection_target());
+		m_MatchedPoints.reserve(m_GridDetector.detection_target());
+		m_ScaledTrackedPoints.reserve(m_GridDetector.detection_target());
+		m_ScaledMatchedPoints.reserve(m_GridDetector.detection_target());
+		m_TrackingError.reserve(m_GridDetector.detection_target());
+		m_InlierStatus.reserve(m_GridDetector.detection_target());
+		m_MatchStatus.reserve(m_GridDetector.detection_target());
 
 		// Use light sharpening kernel
 		m_FilterKernel = cv::Mat({3, 3}, {
@@ -96,44 +71,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameTracker::initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target)
-	{
-		// NOTE: We divide the frame across multiple tracking regions to more evenly
-		// distribute feature detection across the frame. Using regions also accounts
-		// for differing scenery across the frame by allowing them to dynamically
-		// adjust their threshold to meet a feature target.
-
-		m_TrackingRegions.clear();
-
-		const cv::Size region_size(
-			m_TrackingResolution.width / cols,
-			m_TrackingResolution.height / rows
-		);
-
-		for(uint32_t r = 0; r < rows; r++)
-		{
-			for(uint32_t c = 0; c < cols; c++)
-			{
-				auto& region = m_TrackingRegions.emplace_back();
-				region.region = cv::Rect(
-					cv::Point(c * region_size.width, r * region_size.height),
-					region_size
-				);
-				region.detection_target = detection_target;
-			}
-		}
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	void FrameTracker::restart()
 	{
 		m_FirstFrame = true;
 		m_TrackedPoints.clear();
-		m_TrackingGrid.reset();
-
-		for(auto& [region, feature_threshold, feature_target] : m_TrackingRegions)
-			feature_threshold = DEFAULT_FEATURE_THRESHOLD;
+		m_GridDetector.reset();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -168,31 +110,8 @@ namespace lvk
 			return Homography::Identity();
 		}
 
-		// Add new tracking points if necessary
-		if(m_TrackedPoints.size() < m_TrackingPointTarget)
-		{
-			for(auto& [region, feature_threshold, detection_target] : m_TrackingRegions)
-			{
-				m_Features.clear();
-
-				cv::FAST(
-					m_PrevFrame(region),
-					m_Features,
-					feature_threshold,
-					true
-				);
-
-				m_TrackingGrid.process(m_Features, {1, 1}, region.tl());
-
-				// Dynamically adjust feature threshold to try meet detection target next time
-				if(m_Features.size() > detection_target)
-					feature_threshold = lerp(feature_threshold, MAX_FEATURE_THRESHOLD, 0.1);
-				else
-					feature_threshold = lerp(feature_threshold, MIN_FEATURE_THRESHOLD, 0.1);
-			}
-
-			m_TrackingGrid.extract(m_TrackedPoints);
-		}
+		// Detect tracking points
+		m_GridDetector.detect(m_PrevFrame, m_TrackedPoints);
 
 		if(m_TrackedPoints.size() < m_MinMatchThreshold)
 			return Homography::Identity();
@@ -250,23 +169,13 @@ namespace lvk
 				break;
 		}
 
-		m_TrackingGrid.reset();
-		m_TrackedPoints.clear();
+		m_GridDetector.reset();
 
 		if(!motion.empty())
 		{
-			// NOTE: If we really want to enforce the one tracking point
-			// per grid block, then we need to merge tracking points which
-			// have moved into the same block. This enforces a hard cap on
-			// the number of tracking points which is good for performance.
-			// On the other hand, good tracking points which are consistently
-			// inliers are may be better to keep around, even if not evenly spread.
-
 			// Propogate good matched points to next pass
 			fast_filter(m_MatchedPoints, m_InlierStatus);
-			m_TrackedPoints = m_MatchedPoints;
-
-			m_TrackingGrid.mask(m_TrackedPoints);
+			m_GridDetector.propogate(m_MatchedPoints);
 
 			return Homography::FromMatrix(motion);
 		}
@@ -279,6 +188,7 @@ namespace lvk
 	{
 		m_ScaledTrackedPoints.clear();
 		m_ScaledMatchedPoints.clear();
+		m_TrackedPoints.clear();
 		m_MatchedPoints.clear();
 		m_TrackingError.clear();
 		m_InlierStatus.clear();

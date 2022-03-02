@@ -18,10 +18,9 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-#include <optional>
 
+#include "GridDetector.hpp"
 #include "Math/Homography.hpp"
-#include "TrackingGrid.hpp"
 
 namespace lvk
 {
@@ -36,11 +35,9 @@ namespace lvk
 	public:
 
 		FrameTracker(
-			const float detection_threshold = 0.6,
-			const float estimation_threshold = 0.05,
 			const MotionModel model = MotionModel::HOMOGRAPHY,
-			const cv::Size& resolution = cv::Size(640, 360),
-			const cv::Size& block_size = cv::Size(20, 20)
+			const float estimation_threshold = 0.05,
+			const GridDetector& detector = GridDetector(0.6, cv::Size(640,360), cv::Size(320,360), cv::Size(20,20))
 		);
 
 		Homography track(const cv::UMat& next_frame);
@@ -55,28 +52,16 @@ namespace lvk
 
 	private:
 
-		void initialise_regions(const uint32_t rows, const uint32_t cols, const uint32_t detection_target);
-
 		cv::Point2f import_next(const cv::UMat& frame);
 
 		void prepare_state();
 
 	private:
 
-		struct TrackingRegion
-		{
-			cv::Rect region;
-			double feature_threshold;
-			uint32_t detection_target;
-		};
+		GridDetector m_GridDetector;
 
-		TrackingGrid m_TrackingGrid;
-		std::vector<cv::KeyPoint> m_Features;
-		std::vector<TrackingRegion> m_TrackingRegions;
-
-		const int m_TrackingPointTarget;
-		const uint32_t m_MinMatchThreshold;
 		const cv::Size m_TrackingResolution;
+		const uint32_t m_MinMatchThreshold;
 
 		std::vector<cv::Point2f> m_TrackedPoints, m_ScaledTrackedPoints;
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
