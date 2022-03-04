@@ -40,7 +40,9 @@ namespace lvk
 
 		virtual void filter(cv::UMat& frame) override;
 
-		void draw_debug_info(cv::UMat& frame, const uint64_t frame_time_ns);
+		uint64_t draw_debug_frame(cv::UMat& frame);
+
+		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
 	private:
 
@@ -49,10 +51,9 @@ namespace lvk
 		bool m_TestMode;
 		uint32_t m_DetectionLevels;
 
-		cv::UMat m_BlockGrid, m_ChannelMask, m_BlockMask;
-		cv::UMat m_Buffer, m_DeblockBuffer, m_FloatBuffer;
-		cv::UMat m_KeepBlendMap, m_DeblockBlendMap;
-
+		cv::UMat m_PaddedFrame, m_SmoothFrame, m_BlockFrame;
+		cv::UMat m_BlockBuffer, m_DeblockBuffer, m_FloatBuffer;
+		cv::UMat m_ChannelMask, m_BlockMask, m_KeepMap, m_DeblockMap;
 	};
 
 }
