@@ -51,9 +51,9 @@ namespace lvk
 		bool m_TestMode;
 		uint32_t m_DetectionLevels;
 
-		cv::UMat m_PaddedFrame, m_SmoothFrame, m_BlockFrame;
-		cv::UMat m_BlockBuffer, m_DeblockBuffer, m_FloatBuffer;
-		cv::UMat m_ChannelMask, m_BlockMask, m_KeepMap, m_DeblockMap;
+		cv::UMat m_SmoothFrame, m_DetectionFrame, m_ReferenceFrame;
+		cv::UMat m_BlockMask, m_KeepBlendMap, m_DeblockBlendMap;
+		cv::UMat m_BlockGrid, m_DeblockBuffer, m_FloatBuffer;
 	};
 
 }
