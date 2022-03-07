@@ -28,7 +28,7 @@ namespace lvk
 	constexpr auto CALIBRATION_PATTERN_COLS = 9;
 	constexpr auto CALIBRATION_PATTERN_ROWS = 6;
 
-	constexpr auto FRAME_HOLD_DURATION = 30;
+	constexpr auto FRAME_HOLD_COUNT = 20;
 
 	constexpr auto PROP_UTILITY_BTN = "PROP_UTILITY_BTN";
 	constexpr auto UTILITY_BTN_CAPTURE_TEXT = "Capture Frame";
@@ -437,7 +437,7 @@ namespace lvk
 			{
 				// Hold the frame with the corners drawn on for user feedback
 				frame.copyTo(m_HoldFrame);
-				m_FrameHoldCountdown = FRAME_HOLD_DURATION;
+				m_FrameHoldCountdown = FRAME_HOLD_COUNT;
 			}
 
 			m_CaptureNext = false;
