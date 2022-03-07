@@ -101,7 +101,7 @@ namespace lvk
 		obs_properties_add_bool(
 			properties,
 			PROP_STAB_DISABLED,
-			"Disable Stabilisation"
+			"Disable Stabilization"
 		);
 
 		obs_properties_add_bool(

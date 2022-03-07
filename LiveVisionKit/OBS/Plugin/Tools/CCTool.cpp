@@ -201,7 +201,7 @@ namespace lvk
 		auto property = obs_properties_add_int(
 			properties,
 			PROP_SQUARE_SIZE,
-			"Square Size (mm)",
+			"Square Size",
 			SQUARE_SIZE_MIN,
 			SQUARE_SIZE_MAX,
 			SQUARE_SIZE_STEP

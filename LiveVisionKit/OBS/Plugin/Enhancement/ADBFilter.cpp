@@ -52,9 +52,9 @@ namespace lvk
 		);
 
 		obs_properties_add_bool(
-				properties,
-				PROP_TEST_MODE,
-				"Test Mode"
+			properties,
+			PROP_TEST_MODE,
+			"Test Mode"
 		);
 
 		return properties;
