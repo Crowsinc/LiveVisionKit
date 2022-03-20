@@ -32,8 +32,6 @@ namespace lvk
 
 		FSRFilter(obs_source_t* context);
 
-		~FSRFilter();
-
 		void render();
 
 		void configure(obs_data_t* settings);
@@ -46,25 +44,10 @@ namespace lvk
 
 	private:
 
-		bool update_scaling();
-
-	private:
-
 		obs_source_t* m_Context;
-		gs_effect_t* m_Shader;
 
-		bool m_EASUMatchCanvas;
-		vec2 m_InputSize, m_OutputSize;
-		vec2 m_NewOutputSize;
-
-		vec4 m_EASUConst0, m_EASUConst1;
-		vec4 m_EASUConst2, m_EASUConst3;
-
-		gs_eparam_t* m_OutputSizeParam;
-		gs_eparam_t* m_EASUConstParam0;
-		gs_eparam_t* m_EASUConstParam1;
-		gs_eparam_t* m_EASUConstParam2;
-		gs_eparam_t* m_EASUConstParam3;
+		bool m_MatchCanvasSize;
+		cv::Size m_OutputSize;
 
 	};
 
