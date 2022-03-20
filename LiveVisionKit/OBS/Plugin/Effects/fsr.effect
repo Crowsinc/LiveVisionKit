@@ -17,10 +17,19 @@
 
 #include "ffx_a_mod.h"
 
+//---------------------------------------------------------------------------------------------------------------------
+//    Uniforms, Constants & Samplers
+//---------------------------------------------------------------------------------------------------------------------
+
 uniform float4x4 ViewProj;
 uniform texture2d image; 
 
+uniform float2 uv_scale;
+uniform float2 uv_offset;
+
 uniform AF2 output_size;
+uniform AF2 input_size;
+
 uniform AF4 easu_const_0;
 uniform AF4 easu_const_1;
 uniform AF4 easu_const_2;
@@ -41,9 +50,31 @@ sampler_state PointSampler
     AddressV    = Clamp;
 };
 
+//---------------------------------------------------------------------------------------------------------------------
+//    Vertex Shader
+//---------------------------------------------------------------------------------------------------------------------
+
+struct VSData 
+{
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VSData VSMain(VSData vs)
+{
+    VSData vs_out;
+    vs_out.pos = mul(float4(vs.pos.xyz, 1.0), ViewProj);
+    vs_out.uv  = uv_offset + (vs.uv * uv_scale);
+    return vs_out;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+//    FSR Functions 
+//---------------------------------------------------------------------------------------------------------------------
+
 // The textureGather (GLSL 400) and Gather*** (HLSL 5+) functions which are ideally
 // required for these functions are not supported. So we instead mimic the functionality 
-// by using point sampling.  
+// by using sampling.  
 //
 // For a given point p in normalized texture coordinates. We want to grab neighbouring
 // texels x, y, z, and w in the listed order.
@@ -58,34 +89,34 @@ sampler_state PointSampler
 // point p by half the texel size using addition/subtraction as necessary.
 AF4 FsrEasuRF(AF2 p)
 {
-    AF2 half_texel_size = AF2_(0.5) / output_size;
+    AF2 half_texel_size = AF2_(0.5) / input_size;
     return AF4(
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).r,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).r,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).r,
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).r
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).r,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).r,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).r,
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).r
     );
 }
 
 AF4 FsrEasuGF(AF2 p)
 {
-    AF2 half_texel_size = AF2_(0.5) / output_size;
+    AF2 half_texel_size = AF2_(0.5) / input_size;
     return AF4(
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).g,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).g,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).g,
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).g
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).g,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).g,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).g,
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).g
     );
 }
 
 AF4 FsrEasuBF(AF2 p)
 {
-    AF2 half_texel_size = AF2_(0.5) / output_size;
+    AF2 half_texel_size = AF2_(0.5) / input_size;
     return AF4(
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).b,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).b,
-        image.Sample(PointSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).b,
-        image.Sample(PointSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).b
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y + half_texel_size.y)).b,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y + half_texel_size.y)).b,
+        image.Sample(LinearSampler, AF2(p.x + half_texel_size.x, p.y - half_texel_size.y)).b,
+        image.Sample(LinearSampler, AF2(p.x - half_texel_size.x, p.y - half_texel_size.y)).b
     );
 }
 
@@ -98,53 +129,48 @@ AF4 FsrRcasLoadF(ASU2 p)
 #endif
 }
 
-void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b)
-{
-    // NOT USED
-}
+void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b){ /* UNUSED */ }
 
 #include "ffx_fsr1_mod.h"
 
-struct VSData 
-{
-    float4 pos : POSITION;
-    float2 uv  : TEXCOORD0;
-};
+//---------------------------------------------------------------------------------------------------------------------
+//    EASU Pixel Shader
+//---------------------------------------------------------------------------------------------------------------------
 
-VSData VSMain(VSData vs_in)
+float4 EASUPSMain(VSData vs) : TARGET
 {
-    VSData vs_out;
-    vs_out.pos = mul(float4(vs_in.pos.xyz, 1.0), ViewProj);
-    vs_out.uv  = vs_in.uv;
-    return vs_out;
+    AF3 col = AF3(0, 0, 0);
+    AF2 pos = floor(vs.uv * output_size.xy); 
+
+    FsrEasuF(col, pos, easu_const_0, easu_const_1, easu_const_2, easu_const_3);
+
+    return float4(col, 1.0);
 }
 
-float4 PSEASUMain(VSData vs_in) : TARGET
+//---------------------------------------------------------------------------------------------------------------------
+//    RCAS Pixel Shader
+//---------------------------------------------------------------------------------------------------------------------
+
+float4 RCASPSMain(VSData vs) : TARGET
 {
-    AF3 out_col = AF3(0, 0, 0);
-    AF2 out_pos = floor(vs_in.uv * output_size.xy); 
-
-    FsrEasuF(out_col, out_pos, easu_const_0, easu_const_1, easu_const_2, easu_const_3);
-
-    return float4(out_col, 1.0);
-}
-
-float4 PSRCASMain(VSData vs_in) : TARGET
-{
-    AF3 out_col = AF3(0, 0, 0);
-    AF2 out_pos = floor(vs_in.uv * output_size.xy);
+    AF3 col = AF3(0, 0, 0);
+    AF2 pos = floor(vs.uv * output_size.xy);
    
-    FsrRcasF(out_col.r, out_col.g, out_col.b, out_pos, rcas_const_0);
+    FsrRcasF(col.r, col.g, col.b, pos, rcas_const_0);
 
-    return float4(out_col, 1.0);
+    return float4(col, 1.0);
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+//    Techniques
+//---------------------------------------------------------------------------------------------------------------------
 
 technique EASU
 {
     pass
     {
-        vertex_shader = VSMain(vs_in);
-        pixel_shader  = PSEASUMain(vs_in);
+        vertex_shader = VSMain(vs);
+        pixel_shader  = EASUPSMain(vs);
     }
 };
 
@@ -152,7 +178,7 @@ technique RCAS
 {
     pass
     {
-        vertex_shader = VSMain(vs_in);
-        pixel_shader  = PSRCASMain(vs_in);
+        vertex_shader = VSMain(vs);
+        pixel_shader  = RCASPSMain(vs);
     }
 };

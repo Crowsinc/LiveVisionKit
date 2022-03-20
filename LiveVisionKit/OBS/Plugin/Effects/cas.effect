@@ -17,11 +17,37 @@
 
 #include "ffx_a_mod.h"
 
+//---------------------------------------------------------------------------------------------------------------------
+//    Uniforms, Constants & Samplers
+//---------------------------------------------------------------------------------------------------------------------
+
 uniform float4x4 ViewProj;
 uniform texture2d image; 
 
 uniform AF2 output_size;
 uniform AF4 cas_const_1;
+
+//---------------------------------------------------------------------------------------------------------------------
+//    Vertex Shader
+//---------------------------------------------------------------------------------------------------------------------
+
+struct VSData 
+{
+    float4 pos : POSITION;
+    float2 uv  : TEXCOORD0;
+};
+
+VSData VSMain(VSData vs)
+{
+    VSData vs_out;
+    vs_out.pos = mul(float4(vs.pos.xyz, 1.0), ViewProj);
+    vs_out.uv  = vs.uv;
+    return vs_out;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+//     Pixel Shader
+//---------------------------------------------------------------------------------------------------------------------
 
 AF3 CasLoad(ASU2 p)
 {   
@@ -32,44 +58,31 @@ AF3 CasLoad(ASU2 p)
 #endif
 }
 
-void CasInput(inout AF1 r, inout AF1 g, inout AF1 b)
-{
-    // NOT USED
-}
+void CasInput(inout AF1 r, inout AF1 g, inout AF1 b){ /* UNUSED */ }
 
 #define CAS_SLOW
 #define CAS_BETTER_DIAGONALS
 #include "ffx_cas_mod.h"
 
-struct VSData 
+float4 PSMain(VSData vs) : TARGET
 {
-    float4 pos : POSITION;
-    float2 uv  : TEXCOORD0;
-};
+    AF3 col = AF3(0, 0, 0);
+    AF2 pos = floor(vs.uv * output_size.xy); 
 
-VSData VSMain(VSData vs_in)
-{
-    VSData vs_out;
-    vs_out.pos = mul(float4(vs_in.pos.xyz, 1.0), ViewProj);
-    vs_out.uv  = vs_in.uv;
-    return vs_out;
+    CasFilter(col.r, col.g, col.b, pos, cas_const_1);
+
+    return float4(col, 1.0);
 }
 
-float4 PSMain(VSData vs_in) : TARGET
-{
-    AF3 out_col = AF3(0, 0, 0);
-    AF2 out_pos = floor(vs_in.uv * output_size.xy); 
-
-    CasFilter(out_col.r, out_col.g, out_col.b, out_pos, cas_const_1);
-
-    return float4(out_col, 1.0);
-}
+//---------------------------------------------------------------------------------------------------------------------
+//    Techniques
+//---------------------------------------------------------------------------------------------------------------------
 
 technique Draw
 {
     pass
     {
-        vertex_shader = VSMain(vs_in);
-        pixel_shader  = PSMain(vs_in);
+        vertex_shader = VSMain(vs);
+        pixel_shader  = PSMain(vs);
     }
 }
