@@ -45,3 +45,4 @@
 #include "OBS/Interop/VisionFilter.hpp"
 #include "OBS/Interop/FrameBuffer.hpp"
 #include "OBS/Interop/OBSDispatch.hpp"
+#include "OBS/Interop/OBSEffect.hpp"

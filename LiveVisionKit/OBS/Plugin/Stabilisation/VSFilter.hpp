@@ -87,9 +87,6 @@ namespace lvk
 
 		obs_source_t* m_Context;
 
-		gs_effect_t* m_Shader;
-		gs_eparam_t* m_CropParam;
-
 		bool m_Enabled, m_TestMode;
 		uint32_t m_SmoothingRadius;
 		float m_CropProportion;

@@ -17,8 +17,9 @@
 
 #include "VSFilter.hpp"
 
-
 #include <sstream>
+
+#include "OBS/Plugin/Scaling/FSREffect.hpp"
 
 namespace lvk
 {
@@ -178,8 +179,6 @@ namespace lvk
 	VSFilter::VSFilter(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
-		  m_Shader(nullptr),
-		  m_CropParam(nullptr),
 		  m_Enabled(true),
 		  m_TestMode(false),
 		  m_SmoothingRadius(0),
@@ -190,20 +189,6 @@ namespace lvk
 		  m_FrameTracker(/* Use defaults */)
 	{
 		LVK_ASSERT(context != nullptr);
-
-		char* shader_path = obs_module_file("effects/vs.effect");
-		if(shader_path != nullptr)
-		{
-			obs_enter_graphics();
-
-			m_Shader = gs_effect_create_from_file(shader_path, nullptr);
-			bfree(shader_path);
-
-			if(m_Shader)
-				m_CropParam = gs_effect_get_param_by_name(m_Shader, "crop_proportion");
-
-			obs_leave_graphics();
-		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -223,11 +208,7 @@ namespace lvk
 			auto frame_size = m_FrameQueue[1].frame.size();
 
 			m_CropRegion = crop(frame_size, m_CropProportion);
-
-			if(m_TestMode)
-				m_OutputSize = frame_size;
-			else
-				m_OutputSize = m_CropRegion.size();
+			m_OutputSize = frame_size;
 		}
 	}
 
@@ -235,15 +216,10 @@ namespace lvk
 
 	void VSFilter::render() const
 	{
-		if(obs_source_process_filter_begin(m_Context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
-		{
-			if(m_TestMode)
-				gs_effect_set_float(m_CropParam, 0.0f);
-			else
-				gs_effect_set_float(m_CropParam, m_CropProportion);
-
-			obs_source_process_filter_end(m_Context, m_Shader, m_OutputSize.width, m_OutputSize.height);
-		}
+		if(m_TestMode)
+			obs_source_skip_video_filter(m_Context);
+		else
+			FSREffect::Get().scale(m_Context, m_CropRegion, m_OutputSize);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -460,8 +436,7 @@ namespace lvk
 	bool VSFilter::validate() const
 	{
 		return m_Context != nullptr
-			&& m_Shader != nullptr
-			&& m_CropParam != nullptr;
+			&& FSREffect::Validate();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
