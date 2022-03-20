@@ -36,14 +36,18 @@ namespace lvk
 
 	private:
 
-		void prepare_easu(const cv::Rect& region, const cv::Size& output_size);
+		void render_easu(
+			obs_source_t* context,
+			const cv::Size& input_size,
+			const cv::Rect& region,
+			const cv::Size& output_size
+		);
 
 	private:
 
-		gs_eparam_t* m_UVScaleParam;
-		gs_eparam_t* m_UVOffsetParam;
 		gs_eparam_t* m_InputSizeParam;
 		gs_eparam_t* m_OutputSizeParam;
+		gs_eparam_t* m_RegionUVOffsetParam;
 		std::array<vec4, 4> m_EASUConstants;
 		std::array<gs_eparam_t*, 4> m_EASUParams;
 	};
