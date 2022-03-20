@@ -100,7 +100,7 @@ namespace lvk
 
 		// Silently skip if no scaling is needed or any of the sizes are zero. Dont crash
 		// because there are scenarios where zero sizing is expected or reasonable input.
-		if(region.size() == output_size || region.area() * input_size.area() * output_size.area() == 0)
+		if(region.size() == output_size || region.area() == 0 || input_size.area() == 0 || output_size.area() == 0)
 			obs_source_skip_video_filter(context);
 
 		if(obs_source_process_filter_begin(context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
@@ -153,6 +153,7 @@ namespace lvk
 	bool FSREffect::validate() const
 	{
 		return m_OutputSizeParam != nullptr
+			&& m_InputSizeParam != nullptr
 			&& m_RegionUVOffsetParam != nullptr
 			&& m_EASUParams[0] != nullptr
 			&& m_EASUParams[1] != nullptr
