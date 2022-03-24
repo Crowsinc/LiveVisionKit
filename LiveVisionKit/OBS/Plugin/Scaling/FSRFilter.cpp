@@ -33,14 +33,11 @@ namespace lvk
 	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
 	constexpr auto OUTPUT_SIZE_SOURCE = "Original Size";
 	constexpr auto OUTPUT_SIZE_CANVAS = "Canvas Size";
-	constexpr auto OUTPUT_SIZE_2160P  = "3840x2160";
-	constexpr auto OUTPUT_SIZE_1440P  = "2560x1440";
-	constexpr auto OUTPUT_SIZE_1080P  = "1920x1080";
-	constexpr auto OUTPUT_SIZE_720P   = "1280x720";
-	constexpr auto OUTPUT_SIZE_X2   = "x2";
-	constexpr auto OUTPUT_SIZE_XR2   = "x0.5";
-
 	constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_SOURCE;
+
+	const std::vector<std::string> OUTPUT_SIZES = {
+		"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"
+	};
 
 	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
 	constexpr auto OUTPUT_MIN_DIMENSION = 1;
@@ -79,12 +76,9 @@ namespace lvk
 
 		obs_property_list_add_string(property, OUTPUT_SIZE_SOURCE, OUTPUT_SIZE_SOURCE);
 		obs_property_list_add_string(property, OUTPUT_SIZE_CANVAS, OUTPUT_SIZE_CANVAS);
-		obs_property_list_add_string(property, OUTPUT_SIZE_2160P, OUTPUT_SIZE_2160P);
-		obs_property_list_add_string(property, OUTPUT_SIZE_1440P, OUTPUT_SIZE_1440P);
-		obs_property_list_add_string(property, OUTPUT_SIZE_1080P, OUTPUT_SIZE_1080P);
-		obs_property_list_add_string(property, OUTPUT_SIZE_720P, OUTPUT_SIZE_720P);
-		obs_property_list_add_string(property, OUTPUT_SIZE_XR2, OUTPUT_SIZE_XR2);
-		obs_property_list_add_string(property, OUTPUT_SIZE_X2, OUTPUT_SIZE_X2);
+
+		for(const auto& size : OUTPUT_SIZES)
+			obs_property_list_add_string(property, size.c_str(), size.c_str());
 
 		obs_properties_add_bool(
 			properties,
