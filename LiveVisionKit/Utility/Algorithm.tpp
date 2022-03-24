@@ -15,7 +15,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#include <vector>
+#include <string>
+#include <sstream>
 #include <algorithm>
+#include <functional>
 
 #include "Diagnostics/Directives.hpp"
 
@@ -79,6 +83,39 @@ namespace lvk
 		};
 
 		data.erase(std::remove_if(data.begin(), data.end(), predicate), data.end());
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	std::vector<T> split(
+		const std::string& string,
+		const char delimiter,
+		const std::function<bool(size_t,T&,bool)>& process
+	)
+	{
+		static_assert(std::is_fundamental_v<T>);
+
+		std::stringstream parser, stream(string);
+		std::string token;
+
+		size_t index = 0;
+		std::vector<T> output;
+		while(std::getline(stream, token, delimiter))
+		{
+			parser.clear();
+			parser.str(token);
+
+			T value = T{};
+			parser >> value;
+
+			if(process(index, value, parser.fail()))
+				output.emplace_back(value);
+
+			index++;
+		}
+
+		return output;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
