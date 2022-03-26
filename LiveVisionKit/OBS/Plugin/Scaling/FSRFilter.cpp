@@ -17,12 +17,6 @@
 
 #include "FSRFilter.hpp"
 
-#include <string>
-
-#define A_CPU 1
-#include "../Effects/ffx_a.h"
-#include "../Effects/ffx_fsr1.h"
-
 #include "FSREffect.hpp"
 
 namespace lvk
@@ -30,25 +24,20 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
+
 	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
 	constexpr auto OUTPUT_SIZE_SOURCE = "Original Size";
 	constexpr auto OUTPUT_SIZE_CANVAS = "Canvas Size";
 	constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_SOURCE;
-
 	const std::vector<std::string> OUTPUT_SIZES = {
 		"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"
 	};
 
-	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
-	constexpr auto OUTPUT_MIN_DIMENSION = 1;
-	constexpr auto OUTPUT_DEFAULT_MULTIPLIER = 1.0f;
-
-
-	constexpr auto PROP_CROP_GROUP = "CROP_GROUP";
-
 	constexpr auto PROP_MAINTAIN_ASPECT = "MAINTAIN_ASPECT_RATIO";
 	constexpr auto MAINTAIN_ASPECT_DEFAULT = true;
 
+	constexpr auto PROP_CROP_GROUP = "CROP_GROUP";
 	constexpr auto PROP_CROP_TOP = "CROP_TOP";
 	constexpr auto PROP_CROP_LEFT = "CROP_LEFT";
 	constexpr auto PROP_CROP_RIGHT = "CROP_RIGHT";
@@ -58,7 +47,6 @@ namespace lvk
 	constexpr auto CROP_MAX = OUTPUT_MAX_DIMENSION;
 	constexpr auto CROP_STEP = 1;
 	constexpr auto CROP_DEFAULT = CROP_MIN;
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -155,17 +143,17 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+		m_SizeMultiplier = 1.0;
 		m_MatchCanvasSize = m_MatchSourceSize = false;
-		m_SizeMultiplier = OUTPUT_DEFAULT_MULTIPLIER;
 
-		const std::string output_command = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
-		if(output_command == OUTPUT_SIZE_CANVAS)
+		const std::string output_pattern = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
+		if(output_pattern == OUTPUT_SIZE_CANVAS)
 			m_MatchCanvasSize = true;
-		else if(output_command == OUTPUT_SIZE_SOURCE)
+		else if(output_pattern == OUTPUT_SIZE_SOURCE)
 			m_MatchSourceSize = true;
-		else
+		else if(output_pattern.find('x') != std::string::npos)
 		{
-			std::vector<float> tokens = split<float>(output_command, 'x', [](auto _, float& value, const bool fail){
+			std::vector<float> tokens = split<float>(output_pattern, 'x', [](auto _, float& value, const bool fail){
 				return !fail && value > 0;
 			});
 
@@ -191,6 +179,7 @@ namespace lvk
 		}
 
 		m_MaintainAspectRatio = obs_data_get_bool(settings, PROP_MAINTAIN_ASPECT);
+
 		m_TLCrop.width = obs_data_get_int(settings, PROP_CROP_LEFT);
 		m_TLCrop.height = obs_data_get_int(settings, PROP_CROP_TOP);
 		m_BRCrop.width = obs_data_get_int(settings, PROP_CROP_RIGHT);
@@ -202,11 +191,11 @@ namespace lvk
 	FSRFilter::FSRFilter(obs_source_t* context)
 		: m_Context(context),
 		  m_OutputSize(0, 0),
-		  m_MatchCanvasSize(false),
-		  m_MatchSourceSize(false),
 		  m_SizeMultiplier(1.0),
 		  m_TLCrop(0,0),
 		  m_BRCrop(0,0),
+		  m_MatchCanvasSize(false),
+		  m_MatchSourceSize(false),
 		  m_MaintainAspectRatio(true)
 	{
 		LVK_ASSERT(context != nullptr);
@@ -221,7 +210,6 @@ namespace lvk
 			obs_source_get_base_width(filter_target),
 			obs_source_get_base_height(filter_target)
 		);
-
 
 		// Update output size
 		if(m_MatchSourceSize)
@@ -250,17 +238,15 @@ namespace lvk
 			m_OutputSize = cv::Size2f(crop_region.size()) * scale;
 		}
 
-		//TODO: Fix render bug when only one crop dimension is applied
-		//TODO: Silently clamp to valid dimensions to avoid errors with uninitialised sizes.
-		// Should probably make it so we can't have invalid sizes to begin with.
-		m_OutputSize.width = std::clamp(m_OutputSize.width, OUTPUT_MIN_DIMENSION, OUTPUT_MAX_DIMENSION);
-		m_OutputSize.height = std::clamp(m_OutputSize.height, OUTPUT_MIN_DIMENSION, OUTPUT_MAX_DIMENSION);
+		// Enforce maximum output in case the user tries to do something ridiculous
+		m_OutputSize.width = std::min(m_OutputSize.width, OUTPUT_MAX_DIMENSION);
+		m_OutputSize.height = std::min(m_OutputSize.height, OUTPUT_MAX_DIMENSION);
 
-		// Only crop if valid
-		if(crop_valid)
-			FSREffect::Get().scale(m_Context, crop_region, m_OutputSize);
-		else
-			FSREffect::Get().scale(m_Context, m_OutputSize);
+		FSREffect::Get().scale(
+			m_Context,
+			crop_valid ? crop_region : cv::Rect({0,0}, input_size),
+			m_OutputSize
+		);
 	}
 
 

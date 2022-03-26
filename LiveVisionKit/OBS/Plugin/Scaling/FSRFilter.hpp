@@ -47,12 +47,11 @@ namespace lvk
 		obs_source_t* m_Context;
 
 		cv::Size m_OutputSize;
-		bool m_MatchCanvasSize, m_MatchSourceSize;
 		float m_SizeMultiplier;
-
 		cv::Size m_TLCrop, m_BRCrop;
-		bool m_MaintainAspectRatio;
 
+		bool m_MatchCanvasSize, m_MatchSourceSize;
+		bool m_MaintainAspectRatio;
 	};
 
 }
