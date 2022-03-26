@@ -75,7 +75,7 @@ namespace lvk
 	template<typename T>
 	bool between(const T& value, const T& min, const T& max)
 	{
-		LVK_ASSERT(min < max);
+		LVK_ASSERT(min <= max);
 
 		return (value >= min) && (value <= max);
 	}
