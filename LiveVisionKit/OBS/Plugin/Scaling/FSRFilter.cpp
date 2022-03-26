@@ -211,6 +211,12 @@ namespace lvk
 			obs_source_get_base_height(filter_target)
 		);
 
+		if(input_size.area() == 0)
+		{
+			obs_source_skip_video_filter(m_Context);
+			return;
+		}
+
 		// Update output size
 		if(m_MatchSourceSize)
 			m_OutputSize = cv::Size2f(input_size) * m_SizeMultiplier;
@@ -223,30 +229,30 @@ namespace lvk
 			m_OutputSize.height = video_info.base_height;
 		}
 
-		const cv::Rect crop_region(m_TLCrop, input_size - m_BRCrop - m_TLCrop);
-		const bool crop_valid = crop_region.x < crop_region.br().x
-							 && crop_region.y < crop_region.br().y
-							 && crop_region.width > 0
-							 && crop_region.height > 0;
+		const bool crop_valid = m_TLCrop.width + m_BRCrop.width < input_size.width
+							 && m_TLCrop.height + m_BRCrop.height < input_size.height;
 
-		if(m_MaintainAspectRatio && crop_valid)
+		const cv::Rect scaling_region = crop_valid ? cv::Rect(m_TLCrop, input_size - m_BRCrop - m_TLCrop)
+										: cv::Rect({0,0}, input_size);
+
+		if(m_MaintainAspectRatio)
 		{
-			const auto scale = std::min<float>(
-				static_cast<float>(m_OutputSize.width) / crop_region.width,
-				static_cast<float>(m_OutputSize.height) / crop_region.height
+			// To maintain the aspect ratio, the scaling of each dimension must be the same.
+			// There are two possible scalings to use, we need to ensure that we pick the one
+			// which doesn't result in scaling beyond the user's output dimensions.
+			const auto safe_scale = std::min<float>(
+				static_cast<float>(m_OutputSize.width) / scaling_region.width,
+				static_cast<float>(m_OutputSize.height) / scaling_region.height
 			);
-			m_OutputSize = cv::Size2f(crop_region.size()) * scale;
+
+			m_OutputSize = cv::Size2f(scaling_region.size()) * safe_scale;
 		}
 
 		// Enforce maximum output in case the user tries to do something ridiculous
 		m_OutputSize.width = std::min(m_OutputSize.width, OUTPUT_MAX_DIMENSION);
 		m_OutputSize.height = std::min(m_OutputSize.height, OUTPUT_MAX_DIMENSION);
 
-		FSREffect::Get().scale(
-			m_Context,
-			crop_valid ? crop_region : cv::Rect({0,0}, input_size),
-			m_OutputSize
-		);
+		FSREffect::Get().scale(m_Context, scaling_region, m_OutputSize);
 	}
 
 
