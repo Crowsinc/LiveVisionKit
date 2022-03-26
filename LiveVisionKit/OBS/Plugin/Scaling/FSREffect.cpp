@@ -51,24 +51,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FSREffect::scale(obs_source_t* context, const cv::Size& output_size)
-	{
-		const auto filter_target = obs_filter_get_target(context);
-		const cv::Size input_size(
-			obs_source_get_base_width(filter_target),
-			obs_source_get_base_height(filter_target)
-		);
-
-		render_easu(
-			context,
-			input_size,
-			cv::Rect({0,0}, input_size),
-			output_size
-		);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	void FSREffect::scale(obs_source_t* context, const cv::Rect& region, const cv::Size& output_size)
 	{
 		const auto filter_target = obs_filter_get_target(context);
@@ -77,33 +59,17 @@ namespace lvk
 			obs_source_get_base_height(filter_target)
 		);
 
-		render_easu(
-			context,
-			input_size,
-			region,
-			output_size
-		);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FSREffect::render_easu(
-		obs_source_t* context,
-		const cv::Size& input_size,
-		const cv::Rect& region,
-		const cv::Size& output_size
-	)
-	{
-		LVK_ASSERT(input_size.width >= 0 && input_size.height >= 0);
 		LVK_ASSERT(output_size.width >= 0 && output_size.height >= 0);
-		LVK_ASSERT(region.x >= 0 && region.y >= 0 && region.width >= 0 && region.height >= 0);
+		LVK_ASSERT(between(region.x, 0, input_size.width) && between(region.br().x, region.x, input_size.width));
+		LVK_ASSERT(between(region.y, 0, input_size.height) && between(region.br().y, region.y, input_size.height));
 
-		// Silently skip if no scaling is needed or any of the sizes are zero. Dont crash
-		// because there are scenarios where zero sizing is expected or reasonable input.
-		if(region.size() == output_size || region.area() == 0 || input_size.area() == 0 || output_size.area() == 0)
+		// Silently skip if no scaling/cropping is needed or any of the sizes are zero.
+		// Dont crash on zero sizing because there are scenarios where it is expected or reasonable input.
+		const bool invalid_output = input_size.area() == 0 || region.area() == 0 || output_size.area() == 0;
+		if((input_size == output_size && region.size() == input_size) || invalid_output)
 			obs_source_skip_video_filter(context);
 
-		if(obs_source_process_filter_begin(context, GS_RGBA, OBS_NO_DIRECT_RENDERING))
+		if(obs_source_process_filter_begin(context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		{
 			// Input Size
 			vec2 param;

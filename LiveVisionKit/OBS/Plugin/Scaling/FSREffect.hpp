@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "LiveVisionKit.hpp"
 
 namespace lvk
@@ -28,20 +30,11 @@ namespace lvk
 
 		FSREffect();
 
-		void scale(obs_source_t* context, const cv::Size& output_size);
+		virtual ~FSREffect() = default;
 
 		void scale(obs_source_t* context, const cv::Rect& region, const cv::Size& output_size);
 
 		bool validate() const override;
-
-	private:
-
-		void render_easu(
-			obs_source_t* context,
-			const cv::Size& input_size,
-			const cv::Rect& region,
-			const cv::Size& output_size
-		);
 
 	private:
 
