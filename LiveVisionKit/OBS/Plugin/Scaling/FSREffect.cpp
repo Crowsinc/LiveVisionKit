@@ -67,7 +67,10 @@ namespace lvk
 		// Dont crash on zero sizing because there are scenarios where it is expected or reasonable input.
 		const bool invalid_output = input_size.area() == 0 || region.area() == 0 || output_size.area() == 0;
 		if((input_size == output_size && region.size() == input_size) || invalid_output)
+		{
 			obs_source_skip_video_filter(context);
+			return;
+		}
 
 		if(obs_source_process_filter_begin(context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		{
