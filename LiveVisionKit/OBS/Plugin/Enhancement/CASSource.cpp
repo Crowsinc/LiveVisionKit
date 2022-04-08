@@ -20,7 +20,7 @@
 
 //---------------------------------------------------------------------------------------------------------------------
 
-constexpr auto CAS_FILTER_NAME = "(LVK) FidelityFX Contrast Adaptive Sharpening";
+constexpr auto CAS_FILTER_NAME = "(LVK) AMD FidelityFX Sharpening";
 
 //---------------------------------------------------------------------------------------------------------------------
 
