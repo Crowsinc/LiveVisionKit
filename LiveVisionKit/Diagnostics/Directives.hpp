@@ -27,6 +27,8 @@
 
 #define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@" __FILE__ "@%s(..) ERROR " #msg "\n", __func__);
 
+#define LVK_ERROR_IF(pred, msg) if(pred){blog(LOG_ERROR, "LVK@" __FILE__ "@%s(..) ERROR " #msg "\n", __func__);}
+
 #else
 
 #define LVK_ASSERT(assertion)
@@ -34,6 +36,8 @@
 #define LVK_CRASH(msg)
 
 #define LVK_ERROR(msg)
+
+#define LVK_ERROR_IF(pred, msg)
 
 #endif
 
