@@ -59,14 +59,22 @@ namespace lvk
 			obs_source_get_base_height(filter_target)
 		);
 
-		LVK_ASSERT(output_size.width >= 0 && output_size.height >= 0);
-		LVK_ASSERT(between(region.x, 0, input_size.width) && between(region.br().x, region.x, input_size.width));
-		LVK_ASSERT(between(region.y, 0, input_size.height) && between(region.br().y, region.y, input_size.height));
+		const bool invalid_params = input_size.area() == 0 || region.area() == 0 || output_size.area() == 0
+								 || output_size.width <= 0 || output_size.height <= 0
+				 	 	 	 	 || !between(region.x, 0, input_size.width)
+				 	 	 	 	 || !between(region.br().x, region.x, input_size.width)
+				 	 	 	 	 || !between(region.y, 0, input_size.height)
+				 	 	 	 	 || !between(region.br().y, region.y, input_size.height);
 
-		// Silently skip if no scaling/cropping is needed or any of the sizes are zero.
-		// Dont crash on zero sizing because there are scenarios where it is expected or reasonable input.
-		const bool invalid_output = input_size.area() == 0 || region.area() == 0 || output_size.area() == 0;
-		if((input_size == output_size && region.size() == input_size) || invalid_output)
+		// NOTE: Only error on invalid params because there are many edge cases where a filter may
+		// have gargabe sizing data for a single frame. Given the inconsequential nature of these
+		// cases, it is better to report it and continue instead of crashing the experience for the
+		// user. If something is actually wrong, it should be fairly obvious from the log and the
+		// scaling not working.
+		LVK_ERROR_IF(invalid_params, "Skipping due to invalid parameters")
+
+		// Silently skip scalingi s unncecessary or the output is invalid.
+		if((input_size == output_size && region.size() == input_size) || invalid_params)
 		{
 			obs_source_skip_video_filter(context);
 			return;
