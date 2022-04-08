@@ -35,6 +35,7 @@ extern void register_fsr_source()
 	config.destroy = lvk::dispatch::filter_delete<lvk::FSRFilter>;
 
 	config.update = lvk::dispatch::filter_configure<lvk::FSRFilter>;
+	config.video_tick = lvk::dispatch::filter_tick<lvk::FSRFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::FSRFilter>;
 
 	config.get_name = [](void* data){return FSR_FILTER_NAME;};

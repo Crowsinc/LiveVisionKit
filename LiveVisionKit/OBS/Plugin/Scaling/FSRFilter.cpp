@@ -164,7 +164,7 @@ namespace lvk
 				if(tokens.size() == 3)
 					m_SizeMultiplier = tokens[2];
 
-				m_OutputSize = {
+				m_RequestedSize = {
 					static_cast<int>(tokens[0] * m_SizeMultiplier),
 					static_cast<int>(tokens[1] * m_SizeMultiplier)
 				};
@@ -190,8 +190,11 @@ namespace lvk
 
 	FSRFilter::FSRFilter(obs_source_t* context)
 		: m_Context(context),
-		  m_OutputSize(0, 0),
 		  m_SizeMultiplier(1.0),
+		  m_RequestedSize(0,0),
+		  m_InputSize(0,0),
+		  m_OutputSize(0,0),
+		  m_ScalingRegion(0,0,0,0),
 		  m_TLCrop(0,0),
 		  m_BRCrop(0,0),
 		  m_MatchCanvasSize(false),
@@ -203,24 +206,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FSRFilter::render()
+	void FSRFilter::tick()
 	{
-		const auto filter_target = obs_filter_get_target(m_Context);
-		const cv::Size input_size(
-			obs_source_get_base_width(filter_target),
-			obs_source_get_base_height(filter_target)
-		);
+		// NOTE: We set the output size and scaling region here so that the width() and height()
+		// functions return the correct sizing for the render, which avoids glitchy looking
+		// interactions with the bounding boxes. The input size come from the render tick so it
+		// will be outdated for a frame. This should be imperceptible to the viewer.
 
-		if(input_size.area() == 0)
-		{
-			obs_source_skip_video_filter(m_Context);
-			return;
-		}
+		// Output size selection
 
-		// Update output size
-		if(m_MatchSourceSize)
-			m_OutputSize = cv::Size2f(input_size) * m_SizeMultiplier;
-		else if(m_MatchCanvasSize)
+		if(m_MatchCanvasSize)
 		{
 			obs_video_info video_info;
 			obs_get_video_info(&video_info);
@@ -228,12 +223,19 @@ namespace lvk
 			m_OutputSize.width = video_info.base_width;
 			m_OutputSize.height = video_info.base_height;
 		}
+		else if(m_MatchSourceSize)
+			m_OutputSize = cv::Size2f(m_InputSize) * m_SizeMultiplier;
+		else
+			m_OutputSize = m_RequestedSize;
 
-		const bool crop_valid = m_TLCrop.width + m_BRCrop.width < input_size.width
-							 && m_TLCrop.height + m_BRCrop.height < input_size.height;
 
-		const cv::Rect scaling_region = crop_valid ? cv::Rect(m_TLCrop, input_size - m_BRCrop - m_TLCrop)
-										: cv::Rect({0,0}, input_size);
+		// Crop application
+
+		const bool crop_valid = m_TLCrop.width + m_BRCrop.width < m_InputSize.width
+							 && m_TLCrop.height + m_BRCrop.height < m_InputSize.height;
+
+		m_ScalingRegion = crop_valid ? cv::Rect(m_TLCrop, m_InputSize - m_BRCrop - m_TLCrop)
+										: cv::Rect({0,0}, m_InputSize);
 
 		if(m_MaintainAspectRatio)
 		{
@@ -241,20 +243,31 @@ namespace lvk
 			// There are two possible scalings to use, we need to ensure that we pick the one
 			// which doesn't result in scaling beyond the user's output dimensions.
 			const auto safe_scale = std::min<float>(
-				static_cast<float>(m_OutputSize.width) / scaling_region.width,
-				static_cast<float>(m_OutputSize.height) / scaling_region.height
+				static_cast<float>(m_OutputSize.width) / m_ScalingRegion.width,
+				static_cast<float>(m_OutputSize.height) / m_ScalingRegion.height
 			);
 
-			m_OutputSize = cv::Size2f(scaling_region.size()) * safe_scale;
+			m_OutputSize = cv::Size2f(m_ScalingRegion.size()) * safe_scale;
 		}
 
 		// Enforce maximum output in case the user tries to do something ridiculous
 		m_OutputSize.width = std::min(m_OutputSize.width, OUTPUT_MAX_DIMENSION);
 		m_OutputSize.height = std::min(m_OutputSize.height, OUTPUT_MAX_DIMENSION);
-
-		FSREffect::Get().scale(m_Context, scaling_region, m_OutputSize);
 	}
 
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FSRFilter::render()
+	{
+		const auto filter_target = obs_filter_get_target(m_Context);
+		m_InputSize = cv::Size(
+			obs_source_get_base_width(filter_target),
+			obs_source_get_base_height(filter_target)
+		);
+
+		// Bad parameters will automatically get rejected by the effect.
+		FSREffect::Get().scale(m_Context, m_ScalingRegion, m_OutputSize);
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

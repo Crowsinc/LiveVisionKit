@@ -32,6 +32,8 @@ namespace lvk
 
 		FSRFilter(obs_source_t* context);
 
+		void tick();
+
 		void render();
 
 		void configure(obs_data_t* settings);
@@ -46,8 +48,11 @@ namespace lvk
 
 		obs_source_t* m_Context;
 
-		cv::Size m_OutputSize;
 		float m_SizeMultiplier;
+		cv::Size m_RequestedSize;
+		cv::Size m_InputSize, m_OutputSize;
+
+		cv::Rect m_ScalingRegion;
 		cv::Size m_TLCrop, m_BRCrop;
 
 		bool m_MatchCanvasSize, m_MatchSourceSize;
