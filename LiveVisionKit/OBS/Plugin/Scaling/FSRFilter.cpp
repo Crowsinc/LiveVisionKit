@@ -143,7 +143,6 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-
 		m_SizeMultiplier = 1.0;
 		m_MatchCanvasSize = m_MatchSourceSize = false;
 
@@ -185,7 +184,6 @@ namespace lvk
 		m_TLCrop.height = obs_data_get_int(settings, PROP_CROP_TOP);
 		m_BRCrop.width = obs_data_get_int(settings, PROP_CROP_RIGHT);
 		m_BRCrop.height = obs_data_get_int(settings, PROP_CROP_BOTTOM);
-		std::cout << "CONFIGURE - " << output_pattern << std::endl;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
