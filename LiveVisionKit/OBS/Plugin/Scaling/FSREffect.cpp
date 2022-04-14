@@ -66,12 +66,12 @@ namespace lvk
 				 	 	 	 	 || !between(region.y, 0, input_size.height)
 				 	 	 	 	 || !between(region.br().y, region.y, input_size.height);
 
-		// NOTE: Only error on invalid params because there are many edge cases where a filter may
+		// NOTE: Only warn on invalid params because there are many edge cases where a filter may
 		// have gargabe sizing data for a single frame. Given the inconsequential nature of these
 		// cases, it is better to report it and continue instead of crashing the experience for the
 		// user. If something is actually wrong, it should be fairly obvious from the log and the
 		// scaling not working.
-		LVK_ERROR_IF(invalid_params, "Skipping due to invalid parameters")
+		LVK_WARN_IF(invalid_params, "Skipping due to invalid parameters")
 
 		// Silently skip scalingi s unncecessary or the output is invalid.
 		if((input_size == output_size && region.size() == input_size) || invalid_params)
