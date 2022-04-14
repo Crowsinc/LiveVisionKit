@@ -12,7 +12,7 @@ LiveVisionKit (LVK) is an OBS Studio plugin which provides GPU accelerated real-
 
 # Supporting the Project
 ### Partnerships & Collaborations
-LiveVisionKit is currently focussed on providing purpose-built tools for remote IRL streaming. If you are an established IRL streamer, I'm interested in collaborating to find out how LiveVisionKit can be best configured and improved to fit your needs. Please contact me through the email listed below. 
+LiveVisionKit is currently focused on providing purpose-built tools for remote IRL streaming. If you are an established IRL streamer, I'm interested in collaborating to find out how LiveVisionKit can be best configured and improved to fit your needs. Please contact me through the email listed below. 
 
 **Business Contact:** crowsinc.dev@gmail.com
 
