@@ -18,16 +18,24 @@
 #pragma once
 
 #include <obs.h>
+#include <string>
 
-#ifndef DISABLE_DIRECTIVES
+// taken from https://stackoverflow.com/a/8488201
+#ifdef _WIN32
+#define LVK_FILE (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else 
+#define LVK_FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
 
-#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@" __FILE__ "@%s(..) FAILED " #assertion "\n", __func__);}
+#ifndef DISABLE_CHECKS
 
-#define LVK_CRASH(msg) bcrash("LVK@" __FILE__ "@%s(..) CRASHED " #msg "\n", __func__);
+#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@%s@%s(..) FAILED " #assertion "\n", LVK_FILE, __func__);}
 
-#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@" __FILE__ "@%s(..) ERROR " #msg "\n", __func__);
+#define LVK_CRASH(msg) bcrash("LVK@%s@%s(..) CRASHED " #msg "\n", LVK_FILE, __func__);
 
-#define LVK_ERROR_IF(pred, msg) if(pred){blog(LOG_ERROR, "LVK@" __FILE__ "@%s(..) ERROR " #msg "\n", __func__);}
+#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg "\n", LVK_FILE, __func__);
+
+#define LVK_ERROR_IF(pred, msg) if(pred){blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg "\n", LVK_FILE, __func__);}
 
 #else
 
