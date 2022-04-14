@@ -143,6 +143,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+
 		m_SizeMultiplier = 1.0;
 		m_MatchCanvasSize = m_MatchSourceSize = false;
 
@@ -184,6 +185,7 @@ namespace lvk
 		m_TLCrop.height = obs_data_get_int(settings, PROP_CROP_TOP);
 		m_BRCrop.width = obs_data_get_int(settings, PROP_CROP_RIGHT);
 		m_BRCrop.height = obs_data_get_int(settings, PROP_CROP_BOTTOM);
+		std::cout << "CONFIGURE - " << output_pattern << std::endl;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -192,8 +194,8 @@ namespace lvk
 		: m_Context(context),
 		  m_SizeMultiplier(1.0),
 		  m_RequestedSize(0,0),
-		  m_InputSize(0,0),
-		  m_OutputSize(0,0),
+		  m_InputSize(0, 0),
+		  m_OutputSize(0, 0),
 		  m_ScalingRegion(0,0,0,0),
 		  m_TLCrop(0,0),
 		  m_BRCrop(0,0),
@@ -228,7 +230,6 @@ namespace lvk
 		else
 			m_OutputSize = m_RequestedSize;
 
-
 		// Crop application
 
 		const bool crop_valid = m_TLCrop.width + m_BRCrop.width < m_InputSize.width
@@ -237,7 +238,11 @@ namespace lvk
 		m_ScalingRegion = crop_valid ? cv::Rect(m_TLCrop, m_InputSize - m_BRCrop - m_TLCrop)
 										: cv::Rect({0,0}, m_InputSize);
 
-		if(m_MaintainAspectRatio)
+		// NOTE: Only perform the aspect ratio calculation if we
+		// have a non-zero scaling region defined otherwise we
+		// will divide by zero. There are some cases where the
+		// region may be zero for a few frames.
+		if(m_MaintainAspectRatio && m_ScalingRegion.area() != 0)
 		{
 			// To maintain the aspect ratio, the scaling of each dimension must be the same.
 			// There are two possible scalings to use, we need to ensure that we pick the one
