@@ -615,6 +615,7 @@ namespace lvk
 	bool import_yuv(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
+		LVK_ASSERT(src->format != VIDEO_FORMAT_NONE);
 
 		const auto& frame = *src;
 
@@ -685,6 +686,7 @@ namespace lvk
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(!src.empty());
 		LVK_ASSERT(src.type() == CV_8UC3);
+		LVK_ASSERT(dst->format != VIDEO_FORMAT_NONE);
 
 		auto& frame = *dst;
 
