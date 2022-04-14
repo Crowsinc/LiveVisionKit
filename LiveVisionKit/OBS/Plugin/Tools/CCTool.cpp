@@ -147,7 +147,8 @@ namespace lvk
 
 	bool CCTool::SaveProfile(const CameraParameters& parameters, const std::string& name)
 	{
-		LVK_ASSERT(parameters.camera_matrix.size() == cv::Size(3,3) && parameters.camera_matrix.type() == CV_64FC1);
+		LVK_ASSERT(parameters.camera_matrix.type() == CV_64FC1);
+		LVK_ASSERT(parameters.camera_matrix.size() == cv::Size(3,3));
 		LVK_ASSERT(parameters.distortion_coefficients.size() == 5);
 
 		config_t* config = load_profile_config();

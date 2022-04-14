@@ -55,7 +55,8 @@ namespace lvk::dispatch
 	template<typename T>
 	void* filter_create_auto(obs_data_t* settings, obs_source_t* context)
 	{
-		LVK_ASSERT(context != nullptr && settings != nullptr);
+		LVK_ASSERT(context != nullptr);
+		LVK_ASSERT(settings != nullptr);
 
 		auto filter = new T(context);
 

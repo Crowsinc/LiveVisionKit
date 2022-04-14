@@ -97,7 +97,8 @@ namespace lvk
 
 	Homography FrameTracker::track(const cv::UMat& next_frame)
 	{
-		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
+		LVK_ASSERT(!next_frame.empty());
+		LVK_ASSERT(next_frame.type() == CV_8UC1);
 
 		prepare_state();
 

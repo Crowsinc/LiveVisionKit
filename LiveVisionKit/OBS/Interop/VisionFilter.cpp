@@ -72,7 +72,8 @@ namespace lvk
 	VisionFilter::VisionFilter(const obs_source_t* filter)
 		: m_Context(filter)
 	{
-		LVK_ASSERT(m_Context != nullptr && s_Filters.count(filter) == 0);
+		LVK_ASSERT(m_Context != nullptr);
+		LVK_ASSERT(s_Filters.count(filter) == 0);
 
 		s_Filters.insert(filter);
 	}

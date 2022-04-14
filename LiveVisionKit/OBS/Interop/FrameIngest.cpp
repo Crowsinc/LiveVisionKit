@@ -82,8 +82,12 @@ namespace lvk
 
 	void merge_planes(const cv::UMat& p1, const cv::UMat& p2, const cv::UMat& p3, cv::UMat& dst)
 	{
-		LVK_ASSERT(p1.type() == CV_8UC1 && p2.type() == CV_8UC1 && p3.type() == CV_8UC1);
-		LVK_ASSERT(!p1.empty() && !p2.empty() && !p3.empty());
+		LVK_ASSERT(p1.type() == CV_8UC1);
+		LVK_ASSERT(p2.type() == CV_8UC1);
+		LVK_ASSERT(p3.type() == CV_8UC1);
+		LVK_ASSERT(!p1.empty());
+		LVK_ASSERT(!p2.empty());
+		LVK_ASSERT(!p3.empty());
 
 		cv::merge(std::vector<cv::UMat>{p1, p2, p3}, dst);
 	}
@@ -92,8 +96,10 @@ namespace lvk
 
 	void merge_planes(const cv::UMat& p1, const cv::UMat& p2, cv::UMat& dst)
 	{
-		LVK_ASSERT(p1.type() == CV_8UC1 && p2.type() == CV_8UC1);
-		LVK_ASSERT(!p1.empty() && !p2.empty());
+		LVK_ASSERT(p1.type() == CV_8UC1);
+		LVK_ASSERT(p2.type() == CV_8UC1);
+		LVK_ASSERT(!p1.empty());
+		LVK_ASSERT(!p2.empty());
 
 		cv::merge(std::vector<cv::UMat>{p1, p2}, dst);
 	}
@@ -102,7 +108,8 @@ namespace lvk
 
 	void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3)
 	{
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+		LVK_ASSERT(src.type() == CV_8UC3);
+		LVK_ASSERT(!src.empty());
 
 		p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -115,7 +122,8 @@ namespace lvk
 
 	void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2)
 	{
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC2);
+		LVK_ASSERT(!src.empty());
+		LVK_ASSERT(src.type() == CV_8UC2);
 
 		p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 		p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -157,8 +165,9 @@ namespace lvk
 		const uint32_t plane_1_channels
 	)
 	{
+		LVK_ASSERT(src.data[0] != nullptr);
+		LVK_ASSERT(src.data[1] != nullptr);
 		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr);
 		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
@@ -203,8 +212,10 @@ namespace lvk
 		const cv::Size plane_2_size,
 		const uint32_t plane_2_channels
 	){
+		LVK_ASSERT(src.data[0] != nullptr);
+		LVK_ASSERT(src.data[1] != nullptr);
+		LVK_ASSERT(src.data[2] != nullptr);
 		LVK_ASSERT(is_frame_initialised(src));
-		LVK_ASSERT(src.data[0] != nullptr && src.data[1] != nullptr && src.data[2] != nullptr);
 		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
@@ -275,9 +286,11 @@ namespace lvk
 		const cv::UMat plane_1,
 		obs_source_frame& dst
 	){
+		LVK_ASSERT(!plane_0.empty())
+		LVK_ASSERT(!plane_1.empty());
+		LVK_ASSERT(dst.data[0] != nullptr);
+		LVK_ASSERT(dst.data[1] != nullptr);
 		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(!plane_0.empty() && !plane_1.empty());
-		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr);
 		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
 		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
 		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
@@ -311,9 +324,13 @@ namespace lvk
 		const cv::UMat plane_2,
 		obs_source_frame& dst
 	){
+		LVK_ASSERT(!plane_0.empty());
+		LVK_ASSERT(!plane_1.empty());
+		LVK_ASSERT(!plane_2.empty());
+		LVK_ASSERT(dst.data[0] != nullptr);
+		LVK_ASSERT(dst.data[1] != nullptr);
+		LVK_ASSERT(dst.data[2] != nullptr);
 		LVK_ASSERT(is_frame_initialised(dst));
-		LVK_ASSERT(!plane_0.empty() && !plane_1.empty() && !plane_2.empty());
-		LVK_ASSERT(dst.data[0] != nullptr && dst.data[1] != nullptr && dst.data[2] != nullptr);
 		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
 		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
 		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
@@ -369,7 +386,9 @@ namespace lvk
 			chroma_size, 1
 		);
 
-		LVK_ASSERT(!y_roi.empty() && !u_roi.empty() && !v_roi.empty())
+		LVK_ASSERT(!y_roi.empty());
+		LVK_ASSERT(!u_roi.empty());
+		LVK_ASSERT(!v_roi.empty());
 
 		if(subsampled_width || subsampled_height)
 		{
@@ -664,7 +683,8 @@ namespace lvk
 	bool export_yuv(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
-		LVK_ASSERT(!src.empty() && src.type() == CV_8UC3);
+		LVK_ASSERT(!src.empty());
+		LVK_ASSERT(src.type() == CV_8UC3);
 
 		auto& frame = *dst;
 

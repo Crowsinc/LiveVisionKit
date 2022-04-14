@@ -347,7 +347,8 @@ namespace lvk
 
 	void VSFilter::reset_buffers()
 	{
-		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN && m_SmoothingRadius % 2 == 0);
+		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN);
+		LVK_ASSERT(m_SmoothingRadius % 2 == 0);
 
 		// NOTE: Must release all OBS frames before clearing
 		// the frame buffer queue to avoid leaking memory.

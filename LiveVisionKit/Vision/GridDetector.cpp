@@ -55,8 +55,9 @@ namespace lvk
 		  m_FineAreaRatio(m_FineGridSize.area() / m_CoarseGridSize.area()),
 		  m_FineWidthRatio(m_FineGridSize.width / m_CoarseGridSize.width)
 	{
+		LVK_ASSERT(resolution.width > 0);
+		LVK_ASSERT(resolution.height > 0);
 		LVK_ASSERT(between(detection_load, 0.0f, 1.0f));
-		LVK_ASSERT(resolution.width > 0 && resolution.height > 0);
 		LVK_ASSERT(between(coarse_block_size.width, 1, resolution.width));
 		LVK_ASSERT(between(coarse_block_size.height, 1, resolution.height));
 		LVK_ASSERT(between(fine_block_size.width, 1, coarse_block_size.width));
@@ -119,7 +120,8 @@ namespace lvk
 
 	void GridDetector::detect(cv::UMat& frame, std::vector<cv::Point2f>& points)
 	{
-		LVK_ASSERT(frame.size() == resolution() && frame.type() == CV_8UC1);
+		LVK_ASSERT(frame.size() == resolution());
+		LVK_ASSERT(frame.type() == CV_8UC1);
 
 		// Detect new features over the coarse grid and process into the fine grid
 		for(auto& [bounds, threshold, active] : m_CoarseGrid)

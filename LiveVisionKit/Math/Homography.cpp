@@ -52,7 +52,9 @@ namespace lvk
 
 	Homography Homography::FromAffineMatrix(const cv::Mat& affine)
 	{
-		LVK_ASSERT(affine.cols == 3 && affine.rows == 2 && affine.type() == CV_64FC1);
+		LVK_ASSERT(affine.cols == 3);
+		LVK_ASSERT(affine.rows == 2);
+		LVK_ASSERT(affine.type() == CV_64FC1);
 
 		// Copy affine data over
 		Homography h = Homography::Identity();
@@ -74,7 +76,9 @@ namespace lvk
 	Homography::Homography(const cv::Mat& matrix)
 		: m_Matrix(matrix.clone())
 	{
-		LVK_ASSERT(matrix.cols == 3 && matrix.rows == 3 && matrix.type() == CV_64FC1);
+		LVK_ASSERT(matrix.cols == 3);
+		LVK_ASSERT(matrix.rows == 3);
+		LVK_ASSERT(matrix.type() == CV_64FC1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -94,7 +94,8 @@ namespace lvk
 
 	obs_source_frame* FrameBuffer::download() const
 	{
-		LVK_ASSERT(m_FrameHandle != nullptr && !frame.empty());
+		LVK_ASSERT(m_FrameHandle != nullptr);
+		LVK_ASSERT(!frame.empty());
 
 		frame >> m_FrameHandle;
 		return m_FrameHandle;
