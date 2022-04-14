@@ -28,7 +28,7 @@ OBS_DECLARE_MODULE()
 
 MODULE_EXPORT const char* obs_module_name(void)
 {
-	return "LiveVisionKit v1.0.1";
+	return "LiveVisionKit v1.1.1";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
