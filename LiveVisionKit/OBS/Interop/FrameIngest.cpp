@@ -49,14 +49,14 @@
 
 bool operator<<(cv::UMat& dst, const obs_source_frame* src)
 {
-	return lvk::import_yuv(src, dst);
+	return lvk::import_frame(src, dst);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 bool operator>>(const cv::UMat& src, obs_source_frame* dst)
 {
-	return lvk::export_yuv(src, dst);
+	return lvk::export_frame(src, dst);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -786,7 +786,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool import_yuv(const obs_source_frame* src, cv::UMat& dst)
+	void import_frame(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
 		LVK_ASSERT(src->format != VIDEO_FORMAT_NONE);
@@ -848,14 +848,12 @@ namespace lvk
 			// Unsupported formats
 			default:
 				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
-				return false;
 		}
-		return true;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool export_yuv(const cv::UMat& src, obs_source_frame* dst)
+	void export_frame(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(!src.empty());
@@ -919,13 +917,10 @@ namespace lvk
 			// Unsupported formats
 			default:
 				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
-				return false;
 		}
 
 		frame.height = src.rows;
 		frame.width = src.cols;
-
-		return true;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
