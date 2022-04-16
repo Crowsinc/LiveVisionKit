@@ -65,7 +65,8 @@ namespace lvk
 {
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void initialize_interop_context() //TODO: needs to run before anything OpenCL happens!! So call in vision filter constructor
+	//TODO: needs to run before anything OpenCL happens!! So call in vision filter constructor
+	void try_initialize_interop_context()
 	{
 		static bool initialized = false;
 		if (!initialized)
@@ -83,7 +84,7 @@ namespace lvk
 
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void acquire(obs_source_t* source, cv::UMat& dst)
+	bool acquire(obs_source_t* source, cv::UMat& frame)
 	{
 		LVK_ASSERT(source != nullptr);
 		
@@ -100,29 +101,85 @@ namespace lvk
 		gs_texrender_reset(render_texture);
 
 		// Render the source to our render texture
+		// NOTE: Referenced from official gpu delay filter
+
+		gs_blend_state_push();
+		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+
 		if (gs_texrender_begin(render_texture, width, height))
 		{
-			uint32_t parent_flags = obs_source_get_output_flags(target);
-			bool custom_draw = (parent_flags & OBS_SOURCE_CUSTOM_DRAW) != 0;
-			bool async = (parent_flags & OBS_SOURCE_ASYNC) != 0;
-			struct vec4 clear_color;
+			const auto target_flags = obs_source_get_output_flags(target);
+			const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0b0
+				                          && (target_flags & OBS_SOURCE_ASYNC) == 0b0;
 
+			vec4 clear_color;
 			vec4_zero(&clear_color);
 			gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
 			gs_ortho(0.0f, width, 0.0f, height, -100.0f, 100.0f);
 
-			if (target == parent && !custom_draw && !async)
+			if(target == parent && allow_direct_render)
 				obs_source_default_render(target);
 			else
 				obs_source_video_render(target);
 
 			gs_texrender_end(render_texture);
-
-			// Use Interop procedures to convert our texture to a UMat
-			import_texture(gs_texrender_get_texture(render_texture), dst);
 		}
 		else
-			LVK_ERROR("Unable to render texture for acquisition");
+		{
+			LVK_WARN("Unable to render texture for acquisition");
+			return false;
+		}
+		
+		gs_blend_state_pop();
+
+		// Use Interop procedures to convert our texture to a UMat
+		import_texture(gs_texrender_get_texture(render_texture), frame);
+		
+		return true;
+	}
+	
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void release(obs_source_t* source, cv::UMat& frame)
+	{
+		obs_enter_graphics();
+
+		// Use interop procedures to conver UMat back to texture
+		static gs_texture_t* texture = nullptr;
+
+		const auto width = texture ? gs_texture_get_width(texture) : frame.cols;
+		const auto height = texture ? gs_texture_get_height(texture) : frame.rows;
+
+		if (texture == nullptr || width != frame.cols || height != frame.rows)
+		{
+			gs_texture_destroy(texture);
+			texture = gs_texture_create(width, height, GS_RGBA_UNORM, 1, nullptr, 0);
+		}
+
+		export_texture(frame, texture);
+
+		// Render texture as source output
+		// NOTE: Referenced from official gpu delay filter
+
+		auto base_effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+		
+		const bool new_srgb_setting = gs_get_linear_srgb();
+		const bool prev_srgb_setting = gs_framebuffer_srgb_enabled();
+
+		gs_enable_framebuffer_srgb(new_srgb_setting);
+
+		auto image_param = gs_effect_get_param_by_name(base_effect, "image");
+		if (new_srgb_setting)
+			gs_effect_set_texture_srgb(image_param, texture);
+		else
+			gs_effect_set_texture(image_param, texture);
+
+		while (gs_effect_loop(base_effect, "Draw"))
+			gs_draw_sprite(texture, 0, width, height);
+
+		gs_enable_framebuffer_srgb(prev_srgb_setting);
+
+		obs_leave_graphics();
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
@@ -130,6 +187,8 @@ namespace lvk
 	void import_texture(gs_texture_t* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
+
+		//try_initialize_interop_context();
 
 #ifdef _WIN32 // DirextX 11 Interop
 		
@@ -153,6 +212,8 @@ namespace lvk
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
+
+		//try_initialize_interop_context();
 
 #ifdef _WIN32 // DirectX 11 interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
