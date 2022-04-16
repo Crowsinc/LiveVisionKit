@@ -93,7 +93,7 @@ namespace lvk
 		const uint32_t height = obs_source_get_base_height(target);
 
 		static gs_texrender_t* render_texture = gs_texrender_create(
-			gs_color_format::GS_RGBA_UNORM,
+			gs_color_format::GS_BGRX_UNORM,
 			gs_zstencil_format::GS_ZS_NONE
 		);
 
@@ -118,11 +118,7 @@ namespace lvk
 		}
 
 		// Use Interop procedures to convert our texture to a UMat
-
-		gs_texture_t* texture = gs_texrender_get_texture(render_texture);
-
-		import(texture, dst);
-
+		import(gs_texrender_get_texture(render_texture), dst);
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
