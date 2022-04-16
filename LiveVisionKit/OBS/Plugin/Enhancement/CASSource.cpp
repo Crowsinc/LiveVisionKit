@@ -29,7 +29,7 @@ extern void register_cas_source()
 	obs_source_info config = {0};
 	config.id = "LVK~CAS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
-	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB | OBS_SOURCE_CUSTOM_DRAW;
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
 
 	config.create = lvk::dispatch::filter_create_auto<lvk::CASFilter>;
 	config.destroy = lvk::dispatch::filter_delete<lvk::CASFilter>;
