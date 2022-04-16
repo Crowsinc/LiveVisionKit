@@ -29,6 +29,16 @@ namespace lvk
 	// Converts YUV UMat back to OBS frame, preserves dst alpha channel
 	bool export_yuv(const cv::UMat& src, obs_source_frame* dst);
 
+
+	void acquire(const gs_texture* src, const cv::UMat& dst);
+	
+	void release(const cv::UMat& src, const gs_texture* dst);
+
+
+	void acquire_yuv(const obs_source* src, const cv::UMat& dst);
+
+	void release_yuv(const cv::UMat& src, const obs_source* dst);
+
 }
 
 // Calls import_yuv
