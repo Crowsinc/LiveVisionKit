@@ -93,9 +93,11 @@ namespace lvk
 		const uint32_t height = obs_source_get_base_height(target);
 
 		static gs_texrender_t* render_texture = gs_texrender_create(
-			gs_color_format::GS_BGRX_UNORM,
+			gs_color_format::GS_RGBA_UNORM,
 			gs_zstencil_format::GS_ZS_NONE
 		);
+
+		gs_texrender_reset(render_texture);
 
 		// Render the source to our render texture
 		if (gs_texrender_begin(render_texture, width, height))
@@ -115,10 +117,12 @@ namespace lvk
 				obs_source_video_render(target);
 
 			gs_texrender_end(render_texture);
-		}
 
-		// Use Interop procedures to convert our texture to a UMat
-		import_texture(gs_texrender_get_texture(render_texture), dst);
+			// Use Interop procedures to convert our texture to a UMat
+			import_texture(gs_texrender_get_texture(render_texture), dst);
+		}
+		else
+			LVK_ERROR("Unable to render texture for acquisition");
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
@@ -126,7 +130,6 @@ namespace lvk
 	void import_texture(gs_texture_t* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
-		LVK_ASSERT(gs_get_texture_type(src) != GS_UNKNOWN);
 
 #ifdef _WIN32 // DirextX 11 Interop
 		
@@ -148,7 +151,6 @@ namespace lvk
 	void export_texture(cv::UMat& src, gs_texture_t* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
-		LVK_ASSERT(gs_get_texture_type(dst) != GS_UNKNOWN);
 		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
 
