@@ -39,8 +39,3 @@ namespace lvk
 
 }
 
-// Calls import_yuv
-bool operator<<(cv::UMat& dst, const obs_source_frame* src);
-
-// Calls export_yuv
-bool operator>>(const cv::UMat& src, obs_source_frame* dst);

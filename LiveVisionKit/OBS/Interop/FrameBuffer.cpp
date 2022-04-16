@@ -86,7 +86,7 @@ namespace lvk
 	{
 		LVK_ASSERT(frame_handle != nullptr);
 
-		frame << frame_handle;
+		import_frame(frame_handle, frame);
 		m_FrameHandle = frame_handle;
 	}
 
@@ -97,7 +97,7 @@ namespace lvk
 		LVK_ASSERT(m_FrameHandle != nullptr);
 		LVK_ASSERT(!frame.empty());
 
-		frame >> m_FrameHandle;
+		export_frame(frame, m_FrameHandle);
 		return m_FrameHandle;
 	}
 
