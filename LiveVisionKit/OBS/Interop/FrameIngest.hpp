@@ -30,14 +30,11 @@ namespace lvk
 	bool export_yuv(const cv::UMat& src, obs_source_frame* dst);
 
 
-	void acquire(const gs_texture* src, const cv::UMat& dst);
+	void acquire(obs_source_t* source, cv::UMat& dst);
 	
-	void release(const cv::UMat& src, const gs_texture* dst);
+	void import(gs_texture_t* src, cv::UMat& dst);
 
-
-	void acquire_yuv(const obs_source* src, const cv::UMat& dst);
-
-	void release_yuv(const cv::UMat& src, const obs_source* dst);
+	void export(cv::UMat& src, gs_texture_t* dst);
 
 }
 

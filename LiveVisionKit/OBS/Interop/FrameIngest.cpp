@@ -17,10 +17,18 @@
 
 #include "FrameIngest.hpp"
 
-#include "Math/Math.hpp"
-
 #include <tuple>
+
+#include "Math/Math.hpp"
 #include "Diagnostics/Directives.hpp"
+
+#ifdef _WIN32
+#include <dxgi.h>
+#include <d3d11.h>
+#include <opencv2/core/directx.hpp>
+#else
+#include <opencv2/core/opengl.hpp>
+#endif
 
 /* NOTE: All upload conversion operations are to YUV, and are performed on the GPU using thread
  * local cached buffers to maximise performance and avoid expensive GPU memory allocations.
@@ -57,30 +65,115 @@ namespace lvk
 {
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void acquire(const gs_texture* src, const cv::UMat& dst)
+	void initialize_interop_context() //TODO: needs to run before anything OpenCL happens!! So call in vision filter constructor
 	{
+		static bool initialized = false;
+		if (!initialized)
+		{
+			obs_enter_graphics();
+#ifdef _WIN32
+			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
+			cv::directx::ocl::initializeContextFromD3D11Device(device);
+#else
 
+#endif
+			initialized = true;
+		}
+	}
+
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void acquire(obs_source_t* source, cv::UMat& dst)
+	{
+		LVK_ASSERT(source != nullptr);
+		
+		const auto parent = obs_filter_get_target(source);
+		const auto target = obs_filter_get_target(source);
+		const uint32_t width = obs_source_get_base_width(target);
+		const uint32_t height = obs_source_get_base_height(target);
+
+		static gs_texrender_t* render_texture = gs_texrender_create(
+			gs_color_format::GS_RGBA_UNORM,
+			gs_zstencil_format::GS_ZS_NONE
+		);
+
+		// Render the source to our render texture
+		if (gs_texrender_begin(render_texture, width, height))
+		{
+			uint32_t parent_flags = obs_source_get_output_flags(target);
+			bool custom_draw = (parent_flags & OBS_SOURCE_CUSTOM_DRAW) != 0;
+			bool async = (parent_flags & OBS_SOURCE_ASYNC) != 0;
+			struct vec4 clear_color;
+
+			vec4_zero(&clear_color);
+			gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
+			gs_ortho(0.0f, width, 0.0f, height, -100.0f, 100.0f);
+
+			if (target == parent && !custom_draw && !async)
+				obs_source_default_render(target);
+			else
+				obs_source_video_render(target);
+
+			gs_texrender_end(render_texture);
+		}
+
+		// Use Interop procedures to convert our texture to a UMat
+		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		gs_texture_t* texture = gs_texrender_get_texture(render_texture);
+
+		import(texture, buffer);
+
+		// Convert RGBA texture to standardised YUV
+		cv::cvtColor(buffer, dst, cv::COLOR_BGRA2BGR);
+		cv::cvtColor(dst, dst, cv::COLOR_BGR2YUV);
+	}
+
+
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void import(gs_texture_t* src, cv::UMat& dst)
+	{
+		LVK_ASSERT(src != nullptr);
+		LVK_ASSERT(gs_get_texture_type(src) != GS_UNKNOWN);
+
+#ifdef _WIN32 // DirextX 11 Interop
+		
+		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(src));
+
+		// Pre-validate texture format
+		D3D11_TEXTURE2D_DESC desc = {0};
+		texture->GetDesc(&desc);
+		LVK_ASSERT(cv::directx::getTypeFromDXGI_FORMAT(desc.Format) >= 0);
+
+		cv::directx::convertFromD3D11Texture2D(texture, dst);
+#else  // OpenGL Interop
+		// TODO: implement
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-
-	void release(const cv::UMat& src, const gs_texture* dst)
+	
+	void export(cv::UMat& src, gs_texture_t* dst)
 	{
+		LVK_ASSERT(dst != nullptr);
+		LVK_ASSERT(gs_get_texture_type(dst) != GS_UNKNOWN);
+		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
+		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
 
-	}
+#ifdef _WIN32 // DirectX 11 interop
+		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
 
-//---------------------------------------------------------------------------------------------------------------------
+		// Pre-validate texture format
+		D3D11_TEXTURE2D_DESC desc = { 0 };
+		texture->GetDesc(&desc);
+		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
 
-	void acquire_yuv(const obs_source* src, const cv::UMat& dst)
-	{
+		cv::directx::convertToD3D11Texture2D(src, texture);
 
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void release_yuv(const cv::UMat& src, const obs_source* dst)
-	{
-
+#else // OpenGL Interop
+		//TODO: implement
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
