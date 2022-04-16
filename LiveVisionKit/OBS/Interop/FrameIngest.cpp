@@ -118,17 +118,12 @@ namespace lvk
 		}
 
 		// Use Interop procedures to convert our texture to a UMat
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		gs_texture_t* texture = gs_texrender_get_texture(render_texture);
 
-		import(texture, buffer);
+		import(texture, dst);
 
-		// Convert RGBA texture to standardised YUV
-		cv::cvtColor(buffer, dst, cv::COLOR_BGRA2BGR);
-		cv::cvtColor(dst, dst, cv::COLOR_BGR2YUV);
 	}
-
 
 	//---------------------------------------------------------------------------------------------------------------------
 
