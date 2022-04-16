@@ -118,12 +118,12 @@ namespace lvk
 		}
 
 		// Use Interop procedures to convert our texture to a UMat
-		import(gs_texrender_get_texture(render_texture), dst);
+		import_texture(gs_texrender_get_texture(render_texture), dst);
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void import(gs_texture_t* src, cv::UMat& dst)
+	void import_texture(gs_texture_t* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
 		LVK_ASSERT(gs_get_texture_type(src) != GS_UNKNOWN);
@@ -145,7 +145,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 	
-	void export(cv::UMat& src, gs_texture_t* dst)
+	void export_texture(cv::UMat& src, gs_texture_t* dst)
 	{
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(gs_get_texture_type(dst) != GS_UNKNOWN);
