@@ -33,11 +33,11 @@
 
 #define LVK_CRASH(msg) bcrash("LVK@%s@%s(..) CRASHED " #msg, LVK_FILE, __func__);
 
-#define LVK_WARN(msg) blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg "\n", LVK_FILE, __func__)
+#define LVK_WARN(msg) blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg, LVK_FILE, __func__)
 
-#define LVK_WARN_IF(pred, msg) if(pred){blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg "\n", LVK_FILE, __func__);}
+#define LVK_WARN_IF(pred, msg) if(pred){blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg, LVK_FILE, __func__);}
 
-#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg "\n", LVK_FILE, __func__);
+#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg, LVK_FILE, __func__);
 
 #define LVK_ERROR_IF(pred, msg) if(pred){blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg, LVK_FILE, __func__);}
 
