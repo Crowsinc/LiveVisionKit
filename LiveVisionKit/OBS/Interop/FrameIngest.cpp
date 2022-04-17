@@ -190,7 +190,7 @@ namespace lvk
 	{
 		LVK_ASSERT(src != nullptr);
 
-		//try_initialize_interop_context();
+		try_initialize_interop_context();
 
 #ifdef _WIN32 // DirextX 11 Interop
 		
@@ -215,7 +215,7 @@ namespace lvk
 		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
 
-		//try_initialize_interop_context();
+		try_initialize_interop_context();
 
 #ifdef _WIN32 // DirectX 11 interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
