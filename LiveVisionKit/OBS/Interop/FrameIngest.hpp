@@ -23,12 +23,21 @@
 namespace lvk
 {
 
+	// Direct RAM Frame Ingest
+
 	// Converts OBS frame to YUV UMat
 	void import_frame(const obs_source_frame* src, cv::UMat& dst);
 
 	// Converts YUV UMat back to OBS frame, preserves dst alpha channel
 	void export_frame(const cv::UMat& src, obs_source_frame* dst);
 	
+
+	// DX11/OpenGL Interop Ingest
+
+	bool supports_interop();
+
+	void try_initialize_interop_context();
+
 	void import_texture(gs_texture_t* src, cv::UMat& dst);
 
 	void export_texture(cv::UMat& src, gs_texture_t* dst);

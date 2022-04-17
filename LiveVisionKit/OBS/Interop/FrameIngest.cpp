@@ -47,11 +47,29 @@
 
 namespace lvk
 {
+
 	//---------------------------------------------------------------------------------------------------------------------
 
-	//TODO: needs to run before anything OpenCL happens!! So call in vision filter constructor
+	bool supports_interop()
+	{
+		if (!cv::ocl::haveOpenCL())
+			return false;
+		
+		auto& device = cv::ocl::Device::getDefault();
+
+#ifdef _WIN32
+		return device.isExtensionSupported("cl_nv_d3d11_sharing") || device.isExtensionSupported("cl_khr_d3d11_sharing");
+#else
+		return device.isExtensionSupported("cl_khr_gl_sharing");
+#endif
+	}
+
+	//---------------------------------------------------------------------------------------------------------------------
+
 	void try_initialize_interop_context()
 	{
+		LVK_ASSERT(supports_interop());
+
 		static bool initialized = false;
 		if (!initialized)
 		{
