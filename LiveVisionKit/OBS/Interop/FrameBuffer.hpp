@@ -45,9 +45,15 @@ namespace lvk
 
 		obs_source_frame* handle() const;
 
+		void upload(obs_source_frame* frame_handle);
+
 		obs_source_frame* download() const;
 
-		void upload(obs_source_frame* frame_handle);
+		void acquire(obs_source_t* source);
+
+		void render(obs_source_t* source);
+
+		void copy_to(gs_texture_t* texture);
 
 		void operator=(FrameBuffer&& buffer);
 

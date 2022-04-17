@@ -97,8 +97,39 @@ namespace lvk
 		LVK_ASSERT(m_FrameHandle != nullptr);
 		LVK_ASSERT(!frame.empty());
 
+		//TODO: proper handling of errors when the frame is a different size than the frame handle specifies
+
 		export_frame(frame, m_FrameHandle);
 		return m_FrameHandle;
+	}
+	
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameBuffer::acquire(obs_source_t* source)
+	{
+		LVK_ASSERT(source != nullptr);
+	
+		lvk::acquire(source, frame);
+	}
+	
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameBuffer::render(obs_source_t* source)
+	{
+		LVK_ASSERT(source != nullptr);
+		LVK_ASSERT(!frame.empty());
+	
+		lvk::render(source, frame);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void FrameBuffer::copy_to(gs_texture_t* texture)
+	{
+		LVK_ASSERT(texture != nullptr);
+		LVK_ASSERT(!frame.empty());
+		
+		lvk::export_texture(frame, texture);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
