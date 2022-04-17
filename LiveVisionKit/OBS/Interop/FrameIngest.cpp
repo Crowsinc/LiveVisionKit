@@ -88,7 +88,7 @@ namespace lvk
 
 	//---------------------------------------------------------------------------------------------------------------------
 
-	bool acquire(obs_source_t* source, cv::UMat& frame)
+	bool acquire(const obs_source_t* source, cv::UMat& frame)
 	{
 		LVK_ASSERT(source != nullptr);
 		
@@ -144,7 +144,7 @@ namespace lvk
 	
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void render(obs_source_t* source, cv::UMat& frame)
+	void render(cv::UMat& frame)
 	{
 		// Use interop procedures to conver UMat back to texture
 		static gs_texture_t* texture = nullptr;

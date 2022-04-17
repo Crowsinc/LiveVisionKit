@@ -105,7 +105,7 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::acquire(obs_source_t* source)
+	void FrameBuffer::acquire(const obs_source_t* source)
 	{
 		LVK_ASSERT(source != nullptr);
 	
@@ -114,12 +114,11 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::render(obs_source_t* source)
+	void FrameBuffer::render()
 	{
-		LVK_ASSERT(source != nullptr);
 		LVK_ASSERT(!frame.empty());
 	
-		lvk::render(source, frame);
+		lvk::render(frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

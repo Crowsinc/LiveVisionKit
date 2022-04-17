@@ -42,9 +42,9 @@ namespace lvk
 
 	void export_texture(cv::UMat& src, gs_texture_t* dst);
 	
-	bool acquire(obs_source_t* source, cv::UMat& frame);
+	bool acquire(const obs_source_t* source, cv::UMat& frame);
 
-	void render(obs_source_t* source, cv::UMat& frame);
+	void render(cv::UMat& frame);
 
 }
 
