@@ -80,7 +80,9 @@ namespace lvk
 #else
 
 #endif
+			cv::ocl::setUseOpenCL(true);
 			initialized = true;
+			obs_leave_graphics();
 		}
 	}
 
@@ -144,8 +146,6 @@ namespace lvk
 
 	void release(obs_source_t* source, cv::UMat& frame)
 	{
-		obs_enter_graphics();
-
 		// Use interop procedures to conver UMat back to texture
 		static gs_texture_t* texture = nullptr;
 
@@ -180,8 +180,6 @@ namespace lvk
 			gs_draw_sprite(texture, 0, width, height);
 
 		gs_enable_framebuffer_srgb(prev_srgb_setting);
-
-		obs_leave_graphics();
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
@@ -191,6 +189,7 @@ namespace lvk
 		LVK_ASSERT(src != nullptr);
 
 		try_initialize_interop_context();
+		obs_enter_graphics();
 
 #ifdef _WIN32 // DirextX 11 Interop
 		
@@ -216,6 +215,7 @@ namespace lvk
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
 
 		try_initialize_interop_context();
+		obs_enter_graphics();
 
 #ifdef _WIN32 // DirectX 11 interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
