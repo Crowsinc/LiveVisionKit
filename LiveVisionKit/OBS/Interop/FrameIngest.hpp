@@ -44,7 +44,7 @@ namespace lvk
 	
 	bool acquire(obs_source_t* source, cv::UMat& frame);
 
-	void release(obs_source_t* source, cv::UMat& frame);
+	void render(obs_source_t* source, cv::UMat& frame);
 
 }
 

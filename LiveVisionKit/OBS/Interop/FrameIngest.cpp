@@ -144,7 +144,7 @@ namespace lvk
 	
 	//---------------------------------------------------------------------------------------------------------------------
 
-	void release(obs_source_t* source, cv::UMat& frame)
+	void render(obs_source_t* source, cv::UMat& frame)
 	{
 		// Use interop procedures to conver UMat back to texture
 		static gs_texture_t* texture = nullptr;
