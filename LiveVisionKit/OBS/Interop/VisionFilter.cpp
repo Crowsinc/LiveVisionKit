@@ -19,6 +19,8 @@
 
 #include "Diagnostics/Directives.hpp"
 
+#include "FrameIngest.hpp"
+
 namespace lvk
 {
 
@@ -38,15 +40,12 @@ namespace lvk
 		obs_source_t* source = static_cast<obs_source_t*>(calldata_ptr(call_data, "source"));
 		obs_source_t* removed_filter = static_cast<obs_source_t*>(calldata_ptr(call_data, "filter"));
 
-		// If the source has no more vision filters, then clean up its cache
+		// Source Cache Clean Up
 
-		using SearchData = std::tuple<
-			std::unordered_set<const obs_source_t*>*,
-			const obs_source_t*,
-			bool
-		>;
-
+		using SearchData = std::tuple<std::unordered_set<const obs_source_t*>*, const obs_source_t*, bool>;
 		SearchData search_data(&s_Filters, removed_filter, false);
+
+		// Go through the source's filters to try and find another vision filter
 		obs_source_enum_filters(source, [](obs_source_t* _, obs_source_t* filter, void* search_param){
 			auto& [filters, remove_filter, found] = *static_cast<SearchData*>(search_param);
 
@@ -55,6 +54,7 @@ namespace lvk
 
 		}, &search_data);
 
+		// Remove cache if the source has no other vision filters
 		if(!std::get<2>(search_data))
 		{
 			s_FrameCache.erase(source);
@@ -69,13 +69,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VisionFilter::VisionFilter(const obs_source_t* filter)
+	VisionFilter::VisionFilter(obs_source_t* filter)
 		: m_Context(filter)
 	{
 		LVK_ASSERT(m_Context != nullptr);
 		LVK_ASSERT(s_Filters.count(filter) == 0);
 
 		s_Filters.insert(filter);
+
+		// NOTE: Initialize the interop context here because this is the most 
+		// convenient spot runs before any OpenCL is used, and after the OBS
+		// creates the graphics context. 
+		try_initialize_interop_context();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -89,11 +94,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
+	FrameBuffer& VisionFilter::fetch_cache()
 	{
 		const obs_source_t* parent = obs_filter_get_parent(m_Context);
 
-		if(s_FrameCache.count(parent) == 0)
+		// Register any new parents
+		if (s_FrameCache.count(parent) == 0)
 		{
 			s_FrameCache.emplace(parent, FrameBuffer());
 			signal_handler_connect(
@@ -104,7 +110,14 @@ namespace lvk
 			);
 		}
 
-		FrameBuffer& buffer = s_FrameCache[parent];
+		return s_FrameCache[parent];
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
+	{
+		FrameBuffer& buffer = fetch_cache();
 
 		// If this is a new frame, then we need to update the frame cache
 		if(buffer != input_frame)
@@ -121,7 +134,7 @@ namespace lvk
 		// If the next filter is not a vision filter, then we need to download the
 		// cache back into the OBS frame for the filter. Otherwise, we can just
 		// have the next vision filter re-use the frame in the cache.
-		if(!is_vision_filter_next())
+		if(is_vision_filter_chain_end())
 		{
 			output_frame = buffer.download();
 			buffer.reset();
@@ -132,37 +145,110 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const obs_source_t* VisionFilter::find_next_async_filter() const
+	void VisionFilter::render()
 	{
-		using SearchData = std::tuple<const obs_source_t*, bool>;
-		SearchData search_data(m_Context, false);
+		FrameBuffer& buffer = fetch_cache();
 
-		const auto parent = obs_filter_get_parent(m_Context);
-		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param){
-			auto& [target, found] = *static_cast<SearchData*>(search_param);
+		// If this is the first effect vision filter in a chain, 
+		// then render the source into our frame cache
+		if (is_vision_filter_chain_start())
+			buffer.acquire(m_Context);
 
-			const bool async = (obs_source_get_output_flags(filter) & OBS_SOURCE_ASYNC_VIDEO) == OBS_SOURCE_ASYNC_VIDEO;
-			const bool enabled = obs_source_enabled(filter);
+		filter(buffer);
 
-			if(!found && filter == target)
-				target = nullptr;
-			else if(target == nullptr && async && enabled)
-			{
-				target = filter;
-				found = true;
-			}
-		}, &search_data);
-
-		return std::get<0>(search_data);
+		// If the frame buffer wasn't captured by the filter and this is the 
+		// last vision filter in the chain. Then we need to render the frame
+		// buffer out to OBS so that the next filter can operate on the updated
+		// frame. Otherwise, we just skip rendering and have the next vision 
+		// filter re-use the frame in the cache.
+		if(!buffer.empty() && is_vision_filter_chain_end())
+			buffer.render();
+		else
+			obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VisionFilter::is_vision_filter_next() const
+	bool VisionFilter::is_vision_filter_chain_start() const
 	{
-		const obs_source_t* next_filter = find_next_async_filter();
+		const obs_source_t* prev_filter = find_prev_filter();
 
-		return next_filter != nullptr && s_Filters.count(next_filter) > 0;
+		// We are starting a new vision filter chain if there was no
+		// previous filter, or the previous is not a registered vision filter.
+		return prev_filter == nullptr || s_Filters.count(prev_filter) == 0;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VisionFilter::is_vision_filter_chain_end() const
+	{
+		const obs_source_t* next_filter = find_next_filter();
+
+		// We are ending a vision filter chain if there are no more
+		// filters or the next filter is not a registered vision filter.
+		return next_filter == nullptr || s_Filters.count(next_filter) == 0;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const obs_source_t* VisionFilter::find_prev_filter() const
+	{
+		using SearchData = std::tuple<const obs_source_t*, const obs_source_t*, uint32_t, bool>;
+		SearchData search_data(
+			m_Context,
+			nullptr,
+			obs_source_get_output_flags(m_Context) & OBS_SOURCE_ASYNC_VIDEO,
+			false
+		);
+
+		// Search for the filter right before m_Context that is of the same type (sync/async video)
+
+		const auto parent = obs_filter_get_parent(m_Context);
+		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param) {
+			auto& [target, previous, filter_type, target_found] = *static_cast<SearchData*>(search_param);
+
+			const bool same_type = (obs_source_get_output_flags(filter) & OBS_SOURCE_ASYNC_VIDEO) == filter_type;
+			const bool enabled = obs_source_enabled(filter);
+
+			if (!target_found && filter == target)
+				target_found = true;
+			else if (!target_found && enabled && same_type)
+				previous = filter;
+
+			}, &search_data);
+
+		return std::get<1>(search_data);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const obs_source_t* VisionFilter::find_next_filter() const
+	{
+		using SearchData = std::tuple<const obs_source_t*, const obs_source_t*, uint32_t, bool>;
+		SearchData search_data(
+			m_Context,
+			nullptr,
+			obs_source_get_output_flags(m_Context) & OBS_SOURCE_ASYNC_VIDEO,
+			false
+		);
+
+		// Search for the next filter after m_Context that is of the same type (sync/async video)
+
+		const auto parent = obs_filter_get_parent(m_Context);
+		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param){
+			auto& [target, next, filter_type, target_found] = *static_cast<SearchData*>(search_param);
+
+			const bool same_type = (obs_source_get_output_flags(filter) & OBS_SOURCE_ASYNC_VIDEO) == filter_type;
+			const bool enabled = obs_source_enabled(filter);
+			
+			if (!target_found && filter == target)
+				target_found = true;
+			else if(target_found && enabled && same_type)
+				next = filter;
+		
+		}, &search_data);
+
+		return std::get<1>(search_data);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

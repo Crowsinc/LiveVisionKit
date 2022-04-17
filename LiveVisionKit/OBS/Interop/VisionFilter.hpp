@@ -32,11 +32,13 @@ namespace lvk
 	{
 	public:
 
-		VisionFilter(const obs_source_t* filter);
+		VisionFilter(obs_source_t* filter);
 
 		virtual ~VisionFilter();
 
 		obs_source_frame* process(obs_source_frame* frame);
+
+		void render();
 
 	protected:
 
@@ -48,16 +50,22 @@ namespace lvk
 
 		static void on_filter_remove(void* data, calldata_t* call_data);
 
-		const obs_source_t* find_next_async_filter() const;
+		const obs_source_t* find_next_filter() const;
 
-		bool is_vision_filter_next() const;
+		const obs_source_t* find_prev_filter() const;
+
+		bool is_vision_filter_chain_start() const;
+
+		bool is_vision_filter_chain_end() const;
+
+		FrameBuffer& fetch_cache();
 
 	private:
 
 		static std::unordered_map<const obs_source_t*, FrameBuffer> s_FrameCache;
 		static std::unordered_set<const obs_source_t*> s_Filters;
 
-		const obs_source_t* m_Context;
+		obs_source_t* m_Context;
 	};
 
 }
