@@ -145,8 +145,8 @@ namespace lvk
 		gs_ortho(0.0f, source_width, 0.0f, source_height, -100.0f, 100.0f);
 
 		const auto target_flags = obs_source_get_output_flags(target);
-		const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0b0
-									  && (target_flags & OBS_SOURCE_ASYNC) == 0b0;
+		const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0
+									  && (target_flags & OBS_SOURCE_ASYNC) == 0;
 
 		if(target == parent && allow_direct_render)
 			obs_source_default_render(target);
@@ -225,7 +225,6 @@ namespace lvk
 		LVK_ASSERT(src != nullptr);
 
 		try_initialize_interop_context();
-		obs_enter_graphics();
 
 #ifdef _WIN32 // DirextX 11 Interop
 		
@@ -252,7 +251,6 @@ namespace lvk
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
 
 		try_initialize_interop_context();
-		obs_enter_graphics();
 
 #ifdef _WIN32 // DirectX 11 interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
