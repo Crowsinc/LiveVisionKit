@@ -30,21 +30,23 @@ namespace lvk
 
 	// Converts YUV UMat back to OBS frame, preserves dst alpha channel
 	void export_frame(const cv::UMat& src, obs_source_frame* dst);
-	
 
 	// DX11/OpenGL Interop Ingest
+	namespace ocl
+	{
+		// Checks for graphics interop support
+		bool supports_graphics_interop();
 
-	bool supports_interop();
+		// Tries to create an OpenCL context that 
+		// is attached to the bound graphics context
+		void try_attach_graphics_interop_context();
 
-	void try_initialize_interop_context();
+		// Fills UMat from texture using OpenCL Interop
+		void import_texture(gs_texture_t* src, cv::UMat& dst);
 
-	void import_texture(gs_texture_t* src, cv::UMat& dst);
+		// Fills texture from UMat using OpenCL interop
+		void export_texture(cv::UMat& src, gs_texture_t* dst);
 
-	void export_texture(cv::UMat& src, gs_texture_t* dst);
-	
-	bool acquire(const obs_source_t* source, cv::UMat& frame);
-
-	void render(cv::UMat& frame);
-
+	}
 }
 

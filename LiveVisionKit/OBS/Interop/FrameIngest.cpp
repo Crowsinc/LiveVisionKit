@@ -47,225 +47,6 @@
 
 namespace lvk
 {
-
-	//---------------------------------------------------------------------------------------------------------------------
-
-	bool supports_interop()
-	{
-		if (!cv::ocl::haveOpenCL())
-			return false;
-		
-		auto& device = cv::ocl::Device::getDefault();
-
-#ifdef _WIN32
-		return device.isExtensionSupported("cl_nv_d3d11_sharing") || device.isExtensionSupported("cl_khr_d3d11_sharing");
-#else
-		return device.isExtensionSupported("cl_khr_gl_sharing");
-#endif
-	}
-
-	//---------------------------------------------------------------------------------------------------------------------
-
-	void try_initialize_interop_context()
-	{
-		thread_local bool initialized = false;
-		if (!initialized)
-		{
-			LVK_ASSERT(supports_interop());
-			
-#ifdef _WIN32
-			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
-			cv::directx::ocl::initializeContextFromD3D11Device(device);
-#else
-
-#endif
-			initialized = true;
-		}
-	}
-
-	//---------------------------------------------------------------------------------------------------------------------
-
-	bool acquire(const obs_source_t* source, cv::UMat& frame)
-	{
-		LVK_ASSERT(source != nullptr);
-
-		const auto parent = obs_filter_get_target(source);
-		const auto target = obs_filter_get_target(source);
-		const uint32_t source_width = obs_source_get_base_width(target);
-		const uint32_t source_height = obs_source_get_base_height(target);
-		
-		if (source_width == 0 || source_height == 0)
-		{
-			LVK_WARN("Unable to render texture for acquisition");
-			return false;
-		}
-
-		static gs_texture_t* render_texture = nullptr;
-		if (
-			render_texture == nullptr
-		    || gs_texture_get_width(render_texture) != source_width
-			|| gs_texture_get_height(render_texture) != source_height
-		)
-		{
-			gs_texture_destroy(render_texture);
-			render_texture = gs_texture_create(
-				source_width,
-				source_height,
-				GS_RGBA_UNORM,
-				1,
-				nullptr,
-				GS_RENDER_TARGET | GS_SHARED_TEX
-			);
-		}
-		
-		// Render the source to our render texture
-		// NOTE: Referenced from official gpu delay filter
-
-		const auto prev_color_space = gs_get_color_space();
-		const auto prev_render_target = gs_get_render_target();
-		const auto prev_z_stencil_target = gs_get_zstencil_target();
-
-		gs_set_render_target_with_color_space(
-			render_texture,
-			nullptr,
-			GS_CS_SRGB
-		);
-
-		gs_viewport_push();
-		gs_projection_push();
-		gs_matrix_push();
-		gs_matrix_identity();
-		gs_blend_state_push();
-		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-		gs_set_viewport(0, 0, source_width, source_height);
-
-		vec4 clear_color;
-		vec4_zero(&clear_color);
-		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
-		gs_ortho(0.0f, source_width, 0.0f, source_height, -100.0f, 100.0f);
-
-		const auto target_flags = obs_source_get_output_flags(target);
-		const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0
-									  && (target_flags & OBS_SOURCE_ASYNC) == 0;
-
-		if(target == parent && allow_direct_render)
-			obs_source_default_render(target);
-		else
-			obs_source_video_render(target);
-
-		gs_set_render_target_with_color_space(
-			prev_render_target,
-			prev_z_stencil_target,
-			prev_color_space
-		);
-
-		gs_matrix_pop();
-		gs_projection_pop();
-		gs_viewport_pop();
-		gs_blend_state_pop();
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		// Convert RGBA render texture to standard YUV frame
-		import_texture(render_texture, buffer);
-		cv::cvtColor(buffer, frame, cv::COLOR_RGBA2RGB);
-		cv::cvtColor(frame, frame, cv::COLOR_RGB2YUV);
-
-		return true;
-	}
-	
-	//---------------------------------------------------------------------------------------------------------------------
-
-	void render(cv::UMat& frame)
-	{
-		static gs_texture_t* texture = nullptr;
-
-		const auto width = texture ? gs_texture_get_width(texture) : frame.cols;
-		const auto height = texture ? gs_texture_get_height(texture) : frame.rows;
-
-		if (texture == nullptr || width != frame.cols || height != frame.rows)
-		{
-			gs_texture_destroy(texture);
-			texture = gs_texture_create(width, height, GS_RGBA_UNORM, 1, nullptr, GS_SHARED_TEX); 
-		}
-
-		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		// Convert standard YUV frame to RGBA texture
-		cv::cvtColor(frame, frame, cv::COLOR_YUV2RGB);
-		cv::cvtColor(frame, buffer, cv::COLOR_RGB2RGBA);
-		export_texture(buffer, texture);
-
-		// Render texture as source output
-		// NOTE: Referenced from official gpu delay filter
-
-		auto base_effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-		
-		const bool new_srgb_setting = gs_get_linear_srgb();
-		const bool prev_srgb_setting = gs_framebuffer_srgb_enabled();
-
-		gs_enable_framebuffer_srgb(new_srgb_setting);
-
-		auto image_param = gs_effect_get_param_by_name(base_effect, "image");
-		if (new_srgb_setting)
-			gs_effect_set_texture_srgb(image_param, texture);
-		else
-			gs_effect_set_texture(image_param, texture);
-
-		while (gs_effect_loop(base_effect, "Draw"))
-			gs_draw_sprite(texture, 0, width, height);
-
-		gs_enable_framebuffer_srgb(prev_srgb_setting);
-	}
-
-	//---------------------------------------------------------------------------------------------------------------------
-
-	void import_texture(gs_texture_t* src, cv::UMat& dst)
-	{
-		LVK_ASSERT(src != nullptr);
-
-		try_initialize_interop_context();
-
-#ifdef _WIN32 // DirextX 11 Interop
-		
-		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(src));
-
-		// Pre-validate texture format
-		D3D11_TEXTURE2D_DESC desc = {0};
-		texture->GetDesc(&desc);
-		LVK_ASSERT(cv::directx::getTypeFromDXGI_FORMAT(desc.Format) >= 0);
-
-		cv::directx::convertFromD3D11Texture2D(texture, dst);
-#else  // OpenGL Interop
-		// TODO: implement
-
-#endif
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-	
-	void export_texture(cv::UMat& src, gs_texture_t* dst)
-	{
-		LVK_ASSERT(dst != nullptr);
-		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
-		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
-
-		try_initialize_interop_context();
-
-#ifdef _WIN32 // DirectX 11 interop
-		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
-
-		// Pre-validate texture format
-		D3D11_TEXTURE2D_DESC desc = { 0 };
-		texture->GetDesc(&desc);
-		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
-
-		cv::directx::convertToD3D11Texture2D(src, texture);
-#else // OpenGL Interop
-		//TODO: implement
-#endif
-	}
-
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool is_frame_initialised(const obs_source_frame& frame)
@@ -963,3 +744,86 @@ namespace lvk
 
 }
 
+namespace lvk::ocl
+{
+	//---------------------------------------------------------------------------------------------------------------------
+
+	bool supports_graphics_interop()
+	{
+		if (!cv::ocl::haveOpenCL())
+			return false;
+
+		auto& device = cv::ocl::Device::getDefault();
+
+#ifdef _WIN32
+		return device.isExtensionSupported("cl_nv_d3d11_sharing") || device.isExtensionSupported("cl_khr_d3d11_sharing");
+#else
+		return device.isExtensionSupported("cl_khr_gl_sharing");
+#endif
+	}
+
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void try_attach_graphics_interop_context()
+	{
+		static bool initialized = false; //TODO: use thread_local for thread specific contexts?
+		if (!initialized)
+		{
+			LVK_ASSERT(supports_graphics_interop());
+#ifdef _WIN32
+			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
+			cv::directx::ocl::initializeContextFromD3D11Device(device);
+#else
+
+#endif
+			initialized = true;
+		}
+	}
+
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void import_texture(gs_texture_t* src, cv::UMat& dst)
+	{
+		LVK_ASSERT(src != nullptr);
+
+		try_attach_graphics_interop_context();
+
+#ifdef _WIN32 // DirextX 11 Interop
+		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(src));
+
+		// Pre-validate texture format
+		D3D11_TEXTURE2D_DESC desc = { 0 };
+		texture->GetDesc(&desc);
+		LVK_ASSERT(cv::directx::getTypeFromDXGI_FORMAT(desc.Format) >= 0);
+
+		cv::directx::convertFromD3D11Texture2D(texture, dst);
+#else  // OpenGL Interop
+		// TODO: implement
+
+#endif
+	}
+
+	//---------------------------------------------------------------------------------------------------------------------
+
+	void export_texture(cv::UMat& src, gs_texture_t* dst)
+	{
+		LVK_ASSERT(dst != nullptr);
+		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
+		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
+
+		try_attach_graphics_interop_context();
+
+#ifdef _WIN32 // DirectX 11 interop
+		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
+
+		// Pre-validate texture format
+		D3D11_TEXTURE2D_DESC desc = { 0 };
+		texture->GetDesc(&desc);
+		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
+
+		cv::directx::convertToD3D11Texture2D(src, texture);
+#else // OpenGL Interop
+		//TODO: implement
+#endif
+	}
+}
