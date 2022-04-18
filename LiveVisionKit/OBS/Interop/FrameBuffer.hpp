@@ -15,11 +15,9 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-
 #pragma once
 
 #include <opencv2/core.hpp>
-
 #include <obs-module.h>
 
 namespace lvk
@@ -35,6 +33,8 @@ namespace lvk
 
 		FrameBuffer(const FrameBuffer& buffer) = delete;
 
+		~FrameBuffer();
+
 		void reset();
 
 		void release(obs_source_t* owner);
@@ -49,9 +49,7 @@ namespace lvk
 
 		obs_source_frame* download() const;
 
-		void acquire(const obs_source_t* source);
-
-		void copy_to(gs_texture_t* texture);
+		bool acquire(const obs_source_t* source);
 
 		void render();
 
@@ -66,7 +64,15 @@ namespace lvk
 		bool operator!=(obs_source_frame* frame_handle) const;
 
 	private:
+
+		void prepare_interop_texture(const uint32_t width, const uint32_t height);
+
+	private:
+
 		obs_source_frame* m_FrameHandle;
+
+		gs_texture_t* m_InteropTexture;
+		cv::UMat m_InteropBuffer;
 	};
 
 }
