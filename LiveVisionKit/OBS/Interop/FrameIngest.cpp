@@ -785,6 +785,7 @@ namespace lvk::ocl
 	void import_texture(gs_texture_t* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(src != nullptr);
+		LVK_ASSERT(supports_graphics_interop());
 
 		try_attach_graphics_interop_context();
 
@@ -792,7 +793,7 @@ namespace lvk::ocl
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(src));
 
 		// Pre-validate texture format
-		D3D11_TEXTURE2D_DESC desc = { 0 };
+		D3D11_TEXTURE2D_DESC desc = {0};
 		texture->GetDesc(&desc);
 		LVK_ASSERT(cv::directx::getTypeFromDXGI_FORMAT(desc.Format) >= 0);
 
@@ -810,6 +811,7 @@ namespace lvk::ocl
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
+		LVK_ASSERT(supports_graphics_interop());
 
 		try_attach_graphics_interop_context();
 
@@ -817,7 +819,7 @@ namespace lvk::ocl
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
 
 		// Pre-validate texture format
-		D3D11_TEXTURE2D_DESC desc = { 0 };
+		D3D11_TEXTURE2D_DESC desc = {0};
 		texture->GetDesc(&desc);
 		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
 
