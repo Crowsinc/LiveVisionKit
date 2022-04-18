@@ -81,6 +81,8 @@ bool obs_module_load()
 	if (lvk::ocl::supports_graphics_interop())
 	{
 		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
+
+		register_adb_effect_source();
 	}
 	else LVK_ERROR("OpenCL Interop unsupported");
 

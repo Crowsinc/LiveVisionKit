@@ -45,3 +45,23 @@ extern void register_adb_source()
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+
+extern void register_adb_effect_source()
+{
+	obs_source_info config = {0};
+	config.id = "LVK~ADB~Effect";
+	config.type = OBS_SOURCE_TYPE_FILTER;
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+
+	config.create = lvk::dispatch::filter_create_auto<lvk::ADBFilter>;
+	config.destroy = lvk::dispatch::filter_delete<lvk::ADBFilter>;
+
+	config.video_render = lvk::dispatch::filter_render<lvk::ADBFilter>;
+	config.update = lvk::dispatch::filter_configure<lvk::ADBFilter>;
+
+	config.get_name = [](void* data) {return ADB_FILTER_NAME; };
+	config.get_properties = lvk::dispatch::filter_properties<lvk::ADBFilter>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::ADBFilter>;
+
+	obs_register_source(&config);
+}
