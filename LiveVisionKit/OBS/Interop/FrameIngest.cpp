@@ -68,21 +68,18 @@ namespace lvk
 
 	void try_initialize_interop_context()
 	{
-		LVK_ASSERT(supports_interop());
-
-		static bool initialized = false;
+		thread_local bool initialized = false;
 		if (!initialized)
 		{
-			obs_enter_graphics();
+			LVK_ASSERT(supports_interop());
+			
 #ifdef _WIN32
 			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
 			cv::directx::ocl::initializeContextFromD3D11Device(device);
 #else
 
 #endif
-			cv::ocl::setUseOpenCL(true);
 			initialized = true;
-			obs_leave_graphics();
 		}
 	}
 
@@ -91,54 +88,89 @@ namespace lvk
 	bool acquire(const obs_source_t* source, cv::UMat& frame)
 	{
 		LVK_ASSERT(source != nullptr);
-		
+
 		const auto parent = obs_filter_get_target(source);
 		const auto target = obs_filter_get_target(source);
-		const uint32_t width = obs_source_get_base_width(target);
-		const uint32_t height = obs_source_get_base_height(target);
-
-		static gs_texrender_t* render_texture = gs_texrender_create(
-			gs_color_format::GS_RGBA_UNORM,
-			gs_zstencil_format::GS_ZS_NONE
-		);
-
-		gs_texrender_reset(render_texture);
-
-		// Render the source to our render texture
-		// NOTE: Referenced from official gpu delay filter
-
-		gs_blend_state_push();
-		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-
-		if (gs_texrender_begin(render_texture, width, height))
-		{
-			const auto target_flags = obs_source_get_output_flags(target);
-			const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0b0
-				                          && (target_flags & OBS_SOURCE_ASYNC) == 0b0;
-
-			vec4 clear_color;
-			vec4_zero(&clear_color);
-			gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
-			gs_ortho(0.0f, width, 0.0f, height, -100.0f, 100.0f);
-
-			if(target == parent && allow_direct_render)
-				obs_source_default_render(target);
-			else
-				obs_source_video_render(target);
-
-			gs_texrender_end(render_texture);
-		}
-		else
+		const uint32_t source_width = obs_source_get_base_width(target);
+		const uint32_t source_height = obs_source_get_base_height(target);
+		
+		if (source_width == 0 || source_height == 0)
 		{
 			LVK_WARN("Unable to render texture for acquisition");
 			return false;
 		}
+
+		static gs_texture_t* render_texture = nullptr;
+		if (
+			render_texture == nullptr
+		    || gs_texture_get_width(render_texture) != source_width
+			|| gs_texture_get_height(render_texture) != source_height
+		)
+		{
+			gs_texture_destroy(render_texture);
+			render_texture = gs_texture_create(
+				source_width,
+				source_height,
+				GS_RGBA_UNORM,
+				1,
+				nullptr,
+				GS_RENDER_TARGET | GS_SHARED_TEX
+			);
+		}
 		
+		// Render the source to our render texture
+		// NOTE: Referenced from official gpu delay filter
+
+		const auto prev_color_space = gs_get_color_space();
+		const auto prev_render_target = gs_get_render_target();
+		const auto prev_z_stencil_target = gs_get_zstencil_target();
+
+		gs_set_render_target_with_color_space(
+			render_texture,
+			nullptr,
+			GS_CS_SRGB
+		);
+
+		gs_viewport_push();
+		gs_projection_push();
+		gs_matrix_push();
+		gs_matrix_identity();
+		gs_blend_state_push();
+		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+		gs_set_viewport(0, 0, source_width, source_height);
+
+		vec4 clear_color;
+		vec4_zero(&clear_color);
+		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
+		gs_ortho(0.0f, source_width, 0.0f, source_height, -100.0f, 100.0f);
+
+		const auto target_flags = obs_source_get_output_flags(target);
+		const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0b0
+									  && (target_flags & OBS_SOURCE_ASYNC) == 0b0;
+
+		if(target == parent && allow_direct_render)
+			obs_source_default_render(target);
+		else
+			obs_source_video_render(target);
+
+		gs_set_render_target_with_color_space(
+			prev_render_target,
+			prev_z_stencil_target,
+			prev_color_space
+		);
+
+		gs_matrix_pop();
+		gs_projection_pop();
+		gs_viewport_pop();
 		gs_blend_state_pop();
 
-		// Use Interop procedures to convert our texture to a UMat
-		import_texture(gs_texrender_get_texture(render_texture), frame);
-		
+		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// Convert RGBA render texture to standard YUV frame
+		import_texture(render_texture, buffer);
+		cv::cvtColor(buffer, frame, cv::COLOR_RGBA2RGB);
+		cv::cvtColor(frame, frame, cv::COLOR_RGB2YUV);
+
 		return true;
 	}
 	
@@ -146,7 +178,6 @@ namespace lvk
 
 	void render(cv::UMat& frame)
 	{
-		// Use interop procedures to conver UMat back to texture
 		static gs_texture_t* texture = nullptr;
 
 		const auto width = texture ? gs_texture_get_width(texture) : frame.cols;
@@ -155,10 +186,15 @@ namespace lvk
 		if (texture == nullptr || width != frame.cols || height != frame.rows)
 		{
 			gs_texture_destroy(texture);
-			texture = gs_texture_create(width, height, GS_RGBA_UNORM, 1, nullptr, 0);
+			texture = gs_texture_create(width, height, GS_RGBA_UNORM, 1, nullptr, GS_SHARED_TEX); 
 		}
 
-		export_texture(frame, texture);
+		thread_local cv::UMat buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+		// Convert standard YUV frame to RGBA texture
+		cv::cvtColor(frame, frame, cv::COLOR_YUV2RGB);
+		cv::cvtColor(frame, buffer, cv::COLOR_RGB2RGBA);
+		export_texture(buffer, texture);
 
 		// Render texture as source output
 		// NOTE: Referenced from official gpu delay filter
@@ -203,6 +239,7 @@ namespace lvk
 		cv::directx::convertFromD3D11Texture2D(texture, dst);
 #else  // OpenGL Interop
 		// TODO: implement
+
 #endif
 	}
 
@@ -226,7 +263,6 @@ namespace lvk
 		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
 
 		cv::directx::convertToD3D11Texture2D(src, texture);
-
 #else // OpenGL Interop
 		//TODO: implement
 #endif
