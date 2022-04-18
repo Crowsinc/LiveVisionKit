@@ -19,15 +19,13 @@
 
 #include "Diagnostics/Directives.hpp"
 
-#include "FrameIngest.hpp"
-
 namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto FILTER_REMOVE_SIGNAL = "filter_remove";
-
+	
 //---------------------------------------------------------------------------------------------------------------------
 
 	std::unordered_map<const obs_source_t*, FrameBuffer> VisionFilter::s_FrameCache;
@@ -76,11 +74,6 @@ namespace lvk
 		LVK_ASSERT(s_Filters.count(filter) == 0);
 
 		s_Filters.insert(filter);
-
-		// NOTE: Initialize the interop context here because this is the most 
-		// convenient spot runs before any OpenCL is used, and after the OBS
-		// creates the graphics context. 
-		try_initialize_interop_context();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -149,22 +142,28 @@ namespace lvk
 	{
 		FrameBuffer& buffer = fetch_cache();
 
-		// If this is the first effect vision filter in a chain, 
-		// then render the source into our frame cache
-		if (is_vision_filter_chain_start())
-			buffer.acquire(m_Context);
+		// TODO: fix only the last filter actually running. This may
+		// have something to do with effects filters being called in 
+		// backwards order and the way that they are being rendered. 
 
-		filter(buffer);
+		// Attempt to acquire the frame if this is the first effect vision 
+		// filter in a chain. Otherwise the frame should aready be cached.
+		if (!is_vision_filter_chain_start() || buffer.acquire(m_Context))
+		{
+			filter(buffer);
 
-		// If the frame buffer wasn't captured by the filter and this is the 
-		// last vision filter in the chain. Then we need to render the frame
-		// buffer out to OBS so that the next filter can operate on the updated
-		// frame. Otherwise, we just skip rendering and have the next vision 
-		// filter re-use the frame in the cache.
-		if(!buffer.empty() && is_vision_filter_chain_end())
-			buffer.render();
-		else
-			obs_source_skip_video_filter(m_Context);
+			// If the frame buffer wasn't captured by the filter and this is the 
+			// last vision filter in the chain. Then we need to render the frame
+			// buffer out to OBS so that the next filter can operate on the updated
+			// frame. Otherwise, we just skip rendering and have the next vision 
+			// filter re-use the frame in the cache.
+			if (!buffer.frame.empty() && is_vision_filter_chain_end())
+			{
+				buffer.render();
+				return;
+			}
+		}
+		obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -202,7 +201,6 @@ namespace lvk
 		);
 
 		// Search for the filter right before m_Context that is of the same type (sync/async video)
-
 		const auto parent = obs_filter_get_parent(m_Context);
 		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param) {
 			auto& [target, previous, filter_type, target_found] = *static_cast<SearchData*>(search_param);
@@ -233,7 +231,6 @@ namespace lvk
 		);
 
 		// Search for the next filter after m_Context that is of the same type (sync/async video)
-
 		const auto parent = obs_filter_get_parent(m_Context);
 		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param){
 			auto& [target, next, filter_type, target_found] = *static_cast<SearchData*>(search_param);
@@ -243,9 +240,9 @@ namespace lvk
 			
 			if (!target_found && filter == target)
 				target_found = true;
-			else if(target_found && enabled && same_type)
+			else if (target_found && next == nullptr && enabled && same_type)
 				next = filter;
-		
+
 		}, &search_data);
 
 		return std::get<1>(search_data);
