@@ -774,7 +774,7 @@ namespace lvk::ocl
 			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
 			cv::directx::ocl::initializeContextFromD3D11Device(device);
 #else
-
+			cv::ogl::ocl::initializeContextFromGL();
 #endif
 			initialized = true;
 		}
@@ -799,7 +799,20 @@ namespace lvk::ocl
 
 		cv::directx::convertFromD3D11Texture2D(texture, dst);
 #else  // OpenGL Interop
-		// TODO: implement
+
+		// Pre-validate texture format
+		const auto format = gs_texture_get_color_format(src);
+		LVK_ASSERT(format == GS_RGBA || format == GS_RGBA_UNORM);
+
+		cv::ogl::Texture2D texture(
+			gs_texture_get_height(src),
+			gs_texture_get_width(src),
+			cv::ogl::Texture2D::RGBA,
+			*static_cast<uint32_t*>(gs_texture_get_obj(src)),
+			false
+		);
+
+		cv::ogl::convertFromGLTexture2D(texture, dst);
 
 #endif
 	}
@@ -825,7 +838,21 @@ namespace lvk::ocl
 
 		cv::directx::convertToD3D11Texture2D(src, texture);
 #else // OpenGL Interop
-		//TODO: implement
+
+		// Pre-validate texture format
+		const auto format = gs_texture_get_color_format(dst);
+		LVK_ASSERT(format == GS_RGBA || format == GS_RGBA_UNORM);
+
+		cv::ogl::Texture2D texture(
+			gs_texture_get_height(dst),
+			gs_texture_get_width(dst),
+			cv::ogl::Texture2D::RGBA,
+			*static_cast<uint32_t*>(gs_texture_get_obj(dst)),
+			false
+		);
+
+		cv::ogl::convertToGLTexture2D(src, texture);
+
 #endif
 	}
 
