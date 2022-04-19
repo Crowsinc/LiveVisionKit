@@ -46,6 +46,8 @@ void register_adb_effect_source();
 
 void register_lc_source();
 
+void register_lc_effect_source();
+
 void register_cct_source();
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -83,6 +85,7 @@ bool obs_module_load()
 		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
 
 		register_adb_effect_source();
+		register_lc_effect_source();
 	}
 	else LVK_ERROR("OpenCL Interop unsupported");
 
