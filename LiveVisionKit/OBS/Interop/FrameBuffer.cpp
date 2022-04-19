@@ -165,16 +165,11 @@ namespace lvk
 		// NOTE: Referenced from official gpu delay filter
 
 		// Update render targets
-		const auto prev_color_space = gs_get_color_space();
 		const auto prev_render_target = gs_get_render_target();
 		const auto prev_z_stencil_target = gs_get_zstencil_target();
 
 		prepare_interop_texture(source_width, source_height);
-		gs_set_render_target_with_color_space(
-			m_InteropTexture,
-			nullptr,
-			GS_CS_SRGB
-		);
+		gs_set_render_target(m_InteropTexture, nullptr);
 
 		// Push new render state to stack
 		gs_viewport_push();
@@ -202,10 +197,9 @@ namespace lvk
 		gs_viewport_pop();
 		gs_blend_state_pop();
 
-		gs_set_render_target_with_color_space(
+		gs_set_render_target(
 			prev_render_target,
-			prev_z_stencil_target,
-			prev_color_space
+			prev_z_stencil_target
 		);
 	
 		// Import the texture using interop and convert to YUV
