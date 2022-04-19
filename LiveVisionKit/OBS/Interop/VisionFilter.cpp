@@ -142,28 +142,27 @@ namespace lvk
 	{
 		FrameBuffer& buffer = fetch_cache();
 
-		// TODO: fix only the last filter actually running. This may
-		// have something to do with effects filters being called in 
-		// backwards order and the way that they are being rendered. 
-
-		// Attempt to acquire the frame if this is the first effect vision 
-		// filter in a chain. Otherwise the frame should aready be cached.
-		if (!is_vision_filter_chain_start() || buffer.acquire(m_Context))
+		// If filter is not the start of a vision filter chain, then we want
+		// to skip it and travel up the effects filter chain. If it is, then
+		// we want to acquire the latest render within the cache buffer and 
+		// start travelling down the vision filter chain. If acquisition
+		// fails, then continue up the chain as normal. 
+		// NOTE: Continuing up the chain may not actually be the correct 
+		// solution as filtering may continue on the buffer, which could
+		// hold a previous frame in in it. 
+		if (!is_vision_filter_chain_start() || !buffer.acquire(m_Context))
+			obs_source_skip_video_filter(m_Context);
+		
+		// Perform filtering if the buffer has acquired frame data in it.
+		if (!buffer.frame.empty())
 		{
 			filter(buffer);
 
-			// If the frame buffer wasn't captured by the filter and this is the 
-			// last vision filter in the chain. Then we need to render the frame
-			// buffer out to OBS so that the next filter can operate on the updated
-			// frame. Otherwise, we just skip rendering and have the next vision 
-			// filter re-use the frame in the cache.
-			if (!buffer.frame.empty() && is_vision_filter_chain_end())
-			{
+			// If this happens to be the last filter in the vision filter
+			// chain, then render out the update buffer for the next filters. 
+			if (is_vision_filter_chain_end())
 				buffer.render();
-				return;
-			}
 		}
-		obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
