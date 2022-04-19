@@ -45,3 +45,25 @@ extern void register_cct_source()
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+
+extern void register_cct_effect_source()
+{
+	obs_source_info config = { 0 };
+	config.id = "LVK~CCT~Effect";
+	config.type = OBS_SOURCE_TYPE_FILTER;
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+
+	config.create = lvk::dispatch::filter_create_auto<lvk::CCTool>;
+	config.destroy = lvk::dispatch::filter_delete<lvk::CCTool>;
+
+	config.update = lvk::dispatch::filter_configure<lvk::CCTool>;
+	config.video_render = lvk::dispatch::filter_render<lvk::CCTool>;
+
+	config.get_name = [](void* data) {return CC_TOOL_NAME; };
+	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;;
+
+	obs_register_source(&config);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
