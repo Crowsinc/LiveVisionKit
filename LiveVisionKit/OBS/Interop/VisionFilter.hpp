@@ -17,11 +17,13 @@
 
 #pragma once
 
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
 #include <opencv2/core.hpp>
 #include <obs-module.h>
+
 
 #include "FrameBuffer.hpp"
 
@@ -48,7 +50,11 @@ namespace lvk
 
 	private:
 
-		static void on_filter_remove(void* data, calldata_t* call_data);
+		struct SourceCache
+		{
+			FrameBuffer frame_buffer;
+			uint32_t refs;
+		};
 
 		const obs_source_t* find_next_filter() const;
 
@@ -58,14 +64,20 @@ namespace lvk
 
 		bool is_vision_filter_chain_end() const;
 
-		FrameBuffer& fetch_cache();
+		void clean_cache();
+
+		SourceCache& fetch_cache();
+
+		FrameBuffer& fetch_frame_cache();
 
 	private:
 
-		static std::unordered_map<const obs_source_t*, FrameBuffer> s_FrameCache;
+		static std::unordered_map<const obs_source_t*, SourceCache> s_SourceCaches;
 		static std::unordered_set<const obs_source_t*> s_Filters;
+		static std::mutex s_CacheMutex;
 
-		obs_source_t* m_Context;
+		obs_source_t* m_Filter;
+		obs_source_t* m_CacheKey;
 	};
 
 }

@@ -19,58 +19,24 @@
 
 #include "Diagnostics/Directives.hpp"
 
+#include <thread>
+
 namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr auto FILTER_REMOVE_SIGNAL = "filter_remove";
-	
-//---------------------------------------------------------------------------------------------------------------------
-
-	std::unordered_map<const obs_source_t*, FrameBuffer> VisionFilter::s_FrameCache;
+	std::unordered_map<const obs_source_t*, VisionFilter::SourceCache> VisionFilter::s_SourceCaches;
 	std::unordered_set<const obs_source_t*> VisionFilter::s_Filters;
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VisionFilter::on_filter_remove(void* data, calldata_t* call_data)
-	{
-		obs_source_t* source = static_cast<obs_source_t*>(calldata_ptr(call_data, "source"));
-		obs_source_t* removed_filter = static_cast<obs_source_t*>(calldata_ptr(call_data, "filter"));
-
-		// Source Cache Clean Up
-
-		using SearchData = std::tuple<std::unordered_set<const obs_source_t*>*, const obs_source_t*, bool>;
-		SearchData search_data(&s_Filters, removed_filter, false);
-
-		// Go through the source's filters to try and find another vision filter
-		obs_source_enum_filters(source, [](obs_source_t* _, obs_source_t* filter, void* search_param){
-			auto& [filters, remove_filter, found] = *static_cast<SearchData*>(search_param);
-
-			if(filter != remove_filter && filters->count(filter) == 1)
-				found = true;
-
-		}, &search_data);
-
-		// Remove cache if the source has no other vision filters
-		if(!std::get<2>(search_data))
-		{
-			s_FrameCache.erase(source);
-			signal_handler_disconnect(
-				obs_source_get_signal_handler(source),
-				FILTER_REMOVE_SIGNAL,
-				&on_filter_remove,
-				nullptr
-			);
-		}
-	}
+	std::mutex VisionFilter::s_CacheMutex;
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	VisionFilter::VisionFilter(obs_source_t* filter)
-		: m_Context(filter)
+		: m_Filter(filter),
+		  m_CacheKey(nullptr)
 	{
-		LVK_ASSERT(m_Context != nullptr);
+		LVK_ASSERT(m_Filter != nullptr);
 		LVK_ASSERT(s_Filters.count(filter) == 0);
 
 		s_Filters.insert(filter);
@@ -80,37 +46,62 @@ namespace lvk
 
 	VisionFilter::~VisionFilter()
 	{
-		LVK_ASSERT(s_Filters.count(m_Context) == 1);
+		LVK_ASSERT(s_Filters.count(m_Filter) == 1);
 
-		s_Filters.erase(m_Context);
+		s_Filters.erase(m_Filter);
+
+		clean_cache();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameBuffer& VisionFilter::fetch_cache()
+	void VisionFilter::clean_cache()
 	{
-		const obs_source_t* parent = obs_filter_get_parent(m_Context);
+		std::scoped_lock cache_lock(s_CacheMutex);
 
-		// Register any new parents
-		if (s_FrameCache.count(parent) == 0)
+		if (m_CacheKey != nullptr)
 		{
-			s_FrameCache.emplace(parent, FrameBuffer());
-			signal_handler_connect(
-				obs_source_get_signal_handler(parent),
-				FILTER_REMOVE_SIGNAL,
-				&on_filter_remove,
-				nullptr
-			);
+			s_SourceCaches[m_CacheKey].refs--;
+
+			if (s_SourceCaches[m_CacheKey].refs == 0)
+				s_SourceCaches.erase(m_CacheKey);
+		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VisionFilter::SourceCache& VisionFilter::fetch_cache()
+	{
+		std::scoped_lock cache_lock(s_CacheMutex);
+		
+		// Lazy initialization of source cache.
+		if (m_CacheKey == nullptr)
+		{
+			// NOTE: this assumes that a filter's parent cannot change in its life time. 
+			// This seems to hold true in the OBS source but is not guaranteed in the future. 
+			m_CacheKey = obs_filter_get_parent(m_Filter);
+
+			if(s_SourceCaches.count(m_CacheKey) == 0)
+				s_SourceCaches.emplace(m_CacheKey, SourceCache{FrameBuffer(), 1});
+			else
+				s_SourceCaches[m_CacheKey].refs++;
 		}
 
-		return s_FrameCache[parent];
+		return s_SourceCaches[m_CacheKey];
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	FrameBuffer& VisionFilter::fetch_frame_cache()
+	{
+		return fetch_cache().frame_buffer;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
 	{
-		FrameBuffer& buffer = fetch_cache();
+		FrameBuffer& buffer = fetch_frame_cache();
 
 		// If this is a new frame, then we need to update the frame cache
 		if(buffer != input_frame)
@@ -142,11 +133,11 @@ namespace lvk
 	{
 		if (gs_get_render_target() == nullptr)
 		{
-			obs_source_skip_video_filter(m_Context);
+			obs_source_skip_video_filter(m_Filter);
 			return;
 		}
 
-		FrameBuffer& buffer = fetch_cache();
+		FrameBuffer& buffer = fetch_frame_cache();
 
 		// If filter is not the start of a vision filter chain, then we want
 		// to skip it and travel up the effects filter chain. If it is, then
@@ -156,8 +147,8 @@ namespace lvk
 		// NOTE: Continuing up the chain may not actually be the correct 
 		// solution as filtering may continue on the buffer, which could
 		// hold a previous frame in in it. 
-		if (!is_vision_filter_chain_start() || !buffer.acquire(m_Context))
-			obs_source_skip_video_filter(m_Context);
+		if (!is_vision_filter_chain_start() || !buffer.acquire(m_Filter))
+			obs_source_skip_video_filter(m_Filter);
 		
 		// Perform filtering if the buffer has acquired frame data in it.
 		if (!buffer.frame.empty())
@@ -169,6 +160,7 @@ namespace lvk
 			if (is_vision_filter_chain_end())
 				buffer.render();
 		}
+
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -199,14 +191,14 @@ namespace lvk
 	{
 		using SearchData = std::tuple<const obs_source_t*, const obs_source_t*, uint32_t, bool>;
 		SearchData search_data(
-			m_Context,
+			m_Filter,
 			nullptr,
-			obs_source_get_output_flags(m_Context) & OBS_SOURCE_ASYNC_VIDEO,
+			obs_source_get_output_flags(m_Filter) & OBS_SOURCE_ASYNC_VIDEO,
 			false
 		);
 
-		// Search for the filter right before m_Context that is of the same type (sync/async video)
-		const auto parent = obs_filter_get_parent(m_Context);
+		// Search for the filter right before this filter that is of the same type (sync/async video)
+		const auto parent = obs_filter_get_parent(m_Filter);
 		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param) {
 			auto& [target, previous, filter_type, target_found] = *static_cast<SearchData*>(search_param);
 
@@ -229,14 +221,14 @@ namespace lvk
 	{
 		using SearchData = std::tuple<const obs_source_t*, const obs_source_t*, uint32_t, bool>;
 		SearchData search_data(
-			m_Context,
+			m_Filter,
 			nullptr,
-			obs_source_get_output_flags(m_Context) & OBS_SOURCE_ASYNC_VIDEO,
+			obs_source_get_output_flags(m_Filter) & OBS_SOURCE_ASYNC_VIDEO,
 			false
 		);
 
-		// Search for the next filter after m_Context that is of the same type (sync/async video)
-		const auto parent = obs_filter_get_parent(m_Context);
+		// Search for the next filter after this filter that is of the same type (sync/async video)
+		const auto parent = obs_filter_get_parent(m_Filter);
 		obs_source_enum_filters(parent, [](obs_source_t* _, obs_source_t* filter, void* search_param){
 			auto& [target, next, filter_type, target_found] = *static_cast<SearchData*>(search_param);
 
