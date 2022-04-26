@@ -140,6 +140,12 @@ namespace lvk
 
 	void VisionFilter::render()
 	{
+		if (gs_get_render_target() == nullptr)
+		{
+			obs_source_skip_video_filter(m_Context);
+			return;
+		}
+
 		FrameBuffer& buffer = fetch_cache();
 
 		// If filter is not the start of a vision filter chain, then we want
