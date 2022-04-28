@@ -16,11 +16,13 @@
 // 	  **********************************************************************
 
 #include "Math/Math.hpp"
+
 #include "Diagnostics/Directives.hpp"
 #include "GridDetector.hpp"
 
 namespace lvk
 {
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -31,7 +33,8 @@ namespace lvk
 	constexpr int GLOBAL_FEATURE_TARGET = 3000;
 
 //---------------------------------------------------------------------------------------------------------------------
-
+	
+	//TODO: enforce even fits between grid sizes
 	GridDetector::GridDetector(
 		const float detection_load,
 		const cv::Size& resolution,
@@ -128,6 +131,8 @@ namespace lvk
 		{
 			if(active)
 			{
+				// NOTE: we temporarily re-purpose the feature buffer to 
+				// store detected keypoints. The buffer is restored later.
 				m_FeatureBuffer.clear();
 
 				cv::FAST(
@@ -147,6 +152,7 @@ namespace lvk
 			}
 		}
 
+		// Restore feature buffer
 		m_FeatureBuffer.clear();
 		extract_features(m_FeatureBuffer);
 
@@ -159,10 +165,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void GridDetector::propogate(const std::vector<cv::Point2f>& points)
+	void GridDetector::propogate(const std::vector<cv::Point2f>& points) 
 	{
 		// Deactivate fine blocks containing propograted points to avoid
-		// detecting a new feature in a block which as a propogated feature.
+		// detecting a new feature in a block which has a propogated feature.
 		for(const auto& point : points)
 		{
 			// Silently ignore points which are out of bounds
@@ -265,6 +271,46 @@ namespace lvk
 	size_t GridDetector::detection_target() const
 	{
 		return m_GlobalPointTarget;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Point2f GridDetector::distribution_centroid() const
+	{
+		const float points = m_FeatureBuffer.size() + m_PropogatedPoints.size();
+		if(points == 0.0f)
+			return {0, 0};
+
+		cv::Point2f centroid(0, 0);
+		for (const auto& feature : m_FeatureBuffer)
+			centroid += feature.pt;
+
+		for (const auto& point : m_PropogatedPoints)
+			centroid += point;
+
+		centroid /= points;
+		
+		return centroid;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Point2f GridDetector::distribution_error() const 
+	{
+		// In terms of the GridDetector, a good distribution of points is 
+		// one in which the points evenly and fairly describe the frame.
+		// We can define an an ideally distributed set of tracking points 
+		// as being perfectly symmetrical across all of the frame's lines
+		// of symmetry. Therefore we can measure the distribution by the
+		// distance of the point's centroid from the centre of the frame.
+
+		const auto centroid = distribution_centroid();
+
+		// Present independent vertical and horizontal errors. 
+		return cv::Point2f(
+			2 * std::abs((centroid.x / m_Resolution.width) - 0.5),
+			2 * std::abs((centroid.y / m_Resolution.height) - 0.5)
+		);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

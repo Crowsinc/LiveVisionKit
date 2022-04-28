@@ -44,6 +44,10 @@ namespace lvk
 
 		size_t detection_target() const;
 
+		cv::Point2f distribution_error() const;
+
+		cv::Point2f distribution_centroid() const;
+
 	private:
 
 		void construct_grids();
