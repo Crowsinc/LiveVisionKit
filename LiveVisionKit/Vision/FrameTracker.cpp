@@ -182,7 +182,7 @@ namespace lvk
 			// propogate inliers, it also means that outliers are naturally
 			// filtered out until the detection load is too low.
 
-			fast_filter(m_MatchedPoints, m_InlierStatus);
+			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
 			m_GridDetector.propogate(m_MatchedPoints);
 
 			return Homography::FromMatrix(motion);
