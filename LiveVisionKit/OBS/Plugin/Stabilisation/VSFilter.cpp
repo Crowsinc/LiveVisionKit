@@ -254,7 +254,7 @@ namespace lvk
 			{
 				const auto& [displacement, velocity] = m_Trajectory.centre();
 
-				const auto trajectory_correction = m_Trajectory.convolve(m_Filter).displacement - displacement;
+				const auto trajectory_correction = m_Trajectory.convolve_at(m_Filter, m_Trajectory.centre_index()).displacement - displacement;
 				const auto stabilised_velocity = clamp_velocity(output.frame, velocity + trajectory_correction);
 
 				stabilised_velocity.warp(output.frame, m_WarpFrame);
