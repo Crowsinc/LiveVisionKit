@@ -144,15 +144,50 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-	T SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
+	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const uint32_t index, T initial) const
 	{
-		LVK_ASSERT(!empty() && !kernel.empty());
-		LVK_ASSERT(elements() == kernel.elements());
+		LVK_ASSERT(!empty());
+		LVK_ASSERT(!kernel.empty());
+		LVK_ASSERT(elements() >= kernel.elements());
 
-		for(uint32_t i = 0; i < elements(); i++)
-			initial = initial + at(i) * kernel.at(i);
+		uint32_t elems = 0, buffer_offset = 0, kernel_offset = 0;
+		if (index <= kernel.centre_index())
+		{
+			kernel_offset = kernel.centre_index() - index;
+
+			// Kernel is always equal to or smaller than buffer as per the pre-condition
+			// so it will always bound the number of elements. 
+			elems = kernel.elements() - kernel_offset;
+		}
+		else
+		{
+			buffer_offset = index - kernel.centre_index();
+		
+			// Kernel can be smaller than buffer
+			elems = std::min(this->elements() - buffer_offset, kernel.elements());
+		}
+
+		for(uint32_t i = 0; i < elems; i++)
+			initial = initial + at(i + buffer_offset) * kernel.at(i + kernel_offset);
 
 		return initial;
+	}
+	
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	template<typename K>
+	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
+	{
+		LVK_ASSERT(!empty());
+		LVK_ASSERT(!kernel.empty());
+		LVK_ASSERT(elements() >= kernel.elements());
+
+		SlidingBuffer<T> buffer(window_size());
+		for (uint32_t i = 0; i < elements(); i++)
+			buffer.push(convolve_at(kernel, i, initial));
+		
+		return buffer;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

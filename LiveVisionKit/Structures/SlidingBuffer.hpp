@@ -40,17 +40,11 @@ namespace lvk
 
 		void resize(const uint32_t window_size);
 
-		// Convolves centre only
 		template<typename K>
-		T convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
-
-		//TODO: Replace ^^ convolve with...
-		//
-		// template<typename K>
-		// T convolve_at(const SlidingBuffer<K>& kernel, const uint32_t index, T initial = T()) const;
-		//
-		// template<typename K>
-		// SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
+		T convolve_at(const SlidingBuffer<K>& kernel, const uint32_t index, T initial = T()) const;
+		
+		template<typename K>
+		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
 
 		T& at(const uint32_t index);
 
