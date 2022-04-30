@@ -97,19 +97,6 @@ namespace lvk
 	{
 		return smoothing_factor * new_sample + (1.0f - smoothing_factor) * average;
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	bool hysteresis_threshold(const bool state, const T value, const T lower_threshold, const T upper_threshold)
-	{
-		if(value <= lower_threshold)
-			return false;
-		if(value >= upper_threshold)
-			return true;
-		
-		return state;
-	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
