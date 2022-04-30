@@ -83,9 +83,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography::Homography(const Homography& copy)
-		: Homography(copy.m_Matrix)
+	Homography::Homography(const Homography& other)
+		: Homography(other.m_Matrix)
 	{}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	Homography::Homography(Homography&& other)
+		: m_Matrix(other.m_Matrix)
+	{
+		other.m_Matrix.release();
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

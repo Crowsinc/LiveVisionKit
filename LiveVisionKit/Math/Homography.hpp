@@ -38,7 +38,9 @@ namespace lvk
 
 		Homography(const cv::Mat& matrix);
 
-		Homography(const Homography& copy);
+		Homography(const Homography& other);
+
+		Homography(Homography&& other);
 
 		cv::Point2d transform(const cv::Point2d& point) const;
 
