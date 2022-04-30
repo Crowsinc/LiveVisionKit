@@ -45,6 +45,16 @@ namespace lvk
 	constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
 	constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_HOMOGRAPHY;
 
+	constexpr auto PROP_SUPPRESSION_MODE = "SUPPRESSION_MODE";
+	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
+	constexpr auto SUPPRESSION_MODE_STRICT = "SM_STRICT";
+	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
+	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_RELAXED;
+
+	constexpr auto SUPPRESSION_MODE_THRESH_OFF = 0.0f;
+	constexpr auto SUPPRESSION_MODE_THRESH_STRICT = 0.8f;
+	constexpr auto SUPPRESSION_MODE_THRESH_RELAXED = 0.7f;
+
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
 
@@ -96,8 +106,19 @@ namespace lvk
 			OBS_COMBO_TYPE_LIST,
 			OBS_COMBO_FORMAT_STRING
 		);
-		obs_property_list_add_string(property, "Affine", MOTION_MODEL_AFFINE);
 		obs_property_list_add_string(property, "Homography", MOTION_MODEL_HOMOGRAPHY);
+		obs_property_list_add_string(property, "Affine", MOTION_MODEL_AFFINE);
+
+		property = obs_properties_add_list(
+			properties,
+			PROP_SUPPRESSION_MODE,
+			"Suppression Mode",
+			OBS_COMBO_TYPE_LIST,
+			OBS_COMBO_FORMAT_STRING
+		);
+		obs_property_list_add_string(property, "Off", SUPPRESSION_MODE_OFF);
+		obs_property_list_add_string(property, "Relaxed", SUPPRESSION_MODE_RELAXED);
+		obs_property_list_add_string(property, "Strict", SUPPRESSION_MODE_STRICT);
 
 		obs_properties_add_bool(
 			properties,
@@ -123,6 +144,7 @@ namespace lvk
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_string(settings, PROP_MOTION_MODEL, MOTION_MODEL_DEFAULT);
+		obs_data_set_default_string(settings, PROP_SUPPRESSION_MODE, SUPPRESSION_MODE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
@@ -133,6 +155,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+		// Update smoothing radius
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 		if(m_SmoothingRadius != new_radius)
 		{
@@ -140,11 +163,21 @@ namespace lvk
 			reset_buffers();
 		}
 
+		// Update motion model
 		const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
 		if(new_model == MOTION_MODEL_AFFINE)
 			m_FrameTracker.set_model(MotionModel::AFFINE);
 		else if(new_model == MOTION_MODEL_HOMOGRAPHY)
 			m_FrameTracker.set_model(MotionModel::HOMOGRAPHY);
+
+		// Update suppression mode
+		const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);
+		if(new_mode == SUPPRESSION_MODE_OFF)
+			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_OFF;
+		else if(new_mode == SUPPRESSION_MODE_RELAXED)
+			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_RELAXED;
+		else if(new_mode == SUPPRESSION_MODE_STRICT)
+			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_STRICT;
 
 		// NOTE: If stabilisation is disabled, we need to restart the FrameTracker
 		// so that is starts from scratch when its turned on again. Otherwise it
@@ -186,7 +219,8 @@ namespace lvk
 		  m_OutputSize(0, 0),
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FrameTracker(/* Use defaults */)
+		  m_FrameTracker(/* Use defaults */),
+		  m_StabilityThreshold(0.0)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -202,7 +236,7 @@ namespace lvk
 
 	void VSFilter::tick()
 	{
-		if(stabilisation_ready())
+		if(is_stabilisation_ready())
 		{
 			// NOTE: Next frame is the second oldest frame in the queue
 			auto frame_size = m_FrameQueue[1].frame.size();
@@ -234,19 +268,29 @@ namespace lvk
 			m_FrameTracker.restart();
 		}
 
-		// Extract Y channel from YUV frame to use for tracking.
-		cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
+		Homography tracked_motion;
+		if (m_Enabled)
+		{
+			cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
+			tracked_motion = m_FrameTracker.track(m_TrackingFrame);
+		}
 
-		auto& motion = m_Trajectory.advance();
-		motion.velocity = m_Enabled ? m_FrameTracker.track(m_TrackingFrame) : Homography::Identity();
-		motion.displacement = m_Trajectory.previous().displacement + motion.velocity;
-
-		if(m_TestMode && m_Enabled)
-			start_time += draw_debug_frame(buffer.frame, m_FrameTracker.tracking_points());
+		auto& frame_vector = m_Trajectory.advance();
+		frame_vector.velocity = should_suppress() ? Homography::Identity() : tracked_motion;
+		frame_vector.displacement = m_Trajectory.previous().displacement + frame_vector.velocity;
+		
+		if(m_Enabled && m_TestMode)
+		{
+			start_time += draw_debug_frame(
+				buffer.frame,
+				m_FrameTracker.tracking_stability(),
+				m_FrameTracker.tracking_points()
+			);
+		}
 
 		m_FrameQueue.push(std::move(buffer));
 
-		if(stabilisation_ready())
+		if(is_stabilisation_ready())
 		{
 			FrameBuffer& output = m_FrameQueue.oldest();
 
@@ -288,7 +332,7 @@ namespace lvk
 		const auto identity = Homography::Identity();
 
 		double t = step;
-		auto reduced_velocity = velocity;
+		Homography reduced_velocity = velocity;
 		BoundingQuad frame_bounds(frame.size(), reduced_velocity);
 
 		while(t <= max_t && !frame_bounds.encloses(m_CropRegion))
@@ -303,7 +347,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	uint64_t VSFilter::draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers)
+	uint64_t VSFilter::draw_debug_frame(
+		cv::UMat& frame,
+		const float tracking_stability,
+		const std::vector<cv::Point2f>& trackers
+	)
 	{
 		cv::ocl::finish();
 		const uint64_t start_time = os_gettime_ns();
@@ -311,7 +359,7 @@ namespace lvk
 		draw::plot_markers(
 			frame,
 			m_FrameTracker.tracking_points(),
-			draw::YUV_GREEN,
+			should_suppress() ? draw::YUV_RED : draw::YUV_GREEN,
 			cv::MarkerTypes::MARKER_CROSS,
 			8,
 			2
@@ -410,7 +458,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VSFilter::stabilisation_ready() const
+	bool VSFilter::should_suppress() const
+	{
+		return !m_Enabled || m_FrameTracker.tracking_stability() < m_StabilityThreshold;
+	}
+	
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VSFilter::is_stabilisation_ready() const
 	{
 		LVK_ASSERT(m_Trajectory.full() == m_FrameQueue.full());
 

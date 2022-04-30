@@ -71,7 +71,11 @@ namespace lvk
 
 		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
-		uint64_t draw_debug_frame(cv::UMat& frame, const std::vector<cv::Point2f>& trackers);
+		uint64_t draw_debug_frame(
+			cv::UMat& frame,
+			const float tracking_stability,
+			const std::vector<cv::Point2f>& trackers
+		);
 
 		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
 
@@ -81,7 +85,9 @@ namespace lvk
 
 		void release_frame_queue();
 
-		bool stabilisation_ready() const;
+		bool should_suppress() const;
+
+		bool is_stabilisation_ready() const;
 
 	private:
 
@@ -100,6 +106,7 @@ namespace lvk
 
 		cv::UMat m_WarpFrame, m_TrackingFrame;
 		FrameTracker m_FrameTracker;
+		float m_StabilityThreshold;
 
 	};
 
