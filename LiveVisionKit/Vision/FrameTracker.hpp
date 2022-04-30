@@ -48,9 +48,7 @@ namespace lvk
 
 		MotionModel model() const;
 
-		float inlier_ratio() const;
-
-		cv::Point2f distribution_error() const;
+		const float tracking_stability() const;
 
 		const std::vector<cv::Point2f> tracking_points() const;
 
@@ -61,6 +59,8 @@ namespace lvk
 		Homography abort_tracking();
 
 		void prepare_state();
+		
+		void update_tracking_stability(const float inliers, const float samples);
 
 	private:
 
@@ -74,7 +74,8 @@ namespace lvk
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 		std::vector<float> m_TrackingError;
 
-		float m_InlierRatio;
+		float m_TrackingStability;
+
 		MotionModel m_MotionModel;
 		cv::UsacParams m_USACParams;
 

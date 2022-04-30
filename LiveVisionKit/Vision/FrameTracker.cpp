@@ -23,13 +23,18 @@
 
 namespace lvk
 {
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	constexpr float STABILITY_SMOOTHING_FACTOR = 0.3f;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
 		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
-		  m_InlierRatio(0),
+		  m_TrackingStability(0.0f),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -174,10 +179,10 @@ namespace lvk
 			// too many inliers, and the GridDetector has to detect new points. 
 
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
-			m_InlierRatio = static_cast<float>(m_MatchedPoints.size()) / m_InlierStatus.size();
-
 			m_GridDetector.propagate(m_MatchedPoints);
-	
+
+			update_tracking_stability(m_MatchedPoints.size(), m_TrackedPoints.size());
+
 			return Homography::FromMatrix(motion);
 		}
 		else return abort_tracking();
@@ -187,6 +192,7 @@ namespace lvk
 
 	Homography FrameTracker::abort_tracking()
 	{
+		update_tracking_stability(0, 0);
 		m_GridDetector.reset();
 		return Homography::Identity();
 	}
@@ -195,8 +201,6 @@ namespace lvk
 
 	void FrameTracker::prepare_state()
 	{
-		m_InlierRatio = 0;
-
 		m_ScaledTrackedPoints.clear();
 		m_ScaledMatchedPoints.clear();
 		m_TrackedPoints.clear();
@@ -222,16 +226,37 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float FrameTracker::inlier_ratio() const
+	void FrameTracker::update_tracking_stability(const float inliers, const float samples)
 	{
-		return m_InlierRatio;
-	}
+		LVK_ASSERT(samples >= 0.0f);
+		LVK_ASSERT(inliers <= samples);
 
+		// NOTE: we use the inlier ratio as a measure of stability. 
+		// Assuming the GridDetector produces an even spread of points 
+		// across the entire frame, as it is designed to do. Then a low
+		// inlier proportion suggests that the frame contains competing
+		// non-global motions, which makes the tracking prone to errors
+		// and the stability is low. If the inlier ratio is high, then
+		// the new points, plus our propagated inliers, continue to 
+		// consistently describe the global motion of the frame hence
+		// the stability is high. 
+
+		float inlier_proportion = 0;
+		if(samples != 0)
+			inlier_proportion = inliers / samples;
+
+		m_TrackingStability = exponential_moving_average(
+			m_TrackingStability,
+			inlier_proportion,
+			STABILITY_SMOOTHING_FACTOR
+		);
+	}
+	
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f FrameTracker::distribution_error() const
+	const float FrameTracker::tracking_stability() const
 	{
-		return m_GridDetector.distribution_error();
+		return m_TrackingStability;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
