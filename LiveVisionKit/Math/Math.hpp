@@ -48,6 +48,12 @@ namespace lvk
 	template<typename T>
 	bool between_strict(const T& value, const T& min, const T& max);
 
+	template<typename T>
+	T exponential_moving_average(const T average, const T new_sample, const float smoothing_factor);
+
+	template<typename T>
+	bool hysteresis_threshold(const bool state, const T value, const T lower_threshold, const T upper_threshold);
+
 }
 
 #include "../Math/Math.tpp"
