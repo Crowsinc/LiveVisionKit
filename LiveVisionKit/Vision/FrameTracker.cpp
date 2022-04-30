@@ -25,10 +25,6 @@ namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr double MAX_TRACKING_ERROR = 25;
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
@@ -127,10 +123,6 @@ namespace lvk
 			m_TrackingError,
 			cv::Size(7, 7)
 		);
-
-		// Filter out points with high error
-		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
-			m_MatchStatus[i] = m_MatchStatus[i] && (m_TrackingError[i] < MAX_TRACKING_ERROR);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
