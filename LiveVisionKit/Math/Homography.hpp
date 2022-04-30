@@ -52,6 +52,10 @@ namespace lvk
 
 		cv::Mat as_matrix() const;
 
+		void operator=(const Homography& other);
+
+		void operator=(Homography&& other);
+
 		void operator+=(const Homography& other);
 
 		void operator-=(const Homography& other);
