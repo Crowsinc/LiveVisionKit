@@ -20,13 +20,12 @@
 #include "Math/Math.hpp"
 #include "Utility/Algorithm.hpp"
 #include "Diagnostics/Directives.hpp"
-#include <util/platform.h>
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr double MAX_TRACKING_ERROR = 15;
+	constexpr double MAX_TRACKING_ERROR = 25;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -34,6 +33,7 @@ namespace lvk
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
 		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
+		  m_InlierRatio(0),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -49,7 +49,7 @@ namespace lvk
 		m_InlierStatus.reserve(m_GridDetector.feature_capacity());
 		m_MatchStatus.reserve(m_GridDetector.feature_capacity());
 
-		// Use light sharpening kernel
+		// Light sharpening kernel
 		m_FilterKernel = cv::Mat({3, 3}, {
 			0.0f, -0.5f,  0.0f,
 		   -0.5f,  3.0f, -0.5f,
@@ -74,7 +74,6 @@ namespace lvk
 	void FrameTracker::restart()
 	{
 		m_FirstFrame = true;
-		m_TrackedPoints.clear();
 		m_GridDetector.reset();
 	}
 
@@ -102,23 +101,21 @@ namespace lvk
 
 		prepare_state();
 
+		// Import the frame into the tracker
 		std::swap(m_PrevFrame, m_NextFrame);
 		const auto scaling = import_next(next_frame);
 
 		if(m_FirstFrame)
 		{
 			m_FirstFrame = false;
-			return Homography::Identity();
+			return abort_tracking();
 		}
 
 		// Detect tracking points
 		m_GridDetector.detect(m_PrevFrame, m_TrackedPoints);
 
 		if (m_TrackedPoints.size() < m_MinMatchThreshold)
-		{
-			m_GridDetector.reset();
-			return Homography::Identity();
-		}
+			return abort_tracking();
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -131,16 +128,14 @@ namespace lvk
 			cv::Size(7, 7)
 		);
 
+		// Filter out points with high error
 		for(uint32_t i = 0; i < m_MatchStatus.size(); i++)
 			m_MatchStatus[i] = m_MatchStatus[i] && (m_TrackingError[i] < MAX_TRACKING_ERROR);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
 		if (m_MatchedPoints.size() < m_MinMatchThreshold)
-		{
-			m_GridDetector.reset();
-			return Homography::Identity();
-		}
+			return abort_tracking();
 
 		// Re-scale all the points to original frame size otherwise the motion will be downscaled
 		for(size_t i = 0; i < m_TrackedPoints.size(); i++)
@@ -154,6 +149,7 @@ namespace lvk
 			scaled_matched_point.y *= scaling.y;
 		}
 
+		// Estimate motion between frames
 		cv::Mat motion;
 		switch(m_MotionModel)
 		{
@@ -178,31 +174,36 @@ namespace lvk
 
 		if (!motion.empty())
 		{
-			// NOTE: Propogate inlier matches on to the next detection.
-			// This means that we are using the same points for consecutive
-			// motion estimation which aids in consistency. It also allows
-			// the GridDetector to skip detection of new points if the
-			// propogated points alone meet the detection load. As we only
-			// propogate inliers, it also means that outliers are naturally
-			// filtered out until the detection load is too low.
+			// NOTE: We only propagate inlier points to  the GridDetector to 
+			// help ensure consistency between subsequent motion estimations.
+			// Additionally, the GridDetector doesn't detect new points if the 
+			// propagated points meet the detection load. This means that outliers
+			// are naturally removed from the tracking point set until we have lost
+			// too many inliers, and the GridDetector has to detect new points. 
 
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
+			m_InlierRatio = static_cast<float>(m_MatchedPoints.size()) / m_InlierStatus.size();
+
 			m_GridDetector.propagate(m_MatchedPoints);
 	
 			return Homography::FromMatrix(motion);
 		}
-		else
-		{
-			m_GridDetector.reset();
-			return Homography::Identity();
-		}
+		else return abort_tracking();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	Homography FrameTracker::abort_tracking()
+	{
+		m_GridDetector.reset();
+		return Homography::Identity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void FrameTracker::prepare_state()
 	{
-
+		m_InlierRatio = 0;
 
 		m_ScaledTrackedPoints.clear();
 		m_ScaledMatchedPoints.clear();
@@ -225,6 +226,20 @@ namespace lvk
 	MotionModel FrameTracker::model() const
 	{
 		return m_MotionModel;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	float FrameTracker::inlier_ratio() const
+	{
+		return m_InlierRatio;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Point2f FrameTracker::distribution_error() const
+	{
+		return m_GridDetector.distribution_error();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
