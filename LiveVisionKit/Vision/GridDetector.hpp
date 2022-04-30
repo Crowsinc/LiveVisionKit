@@ -28,21 +28,21 @@ namespace lvk
 	public:
 
 		GridDetector(
-			const float detection_load,
 			const cv::Size& resolution,
-			const cv::Size& coarse_block_size,
-			const cv::Size& fine_block_size
+			const cv::Size& detect_grid_size,
+			const cv::Size& feature_grid_size,
+			const float detection_load
 		);
 
 		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
 
-		void propogate(const std::vector<cv::Point2f>& points);
+		void propagate(const std::vector<cv::Point2f>& points);
 
 		void reset();
 
 		cv::Size resolution() const;
 
-		size_t detection_target() const;
+		size_t feature_capacity() const;
 
 		cv::Point2f distribution_error() const;
 
@@ -50,45 +50,45 @@ namespace lvk
 
 	private:
 
+		struct DetectBlock
+		{
+			size_t propagations;
+			cv::Rect2f bounds;
+			int fast_threshold;
+		};
+
+		struct FeatureBlock
+		{
+			std::optional<cv::KeyPoint> feature;
+			bool propagated;
+		};
+
 		void construct_grids();
 
 		void process_features(std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
 
-		void extract_features(std::vector<cv::KeyPoint>& features) const;
+		void extract_features(std::vector<cv::Point2f>& feature_points) const;
+
+		FeatureBlock& fetch_feature_block(const cv::Point& point);
+
+		DetectBlock& fetch_detect_block(const cv::Point& point);
 
 		bool within_bounds(const cv::Point& point) const;
 
-		size_t coarse_index(const cv::Point& point) const;
-
-		size_t fine_index(const cv::Point& point) const;
-
 	private:
 
-		struct CoarseBlock
-		{
-			cv::Rect2f bounds;
-			int threshold;
-			bool active;
-		};
-
-		struct FineBlock
-		{
-			std::optional<cv::KeyPoint> feature;
-			bool active;
-		};
-
 		const cv::Size m_Resolution;
-		const cv::Size m_CoarseBlockSize, m_FineBlockSize;
-		const cv::Size m_CoarseGridSize, m_FineGridSize;
+		const cv::Size m_DetectGridSize, m_DetectBlockSize;
+		const cv::Size m_FeatureGridSize, m_FeatureBlockSize;
 
-		const size_t m_GlobalPointTarget;
-		const size_t m_CoarsePointTarget, m_CoarseFeatureTarget;
-		const size_t m_FineAreaRatio, m_FineWidthRatio;
+		const float m_DetectionLoad;
+		const size_t m_FASTFeatureTarget;
+		const size_t m_FeaturesPerDetectBlock;
+		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
 
-		std::vector<cv::Point2f> m_PropogatedPoints;
-		std::vector<cv::KeyPoint> m_FeatureBuffer;
-		std::vector<CoarseBlock> m_CoarseGrid;
-		std::vector<FineBlock> m_FineGrid;
+		std::vector<DetectBlock> m_DetectGrid;
+		std::vector<FeatureBlock> m_FeatureGrid;
+		std::vector<cv::Point2f> m_FeaturePoints;
 	};
 
 }

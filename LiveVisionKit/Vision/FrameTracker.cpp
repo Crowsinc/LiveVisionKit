@@ -33,7 +33,7 @@ namespace lvk
 	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
-		  m_MinMatchThreshold(estimation_threshold * detector.detection_target()),
+		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -41,13 +41,13 @@ namespace lvk
 	{
 		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.0f));
 
-		m_TrackedPoints.reserve(m_GridDetector.detection_target());
-		m_MatchedPoints.reserve(m_GridDetector.detection_target());
-		m_ScaledTrackedPoints.reserve(m_GridDetector.detection_target());
-		m_ScaledMatchedPoints.reserve(m_GridDetector.detection_target());
-		m_TrackingError.reserve(m_GridDetector.detection_target());
-		m_InlierStatus.reserve(m_GridDetector.detection_target());
-		m_MatchStatus.reserve(m_GridDetector.detection_target());
+		m_TrackedPoints.reserve(m_GridDetector.feature_capacity());
+		m_MatchedPoints.reserve(m_GridDetector.feature_capacity());
+		m_ScaledTrackedPoints.reserve(m_GridDetector.feature_capacity());
+		m_ScaledMatchedPoints.reserve(m_GridDetector.feature_capacity());
+		m_TrackingError.reserve(m_GridDetector.feature_capacity());
+		m_InlierStatus.reserve(m_GridDetector.feature_capacity());
+		m_MatchStatus.reserve(m_GridDetector.feature_capacity());
 
 		// Use light sharpening kernel
 		m_FilterKernel = cv::Mat({3, 3}, {
@@ -114,8 +114,11 @@ namespace lvk
 		// Detect tracking points
 		m_GridDetector.detect(m_PrevFrame, m_TrackedPoints);
 
-		if(m_TrackedPoints.size() < m_MinMatchThreshold)
+		if (m_TrackedPoints.size() < m_MinMatchThreshold)
+		{
+			m_GridDetector.reset();
 			return Homography::Identity();
+		}
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -133,8 +136,11 @@ namespace lvk
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
 
-		if(m_MatchedPoints.size() < m_MinMatchThreshold)
+		if (m_MatchedPoints.size() < m_MinMatchThreshold)
+		{
+			m_GridDetector.reset();
 			return Homography::Identity();
+		}
 
 		// Re-scale all the points to original frame size otherwise the motion will be downscaled
 		for(size_t i = 0; i < m_TrackedPoints.size(); i++)
@@ -170,9 +176,7 @@ namespace lvk
 				break;
 		}
 
-		m_GridDetector.reset();
-
-		if(!motion.empty())
+		if (!motion.empty())
 		{
 			// NOTE: Propogate inlier matches on to the next detection.
 			// This means that we are using the same points for consecutive
@@ -183,17 +187,23 @@ namespace lvk
 			// filtered out until the detection load is too low.
 
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
-			m_GridDetector.propogate(m_MatchedPoints);
-
+			m_GridDetector.propagate(m_MatchedPoints);
+	
 			return Homography::FromMatrix(motion);
 		}
-		else return Homography::Identity();
+		else
+		{
+			m_GridDetector.reset();
+			return Homography::Identity();
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void FrameTracker::prepare_state()
 	{
+
+
 		m_ScaledTrackedPoints.clear();
 		m_ScaledMatchedPoints.clear();
 		m_TrackedPoints.clear();
