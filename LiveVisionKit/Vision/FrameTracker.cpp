@@ -46,7 +46,6 @@ namespace lvk
 		m_MatchedPoints.reserve(m_GridDetector.feature_capacity());
 		m_ScaledTrackedPoints.reserve(m_GridDetector.feature_capacity());
 		m_ScaledMatchedPoints.reserve(m_GridDetector.feature_capacity());
-		m_TrackingError.reserve(m_GridDetector.feature_capacity());
 		m_InlierStatus.reserve(m_GridDetector.feature_capacity());
 		m_MatchStatus.reserve(m_GridDetector.feature_capacity());
 
@@ -125,7 +124,7 @@ namespace lvk
 			m_TrackedPoints,
 			m_MatchedPoints,
 			m_MatchStatus,
-			m_TrackingError,
+			cv::noArray(),
 			cv::Size(7, 7)
 		);
 
@@ -205,7 +204,6 @@ namespace lvk
 		m_ScaledMatchedPoints.clear();
 		m_TrackedPoints.clear();
 		m_MatchedPoints.clear();
-		m_TrackingError.clear();
 		m_InlierStatus.clear();
 		m_MatchStatus.clear();
 	}

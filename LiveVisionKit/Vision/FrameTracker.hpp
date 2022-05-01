@@ -72,7 +72,6 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackedPoints, m_ScaledTrackedPoints;
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
-		std::vector<float> m_TrackingError;
 
 		float m_TrackingStability;
 
