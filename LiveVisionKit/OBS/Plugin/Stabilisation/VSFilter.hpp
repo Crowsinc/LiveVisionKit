@@ -87,6 +87,8 @@ namespace lvk
 
 		bool should_suppress() const;
 
+		Homography suppress(Homography& motion);
+
 		bool is_stabilisation_ready() const;
 
 	private:
@@ -107,7 +109,7 @@ namespace lvk
 		cv::UMat m_WarpFrame, m_TrackingFrame;
 		FrameTracker m_FrameTracker;
 		float m_StabilityThreshold;
-
+		float m_SupressionFactor;
 	};
 
 }

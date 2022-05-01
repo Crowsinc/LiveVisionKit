@@ -54,6 +54,7 @@ namespace lvk
 	constexpr auto SUPPRESSION_MODE_THRESH_OFF = 0.0f;
 	constexpr auto SUPPRESSION_MODE_THRESH_STRICT = 0.8f;
 	constexpr auto SUPPRESSION_MODE_THRESH_RELAXED = 0.7f;
+	constexpr auto SUPPRESSION_SMOOTHING_STEP = 0.1f;
 
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
@@ -220,7 +221,8 @@ namespace lvk
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FrameTracker(/* Use defaults */),
-		  m_StabilityThreshold(0.0)
+		  m_StabilityThreshold(0.0),
+		  m_SupressionFactor(0.0)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -276,7 +278,7 @@ namespace lvk
 		}
 
 		auto& frame_vector = m_Trajectory.advance();
-		frame_vector.velocity = should_suppress() ? Homography::Identity() : tracked_motion;
+		frame_vector.velocity = suppress(tracked_motion);
 		frame_vector.displacement = m_Trajectory.previous().displacement + frame_vector.velocity;
 		
 		if(m_Enabled && m_TestMode)
@@ -463,6 +465,22 @@ namespace lvk
 		return !m_Enabled || m_FrameTracker.tracking_stability() < m_StabilityThreshold;
 	}
 	
+//---------------------------------------------------------------------------------------------------------------------
+
+	Homography VSFilter::suppress(Homography& motion)
+	{
+		if (should_suppress())
+		{
+			m_SupressionFactor = std::min(m_SupressionFactor + SUPPRESSION_SMOOTHING_STEP, 1.0f);
+			return (1.0f - m_SupressionFactor) * motion + m_SupressionFactor * Homography::Identity();
+		}
+		else
+		{
+			m_SupressionFactor = 0.0f;
+			return motion;
+		}
+	}
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool VSFilter::is_stabilisation_ready() const
