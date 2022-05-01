@@ -48,11 +48,13 @@ namespace lvk
 	constexpr auto PROP_SUPPRESSION_MODE = "SUPPRESSION_MODE";
 	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
 	constexpr auto SUPPRESSION_MODE_STRICT = "SM_STRICT";
+	constexpr auto SUPPRESSION_MODE_MODERATE = "SM_MODERATE";
 	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
 	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_RELAXED;
 
 	constexpr auto SUPPRESSION_MODE_THRESH_OFF = 0.0f;
-	constexpr auto SUPPRESSION_MODE_THRESH_STRICT = 0.8f;
+	constexpr auto SUPPRESSION_MODE_THRESH_STRICT = 0.9f;
+	constexpr auto SUPPRESSION_MODE_THRESH_MODERATE = 0.8f;
 	constexpr auto SUPPRESSION_MODE_THRESH_RELAXED = 0.7f;
 	constexpr auto SUPPRESSION_SMOOTHING_STEP = 0.1f;
 
@@ -119,6 +121,7 @@ namespace lvk
 		);
 		obs_property_list_add_string(property, "Off", SUPPRESSION_MODE_OFF);
 		obs_property_list_add_string(property, "Relaxed", SUPPRESSION_MODE_RELAXED);
+		obs_property_list_add_string(property, "Moderate", SUPPRESSION_MODE_MODERATE);
 		obs_property_list_add_string(property, "Strict", SUPPRESSION_MODE_STRICT);
 
 		obs_properties_add_bool(
@@ -177,6 +180,8 @@ namespace lvk
 			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_OFF;
 		else if(new_mode == SUPPRESSION_MODE_RELAXED)
 			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_RELAXED;
+		else if(new_mode == SUPPRESSION_MODE_MODERATE)
+			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_MODERATE;
 		else if(new_mode == SUPPRESSION_MODE_STRICT)
 			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_STRICT;
 
