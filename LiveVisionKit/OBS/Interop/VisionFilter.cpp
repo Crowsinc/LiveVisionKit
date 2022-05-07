@@ -155,6 +155,10 @@ namespace lvk
 		{
 			filter(buffer);
 
+			// Frame was captured by the filter (probably to introduce delay).
+			if (buffer.frame.empty())
+				return;
+
 			// If this happens to be the last filter in the vision filter
 			// chain, then render out the update buffer for the next filters. 
 			if (is_vision_filter_chain_end())
