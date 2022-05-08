@@ -18,7 +18,9 @@
 #include "FrameBuffer.hpp"
 
 #include "Diagnostics/Directives.hpp"
+
 #include "FrameIngest.hpp"
+#include "DefaultEffect.hpp"
 
 namespace lvk
 {
@@ -157,57 +159,17 @@ namespace lvk
 			return false;
 		}
 
-		const auto target_flags = obs_source_get_output_flags(target);
-		const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0
-									  && (target_flags & OBS_SOURCE_ASYNC) == 0;
-
-		// Render the source to our interop texture
-		// NOTE: Referenced from official gpu delay filter
-
-		// Update render targets
-		const auto prev_render_target = gs_get_render_target();
-		const auto prev_z_stencil_target = gs_get_zstencil_target();
-
 		prepare_interop_texture(source_width, source_height);
-		gs_set_render_target(m_InteropTexture, nullptr);
+		if (DefaultEffect::Acquire(source, m_InteropTexture))
+		{
+			// Import the texture using interop and convert to YUV
+			ocl::import_texture(m_InteropTexture, m_InteropBuffer);
+			cv::cvtColor(m_InteropBuffer, frame, cv::COLOR_RGBA2RGB);
+			cv::cvtColor(frame, frame, cv::COLOR_RGB2YUV);
 
-		// Push new render state to stack
-		gs_viewport_push();
-		gs_projection_push();
-		gs_matrix_push();
-		gs_matrix_identity();
-		gs_blend_state_push();
-		gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-		gs_set_viewport(0, 0, source_width, source_height);
-		gs_ortho(0.0f, source_width, 0.0f, source_height, -100.0f, 100.0f);
-
-		// Clear render texture and perform the render
-		vec4 clear_color;
-		vec4_zero(&clear_color);
-		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
-
-		if (target == parent && allow_direct_render)
-			obs_source_default_render(target);
-		else
-			obs_source_video_render(target);
-
-		// Restore render targets and state
-		gs_matrix_pop();
-		gs_projection_pop();
-		gs_viewport_pop();
-		gs_blend_state_pop();
-
-		gs_set_render_target(
-			prev_render_target,
-			prev_z_stencil_target
-		);
-	
-		// Import the texture using interop and convert to YUV
-		ocl::import_texture(m_InteropTexture, m_InteropBuffer);
-		cv::cvtColor(m_InteropBuffer, frame, cv::COLOR_RGBA2RGB);
-		cv::cvtColor(frame, frame, cv::COLOR_RGB2YUV);
-
-		return true;
+			return true;
+		}
+		return false;
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -222,26 +184,7 @@ namespace lvk
 		cv::cvtColor(frame, m_InteropBuffer, cv::COLOR_YUV2RGB, 4);
 		ocl::export_texture(m_InteropBuffer, m_InteropTexture);
 
-		// Render the interop texture as source output
-		// NOTE: Referenced from official gpu delay filter
-
-		const auto base_effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
-
-		const bool use_srgb = gs_get_linear_srgb();
-		const bool old_srgb_setting = gs_framebuffer_srgb_enabled();
-
-		gs_enable_framebuffer_srgb(use_srgb);
-
-		auto image_param = gs_effect_get_param_by_name(base_effect, "image");
-		if (use_srgb)
-			gs_effect_set_texture_srgb(image_param, m_InteropTexture);
-		else
-			gs_effect_set_texture(image_param, m_InteropTexture);
-
-		while (gs_effect_loop(base_effect, "Draw"))
-			gs_draw_sprite(m_InteropTexture, false, frame.cols, frame.rows);
-
-		gs_enable_framebuffer_srgb(old_srgb_setting);
+		DefaultEffect::Render(m_InteropTexture, frame.size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
