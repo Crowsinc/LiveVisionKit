@@ -22,32 +22,73 @@
 namespace lvk
 {
 
+	struct tmp;
+
 	//TODO: Build proper shader API for the purposes of easily creating & re-using effects in various filters.
 
-	template<typename E>
+	template<typename E, typename... Args>
 	class OBSEffect
 	{
 	public:
 
-		static E& Get();
+		static bool Render(
+			obs_source_t* source,
+			const cv::Size render_size,
+			Args... args
+		);
 
+		static bool Render(
+			gs_texture_t* texture,
+			const cv::Size render_size,
+			Args... args
+		);
+	
 		static bool Validate();
 
 	protected:
 
 		OBSEffect(const std::string& name);
+		
+		OBSEffect(gs_effect_t* handle);
 
 		~OBSEffect();
 
 		gs_effect_t* handle();
 
-		virtual bool validate() const = 0;
+		gs_eparam_t* load_param(const char* name);
+
+		virtual const char* configure(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			Args... args
+		);
+
+		virtual bool should_skip(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			Args... args
+		) const;
+
+		virtual bool validate() const;
 
 	private:
+		
+		static E& Instance();
+
+		static bool is_render_valid(
+			obs_source_t* source, 
+			const cv::Size source_size, 
+			const cv::Size render_size, 
+			E& effect,
+			Args... args
+		);
+
+	private:
+
 		gs_effect_t* m_Handle;
+		bool m_Owner;
 	};
 
 }
-
 
 #include "OBSEffect.tpp"
