@@ -32,106 +32,103 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FSREffect::FSREffect()
-		: OBSEffect("fsr")
+		: OBSEffect("fsr"),
+		  m_InputSizeParam(nullptr),
+		  m_OutputSizeParam(nullptr),
+		  m_RegionUVOffsetParam(nullptr),
+		  m_EASUParams({nullptr, nullptr, nullptr, nullptr})
 	{
 		if(handle() != nullptr)
 		{
 			obs_enter_graphics();
-			m_InputSizeParam = gs_effect_get_param_by_name(handle(), "input_size");
-			m_OutputSizeParam = gs_effect_get_param_by_name(handle(), "output_size");
-			m_RegionUVOffsetParam = gs_effect_get_param_by_name(handle(), "region_uv_offset");
 
-			m_EASUParams[0] = gs_effect_get_param_by_name(handle(), "easu_const_0");
-			m_EASUParams[1] = gs_effect_get_param_by_name(handle(), "easu_const_1");
-			m_EASUParams[2] = gs_effect_get_param_by_name(handle(), "easu_const_2");
-			m_EASUParams[3] = gs_effect_get_param_by_name(handle(), "easu_const_3");
+			m_InputSizeParam = load_param("input_size");
+			m_OutputSizeParam = load_param("output_size");
+			m_RegionUVOffsetParam = load_param("region_uv_offset");
+
+			m_EASUParams[0] = load_param("easu_const_0");
+			m_EASUParams[1] = load_param("easu_const_1");
+			m_EASUParams[2] = load_param("easu_const_2");
+			m_EASUParams[3] = load_param("easu_const_3");
+			
 			obs_leave_graphics();
 		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FSREffect::scale(obs_source_t* context, const cv::Rect& region, const cv::Size& output_size)
+	bool FSREffect::should_skip(
+		const cv::Size source_size,
+		const cv::Size render_size,
+		const cv::Rect& region
+	) const
 	{
-		const auto filter_target = obs_filter_get_target(context);
-		const cv::Size input_size(
-			obs_source_get_base_width(filter_target),
-			obs_source_get_base_height(filter_target)
+		return (source_size == render_size && region.size() == source_size)
+		    || !between(region.x, 0, source_size.width)
+			|| !between(region.br().x, region.x, source_size.width)
+			|| !between(region.y, 0, source_size.height)
+			|| !between(region.br().y, region.y, source_size.height)
+			|| region.area() == 0;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const char* FSREffect::configure(
+		const cv::Size input_size,
+		const cv::Size output_size,
+		const cv::Rect& region
+	)
+	{
+		vec2 param;
+
+		// Input Size
+		vec2_set(&param, input_size.width, input_size.height);
+		gs_effect_set_vec2(m_InputSizeParam, &param);
+
+		// Output Size
+		vec2_set(&param, output_size.width, output_size.height);
+		gs_effect_set_vec2(m_OutputSizeParam, &param);
+
+		// Region UV Offset
+		vec2_set(
+			&param,
+			static_cast<float>(region.x) / input_size.width,
+			static_cast<float>(region.y) / input_size.height
+		);
+		gs_effect_set_vec2(m_RegionUVOffsetParam, &param);
+
+		// EASU constants
+
+		// NOTE: The constants are a vector of four uint32_t but their bits actually represent
+		// floats. Normally this conversion happens in the FSR shader. However due to compatibility
+		// issues, we perform the conversion on the CPU instead. So we pass in float pointers,
+		// casted to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
+		FsrEasuCon(
+			(AU1*)m_EASUConstants[0].ptr,
+			(AU1*)m_EASUConstants[1].ptr,
+			(AU1*)m_EASUConstants[2].ptr,
+			(AU1*)m_EASUConstants[3].ptr,
+			region.width,
+			region.height,
+			input_size.width,
+			input_size.height,
+			output_size.width,
+			output_size.height
 		);
 
-		const bool invalid_params = input_size.area() == 0 || region.area() == 0 || output_size.area() == 0
-								 || output_size.width <= 0 || output_size.height <= 0
-				 	 	 	 	 || !between(region.x, 0, input_size.width)
-				 	 	 	 	 || !between(region.br().x, region.x, input_size.width)
-				 	 	 	 	 || !between(region.y, 0, input_size.height)
-				 	 	 	 	 || !between(region.br().y, region.y, input_size.height);
+		for (size_t i = 0; i < m_EASUParams.size(); i++)
+			gs_effect_set_vec4(m_EASUParams[i], &m_EASUConstants[i]);
 
-		// NOTE: Only warn on invalid params because there are many edge cases where a filter may
-		// have gargabe sizing data for a single frame. Given the inconsequential nature of these
-		// cases, it is better to report it and continue instead of crashing the experience for the
-		// user. If something is actually wrong, it should be fairly obvious from the log and the
-		// scaling not working.
-		LVK_WARN_IF(invalid_params, "Skipping due to invalid parameters")
-
-		// Silently skip scalingi s unncecessary or the output is invalid.
-		if((input_size == output_size && region.size() == input_size) || invalid_params)
-		{
-			obs_source_skip_video_filter(context);
-			return;
-		}
-
-		if(obs_source_process_filter_begin(context, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
-		{
-			// Input Size
-			vec2 param;
-			vec2_set(&param, input_size.width, input_size.height);
-			gs_effect_set_vec2(m_InputSizeParam, &param);
-
-			// Output Size
-			vec2_set(&param, output_size.width, output_size.height);
-			gs_effect_set_vec2(m_OutputSizeParam, &param);
-
-			// Region UV Offset
-			vec2_set(
-				&param,
-				static_cast<float>(region.x) / input_size.width,
-				static_cast<float>(region.y) / input_size.height
-			);
-			gs_effect_set_vec2(m_RegionUVOffsetParam, &param);
-
-			// EASU constants
-
-			// NOTE: The constants are a vector of four uint32_t but their bits actually represent
-			// floats. Normally this conversion happens in the FSR shader. However due to compatibility
-			// issues, we perform the conversion on the CPU instead. So we pass in float pointers,
-			// casted to uint32_t pointers to facilitate the uint32_t to float re-interpretation.
-			FsrEasuCon(
-				(AU1*)m_EASUConstants[0].ptr,
-				(AU1*)m_EASUConstants[1].ptr,
-				(AU1*)m_EASUConstants[2].ptr,
-				(AU1*)m_EASUConstants[3].ptr,
-				region.width,
-				region.height,
-				input_size.width,
-				input_size.height,
-				output_size.width,
-				output_size.height
-			);
-
-			for(size_t i = 0; i < m_EASUParams.size(); i++)
-				gs_effect_set_vec4(m_EASUParams[i], &m_EASUConstants[i]);
-
-			obs_source_process_filter_tech_end(context, handle(), output_size.width, output_size.height, "EASU");
-		}
+		return "EASU";
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FSREffect::validate() const
 	{
-		return m_OutputSizeParam != nullptr
+		return m_RegionUVOffsetParam != nullptr
+			&& m_OutputSizeParam != nullptr
 			&& m_InputSizeParam != nullptr
-			&& m_RegionUVOffsetParam != nullptr
 			&& m_EASUParams[0] != nullptr
 			&& m_EASUParams[1] != nullptr
 			&& m_EASUParams[2] != nullptr

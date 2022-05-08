@@ -17,22 +17,29 @@
 
 #pragma once
 
-#include <optional>
-
 #include "LiveVisionKit.hpp"
 
 namespace lvk
 {
-
-	class FSREffect : public OBSEffect<FSREffect>
+	
+	class FSREffect : public OBSEffect<FSREffect, const cv::Rect& /* scaling region */>
 	{
-	public:
+		friend class OBSEffect<FSREffect, const cv::Rect&>;
+	private:
 
 		FSREffect();
 
-		virtual ~FSREffect() = default;
+		const char* configure(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			const cv::Rect& region
+		) override;
 
-		void scale(obs_source_t* context, const cv::Rect& region, const cv::Size& output_size);
+		bool should_skip(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			const cv::Rect& region
+		) const override;
 
 		bool validate() const override;
 

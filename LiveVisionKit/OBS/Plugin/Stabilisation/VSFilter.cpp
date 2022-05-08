@@ -259,8 +259,8 @@ namespace lvk
 	{
 		if(m_TestMode)
 			obs_source_skip_video_filter(m_Context);
-		else
-			FSREffect::Get().scale(m_Context, m_CropRegion, m_OutputSize);
+		else if(!FSREffect::Render(m_Context, m_OutputSize, m_CropRegion))
+			obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

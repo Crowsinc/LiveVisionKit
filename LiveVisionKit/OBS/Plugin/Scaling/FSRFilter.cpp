@@ -269,7 +269,8 @@ namespace lvk
 		);
 
 		// Bad parameters will automatically get rejected by the effect.
-		FSREffect::Get().scale(m_Context, m_ScalingRegion, m_OutputSize);
+		if (!FSREffect::Render(m_Context, m_OutputSize, m_ScalingRegion))
+			obs_source_skip_video_filter(m_Context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
