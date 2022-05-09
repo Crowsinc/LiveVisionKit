@@ -18,8 +18,8 @@
 #include "CASEffect.hpp"
 
 #define A_CPU 1
-#include "../Effects/Data/ffx_a.h"
-#include "../Effects/Data/ffx_cas.h"
+#include "Data/ffx_a.h"
+#include "Data/ffx_cas.h"
 
 namespace lvk
 {
