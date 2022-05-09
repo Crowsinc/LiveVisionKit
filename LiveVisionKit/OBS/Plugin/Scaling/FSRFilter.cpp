@@ -17,7 +17,7 @@
 
 #include "FSRFilter.hpp"
 
-#include "FSREffect.hpp"
+#include "../Effects/FSREffect.hpp"
 
 namespace lvk
 {

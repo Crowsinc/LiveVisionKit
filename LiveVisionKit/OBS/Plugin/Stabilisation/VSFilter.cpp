@@ -19,8 +19,6 @@
 
 #include <sstream>
 
-#include "OBS/Plugin/Scaling/FSREffect.hpp"
-
 namespace lvk
 {
 

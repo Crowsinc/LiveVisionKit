@@ -20,8 +20,8 @@
 #include <string>
 
 #define A_CPU 1
-#include "../Effects/ffx_a.h"
-#include "../Effects/ffx_cas.h"
+#include "../Effects/Data/ffx_a.h"
+#include "../Effects/Data/ffx_cas.h"
 
 namespace lvk
 {

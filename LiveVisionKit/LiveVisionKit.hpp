@@ -36,6 +36,9 @@
 #include "Vision/GridDetector.hpp"
 #include "Vision/CameraCalibrator.hpp"
 
+#include "OBS/Plugin/Effects/DefaultEffect.hpp"
+#include "OBS/Plugin/Effects/FSREffect.hpp"
+
 // OBS Specific
 #include <obs-module.h>
 #include <util/config-file.h>
