@@ -38,10 +38,8 @@ extern void register_cas_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::CASFilter>;
 
 	config.get_name = [](void* data){return CAS_FILTER_NAME;};
-	config.get_width = lvk::dispatch::filter_width<lvk::CASFilter>;;
-	config.get_height = lvk::dispatch::filter_height<lvk::CASFilter>;;
-	config.get_properties = lvk::dispatch::filter_properties<lvk::CASFilter>;;
-	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CASFilter>;;
+	config.get_properties = lvk::dispatch::filter_properties<lvk::CASFilter>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CASFilter>;
 
 	obs_register_source(&config);
 }

@@ -69,7 +69,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	CASFilter::CASFilter(obs_source_t* context)
-		: m_Context(context)
+		: m_Context(context),
+		  m_Sharpness(0.0f)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -78,34 +79,14 @@ namespace lvk
 
 	void CASFilter::render()
 	{
-		const auto filter_target = obs_filter_get_target(m_Context);
-		
-		m_OutputSize.width = obs_source_get_base_width(filter_target);
-		m_OutputSize.height = obs_source_get_base_height(filter_target);
-
-		if(!CASEffect::Render(m_Context, m_OutputSize, m_Sharpness))
+		if(!CASEffect::Render(m_Context, m_Sharpness))
 			obs_source_skip_video_filter(m_Context);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t CASFilter::width() const
-	{
-		return m_OutputSize.width;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t CASFilter::height() const
-	{
-		return m_OutputSize.height;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool CASFilter::validate() const
 	{
-		// Ensure we have no nulls for key filter members
 		return m_Context != nullptr
 			&& CASEffect::Validate();
 	}

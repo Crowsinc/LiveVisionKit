@@ -36,17 +36,12 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		uint32_t width() const;
-
-		uint32_t height() const;
-
 		bool validate() const;
 
 	private:
 		
 		obs_source_t* m_Context;
 
-		cv::Size m_OutputSize;
 		float m_Sharpness;
 	};
 
