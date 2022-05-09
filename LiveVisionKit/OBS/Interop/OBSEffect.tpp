@@ -58,6 +58,25 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::Render(
+		obs_source_t* source,
+		Args... args
+	)
+	{
+		LVK_ASSERT(source != nullptr);
+
+		const auto target = obs_filter_get_target(source);
+		const cv::Size source_size(
+			obs_source_get_base_width(target),
+			obs_source_get_base_height(target)
+		);
+	
+		return E::Render(source, source_size, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	// Render texture to source
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::Render(
@@ -96,6 +115,24 @@ namespace lvk
 		gs_enable_framebuffer_srgb(prev_srgb);
 
 		return true;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::Render(
+		gs_texture_t* texture,
+		Args... args
+	)
+	{
+		LVK_ASSERT(texture != nullptr);
+
+		const cv::Size source_size(
+			gs_texture_get_width(texture),
+			gs_texture_get_height(texture)
+		);
+
+		return E::Render(texture, source_size, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

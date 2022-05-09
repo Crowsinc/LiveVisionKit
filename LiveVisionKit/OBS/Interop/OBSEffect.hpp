@@ -38,11 +38,22 @@ namespace lvk
 		);
 
 		static bool Render(
+			obs_source_t* source,
+			Args... args
+		);
+
+		static bool Render(
 			gs_texture_t* texture,
 			const cv::Size render_size,
 			Args... args
 		);
-	
+
+		static bool Render(
+			gs_texture_t* texture,
+			Args... args
+		);
+
+
 		static bool Validate();
 
 	protected:
