@@ -22,32 +22,33 @@
 namespace lvk
 {
 
-	class CASFilter
+	class CASEffect : public OBSEffect<CASEffect, const float /* sharpness */>
 	{
-	public:
+		friend class OBSEffect<CASEffect, const float>;
+	private:
 
-		static obs_properties_t* Properties();
+		CASEffect();
 
-		static void LoadDefaults(obs_data_t* settings);
+		const char* configure(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			const float sharpness
+		) override;
 
-		CASFilter(obs_source_t* context);
+		bool should_skip(
+			const cv::Size source_size,
+			const cv::Size render_size,
+			const float sharpness
+		) const override;
 
-		void render();
-
-		void configure(obs_data_t* settings);
-
-		uint32_t width() const;
-
-		uint32_t height() const;
-
-		bool validate() const;
+		bool validate() const override;
 
 	private:
-		
-		obs_source_t* m_Context;
 
-		cv::Size m_OutputSize;
-		float m_Sharpness;
+		gs_eparam_t* m_CASConstParam;
+		gs_eparam_t* m_OutputSizeParam;
+
 	};
+
 
 }
