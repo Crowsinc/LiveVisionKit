@@ -17,8 +17,6 @@
 
 #include "CASFilter.hpp"
 
-#include "OBS/Plugin/Effects/CASEffect.hpp"
-
 namespace lvk
 {
 

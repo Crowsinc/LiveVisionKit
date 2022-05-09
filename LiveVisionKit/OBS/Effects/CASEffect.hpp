@@ -18,6 +18,7 @@
 #pragma once
 
 #include "LiveVisionKit.hpp"
+#include "OBSEffect.hpp"
 
 namespace lvk
 {

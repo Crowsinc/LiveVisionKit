@@ -36,16 +36,18 @@
 #include "Vision/GridDetector.hpp"
 #include "Vision/CameraCalibrator.hpp"
 
-#include "OBS/Plugin/Effects/DefaultEffect.hpp"
-#include "OBS/Plugin/Effects/FSREffect.hpp"
+#include "OBS/Utility/OBSDispatch.hpp"
+
+#include "OBS/Effects/DefaultEffect.hpp"
+#include "OBS/Effects/FSREffect.hpp"
+#include "OBS/Effects/CASEffect.hpp"
+
+#include "Diagnostics/Directives.hpp"
+#include "OBS/Interop/VisionFilter.hpp"
+#include "OBS/Interop/FrameBuffer.hpp"
 
 // OBS Specific
 #include <obs-module.h>
 #include <util/config-file.h>
 #include <util/platform.h>
 
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Interop/VisionFilter.hpp"
-#include "OBS/Interop/FrameBuffer.hpp"
-#include "OBS/Interop/OBSDispatch.hpp"
-#include "OBS/Interop/OBSEffect.hpp"
