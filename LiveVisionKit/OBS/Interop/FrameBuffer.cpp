@@ -20,7 +20,7 @@
 #include "Diagnostics/Directives.hpp"
 
 #include "FrameIngest.hpp"
-#include "OBS/Plugin/Effects/DefaultEffect.hpp"
+#include "OBS/Effects/DefaultEffect.hpp"
 
 namespace lvk
 {
