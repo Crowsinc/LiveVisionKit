@@ -25,6 +25,7 @@
 #include "Math/BoundingQuad.hpp"
 
 #include "Math/Math.hpp"
+#include "Math/Logic.hpp"
 #include "Math/Homography.hpp"
 
 #include "Structures/SlidingBuffer.hpp"
