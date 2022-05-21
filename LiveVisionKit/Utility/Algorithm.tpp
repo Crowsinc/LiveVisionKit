@@ -88,10 +88,10 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	std::vector<T> split(
+	std::vector<T> parse(
 		const std::string& string,
 		const char delimiter,
-		const std::function<bool(size_t,T&,bool)>& process
+		const std::function<bool(size_t,T&,bool)>& validate
 	)
 	{
 		static_assert(std::is_fundamental_v<T>);
@@ -109,7 +109,7 @@ namespace lvk
 			T value = T{};
 			parser >> value;
 
-			if(process(index, value, parser.fail()))
+			if(validate(index, value, parser.fail()))
 				output.emplace_back(value);
 
 			index++;

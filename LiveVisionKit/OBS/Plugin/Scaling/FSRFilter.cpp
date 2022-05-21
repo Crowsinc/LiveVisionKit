@@ -151,7 +151,7 @@ namespace lvk
 			m_MatchSourceSize = true;
 		else if(output_pattern.find('x') != std::string::npos)
 		{
-			std::vector<float> tokens = split<float>(output_pattern, 'x', [](auto _, float& value, const bool fail){
+			std::vector<float> tokens = parse<float>(output_pattern, 'x', [](auto _, float& value, const bool fail){
 				return !fail && value > 0;
 			});
 

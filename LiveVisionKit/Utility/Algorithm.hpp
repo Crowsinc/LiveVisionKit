@@ -41,14 +41,13 @@ namespace lvk
 	template<typename T, typename P>
 	void filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
-
 	// String Algorithms
 
 	template<typename T>
-	std::vector<T> split(
+	std::vector<T> parse(
 		const std::string& string,
 		const char delimiter = ',',
-		const std::function<bool(size_t,T&,bool)>& process = [](size_t index, T& value, bool fail){return !fail;}
+		const std::function<bool(size_t,T&,bool)>& validate = [](size_t index, T& value, bool fail){return !fail;}
 	);
 
 }
