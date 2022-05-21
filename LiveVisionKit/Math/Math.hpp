@@ -48,9 +48,10 @@ namespace lvk
 	template<typename T>
 	bool between_strict(const T& value, const T& min, const T& max);
 
+
 	template<typename T>
 	T exponential_moving_average(const T average, const T new_sample, const float smoothing_factor);
 
 }
 
-#include "../Math/Math.tpp"
+#include "Math.tpp"
