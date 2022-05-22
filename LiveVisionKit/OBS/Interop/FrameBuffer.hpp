@@ -26,53 +26,20 @@ namespace lvk
 	struct FrameBuffer
 	{
 		cv::UMat frame;
+		uint64_t timestamp;
 
 		FrameBuffer();
 
 		FrameBuffer(FrameBuffer&& buffer);
 
-		FrameBuffer(const FrameBuffer& buffer) = delete;
-
-		~FrameBuffer();
-
-		void reset();
-
-		void release(obs_source_t* owner);
+		void operator=(FrameBuffer&& buffer);
 
 		bool empty() const;
 
-		uint64_t timestamp() const;
+		void load(obs_source_frame* obs_frame);
 
-		obs_source_frame* handle() const;
+		void save(obs_source_frame* obs_frame);
 
-		void upload(obs_source_frame* frame_handle);
-
-		obs_source_frame* download() const;
-
-		bool acquire(const obs_source_t* source);
-
-		void render();
-
-		void operator=(FrameBuffer&& buffer);
-
-		bool operator==(const FrameBuffer& other) const;
-
-		bool operator==(obs_source_frame* frame_handle) const;
-
-		bool operator!=(const FrameBuffer& other) const;
-
-		bool operator!=(obs_source_frame* frame_handle) const;
-
-	private:
-
-		void prepare_interop_texture(const uint32_t width, const uint32_t height);
-
-	private:
-
-		obs_source_frame* m_FrameHandle;
-
-		gs_texture_t* m_InteropTexture;
-		cv::UMat m_InteropBuffer;
 	};
 
 }

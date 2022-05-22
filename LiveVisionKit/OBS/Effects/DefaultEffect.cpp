@@ -49,15 +49,15 @@ namespace lvk
 		if (render_valid)
 		{
 			const auto target_flags = obs_source_get_output_flags(target);
-			const bool allow_direct_render = (target_flags & OBS_SOURCE_CUSTOM_DRAW) == 0
-									      && (target_flags & OBS_SOURCE_ASYNC) == 0;
+			const bool allow_direct_render = !test_bits<uint32_t>(target_flags, OBS_SOURCE_CUSTOM_DRAW)
+									      && !test_bits<uint32_t>(target_flags, OBS_SOURCE_ASYNC);
 
 			// Update render targets
 			const auto prev_render_target = gs_get_render_target();
 			const auto prev_z_stencil_target = gs_get_zstencil_target();
-
+			
 			gs_set_render_target(texture, nullptr);
-
+			
 			// Push new render state to stack
 			gs_viewport_push();
 			gs_projection_push();
@@ -67,7 +67,7 @@ namespace lvk
 			gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 			gs_set_viewport(0, 0, source_size.width, source_size.height);
 			gs_ortho(0.0f, source_size.width, 0.0f, source_size.height, -100.0f, 100.0f);
-
+			
 			// Clear render texture and perform the render
 			vec4 clear_color;
 			vec4_zero(&clear_color);
@@ -83,7 +83,7 @@ namespace lvk
 			gs_projection_pop();
 			gs_viewport_pop();
 			gs_blend_state_pop();
-
+			
 			// Restore render targets
 			gs_set_render_target(
 				prev_render_target,

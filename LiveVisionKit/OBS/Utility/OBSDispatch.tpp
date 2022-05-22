@@ -73,18 +73,10 @@ namespace lvk::dispatch
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T, typename... O>
-	void filter_delete(void* data, O...)
+	template<typename T>
+	void filter_delete(void* data)
 	{
 		delete static_cast<T*>(data);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	void filter_remove(void* data, obs_source_t* parent)
-	{
-		static_cast<T*>(data)->terminate();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

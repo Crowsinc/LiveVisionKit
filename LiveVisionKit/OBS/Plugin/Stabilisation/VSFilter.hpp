@@ -51,11 +51,7 @@ namespace lvk
 
 		VSFilter(obs_source_t* context);
 
-		~VSFilter();
-
 		void tick();
-
-		void render() const;
 
 		void configure(obs_data_t* settings);
 
@@ -68,6 +64,8 @@ namespace lvk
 	private:
 
 		virtual void filter(FrameBuffer& buffer) override;
+
+		virtual void hybrid_render(gs_texture_t* frame) override;
 
 		Homography clamp_velocity(const cv::UMat& frame, const Homography& velocity);
 
@@ -82,8 +80,6 @@ namespace lvk
 		bool is_queue_outdated(const FrameBuffer& new_frame) const;
 
 		void reset_buffers();
-
-		void release_frame_queue();
 
 		bool should_suppress() const;
 

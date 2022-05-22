@@ -22,8 +22,8 @@
 namespace lvk::dispatch
 {
 
-	// Automatic creation of OBS function pointers for the dispatch
-	// of filter (source) operations. The filter itself must implement
+	// Automatic creation of OBS functions for the dispatch of 
+	// filter (source) operations. The filter itself must implement
 	// each of the functions called by the dispatch operation in the .tpp
 
 	template<typename... T>
@@ -46,12 +46,8 @@ namespace lvk::dispatch
 	void* filter_create_auto(obs_data_t* settings, obs_source_t* context);
 
 
-	template<typename T, typename... O>
-	void filter_delete(void* data, O...);
-
-
 	template<typename T>
-	void filter_remove(void* data, obs_source_t* parent);
+	void filter_delete(void* data);
 
 
 	template<typename T>

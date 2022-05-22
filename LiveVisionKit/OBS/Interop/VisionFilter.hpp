@@ -18,12 +18,12 @@
 #pragma once
 
 #include <mutex>
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 
 #include <opencv2/core.hpp>
 #include <obs-module.h>
-
 
 #include "FrameBuffer.hpp"
 
@@ -48,36 +48,49 @@ namespace lvk
 
 		virtual void filter(cv::UMat& frame);
 
+		virtual void hybrid_render(gs_texture_t* frame);
+
 	private:
 
 		struct SourceCache
 		{
 			FrameBuffer frame_buffer;
 			uint32_t refs;
+
+			SourceCache();
 		};
-
-		const obs_source_t* find_next_filter() const;
-
-		const obs_source_t* find_prev_filter() const;
 
 		bool is_vision_filter_chain_start() const;
 
 		bool is_vision_filter_chain_end() const;
 
+		SourceCache& fetch_cache();
+		
 		void clean_cache();
 
-		SourceCache& fetch_cache();
+		void release_resources();
 
-		FrameBuffer& fetch_frame_cache();
+		bool acquire_frame(FrameBuffer& buffer);
+
+		gs_texture_t* render_frame(FrameBuffer& buffer);
+
+		void prepare_interop(const uint32_t width, const uint32_t height);
 
 	private:
 
+		static std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> s_Filters;
 		static std::unordered_map<const obs_source_t*, SourceCache> s_SourceCaches;
-		static std::unordered_set<const obs_source_t*> s_Filters;
 		static std::mutex s_CacheMutex;
-
-		obs_source_t* m_Filter;
 		obs_source_t* m_CacheKey;
+
+		obs_source_t* m_Source;
+		obs_source_t* m_Context;
+		bool m_Asynchronous, m_HybridRender;
+
+		cv::UMat m_ConversionBuffer;
+		gs_texture_t* m_InteropTexture;
+		std::queue<obs_source_frame*> m_AsyncFrameQueue; 
 	};
 
 }
+

@@ -22,8 +22,6 @@
 namespace lvk
 {
 
-	struct tmp;
-
 	//TODO: Build proper shader API for the purposes of easily creating & re-using effects in various filters.
 
 	template<typename E, typename... Args>

@@ -766,7 +766,7 @@ namespace lvk::ocl
 
 	void try_attach_graphics_interop_context()
 	{
-		static bool initialized = false; //TODO: use thread_local for thread specific contexts?
+		static bool initialized = false; 
 		if (!initialized)
 		{
 			LVK_ASSERT(supports_graphics_interop());

@@ -232,13 +232,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	VSFilter::~VSFilter()
-	{
-		release_frame_queue();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	void VSFilter::tick()
 	{
 		if(is_stabilisation_ready())
@@ -253,12 +246,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::render() const
+	void VSFilter::hybrid_render(gs_texture_t* frame)
 	{
-		if(m_TestMode)
-			obs_source_skip_video_filter(m_Context);
-		else if(!FSREffect::Render(m_Context, m_OutputSize, m_CropRegion))
-			obs_source_skip_video_filter(m_Context);
+		if (frame == nullptr)
+		{
+			// As Video Filter
+			if (m_TestMode)
+				obs_source_skip_video_filter(m_Context);
+			else if (!FSREffect::Render(m_Context, m_OutputSize, m_CropRegion))
+				obs_source_skip_video_filter(m_Context);
+		}
+		else
+		{
+			// As Effects Filter
+			if(m_TestMode)
+				DefaultEffect::Render(frame);
+			else if (!FSREffect::Render(frame, m_OutputSize, m_CropRegion))
+				obs_source_skip_video_filter(m_Context);
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -405,7 +410,7 @@ namespace lvk
 
 		// NOTE: Must release all OBS frames before clearing
 		// the frame buffer queue to avoid leaking memory.
-		release_frame_queue();
+		m_FrameQueue.clear();
 		m_Trajectory.clear();
 
 		// NOTE: Trajectory uses a full window for stabilising the centre element,
@@ -441,24 +446,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::release_frame_queue()
-	{
-		// Release all frames to save GPU memory and prevent memory leaks
-		obs_source_t* parent = obs_filter_get_parent(m_Context);
-		for(uint32_t i = 0; i < m_FrameQueue.elements(); i++)
-			m_FrameQueue[i].release(parent);
-
-		m_FrameQueue.clear();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	bool VSFilter::is_queue_outdated(const FrameBuffer& new_frame) const
 	{
 		// If the frame is over a second away from the last frame
 		// then we consider the trajectory and frame data to be outdated.
 		return !m_FrameQueue.empty()
-			&& new_frame.timestamp() - m_FrameQueue.newest().timestamp() > 1e9;
+			&& new_frame.timestamp - m_FrameQueue.newest().timestamp > 1e9;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
