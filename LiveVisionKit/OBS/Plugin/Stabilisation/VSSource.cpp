@@ -26,7 +26,7 @@ constexpr auto VS_FILTER_NAME = "(LVK) Video Stabilizer";
 
 extern void register_vs_source()
 {
-	obs_source_info config = {0};
+	obs_source_info config = { 0 };
 	config.id = "LVK~VS";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;
@@ -40,7 +40,7 @@ extern void register_vs_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::VSFilter>;
 
-	config.get_name = [](void* data){return VS_FILTER_NAME;};
+	config.get_name = [](void* data) {return VS_FILTER_NAME; };
 	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
 	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;
@@ -51,3 +51,27 @@ extern void register_vs_source()
 
 //---------------------------------------------------------------------------------------------------------------------
 
+extern void register_vs_effect_source()
+{
+	obs_source_info config = { 0 };
+	config.id = "LVK~VS~Effect";
+	config.type = OBS_SOURCE_TYPE_FILTER;
+	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;
+
+	config.create = lvk::dispatch::filter_create_auto<lvk::VSFilter>;
+	config.destroy = lvk::dispatch::filter_delete<lvk::VSFilter>;
+
+	config.update = lvk::dispatch::filter_configure<lvk::VSFilter>;
+	config.video_tick = lvk::dispatch::filter_tick<lvk::VSFilter>;
+	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
+
+	config.get_name = [](void* data) {return VS_FILTER_NAME; };
+	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
+	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
+	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::VSFilter>;
+
+	obs_register_source(&config);
+}
+
+//---------------------------------------------------------------------------------------------------------------------

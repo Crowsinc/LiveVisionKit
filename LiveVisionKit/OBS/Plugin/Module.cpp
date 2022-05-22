@@ -40,6 +40,8 @@ void register_cas_source();
 
 void register_vs_source();
 
+void register_vs_effect_source();
+
 void register_adb_source();
 
 void register_adb_effect_source();
@@ -85,6 +87,8 @@ bool obs_module_load()
 	if (lvk::ocl::supports_graphics_interop())
 	{
 		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
+
+		register_vs_effect_source();
 
 		register_adb_effect_source();
 		register_lc_effect_source();
