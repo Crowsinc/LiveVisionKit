@@ -70,11 +70,13 @@ namespace lvk
 
 		void release_resources();
 
-		bool acquire_frame(FrameBuffer& buffer);
+		bool acquire_render(FrameBuffer& buffer);
 
-		gs_texture_t* render_frame(FrameBuffer& buffer);
+		gs_texture_t* acquire_buffer(FrameBuffer& buffer);
 
-		void prepare_interop(const uint32_t width, const uint32_t height);
+		void prepare_interop_buffer(const uint32_t width, const uint32_t height);
+
+		void prepare_render_buffer(const uint32_t width, const uint32_t height);
 
 	private:
 
@@ -88,7 +90,9 @@ namespace lvk
 		bool m_Asynchronous, m_HybridRender;
 
 		cv::UMat m_ConversionBuffer;
-		gs_texture_t* m_InteropTexture;
+		gs_texture_t* m_RenderBuffer;
+		gs_texture_t* m_InteropBuffer;
+		
 		std::queue<obs_source_frame*> m_AsyncFrameQueue; 
 	};
 

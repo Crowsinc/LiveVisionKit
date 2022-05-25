@@ -43,7 +43,8 @@ namespace lvk
 		  // NOTE: We initially assume a hybrid render state for each filter, 
 		  // then update our assumption as we learn more about them during execution. 
 		  m_HybridRender(m_Asynchronous ? false : true),
-		  m_InteropTexture(nullptr),
+		  m_InteropBuffer(nullptr),
+		  m_RenderBuffer(nullptr),
 		  m_ConversionBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
 	{
 		LVK_ASSERT(m_Context != nullptr);
@@ -68,17 +69,17 @@ namespace lvk
 
 	void VisionFilter::release_resources()
 	{
-		if (m_Source != nullptr)
+		while (m_Source != nullptr && !m_AsyncFrameQueue.empty())
 		{
-			while (!m_AsyncFrameQueue.empty())
-			{
-				obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
-				m_AsyncFrameQueue.pop();
-			}
+			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
+			m_AsyncFrameQueue.pop();
 		}
 
-		if(m_InteropTexture != nullptr)
-			gs_texture_destroy(m_InteropTexture);
+		if(m_RenderBuffer != nullptr)
+			gs_texture_destroy(m_RenderBuffer);
+
+		if(m_InteropBuffer != nullptr)
+			gs_texture_destroy(m_InteropBuffer);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -185,17 +186,18 @@ namespace lvk
 		}
 
 		FrameBuffer& buffer = fetch_cache().frame_buffer;
+		bool is_chain_start = false, is_chain_end = false;
 
 		// Render to the frame buffer if we are at the start of a new chain,
 		// otherwise pretend to skip the filter so that OBS travels up the
 		// filter chain to process previous effects filters.
-		if (is_vision_filter_chain_start())
+		if (is_chain_start = is_vision_filter_chain_start(); is_chain_start)
 		{
 			// If rendering to the frame buffer somehow fails, then
 			// release the buffer so that upcoming filters don't try
 			// and filter and an outdated frame. This should rarely
 			// occur during normal operation.
-			if (!acquire_frame(buffer))
+			if (!acquire_render(buffer))
 			{
 				buffer.frame.release();
 				obs_source_skip_video_filter(m_Context);
@@ -216,8 +218,26 @@ namespace lvk
 
 			// If this happens to be the last filter in the vision filter
 			// chain, then render out the buffer for the non-vision filters. 
-			if (is_vision_filter_chain_end())
-				hybrid_render(render_frame(buffer));
+			if (is_chain_end = is_vision_filter_chain_end(); is_chain_end)
+				hybrid_render(acquire_buffer(buffer));
+		}
+
+		// Clean up interop resources if we are not at the chain ends
+		if (!is_chain_start)
+		{
+			if (m_RenderBuffer != nullptr)
+			{
+				gs_texture_destroy(m_RenderBuffer);
+				m_RenderBuffer = nullptr;
+			}
+
+			if (!is_chain_end && m_InteropBuffer != nullptr)
+			{
+				gs_texture_destroy(m_InteropBuffer);
+				m_InteropBuffer = nullptr;
+
+				m_ConversionBuffer.release();
+			}
 		}
 	}
 
@@ -337,7 +357,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VisionFilter::acquire_frame(FrameBuffer& buffer)
+	bool VisionFilter::acquire_render(FrameBuffer& buffer)
 	{
 		const auto target = obs_filter_get_target(m_Context);
 		const uint32_t source_width = obs_source_get_base_width(target);
@@ -346,11 +366,20 @@ namespace lvk
 		if (target == nullptr || source_width == 0 || source_height == 0)
 			return false;
 
-		prepare_interop(source_width, source_height);
-		if (DefaultEffect::Acquire(m_Context, m_InteropTexture))
+		// NOTE: Frame is rendered to a GS_RGBA texture, which automatically
+		// adapts as required to hold linear RGB and sRGB textures. This format
+		// is not supported for interop, so it is then copied to a GS_RGBA_UNORM
+		// texture for interop. This copy operation automatically handles the 
+		// sRGB to linear RGB conversion for us. 
+
+		prepare_render_buffer(source_width, source_height);
+		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
+			prepare_interop_buffer(source_width, source_height);
+			gs_copy_texture(m_InteropBuffer, m_RenderBuffer);
+
 			// Import the texture using interop and convert to YUV
-			lvk::ocl::import_texture(m_InteropTexture, m_ConversionBuffer);
+			lvk::ocl::import_texture(m_InteropBuffer, m_ConversionBuffer);
 			cv::cvtColor(m_ConversionBuffer, buffer.frame, cv::COLOR_RGBA2RGB);
 			cv::cvtColor(buffer.frame, buffer.frame, cv::COLOR_RGB2YUV);
 
@@ -361,34 +390,56 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	gs_texture_t* VisionFilter::render_frame(FrameBuffer& buffer)
+	gs_texture_t* VisionFilter::acquire_buffer(FrameBuffer& buffer)
 	{
-		prepare_interop(buffer.frame.cols, buffer.frame.rows);
+		prepare_interop_buffer(buffer.frame.cols, buffer.frame.rows);
 
 		cv::cvtColor(buffer.frame, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
-		lvk::ocl::export_texture(m_ConversionBuffer, m_InteropTexture);
+		lvk::ocl::export_texture(m_ConversionBuffer, m_InteropBuffer);
 
-		return m_InteropTexture;
+		return m_InteropBuffer;
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VisionFilter::prepare_interop(const uint32_t width, const uint32_t height)
+	void VisionFilter::prepare_render_buffer(const uint32_t width, const uint32_t height)
 	{
-		if (
-			m_InteropTexture == nullptr
-			|| gs_texture_get_width(m_InteropTexture) != width
-			|| gs_texture_get_height(m_InteropTexture) != height
-		)
+		const bool outdated = m_RenderBuffer == nullptr
+			|| gs_texture_get_width(m_RenderBuffer) != width
+			|| gs_texture_get_height(m_RenderBuffer) != height;
+
+		if (outdated)
 		{
-			gs_texture_destroy(m_InteropTexture);
-			m_InteropTexture = gs_texture_create(
+			gs_texture_destroy(m_RenderBuffer);
+			m_RenderBuffer = gs_texture_create(
+				width,
+				height,
+				GS_RGBA,
+				1,
+				nullptr,
+				GS_RENDER_TARGET
+			);
+		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void VisionFilter::prepare_interop_buffer(const uint32_t width, const uint32_t height)
+	{
+		const bool outdated = m_InteropBuffer == nullptr
+			|| gs_texture_get_width(m_InteropBuffer) != width
+			|| gs_texture_get_height(m_InteropBuffer) != height;
+
+		if (outdated)
+		{
+			gs_texture_destroy(m_InteropBuffer);
+			m_InteropBuffer = gs_texture_create(
 				width,
 				height,
 				GS_RGBA_UNORM,
 				1,
 				nullptr,
-				GS_RENDER_TARGET | GS_SHARED_TEX
+				GS_SHARED_TEX
 			);
 		}
 	}
