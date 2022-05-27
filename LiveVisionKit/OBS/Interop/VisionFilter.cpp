@@ -57,14 +57,12 @@ namespace lvk
 
 	VisionFilter::~VisionFilter()
 	{
-		blog(LOG_INFO, "START DEST");
 		LVK_ASSERT(s_Filters.count(m_Context) == 1);
 
 		s_Filters.erase(m_Context);
 
 		clean_cache();
 		release_resources();
-		blog(LOG_INFO, "END DEST");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
