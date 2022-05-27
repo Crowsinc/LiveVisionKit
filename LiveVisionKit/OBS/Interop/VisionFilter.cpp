@@ -57,12 +57,14 @@ namespace lvk
 
 	VisionFilter::~VisionFilter()
 	{
+		blog(LOG_INFO, "START DEST");
 		LVK_ASSERT(s_Filters.count(m_Context) == 1);
 
 		s_Filters.erase(m_Context);
 
 		clean_cache();
 		release_resources();
+		blog(LOG_INFO, "END DEST");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -223,6 +225,7 @@ namespace lvk
 		}
 
 		// Clean up interop resources if we are not at the chain ends
+		// Both require interop buffer, start might need render buffer
 		if (!is_chain_start)
 		{
 			if (m_RenderBuffer != nullptr)
@@ -366,17 +369,25 @@ namespace lvk
 		if (target == nullptr || source_width == 0 || source_height == 0)
 			return false;
 
-		// NOTE: Frame is rendered to a GS_RGBA texture, which automatically
-		// adapts as required to hold linear RGB and sRGB textures. This format
-		// is not supported for interop, so it is then copied to a GS_RGBA_UNORM
-		// texture for interop. This copy operation automatically handles the 
-		// sRGB to linear RGB conversion for us. 
+		// NOTE: sRGB is implicitly handled by the GS_RGBA format.
+		// OpenGL can render directly to a GS_RGBA interop buffer,
+		// but DirectX11 interop is supported with GS_RGBA_UNORM
+		// only. So for DirectX11 to handle sRGB filters, we must
+		// render to GS_RGBA then copy to the GS_RGBA_UNORM buffer.
+		// The copy automatically handles sRGB conversions.
 
+#ifdef _WIN32
 		prepare_render_buffer(source_width, source_height);
 		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
 			prepare_interop_buffer(source_width, source_height);
 			gs_copy_texture(m_InteropBuffer, m_RenderBuffer);
+
+#else
+		prepare_interop_buffer(source_width, source_height);
+		if (DefaultEffect::Acquire(m_Context, m_InteropBuffer))
+		{
+#endif
 
 			// Import the texture using interop and convert to YUV
 			lvk::ocl::import_texture(m_InteropBuffer, m_ConversionBuffer);
@@ -433,6 +444,8 @@ namespace lvk
 		if (outdated)
 		{
 			gs_texture_destroy(m_InteropBuffer);
+
+#ifdef _WIN32
 			m_InteropBuffer = gs_texture_create(
 				width,
 				height,
@@ -441,6 +454,17 @@ namespace lvk
 				nullptr,
 				GS_SHARED_TEX
 			);
+#else
+			// OpenGL renders directly to buffer
+			m_InteropBuffer = gs_texture_create(
+				width,
+				height,
+				GS_RGBA,
+				1,
+				nullptr,
+				GS_SHARED_TEX | GS_RENDER_TARGET
+			);
+#endif
 		}
 	}
 
