@@ -82,7 +82,6 @@ namespace lvk
 
 		if(m_InteropBuffer != nullptr)
 			gs_texture_destroy(m_InteropBuffer);
-	
 
 		obs_leave_graphics();
 
@@ -384,6 +383,7 @@ namespace lvk
 		// The copy automatically handles sRGB conversions.
 
 #ifdef _WIN32
+		// DirectX11
 		prepare_render_buffer(source_width, source_height);
 		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
@@ -391,6 +391,7 @@ namespace lvk
 			gs_copy_texture(m_InteropBuffer, m_RenderBuffer);
 
 #else
+		// OpenGL
 		prepare_interop_buffer(source_width, source_height);
 		if (DefaultEffect::Acquire(m_Context, m_InteropBuffer))
 		{
@@ -457,6 +458,7 @@ namespace lvk
 			gs_texture_destroy(m_InteropBuffer);
 
 #ifdef _WIN32
+			// DirectX11
 			m_InteropBuffer = gs_texture_create(
 				width,
 				height,
@@ -466,7 +468,7 @@ namespace lvk
 				GS_SHARED_TEX
 			);
 #else
-			// OpenGL renders directly to buffer
+			// OpenGL (renders directly to buffer)
 			m_InteropBuffer = gs_texture_create(
 				width,
 				height,
@@ -494,6 +496,7 @@ namespace lvk
 
 	void VisionFilter::hybrid_render(gs_texture_t* frame)
 	{
+		LVK_ASSERT(gs_get_context() != nullptr);
 
 		// Filter is not hybrid render if this function has not been overwritten.
 		m_HybridRender = false;
