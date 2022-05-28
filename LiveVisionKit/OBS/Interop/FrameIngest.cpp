@@ -756,8 +756,10 @@ namespace lvk::ocl
 		auto& device = cv::ocl::Device::getDefault();
 
 #ifdef _WIN32
+		// DirectX11 
 		return device.isExtensionSupported("cl_nv_d3d11_sharing") || device.isExtensionSupported("cl_khr_d3d11_sharing");
 #else
+		// OpenGL
 		return device.isExtensionSupported("cl_khr_gl_sharing");
 #endif
 	}
@@ -769,11 +771,14 @@ namespace lvk::ocl
 		static bool initialized = false; 
 		if (!initialized)
 		{
+			LVK_ASSERT(gs_get_context() != nullptr);
 			LVK_ASSERT(supports_graphics_interop());
-#ifdef _WIN32
+#ifdef _WIN32 
+			// DirectX11 Context
 			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
 			cv::directx::ocl::initializeContextFromD3D11Device(device);
-#else
+#else       
+			// OpenGL Context
 			cv::ogl::ocl::initializeContextFromGL();
 #endif
 			initialized = true;
@@ -789,7 +794,8 @@ namespace lvk::ocl
 
 		try_attach_graphics_interop_context();
 
-#ifdef _WIN32 // DirextX 11 Interop
+#ifdef _WIN32
+		// DirectX11 Interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(src));
 
 		// Pre-validate texture format
@@ -798,8 +804,9 @@ namespace lvk::ocl
 		LVK_ASSERT(cv::directx::getTypeFromDXGI_FORMAT(desc.Format) >= 0);
 
 		cv::directx::convertFromD3D11Texture2D(texture, dst);
-#else  // OpenGL Interop
-
+#else  
+		// OpenGL Interop
+		
 		// Pre-validate texture format
 		const auto format = gs_texture_get_color_format(src);
 		LVK_ASSERT(format == GS_RGBA || format == GS_RGBA_UNORM);
@@ -813,7 +820,6 @@ namespace lvk::ocl
 		);
 
 		cv::ogl::convertFromGLTexture2D(texture, dst);
-
 #endif
 	}
 
@@ -828,7 +834,8 @@ namespace lvk::ocl
 
 		try_attach_graphics_interop_context();
 
-#ifdef _WIN32 // DirectX 11 interop
+#ifdef _WIN32 
+		// DirectX11 Interop
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
 
 		// Pre-validate texture format
@@ -837,7 +844,8 @@ namespace lvk::ocl
 		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
 
 		cv::directx::convertToD3D11Texture2D(src, texture);
-#else // OpenGL Interop
+#else 
+		// OpenGL Interop
 
 		// Pre-validate texture format
 		const auto format = gs_texture_get_color_format(dst);
@@ -852,7 +860,6 @@ namespace lvk::ocl
 		);
 
 		cv::ogl::convertToGLTexture2D(src, texture);
-
 #endif
 	}
 
