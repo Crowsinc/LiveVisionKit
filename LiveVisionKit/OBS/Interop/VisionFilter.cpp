@@ -75,11 +75,18 @@ namespace lvk
 			m_AsyncFrameQueue.pop();
 		}
 
+		obs_enter_graphics();
+
 		if(m_RenderBuffer != nullptr)
 			gs_texture_destroy(m_RenderBuffer);
 
 		if(m_InteropBuffer != nullptr)
 			gs_texture_destroy(m_InteropBuffer);
+	
+
+		obs_leave_graphics();
+
+		m_ConversionBuffer.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -166,6 +173,8 @@ namespace lvk
 
 	void VisionFilter::render()
 	{
+		LVK_ASSERT(gs_get_context() != nullptr);
+
 		m_Source = obs_filter_get_parent(m_Context);
 		if(m_Source == nullptr || gs_get_render_target() == nullptr)
 		{
@@ -413,6 +422,8 @@ namespace lvk
 
 	void VisionFilter::prepare_render_buffer(const uint32_t width, const uint32_t height)
 	{
+		LVK_ASSERT(gs_get_context() != nullptr);
+
 		const bool outdated = m_RenderBuffer == nullptr
 			|| gs_texture_get_width(m_RenderBuffer) != width
 			|| gs_texture_get_height(m_RenderBuffer) != height;
@@ -435,6 +446,8 @@ namespace lvk
 
 	void VisionFilter::prepare_interop_buffer(const uint32_t width, const uint32_t height)
 	{
+		LVK_ASSERT(gs_get_context() != nullptr);
+
 		const bool outdated = m_InteropBuffer == nullptr
 			|| gs_texture_get_width(m_InteropBuffer) != width
 			|| gs_texture_get_height(m_InteropBuffer) != height;
@@ -481,6 +494,7 @@ namespace lvk
 
 	void VisionFilter::hybrid_render(gs_texture_t* frame)
 	{
+
 		// Filter is not hybrid render if this function has not been overwritten.
 		m_HybridRender = false;
 
