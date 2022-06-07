@@ -58,11 +58,13 @@ void register_cct_effect_source();
 
 void attach_ocl_interop_context(void* param, uint32_t cx, uint32_t cy)
 {
-	// NOTE: Attach (create) OpenCV's OpenCL context based on the graphics
-	// context in use by OBS. Do it here before any OpenCL code is able to
-	// run, then immediately remove the callback.
+	// NOTE: We need to attach (create) the OpenCL context based on the graphics
+	// context in use by OBS. We need to do it here during the main render so 
+	// that it occurs before any OpenCL vision filter code is able to run. We 
+	// also need to attempt it repeatedly in case OBS switches to a new graphics
+	// render thread. If this happens, then our OpenCL execution context will be
+	// attached to the wrong thread, and must be updated before running OpenCL code.
 	lvk::ocl::try_attach_graphics_interop_context();
-	obs_remove_main_render_callback(&attach_ocl_interop_context, nullptr);
 }
 
 //---------------------------------------------------------------------------------------------------------------------

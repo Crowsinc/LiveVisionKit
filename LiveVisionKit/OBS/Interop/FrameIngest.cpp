@@ -768,8 +768,11 @@ namespace lvk::ocl
 
 	void try_attach_graphics_interop_context()
 	{
-		static bool initialized = false; 
-		if (!initialized)
+		static cv::ocl::OpenCLExecutionContext opencl_context;
+		static graphics_t* graphics_context = nullptr;
+		static std::thread::id bound_thread;
+		
+		if (opencl_context.empty())
 		{
 			LVK_ASSERT(gs_get_context() != nullptr);
 			LVK_ASSERT(supports_graphics_interop());
@@ -781,7 +784,18 @@ namespace lvk::ocl
 			// OpenGL Context
 			cv::ogl::ocl::initializeContextFromGL();
 #endif
-			initialized = true;
+			graphics_context = gs_get_context();
+			opencl_context = cv::ocl::OpenCLExecutionContext::getCurrent();
+			bound_thread = std::this_thread::get_id();
+		}
+
+		// NOTE: We are making the assumption that 
+		// OBS only ever has one graphics context. 
+		LVK_ASSERT(gs_get_context() == graphics_context);
+		if (std::this_thread::get_id() != bound_thread)
+		{
+			bound_thread = std::this_thread::get_id();
+			opencl_context.bind();
 		}
 	}
 
