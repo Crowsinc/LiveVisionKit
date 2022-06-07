@@ -760,7 +760,11 @@ namespace lvk::ocl
 		return device.isExtensionSupported("cl_nv_d3d11_sharing") || device.isExtensionSupported("cl_khr_d3d11_sharing");
 #else
 		// OpenGL
-		return device.isExtensionSupported("cl_khr_gl_sharing");
+
+		// NOTE: Linux OpenGL interop is implemented but disabled due 
+		// to suspected driver issues. Needs further testing across
+		// multple Linux machines. 
+		return false; //device.isExtensionSupported("cl_khr_gl_sharing");
 #endif
 	}
 
