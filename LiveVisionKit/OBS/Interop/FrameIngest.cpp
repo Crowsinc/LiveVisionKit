@@ -18,6 +18,7 @@
 #include "FrameIngest.hpp"
 
 #include <tuple>
+#include <thread>
 
 #include "Math/Math.hpp"
 #include "Diagnostics/Directives.hpp"
