@@ -37,7 +37,7 @@ namespace lvk
 		FrameTracker(
 			const MotionModel model = MotionModel::HOMOGRAPHY,
 			const float estimation_threshold = 0.05,
-			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,1), cv::Size(32,18), 0.3)
+			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,2), cv::Size(32,18), 0.3)
 		);
 
 		Homography track(const cv::UMat& next_frame);
