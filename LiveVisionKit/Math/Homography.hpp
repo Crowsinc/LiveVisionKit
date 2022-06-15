@@ -44,7 +44,11 @@ namespace lvk
 
 		cv::Point2d transform(const cv::Point2d& point) const;
 
+		cv::Point2f transform(const cv::Point2f& point) const;
+
 		std::vector<cv::Point2d> transform(const std::vector<cv::Point2d>& points) const;
+		
+		std::vector<cv::Point2f> transform(const std::vector<cv::Point2f>& points) const;
 
 		void warp(const cv::UMat& src, cv::UMat& dst) const;
 

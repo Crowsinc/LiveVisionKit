@@ -106,9 +106,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	cv::Point2f Homography::transform(const cv::Point2f& point) const
+	{
+		std::vector<cv::Point2f> out, in = {point};
+		cv::perspectiveTransform(in, out, m_Matrix);
+		return out[0];
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	std::vector<cv::Point2d> Homography::transform(const std::vector<cv::Point2d>& points) const
 	{
 		std::vector<cv::Point2d> out;
+		out.reserve(points.size());
+
+		cv::perspectiveTransform(points, out, m_Matrix);
+
+		return out;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	std::vector<cv::Point2f> Homography::transform(const std::vector<cv::Point2f>& points) const
+	{
+		std::vector<cv::Point2f> out;
 		out.reserve(points.size());
 
 		cv::perspectiveTransform(points, out, m_Matrix);
