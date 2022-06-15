@@ -41,7 +41,9 @@ namespace lvk
 	constexpr auto PROP_MOTION_MODEL = "MOTION_MODEL";
 	constexpr auto MOTION_MODEL_AFFINE = "AFFINE";
 	constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
-	constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_HOMOGRAPHY;
+	
+	constexpr auto MOTION_MODEL_DYNAMIC = "DYNAMIC";
+	constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_DYNAMIC;
 
 	constexpr auto PROP_SUPPRESSION_MODE = "SUPPRESSION_MODE";
 	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
@@ -107,8 +109,9 @@ namespace lvk
 			OBS_COMBO_TYPE_LIST,
 			OBS_COMBO_FORMAT_STRING
 		);
-		obs_property_list_add_string(property, "Homography", MOTION_MODEL_HOMOGRAPHY);
+		obs_property_list_add_string(property, "Dynamic", MOTION_MODEL_DYNAMIC);
 		obs_property_list_add_string(property, "Affine", MOTION_MODEL_AFFINE);
+		obs_property_list_add_string(property, "Homography", MOTION_MODEL_HOMOGRAPHY);
 
 		property = obs_properties_add_list(
 			properties,
@@ -171,6 +174,8 @@ namespace lvk
 			m_FrameTracker.set_model(MotionModel::AFFINE);
 		else if(new_model == MOTION_MODEL_HOMOGRAPHY)
 			m_FrameTracker.set_model(MotionModel::HOMOGRAPHY);
+		else if(new_model == MOTION_MODEL_DYNAMIC)
+			m_FrameTracker.set_model(MotionModel::DYNAMIC);
 
 		// Update suppression mode
 		const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);

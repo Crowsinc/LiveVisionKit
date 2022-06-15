@@ -28,6 +28,9 @@ namespace lvk
 
 	constexpr float STABILITY_SMOOTHING_FACTOR = 0.06f;
 
+	constexpr float DYN_MODEL_DISTRIBTION_THRESHOLD_Y = 0.25f;
+	constexpr float DYN_MODEL_DISTRIBTION_THRESHOLD_X = 0.5f;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
@@ -146,8 +149,12 @@ namespace lvk
 		}
 
 		// Estimate motion between frames
+		MotionModel motion_model = m_MotionModel;
+		if (motion_model == MotionModel::DYNAMIC)
+			motion_model = choose_optimal_model();
+
 		cv::Mat motion;
-		switch(m_MotionModel)
+		switch(motion_model)
 		{
 			case MotionModel::AFFINE:
 				//TODO: switch to USAC when partial is supported
@@ -220,6 +227,28 @@ namespace lvk
 	MotionModel FrameTracker::model() const
 	{
 		return m_MotionModel;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	MotionModel FrameTracker::choose_optimal_model() const
+	{
+		// A good Homography should always be better than a good
+		// affine transform. So always pick Homography unless the
+		// Homography is likely to produce bad results. 
+		
+		// If the tracking points are not well distributed, then 
+		// its possible that the Homography focuses too much on a 
+		// resulting in distortions in the under-represented areas.
+		// Hence, we switch to affine in this case to ensure the 
+		// frame is fairly treated. This effect is particularly 
+		// sensitive in the sky, which often has little to no points.
+		const auto distribution_error = m_GridDetector.distribution_error();
+
+		bool prefer_affine = distribution_error.x > DYN_MODEL_DISTRIBTION_THRESHOLD_X
+			              || distribution_error.y > DYN_MODEL_DISTRIBTION_THRESHOLD_Y;
+	
+		return prefer_affine ? MotionModel::AFFINE : MotionModel::HOMOGRAPHY;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

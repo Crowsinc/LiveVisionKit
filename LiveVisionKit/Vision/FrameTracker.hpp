@@ -27,7 +27,8 @@ namespace lvk
 	enum class MotionModel
 	{
 		AFFINE,
-		HOMOGRAPHY
+		HOMOGRAPHY,
+		DYNAMIC
 	};
 
 	class FrameTracker
@@ -35,7 +36,7 @@ namespace lvk
 	public:
 
 		FrameTracker(
-			const MotionModel model = MotionModel::HOMOGRAPHY,
+			const MotionModel model = MotionModel::DYNAMIC,
 			const float estimation_threshold = 0.05,
 			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,2), cv::Size(32,18), 0.3)
 		);
@@ -61,6 +62,8 @@ namespace lvk
 		void prepare_state();
 		
 		void update_tracking_stability(const float inliers, const float samples);
+
+		MotionModel choose_optimal_model() const;
 
 	private:
 
