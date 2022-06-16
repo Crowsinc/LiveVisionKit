@@ -50,6 +50,8 @@ namespace lvk
 
 		virtual void hybrid_render(gs_texture_t* frame);
 
+		double delta_time() const;
+
 	private:
 
 		struct SourceCache
@@ -78,6 +80,8 @@ namespace lvk
 
 		void prepare_render_buffer(const uint32_t width, const uint32_t height);
 
+		void update_timing();
+
 	private:
 
 		static std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> s_Filters;
@@ -94,6 +98,8 @@ namespace lvk
 		gs_texture_t* m_InteropBuffer;
 		
 		std::queue<obs_source_frame*> m_AsyncFrameQueue; 
+	
+		double m_RenderTime, m_DeltaTime;
 	};
 
 }
