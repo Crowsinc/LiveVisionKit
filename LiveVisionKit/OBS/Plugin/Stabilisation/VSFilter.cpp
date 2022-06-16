@@ -52,9 +52,9 @@ namespace lvk
 	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_RELAXED;
 
 	const auto SUPPRESSION_RANGE_OFF = cv::Point2f(0.0f, 0.0f);
-	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.85f);
+	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.90f);
 	const auto SUPPRESSION_RANGE_RELAXED = cv::Point2f(0.0f, 0.30f);
-	constexpr auto SUPPRESSION_SMOOTHING_STEP = 0.05f;
+	constexpr auto SUPPRESSION_SMOOTHING_STEP = 3.0f;
 
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
@@ -471,7 +471,9 @@ namespace lvk
 		else if(!m_Enabled || scene_stability < suppression_limit)
 			suppression_target = 1.0f;
 
-		m_SuppressionFactor = step(m_SuppressionFactor, suppression_target, SUPPRESSION_SMOOTHING_STEP);
+		std::cout << m_SuppressionFactor << "\t\tDT: " << delta_time() << "\t\t Step: " << delta_time() * SUPPRESSION_SMOOTHING_STEP << std::endl;
+
+		m_SuppressionFactor = step(m_SuppressionFactor, suppression_target, delta_time() * SUPPRESSION_SMOOTHING_STEP);
 		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
 	}
 

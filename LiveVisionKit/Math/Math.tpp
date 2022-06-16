@@ -61,9 +61,9 @@ namespace lvk
 	{
 		LVK_ASSERT(amount > 0);
 		if(current > target)
-			return std::max(current - amount, target);
+			return std::max<V>(current - amount, target);
 		else
-			return std::min(current + amount, target);
+			return std::min<V>(current + amount, target);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
