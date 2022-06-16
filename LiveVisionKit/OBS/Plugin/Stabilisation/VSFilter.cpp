@@ -471,9 +471,12 @@ namespace lvk
 		else if(!m_Enabled || scene_stability < suppression_limit)
 			suppression_target = 1.0f;
 
-		std::cout << m_SuppressionFactor << "\t\tDT: " << delta_time() << "\t\t Step: " << delta_time() * SUPPRESSION_SMOOTHING_STEP << std::endl;
+		m_SuppressionFactor = step(
+			m_SuppressionFactor,
+			suppression_target,
+			delta_time() * SUPPRESSION_SMOOTHING_STEP
+		);
 
-		m_SuppressionFactor = step(m_SuppressionFactor, suppression_target, delta_time() * SUPPRESSION_SMOOTHING_STEP);
 		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
 	}
 
