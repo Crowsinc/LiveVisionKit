@@ -48,15 +48,13 @@ namespace lvk
 	constexpr auto PROP_SUPPRESSION_MODE = "SUPPRESSION_MODE";
 	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
 	constexpr auto SUPPRESSION_MODE_STRICT = "SM_STRICT";
-	constexpr auto SUPPRESSION_MODE_MODERATE = "SM_MODERATE";
 	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
 	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_RELAXED;
 
-	constexpr auto SUPPRESSION_MODE_THRESH_OFF = 0.0f;
-	constexpr auto SUPPRESSION_MODE_THRESH_STRICT = 0.9f;
-	constexpr auto SUPPRESSION_MODE_THRESH_MODERATE = 0.8f;
-	constexpr auto SUPPRESSION_MODE_THRESH_RELAXED = 0.7f;
-	constexpr auto SUPPRESSION_SMOOTHING_STEP = 0.1f;
+	const auto SUPPRESSION_RANGE_OFF = cv::Point2f(0.0f, 0.0f);
+	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.85f);
+	const auto SUPPRESSION_RANGE_RELAXED = cv::Point2f(0.0f, 0.30f);
+	constexpr auto SUPPRESSION_SMOOTHING_STEP = 0.05f;
 
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
@@ -121,9 +119,8 @@ namespace lvk
 			OBS_COMBO_FORMAT_STRING
 		);
 		obs_property_list_add_string(property, "Off", SUPPRESSION_MODE_OFF);
-		obs_property_list_add_string(property, "Relaxed", SUPPRESSION_MODE_RELAXED);
-		obs_property_list_add_string(property, "Moderate", SUPPRESSION_MODE_MODERATE);
 		obs_property_list_add_string(property, "Strict", SUPPRESSION_MODE_STRICT);
+		obs_property_list_add_string(property, "Relaxed", SUPPRESSION_MODE_RELAXED);
 
 		obs_properties_add_bool(
 			properties,
@@ -180,13 +177,11 @@ namespace lvk
 		// Update suppression mode
 		const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);
 		if(new_mode == SUPPRESSION_MODE_OFF)
-			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_OFF;
-		else if(new_mode == SUPPRESSION_MODE_RELAXED)
-			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_RELAXED;
-		else if(new_mode == SUPPRESSION_MODE_MODERATE)
-			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_MODERATE;
+			m_SuppressionRange = SUPPRESSION_RANGE_OFF;
 		else if(new_mode == SUPPRESSION_MODE_STRICT)
-			m_StabilityThreshold = SUPPRESSION_MODE_THRESH_STRICT;
+			m_SuppressionRange = SUPPRESSION_RANGE_STRICT;
+		else if(new_mode == SUPPRESSION_MODE_RELAXED)
+			m_SuppressionRange = SUPPRESSION_RANGE_RELAXED;
 
 		// NOTE: If stabilisation is disabled, we need to restart the FrameTracker
 		// so that is starts from scratch when its turned on again. Otherwise it
@@ -229,8 +224,8 @@ namespace lvk
 		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_FrameTracker(/* Use defaults */),
-		  m_StabilityThreshold(0.0),
-		  m_SupressionFactor(0.0)
+		  m_SuppressionRange(0.0),
+		  m_SuppressionFactor(0.0)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -298,7 +293,7 @@ namespace lvk
 		{
 			start_time += draw_debug_frame(
 				buffer.frame,
-				m_FrameTracker.tracking_stability(),
+				m_FrameTracker.stability(),
 				m_FrameTracker.tracking_points()
 			);
 		}
@@ -374,7 +369,7 @@ namespace lvk
 		draw::plot_markers(
 			frame,
 			m_FrameTracker.tracking_points(),
-			should_suppress() ? draw::YUV_RED : draw::YUV_GREEN,
+			lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
 			cv::MarkerTypes::MARKER_CROSS,
 			8,
 			2
@@ -461,25 +456,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VSFilter::should_suppress() const
-	{
-		return !m_Enabled || m_FrameTracker.tracking_stability() < m_StabilityThreshold;
-	}
-	
-//---------------------------------------------------------------------------------------------------------------------
-
 	Homography VSFilter::suppress(Homography& motion)
 	{
-		if (should_suppress())
+		const float scene_stability = m_FrameTracker.stability();
+		const float suppression_threshold = m_SuppressionRange.y;
+		const float suppression_limit = m_SuppressionRange.x;
+
+		float suppression_target = 0.0f;
+		if (between(scene_stability, suppression_limit, suppression_threshold))
 		{
-			m_SupressionFactor = std::min(m_SupressionFactor + SUPPRESSION_SMOOTHING_STEP, 1.0f);
-			return (1.0f - m_SupressionFactor) * motion + m_SupressionFactor * Homography::Identity();
+			const float length = suppression_threshold - suppression_limit;
+			suppression_target = 1.0f - ((scene_stability - suppression_limit) / length);
 		}
-		else
-		{
-			m_SupressionFactor = 0.0f;
-			return motion;
-		}
+		else if(!m_Enabled || scene_stability < suppression_limit)
+			suppression_target = 1.0f;
+
+		m_SuppressionFactor = step(m_SuppressionFactor, suppression_target, SUPPRESSION_SMOOTHING_STEP);
+		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

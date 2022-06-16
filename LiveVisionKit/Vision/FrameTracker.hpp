@@ -49,7 +49,7 @@ namespace lvk
 
 		MotionModel model() const;
 
-		const float tracking_stability() const;
+		const float stability() const;
 
 		const std::vector<cv::Point2f> tracking_points() const;
 

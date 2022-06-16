@@ -53,6 +53,18 @@ namespace lvk
 	{
 		return from + t * (to - from);
 	}
+	
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename V, typename T>
+	V step(const V& current, const V& target, const T& amount)
+	{
+		LVK_ASSERT(amount > 0);
+		if(current > target)
+			return std::max(current - amount, target);
+		else
+			return std::min(current + amount, target);
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

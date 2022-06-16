@@ -36,6 +36,9 @@ namespace lvk
 	template<typename V, typename T>
 	inline V lerp(const V& from, const V& to, const T& t);
 
+	template<typename V, typename T>
+	inline V step(const V& current, const V& target, const T& amount);
+
 	// Applies percentage crop to the given size
 	template<typename T>
 	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion);

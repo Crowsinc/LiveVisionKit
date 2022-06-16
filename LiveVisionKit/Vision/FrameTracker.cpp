@@ -281,7 +281,7 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	const float FrameTracker::tracking_stability() const
+	const float FrameTracker::stability() const
 	{
 		return m_TrackingStability;
 	}
