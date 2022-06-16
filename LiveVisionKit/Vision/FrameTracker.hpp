@@ -61,7 +61,7 @@ namespace lvk
 
 		void prepare_state();
 		
-		void update_tracking_stability(const float inliers, const float samples);
+		void update_stability(const float inlier_ratio);
 
 		MotionModel choose_optimal_model() const;
 
@@ -76,7 +76,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_TrackingStability;
+		float m_Stability;
 
 		MotionModel m_MotionModel;
 		cv::UsacParams m_USACParams;

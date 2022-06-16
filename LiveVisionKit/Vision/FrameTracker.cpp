@@ -37,7 +37,7 @@ namespace lvk
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
 		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
-		  m_TrackingStability(0.0f),
+		  m_Stability(0.0f),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -187,7 +187,11 @@ namespace lvk
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
 			m_GridDetector.propagate(m_MatchedPoints);
 
-			update_tracking_stability(m_MatchedPoints.size(), m_TrackedPoints.size());
+			if(!m_TrackedPoints.empty())
+				update_stability(static_cast<float>(m_MatchedPoints.size()) / m_TrackedPoints.size());
+			else
+				update_stability(0);
+
 
 			return Homography::FromMatrix(motion);
 		}
@@ -198,7 +202,8 @@ namespace lvk
 
 	Homography FrameTracker::abort_tracking()
 	{
-		update_tracking_stability(0, 0);
+		update_stability(0);
+
 		m_GridDetector.reset();
 		return Homography::Identity();
 	}
@@ -253,12 +258,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameTracker::update_tracking_stability(const float inliers, const float samples)
+	void FrameTracker::update_stability(const float inlier_ratio)
 	{
-		LVK_ASSERT(samples >= 0.0f);
-		LVK_ASSERT(inliers <= samples);
+		LVK_ASSERT(between(inlier_ratio, 0.0f, 1.0f));
 
-		// NOTE: we use the inlier ratio as a measure of stability. 
 		// Assuming the GridDetector produces an even spread of points 
 		// across the entire frame, as it is designed to do. Then a low
 		// inlier proportion suggests that the frame contains competing
@@ -268,13 +271,9 @@ namespace lvk
 		// consistently describe the global motion of the frame hence
 		// the stability is high. 
 
-		float inlier_proportion = 0;
-		if(samples != 0)
-			inlier_proportion = inliers / samples;
-
-		m_TrackingStability = exponential_moving_average(
-			m_TrackingStability,
-			inlier_proportion,
+		m_Stability = exponential_moving_average(
+			m_Stability,
+			inlier_ratio,
 			STABILITY_SMOOTHING_FACTOR
 		);
 	}
@@ -283,7 +282,7 @@ namespace lvk
 
 	const float FrameTracker::stability() const
 	{
-		return m_TrackingStability;
+		return m_Stability;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
