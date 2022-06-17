@@ -26,10 +26,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr float STABILITY_SMOOTHING_FACTOR = 0.06f;
-
-	constexpr float DYN_MODEL_DISTRIBTION_THRESHOLD_Y = 0.25f;
-	constexpr float DYN_MODEL_DISTRIBTION_THRESHOLD_X = 0.5f;
+	constexpr float METRIC_SMOOTHING_FACTOR = 0.05f;
+	constexpr float GOOD_DISTRIBUTION_QUALITY = 0.5f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -37,7 +35,8 @@ namespace lvk
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
 		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
-		  m_Stability(0.0f),
+		  m_SceneStability(0.0f),
+		  m_DistributionQuality(0, 0),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -187,11 +186,10 @@ namespace lvk
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
 			m_GridDetector.propagate(m_MatchedPoints);
 
-			if(!m_TrackedPoints.empty())
-				update_stability(static_cast<float>(m_MatchedPoints.size()) / m_TrackedPoints.size());
-			else
-				update_stability(0);
-
+			update_metrics(
+				static_cast<float>(m_MatchedPoints.size()) / m_TrackedPoints.size(),
+				m_GridDetector.distribution_quality()
+			);
 
 			return Homography::FromMatrix(motion);
 		}
@@ -202,7 +200,7 @@ namespace lvk
 
 	Homography FrameTracker::abort_tracking()
 	{
-		update_stability(0);
+		update_metrics(0, m_GridDetector.distribution_quality());
 
 		m_GridDetector.reset();
 		return Homography::Identity();
@@ -238,43 +236,40 @@ namespace lvk
 
 	MotionModel FrameTracker::choose_optimal_model() const
 	{
-		// A good Homography should always be better than a good
-		// affine transform. So always pick Homography unless the
-		// Homography is likely to produce bad results. 
-		
-		// If the tracking points are not well distributed, then 
-		// its possible that the Homography focuses too much on a 
-		// resulting in distortions in the under-represented areas.
-		// Hence, we switch to affine in this case to ensure the 
-		// frame is fairly treated. This effect is particularly 
-		// sensitive in the sky, which often has little to no points.
-		const auto distribution_error = m_GridDetector.distribution_error();
+		// A good Homography should always be better than a good affine 
+		// transform. But if the tracking points are not well distributed,
+		// then it's possible that the Homography focuses too much on a 
+		// specific area, leading to distortions elsewhere. Hence, we will
+		// only consider using a Homography if the tracking point distribution
+		// is a fair representation of the frame. Otherwise we use the affine
+		// transform, which always fully represents the frame. 
 
-		bool prefer_affine = distribution_error.x > DYN_MODEL_DISTRIBTION_THRESHOLD_X
-			              || distribution_error.y > DYN_MODEL_DISTRIBTION_THRESHOLD_Y;
-	
-		return prefer_affine ? MotionModel::AFFINE : MotionModel::HOMOGRAPHY;
+		// TODO: Use a more rigorous approach to selecting the optimal model.
+		const auto aspect_ratio = m_GridDetector.resolution().aspectRatio();
+		const bool good_distribution = m_DistributionQuality.x >= GOOD_DISTRIBUTION_QUALITY
+								    && m_DistributionQuality.y / aspect_ratio >= GOOD_DISTRIBUTION_QUALITY;
+
+		return good_distribution ? MotionModel::HOMOGRAPHY : MotionModel::AFFINE;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameTracker::update_stability(const float inlier_ratio)
+	void FrameTracker::update_metrics(const float inlier_ratio, const cv::Point2f distribution_quality)
 	{
 		LVK_ASSERT(between(inlier_ratio, 0.0f, 1.0f));
+		LVK_ASSERT(between(distribution_quality.x, 0.0f, 1.0f));
+		LVK_ASSERT(between(distribution_quality.y, 0.0f, 1.0f));
 
-		// Assuming the GridDetector produces an even spread of points 
-		// across the entire frame, as it is designed to do. Then a low
-		// inlier proportion suggests that the frame contains competing
-		// non-global motions, which makes the tracking prone to errors
-		// and the stability is low. If the inlier ratio is high, then
-		// the new points, plus our propagated inliers, continue to 
-		// consistently describe the global motion of the frame hence
-		// the stability is high. 
+		m_DistributionQuality = exponential_moving_average(
+			m_DistributionQuality,
+			distribution_quality,
+			METRIC_SMOOTHING_FACTOR
+		);
 
-		m_Stability = exponential_moving_average(
-			m_Stability,
+		m_SceneStability = exponential_moving_average(
+			m_SceneStability,
 			inlier_ratio,
-			STABILITY_SMOOTHING_FACTOR
+			METRIC_SMOOTHING_FACTOR
 		);
 	}
 	
@@ -282,7 +277,7 @@ namespace lvk
 
 	const float FrameTracker::stability() const
 	{
-		return m_Stability;
+		return m_SceneStability;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

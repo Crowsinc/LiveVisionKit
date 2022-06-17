@@ -268,7 +268,7 @@ namespace lvk
 	cv::Point2f GridDetector::distribution_centroid() const
 	{
 		if(m_FeaturePoints.empty())
-			return { 0,0 };
+			return {0,0};
 
 		cv::Point2f centroid(0, 0);
 		for(const auto& point : m_FeaturePoints)
@@ -281,21 +281,21 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f GridDetector::distribution_error() const 
+	cv::Point2f GridDetector::distribution_quality() const 
 	{
 		// In terms of the GridDetector, a good distribution of points is 
 		// one in which the points evenly and fairly describe the frame.
 		// We can define an an ideally distributed set of tracking points 
 		// as being perfectly symmetrical across all of the frame's lines
-		// of symmetry. Therefore we can measure the distribution by the
-		// distance of the point's centroid from the centre of the frame.
+		// of symmetry. Therefore we can measure the distribution quality 
+		// by how close the centroid is from the centre of the frame.
 
 		const auto centroid = distribution_centroid();
 
-		// Present independent vertical and horizontal errors. 
+		// Present independent vertical and horizontal qualities. 
 		return cv::Point2f(
-			2 * std::abs((centroid.x / m_Resolution.width) - 0.5),
-			2 * std::abs((centroid.y / m_Resolution.height) - 0.5)
+			1.0f - 2 * std::abs((centroid.x / m_Resolution.width) - 0.5f),
+			1.0f - 2 * std::abs((centroid.y / m_Resolution.height) - 0.5f)
 		);
 	}
 

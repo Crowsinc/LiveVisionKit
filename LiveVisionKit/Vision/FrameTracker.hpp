@@ -61,9 +61,9 @@ namespace lvk
 
 		void prepare_state();
 		
-		void update_stability(const float inlier_ratio);
-
 		MotionModel choose_optimal_model() const;
+
+		void update_metrics(const float inlier_ratio, const cv::Point2f distribution_error);
 
 	private:
 
@@ -76,7 +76,8 @@ namespace lvk
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_Stability;
+		float m_SceneStability;
+		cv::Point2f m_DistributionQuality;
 
 		MotionModel m_MotionModel;
 		cv::UsacParams m_USACParams;

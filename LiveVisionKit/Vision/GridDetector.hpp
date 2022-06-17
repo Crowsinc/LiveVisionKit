@@ -44,7 +44,7 @@ namespace lvk
 
 		size_t feature_capacity() const;
 
-		cv::Point2f distribution_error() const;
+		cv::Point2f distribution_quality() const;
 
 		cv::Point2f distribution_centroid() const;
 
