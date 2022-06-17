@@ -34,7 +34,7 @@ namespace lvk
 	constexpr auto STREAM_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
 
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
-	constexpr auto CROP_PERCENTAGE_DEFAULT = 8;
+	constexpr auto CROP_PERCENTAGE_DEFAULT = 5;
 	constexpr auto CROP_PERCENTAGE_MIN = 1;
 	constexpr auto CROP_PERCENTAGE_MAX = 25;
 
