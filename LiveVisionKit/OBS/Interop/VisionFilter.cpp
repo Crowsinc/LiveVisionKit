@@ -178,9 +178,22 @@ namespace lvk
 		LVK_ASSERT(gs_get_context() != nullptr);
 
 		m_Source = obs_filter_get_parent(m_Context);
-		if(m_Source == nullptr || gs_get_render_target() == nullptr)
+		if(m_Source == nullptr)
 		{
 			obs_source_skip_video_filter(m_Context);
+			return;
+		}
+
+		if(gs_get_render_target() == nullptr)
+		{
+			// The render target will be nullptr if we are the last effect 
+			// filter and OBS is attempting to render the filter preview window.
+			// Assuming this is true, we can avoid re-rendering the filter by 
+			// simply presenting the interop buffer, which must contain the
+			// most up to date frame as we are the last filter in the chain.
+			// NOTE: This assumes that this condition is only caused by the
+			// preview window, which may be wrong so check anyway. 
+			hybrid_render(m_InteropBuffer);
 			return;
 		}
 
