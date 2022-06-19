@@ -29,31 +29,15 @@
 
 #ifndef DISABLE_CHECKS
 
-#define LVK_ASSERT(assertion) if(!(assertion)){bcrash("LVK@%s@%s(..) FAILED " #assertion, LVK_FILE, __func__);}
-
-#define LVK_CRASH(msg) bcrash("LVK@%s@%s(..) CRASHED " #msg, LVK_FILE, __func__);
-
-#define LVK_WARN(msg) blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg, LVK_FILE, __func__)
-
-#define LVK_WARN_IF(pred, msg) if(pred){blog(LOG_WARNING, "LVK@%s@%s(..) WARNING " #msg, LVK_FILE, __func__);}
-
-#define LVK_ERROR(msg) blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg, LVK_FILE, __func__);
-
-#define LVK_ERROR_IF(pred, msg) if(pred){blog(LOG_ERROR, "LVK@%s@%s(..) ERROR " #msg, LVK_FILE, __func__);}
+#define LVK_ASSERT(assertion)															\
+	if(!(assertion))																	\
+	{																					\
+		bcrash("[LiveVisionKit] %s@%s(..) Failed " #assertion " ", LVK_FILE, __func__); \
+	} 
 
 #else
 
 #define LVK_ASSERT(assertion)
-
-#define LVK_CRASH(msg)
-
-#define LVK_WARN(msg)
-
-#define LVK_WARN_IF(pred, msg)
-
-#define LVK_ERROR(msg)
-
-#define LVK_ERROR_IF(pred, msg)
 
 #endif
 

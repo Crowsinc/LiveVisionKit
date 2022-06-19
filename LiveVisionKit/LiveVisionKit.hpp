@@ -38,6 +38,7 @@
 #include "Vision/CameraCalibrator.hpp"
 
 #include "OBS/Utility/OBSDispatch.hpp"
+#include "OBS/Utility/Logging.hpp"
 
 #include "OBS/Effects/DefaultEffect.hpp"
 #include "OBS/Effects/FSREffect.hpp"
@@ -46,6 +47,7 @@
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
 #include "OBS/Interop/FrameBuffer.hpp"
+
 
 // OBS Specific
 #include <obs-module.h>
