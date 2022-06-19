@@ -15,10 +15,10 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "Math/Math.hpp"
-
-#include "Diagnostics/Directives.hpp"
 #include "GridDetector.hpp"
+
+#include "Math/Math.hpp"
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

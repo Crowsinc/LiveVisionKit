@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "LiveVisionKit.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
 

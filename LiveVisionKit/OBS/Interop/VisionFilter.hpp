@@ -17,13 +17,11 @@
 
 #pragma once
 
+#include <obs-module.h>
+#include <opencv2/core.hpp>
+#include <unordered_map>
 #include <mutex>
 #include <queue>
-#include <unordered_map>
-#include <unordered_set>
-
-#include <opencv2/core.hpp>
-#include <obs-module.h>
 
 #include "FrameBuffer.hpp"
 

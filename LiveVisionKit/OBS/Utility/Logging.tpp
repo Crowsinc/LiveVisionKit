@@ -16,7 +16,7 @@
 // 	  **********************************************************************
 
 #include <string>
-#include <obs.h>
+#include <obs-module.h>
 
 namespace lvk::log
 {

@@ -15,8 +15,10 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "LiveVisionKit.hpp"
 #include "CASFilter.hpp"
+
+#include <obs-module.h>
+#include "OBS/Utility/OBSDispatch.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 

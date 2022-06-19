@@ -17,6 +17,8 @@
 
 #include "ADBFilter.hpp"
 
+#include <util/platform.h>
+
 namespace lvk
 {
 

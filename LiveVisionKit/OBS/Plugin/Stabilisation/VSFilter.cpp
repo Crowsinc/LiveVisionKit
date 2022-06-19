@@ -18,6 +18,10 @@
 #include "VSFilter.hpp"
 
 #include <sstream>
+#include <util/platform.h>
+
+#include "OBS/Effects/FSREffect.hpp"
+#include "OBS/Effects/DefaultEffect.hpp"
 
 namespace lvk
 {

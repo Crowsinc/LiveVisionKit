@@ -16,6 +16,7 @@
 // 	  **********************************************************************
 
 #include "OBS/Utility/Logging.hpp"
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

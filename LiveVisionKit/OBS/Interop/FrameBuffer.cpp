@@ -17,10 +17,8 @@
 
 #include "FrameBuffer.hpp"
 
-#include "Diagnostics/Directives.hpp"
-
 #include "FrameIngest.hpp"
-#include "OBS/Effects/DefaultEffect.hpp"
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {

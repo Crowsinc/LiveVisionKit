@@ -17,11 +17,11 @@
 
 #pragma once
 
+#include <util/config-file.h>
+
 #include "LiveVisionKit.hpp"
 #include "OBS/Interop/VisionFilter.hpp"
 
-
-#include <filesystem>
 #include <optional>
 #include <string>
 
@@ -102,7 +102,6 @@ namespace lvk
 		std::string m_ProfileName;
 		uint32_t m_SquareSize;
 		cv::Size m_ImageSize;
-
 
 	};
 

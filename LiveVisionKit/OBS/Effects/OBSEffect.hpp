@@ -17,13 +17,10 @@
 
 #pragma once
 
-#include <obs.h>
-#include <obs-module.h>
-
 #include <string>
-#include <opencv2/opencv.hpp>
 
-#include "Diagnostics/Directives.hpp"
+#include <obs-module.h>
+#include <opencv2/opencv.hpp>
 
 namespace lvk
 {

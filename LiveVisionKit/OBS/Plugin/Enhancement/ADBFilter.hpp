@@ -18,6 +18,7 @@
 #pragma once
 
 #include "LiveVisionKit.hpp"
+#include "OBS/Interop/VisionFilter.hpp"
 
 namespace lvk
 {

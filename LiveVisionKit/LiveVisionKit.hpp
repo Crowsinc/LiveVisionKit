@@ -17,8 +17,6 @@
 
 // Library
 
-#include <util/platform.h>
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
@@ -37,20 +35,4 @@
 #include "Vision/GridDetector.hpp"
 #include "Vision/CameraCalibrator.hpp"
 
-#include "OBS/Utility/OBSDispatch.hpp"
-#include "OBS/Utility/Logging.hpp"
-
-#include "OBS/Effects/DefaultEffect.hpp"
-#include "OBS/Effects/FSREffect.hpp"
-#include "OBS/Effects/CASEffect.hpp"
-
 #include "Diagnostics/Directives.hpp"
-#include "OBS/Interop/VisionFilter.hpp"
-#include "OBS/Interop/FrameBuffer.hpp"
-
-
-// OBS Specific
-#include <obs-module.h>
-#include <util/config-file.h>
-#include <util/platform.h>
-

@@ -17,7 +17,9 @@
 
 #include "CCTool.hpp"
 
+#include <filesystem>
 
+#include "OBS/Utility/Logging.hpp"
 
 namespace lvk
 {
