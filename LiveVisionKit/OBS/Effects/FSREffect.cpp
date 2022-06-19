@@ -17,6 +17,9 @@
 
 #include "FSREffect.hpp"
 
+#include "Math/Math.hpp"
+#include "OBS/Utility/Logging.hpp"
+
 #define A_CPU 1
 #include "Data/ffx_a.h"
 #include "Data/ffx_fsr1.h"
@@ -54,6 +57,8 @@ namespace lvk
 			
 			obs_leave_graphics();
 		}
+
+		log::error_if(handle() == nullptr || !validate(), "FSR effect failed to validate");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

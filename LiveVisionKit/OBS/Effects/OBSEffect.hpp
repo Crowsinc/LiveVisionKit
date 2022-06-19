@@ -17,12 +17,16 @@
 
 #pragma once
 
-#include "LiveVisionKit.hpp"
+#include <obs.h>
+#include <obs-module.h>
+
+#include <string>
+#include <opencv2/opencv.hpp>
+
+#include "Diagnostics/Directives.hpp"
 
 namespace lvk
 {
-
-	//TODO: Build proper shader API for the purposes of easily creating & re-using effects in various filters.
 
 	template<typename E, typename... Args>
 	class OBSEffect
@@ -50,7 +54,6 @@ namespace lvk
 			gs_texture_t* texture,
 			Args... args
 		);
-
 
 		static bool Validate();
 

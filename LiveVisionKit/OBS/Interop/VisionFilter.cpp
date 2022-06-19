@@ -17,9 +17,13 @@
 
 #include "VisionFilter.hpp"
 
-#include "FrameIngest.hpp"
 #include "OBS/Effects/DefaultEffect.hpp"
 #include "Diagnostics/Directives.hpp"
+#include "OBS/Utility/Logging.hpp"
+#include "FrameIngest.hpp"
+#include "Math/Logic.hpp"
+
+#include <util/platform.h>
 
 namespace lvk
 {
@@ -39,7 +43,7 @@ namespace lvk
 		m_Asynchronous(test_bits<uint32_t>(
 			obs_source_get_output_flags(context),
 			OBS_SOURCE_ASYNC_VIDEO
-			)),
+		)),
 		// NOTE: We initially assume a hybrid render state for each filter, 
 		// then update our assumption as we learn more about them during execution. 
 		m_HybridRender(m_Asynchronous ? false : true),
@@ -101,7 +105,10 @@ namespace lvk
 			s_SourceCaches[m_CacheKey].refs--;
 
 			if (s_SourceCaches[m_CacheKey].refs == 0)
+			{
+				log::warn("Releasing vision filter cache for \'%s\'", obs_source_get_name(m_CacheKey));
 				s_SourceCaches.erase(m_CacheKey);
+			}
 		}
 	}
 
@@ -192,7 +199,7 @@ namespace lvk
 			// simply presenting the interop buffer, which must contain the
 			// most up to date frame as we are the last filter in the chain.
 			// NOTE: This assumes that this condition is only caused by the
-			// preview window, which may be wrong so check anyway. 
+			// preview window. 
 			hybrid_render(m_InteropBuffer);
 			return;
 		}
@@ -225,7 +232,11 @@ namespace lvk
 			{
 				buffer.frame.release();
 				obs_source_skip_video_filter(m_Context);
-				LVK_WARN("Interop failed to acquire frame");
+				
+				log::warn(
+					"\'%s\' failed to acquire vision interop frame",
+					obs_source_get_name(m_Context)
+				);
 			}
 		}
 		else obs_source_skip_video_filter(m_Context);

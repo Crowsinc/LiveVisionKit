@@ -58,7 +58,7 @@ namespace lvk
 			if(!std::filesystem::create_directory({config_dir}))
 			{
 				bfree(config_dir);
-				LVK_ERROR("Failed to create config directory");
+				log::error("CCTool failed to create config directory");
 				return nullptr;
 			}
 		}
@@ -69,7 +69,7 @@ namespace lvk
 		config_t* config = nullptr;
 		if(config_open(&config, config_path, config_open_type::CONFIG_OPEN_ALWAYS) == CONFIG_ERROR)
 		{
-			LVK_ERROR("Failed to load config file");
+			log::error("CCTool failed to load config file");
 			bfree(config_path);
 			return nullptr;
 		}
@@ -106,7 +106,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!name.empty());
 
-		auto profiles = ListProfiles();
+		const auto& profiles = ListProfiles();
 
 		return std::find(profiles.begin(), profiles.end(), name) != profiles.end();
 	}
@@ -120,7 +120,10 @@ namespace lvk
 		config_t* config = load_profile_config();
 
 		if(config == nullptr || !ContainsProfile(name))
+		{
+			log::error("Failed to load calibration profile \'%s\'", name.c_str());
 			return {};
+		}
 
 		CameraParameters parameters;
 
@@ -139,6 +142,8 @@ namespace lvk
 		parameters.distortion_coefficients.push_back(config_get_double(config, name.c_str(), "k3"));
 
 		config_close(config);
+
+		log::print("Loaded calibration profile \'%s\'", name.c_str());
 
 		return parameters;
 	}
@@ -182,6 +187,8 @@ namespace lvk
 
 		config_save(config);
 		config_close(config);
+
+		log::print("Created calibration profile \'%s\'", name.c_str());
 
 		return true;
 	}

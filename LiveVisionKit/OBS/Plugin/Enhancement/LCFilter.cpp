@@ -46,7 +46,7 @@ namespace lvk
 
 		obs_property_list_add_string(property, PROFILE_DEFAULT, PROFILE_DEFAULT);
 		const auto& profiles = CCTool::ListProfiles();
-		for(auto profile : profiles)
+		for(const auto& profile : profiles)
 			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
 
 		obs_properties_add_bool(
@@ -64,7 +64,6 @@ namespace lvk
 	{
 		obs_data_set_default_bool(settings, PROP_CORRECT_DISTORTION, CORRECT_DISTORTION_DEFAULT);
 		obs_data_set_default_string(settings, PROP_PROFILE, PROFILE_DEFAULT);
-
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -82,7 +81,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-
 	void LCFilter::configure(obs_data_t* settings)
 	{
 		const std::string profile = obs_data_get_string(settings, PROP_PROFILE);
@@ -98,7 +96,7 @@ namespace lvk
 				// Reset the undistort maps to load in new profiles
 				m_UndistortMap.release();
 				m_AuxUndistortMap.release();
-			} else LVK_ERROR("Failed to load calibration profile");
+			}
 		}
 
 		m_CorrectDistortion = profile_selected && obs_data_get_bool(settings, PROP_CORRECT_DISTORTION);

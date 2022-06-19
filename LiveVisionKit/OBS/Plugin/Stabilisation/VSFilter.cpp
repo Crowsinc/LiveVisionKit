@@ -276,6 +276,7 @@ namespace lvk
 		{
 			reset_buffers();
 			m_FrameTracker.restart();
+			log::warn("VSFilter queue is outdated, resetting \'%s\' queue", obs_source_get_name(m_Context));
 		}
 
 		Homography tracked_motion;

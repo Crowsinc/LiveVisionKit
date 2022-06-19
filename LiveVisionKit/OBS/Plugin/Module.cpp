@@ -20,6 +20,14 @@
 
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Interop/FrameIngest.hpp"
+#include "OBS/Utility/Logging.hpp"
+
+#include "OBS/Effects/FSREffect.hpp"
+#include "OBS/Effects/CASEffect.hpp"
+
+//---------------------------------------------------------------------------------------------------------------------
+
+#define VERSION "1.2.0"
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -29,7 +37,7 @@ OBS_DECLARE_MODULE()
 
 MODULE_EXPORT const char* obs_module_name(void)
 {
-	return "LiveVisionKit v1.2.0";
+	return "LiveVisionKit" VERSION;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -71,33 +79,49 @@ void attach_ocl_interop_context(void* param, uint32_t cx, uint32_t cy)
 
 bool obs_module_load()
 {
+	// Detect LVK capabilities
+	const bool has_opencl = cv::ocl::haveOpenCL();
+	const bool has_interop = lvk::ocl::supports_graphics_interop();
+	const bool has_fsr_effect = lvk::FSREffect::Validate();
+	const bool has_cas_effect = lvk::CASEffect::Validate();
+
+	lvk::log::print_block(
+		"Initializing..."
+		"\n    Version: %s"
+		"\n    OpenCL Support: %s"
+		"\n    Interop Support: %s"
+		"\n    FSR Effect Loaded: %s"
+		"\n    CAS Effect Loaded: %s"
+		,
+		VERSION,
+		has_opencl ? "Yes" : "No",
+		has_interop ? "Yes" : "No",
+		has_fsr_effect ? "Yes" : "No",
+		has_cas_effect ? "Yes" : "No"
+	);
+
 	register_fsr_source();
 	register_cas_source();
 
 	// Vision Async Filters 
-	if(cv::ocl::haveOpenCL())
+	if(has_opencl)
 	{
-		register_lc_source();
 		register_vs_source();
+		register_lc_source();
 		register_adb_source();
-
 		register_cct_source();
 	}
-	else LVK_ERROR("OpenCL unsupported");
 
 	// Vision Effects Filters
-	if (lvk::ocl::supports_graphics_interop())
+	if(has_interop)
 	{
 		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
 
 		register_vs_effect_source();
-
 		register_adb_effect_source();
 		register_lc_effect_source();
-
 		register_cct_effect_source();
 	}
-	else LVK_ERROR("OpenCL Interop unsupported");
 
 	return true;
 }

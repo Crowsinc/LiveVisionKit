@@ -15,6 +15,8 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#include "OBS/Utility/Logging.hpp"
+
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
@@ -160,21 +162,30 @@ namespace lvk
 		: m_Handle(nullptr),
 		  m_Owner(true)
 	{
-		char* effect_path = obs_module_file(
-			("effects/" + name + ".effect").c_str()
+		const std::string effect_file = name + ".effect";
+		const std::string effect_path = "effects/" + effect_file;
+
+		char* found_path = obs_module_file(
+			effect_path.c_str()
 		);
 
-		LVK_ASSERT(effect_path != nullptr);
-
-		if (effect_path != nullptr)
+		if (found_path != nullptr)
 		{
 			obs_enter_graphics();
 
-			m_Handle = gs_effect_create_from_file(effect_path, nullptr);
-			bfree(effect_path);
+			m_Handle = gs_effect_create_from_file(found_path, nullptr);
+			bfree(found_path);
 
 			obs_leave_graphics();
+
+			log::error_if(
+				m_Handle == nullptr,
+				"Failed to load effect file \'%s\' from path \'%s\'",
+				effect_file.c_str(),
+				effect_path.c_str()
+			);
 		}
+		else log::error("Failed to find effect path \'%s\'", effect_path.c_str());
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------

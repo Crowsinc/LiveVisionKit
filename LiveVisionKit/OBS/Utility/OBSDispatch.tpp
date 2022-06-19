@@ -18,6 +18,7 @@
 #include <obs-module.h>
 
 #include "Diagnostics/Directives.hpp"
+#include "Logging.hpp"
 
 namespace lvk::dispatch
 {
@@ -62,6 +63,7 @@ namespace lvk::dispatch
 
 		if(!filter->validate())
 		{
+			log::error("\'%s\' failed to validate", obs_source_get_name(context));
 			delete filter;
 			return nullptr;
 		}

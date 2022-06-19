@@ -17,6 +17,9 @@
 
 #include "CASEffect.hpp"
 
+#include "Math/Math.hpp"
+#include "OBS/Utility/Logging.hpp"
+
 #define A_CPU 1
 #include "Data/ffx_a.h"
 #include "Data/ffx_cas.h"
@@ -40,6 +43,8 @@ namespace lvk
 
 			obs_leave_graphics();
 		}
+	
+		log::error_if(!validate(), "CAS effect failed to validate");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

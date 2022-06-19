@@ -22,6 +22,7 @@
 
 #include "Math/Math.hpp"
 #include "Diagnostics/Directives.hpp"
+#include "OBS/Utility/Logging.hpp"
 
 #ifdef _WIN32
 #include <dxgi.h>
@@ -665,7 +666,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
+				log::error("Frame ingest does not support format %s", get_video_format_name(frame.format));
 		}
 	}
 
@@ -734,7 +735,7 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				LVK_CRASH("Unsupported Format (please ask LVK developers to add support)");
+				log::error("Frame ingest does not support format %s", get_video_format_name(frame.format));
 		}
 
 		frame.height = src.rows;
@@ -799,6 +800,7 @@ namespace lvk::ocl
 		LVK_ASSERT(gs_get_context() == graphics_context);
 		if (std::this_thread::get_id() != bound_thread)
 		{
+			log::warn("Switching OpenCL interop context over to new thread");
 			bound_thread = std::this_thread::get_id();
 			opencl_context.bind();
 		}
