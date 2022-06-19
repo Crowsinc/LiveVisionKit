@@ -84,7 +84,7 @@ namespace lvk
 	void LCFilter::configure(obs_data_t* settings)
 	{
 		const std::string profile = obs_data_get_string(settings, PROP_PROFILE);
-		const bool profile_selected = profile != PROFILE_DEFAULT;
+		bool profile_selected = profile != PROFILE_DEFAULT;
 
 		if(profile_selected && m_Profile != profile)
 		{
@@ -97,7 +97,8 @@ namespace lvk
 				m_UndistortMap.release();
 				m_AuxUndistortMap.release();
 			}
-		}
+			else profile_selected = false;
+		} 
 
 		m_CorrectDistortion = profile_selected && obs_data_get_bool(settings, PROP_CORRECT_DISTORTION);
 	}
