@@ -27,7 +27,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr float METRIC_SMOOTHING_FACTOR = 0.05f;
-	constexpr float GOOD_DISTRIBUTION_QUALITY = 0.5f;
+	constexpr float GOOD_DISTRIBUTION_QUALITY = 0.4f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
