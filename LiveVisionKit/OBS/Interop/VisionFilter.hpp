@@ -21,7 +21,7 @@
 #include <opencv2/core.hpp>
 #include <unordered_map>
 #include <mutex>
-#include <queue>
+#include <deque>
 
 #include "FrameBuffer.hpp"
 
@@ -95,7 +95,7 @@ namespace lvk
 		gs_texture_t* m_RenderBuffer;
 		gs_texture_t* m_InteropBuffer;
 		
-		std::queue<obs_source_frame*> m_AsyncFrameQueue; 
+		std::deque<obs_source_frame*> m_AsyncFrameQueue; 
 	
 		double m_RenderTime, m_DeltaTime;
 	};

@@ -78,7 +78,7 @@ namespace lvk
 		while (m_Source != nullptr && !m_AsyncFrameQueue.empty())
 		{
 			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
-			m_AsyncFrameQueue.pop();
+			m_AsyncFrameQueue.pop_front();
 		}
 
 		obs_enter_graphics();
@@ -151,8 +151,28 @@ namespace lvk
 		update_timing();
 		filter(buffer);
 		
-		// Frame was captured by the filter (probably to introduce delay).
-		m_AsyncFrameQueue.push(input_frame);
+		// Capture the new OBS frame in our frame queue, ensuring that frames are 
+		// chronologically increasing. In some cases, the previous filter may feed
+		// us an outdated frame. So search and insert the frame in the correct spot.
+		if (!m_AsyncFrameQueue.empty() && input_frame->timestamp < m_AsyncFrameQueue.back()->timestamp)
+		{
+			size_t index = 0;
+			while(input_frame->timestamp > m_AsyncFrameQueue[index]->timestamp)
+				index++;
+
+			m_AsyncFrameQueue.insert(
+				m_AsyncFrameQueue.begin() + index,
+				input_frame
+			);
+
+			log::warn(
+				"Vision filter \'%s\' was fed an unordered frame!", 
+				obs_source_get_name(m_Context)
+			);
+		}
+		else m_AsyncFrameQueue.push_back(input_frame);
+
+		// Frame was captured by the filter (probably to introduce delay)
 		if (buffer.empty())
 			return nullptr;
 		
@@ -161,14 +181,14 @@ namespace lvk
 		while (buffer.timestamp > m_AsyncFrameQueue.front()->timestamp)
 		{
 			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
-			m_AsyncFrameQueue.pop();
+			m_AsyncFrameQueue.pop_front();
 		}
 
 		// After removing past frames, the front of the queue
 		// must have the frame which corresponds to the buffer.
 		LVK_ASSERT(m_AsyncFrameQueue.front()->timestamp == buffer.timestamp);
 		obs_source_frame* output_frame = m_AsyncFrameQueue.front();
-		m_AsyncFrameQueue.pop();
+		m_AsyncFrameQueue.pop_front();
 
 		// If the next filter is not a vision filter, then we need to save the
 		// frame buffer back into the OBS frame for the non-vision filter.

@@ -280,7 +280,7 @@ namespace lvk
 		{
 			reset_buffers();
 			m_FrameTracker.restart();
-			log::warn("VSFilter queue is outdated, resetting \'%s\' queue", obs_source_get_name(m_Context));
+			log::warn("\'%s\' frame queue is outdated, restarting...", obs_source_get_name(m_Context));
 		}
 
 		Homography tracked_motion;
@@ -453,8 +453,12 @@ namespace lvk
 
 	bool VSFilter::is_queue_outdated(const FrameBuffer& new_frame) const
 	{
-		// If the frame is over a second away from the last frame
-		// then we consider the trajectory and frame data to be outdated.
+		// If the new frame is over a second away from the previously newest 
+		// frame, then we consider the trajectory and frame data to be outdated.
+
+		// NOTE: If the new frame is actually older than the previously 
+		// newest frame, the unsigned timestamps will overflow and the queue 
+		// always will be flagged as outdated. This is the desired behaviour.
 		return !m_FrameQueue.empty()
 			&& new_frame.timestamp - m_FrameQueue.newest().timestamp > 1e9;
 	}
