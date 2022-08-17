@@ -84,7 +84,7 @@ bool obs_module_load()
 	const bool has_interop = lvk::ocl::supports_graphics_interop();
 	const bool has_fsr_effect = lvk::FSREffect::Validate();
 	const bool has_cas_effect = lvk::CASEffect::Validate();
-
+	
 	lvk::log::print_block(
 		"Initializing..."
 		"\n    Version: %s"
@@ -100,23 +100,21 @@ bool obs_module_load()
 		has_cas_effect ? "Yes" : "No"
 	);
 
+	// Attach OpenCL context
+	if(has_interop)
+		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
+
+	// Register Filters...
 	register_fsr_source();
 	register_cas_source();
 
-	// Vision Async Filters 
 	if(has_opencl)
 	{
 		register_vs_source();
 		register_lc_source();
 		register_adb_source();
 		register_cct_source();
-	}
-
-	// Vision Effects Filters
-	if(has_interop)
-	{
-		obs_add_main_render_callback(&attach_ocl_interop_context, nullptr);
-
+		
 		register_vs_effect_source();
 		register_adb_effect_source();
 		register_lc_effect_source();

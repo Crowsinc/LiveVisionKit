@@ -19,9 +19,11 @@
 
 #include "OBS/Effects/DefaultEffect.hpp"
 #include "Diagnostics/Directives.hpp"
+#include "OBS/Utility/Graphics.hpp"
 #include "OBS/Utility/Logging.hpp"
 #include "FrameIngest.hpp"
 #include "Math/Logic.hpp"
+
 
 #include <util/platform.h>
 
@@ -47,9 +49,7 @@ namespace lvk
 		// NOTE: We initially assume a hybrid render state for each filter, 
 		// then update our assumption as we learn more about them during execution. 
 		m_HybridRender(m_Asynchronous ? false : true),
-		m_InteropBuffer(nullptr),
 		m_RenderBuffer(nullptr),
-		m_ConversionBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		m_DeltaTime(0),
 		m_RenderTime(os_gettime_ns() * 1.0e-9)
 	{
@@ -86,12 +86,7 @@ namespace lvk
 		if(m_RenderBuffer != nullptr)
 			gs_texture_destroy(m_RenderBuffer);
 
-		if(m_InteropBuffer != nullptr)
-			gs_texture_destroy(m_InteropBuffer);
-
 		obs_leave_graphics();
-
-		m_ConversionBuffer.release();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -146,7 +141,7 @@ namespace lvk
 
 		// Load the frame to the frame buffer if we are at the start of a new chain.
 		if(is_vision_filter_chain_start())
-			buffer.load(input_frame);
+			buffer.import_frame(input_frame);
 
 		update_timing();
 		filter(buffer);
@@ -193,7 +188,7 @@ namespace lvk
 		// If the next filter is not a vision filter, then we need to save the
 		// frame buffer back into the OBS frame for the non-vision filter.
 		if(is_vision_filter_chain_end())
-			buffer.save(output_frame);
+			buffer.export_frame(output_frame);
 
 		return output_frame;
 	}
@@ -216,11 +211,11 @@ namespace lvk
 			// The render target will be nullptr if we are the last effect 
 			// filter and OBS is attempting to render the filter preview window.
 			// Assuming this is true, we can avoid re-rendering the filter by 
-			// simply presenting the interop buffer, which must contain the
-			// most up to date frame as we are the last filter in the chain.
+			// simply presenting the render buffer, which still contains the
+			// most recent frame because we are the last filter in the chain.
 			// NOTE: This assumes that this condition is only caused by the
 			// preview window. 
-			hybrid_render(m_InteropBuffer);
+			hybrid_render(m_RenderBuffer);
 			return;
 		}
 
@@ -275,26 +270,18 @@ namespace lvk
 			// If this happens to be the last filter in the vision filter
 			// chain, then render out the buffer for the non-vision filters. 
 			if (is_chain_end = is_vision_filter_chain_end(); is_chain_end)
-				hybrid_render(acquire_buffer(buffer));
+			{
+				prepare_render_buffer(buffer.width(), buffer.height());
+				buffer.export_texture(m_RenderBuffer);
+				hybrid_render(m_RenderBuffer);
+			}
 		}
 
-		// Clean up interop resources if we are not at the chain ends
-		// Both require interop buffer, start might need render buffer
-		if (!is_chain_start)
+		// Clean up buffers if we are not at the chain ends
+		if (!is_chain_start && !is_chain_end && m_RenderBuffer != nullptr)
 		{
-			if (m_RenderBuffer != nullptr)
-			{
-				gs_texture_destroy(m_RenderBuffer);
-				m_RenderBuffer = nullptr;
-			}
-
-			if (!is_chain_end && m_InteropBuffer != nullptr)
-			{
-				gs_texture_destroy(m_InteropBuffer);
-				m_InteropBuffer = nullptr;
-
-				m_ConversionBuffer.release();
-			}
+			gs_texture_destroy(m_RenderBuffer);
+			m_RenderBuffer = nullptr;
 		}
 	}
 
@@ -423,33 +410,10 @@ namespace lvk
 		if (target == nullptr || source_width == 0 || source_height == 0)
 			return false;
 
-		// NOTE: sRGB is implicitly handled by the GS_RGBA format.
-		// OpenGL can render directly to a GS_RGBA interop buffer,
-		// but DirectX11 interop is supported with GS_RGBA_UNORM
-		// only. So for DirectX11 to handle sRGB filters, we must
-		// render to GS_RGBA then copy to the GS_RGBA_UNORM buffer.
-		// The copy automatically handles sRGB conversions.
-
-#ifdef _WIN32
-		// DirectX11
 		prepare_render_buffer(source_width, source_height);
 		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
-			prepare_interop_buffer(source_width, source_height);
-			gs_copy_texture(m_InteropBuffer, m_RenderBuffer);
-
-#else
-		// OpenGL
-		prepare_interop_buffer(source_width, source_height);
-		if (DefaultEffect::Acquire(m_Context, m_InteropBuffer))
-		{
-#endif
-
-			// Import the texture using interop and convert to YUV
-			lvk::ocl::import_texture(m_InteropBuffer, m_ConversionBuffer);
-			cv::cvtColor(m_ConversionBuffer, buffer.frame, cv::COLOR_RGBA2RGB);
-			cv::cvtColor(buffer.frame, buffer.frame, cv::COLOR_RGB2YUV);
-
+			buffer.import_texture(m_RenderBuffer);
 			return true;
 		}
 		return false;
@@ -457,78 +421,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	gs_texture_t* VisionFilter::acquire_buffer(FrameBuffer& buffer)
-	{
-		prepare_interop_buffer(buffer.frame.cols, buffer.frame.rows);
-
-		cv::cvtColor(buffer.frame, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
-		lvk::ocl::export_texture(m_ConversionBuffer, m_InteropBuffer);
-
-		return m_InteropBuffer;
-	}
-	
-//---------------------------------------------------------------------------------------------------------------------
-
 	void VisionFilter::prepare_render_buffer(const uint32_t width, const uint32_t height)
 	{
-		LVK_ASSERT(gs_get_context() != nullptr);
-
-		const bool outdated = m_RenderBuffer == nullptr
-			|| gs_texture_get_width(m_RenderBuffer) != width
-			|| gs_texture_get_height(m_RenderBuffer) != height;
-
-		if (outdated)
-		{
-			gs_texture_destroy(m_RenderBuffer);
-			m_RenderBuffer = gs_texture_create(
-				width,
-				height,
-				GS_RGBA,
-				1,
-				nullptr,
-				GS_RENDER_TARGET
-			);
-		}
+		prepare_texture(
+			m_RenderBuffer,
+			width,
+			height,
+			GS_RGBA,
+			GS_RENDER_TARGET
+		);
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VisionFilter::prepare_interop_buffer(const uint32_t width, const uint32_t height)
-	{
-		LVK_ASSERT(gs_get_context() != nullptr);
-
-		const bool outdated = m_InteropBuffer == nullptr
-			|| gs_texture_get_width(m_InteropBuffer) != width
-			|| gs_texture_get_height(m_InteropBuffer) != height;
-
-		if (outdated)
-		{
-			gs_texture_destroy(m_InteropBuffer);
-
-#ifdef _WIN32
-			// DirectX11
-			m_InteropBuffer = gs_texture_create(
-				width,
-				height,
-				GS_RGBA_UNORM,
-				1,
-				nullptr,
-				GS_SHARED_TEX
-			);
-#else
-			// OpenGL (renders directly to buffer)
-			m_InteropBuffer = gs_texture_create(
-				width,
-				height,
-				GS_RGBA,
-				1,
-				nullptr,
-				GS_SHARED_TEX | GS_RENDER_TARGET
-			);
-#endif
-		}
-	}
-	
 //---------------------------------------------------------------------------------------------------------------------
 
 	void VisionFilter::update_timing()

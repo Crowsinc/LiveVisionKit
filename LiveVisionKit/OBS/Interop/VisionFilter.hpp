@@ -72,10 +72,6 @@ namespace lvk
 
 		bool acquire_render(FrameBuffer& buffer);
 
-		gs_texture_t* acquire_buffer(FrameBuffer& buffer);
-
-		void prepare_interop_buffer(const uint32_t width, const uint32_t height);
-
 		void prepare_render_buffer(const uint32_t width, const uint32_t height);
 
 		void update_timing();
@@ -91,9 +87,7 @@ namespace lvk
 		obs_source_t* m_Context;
 		bool m_Asynchronous, m_HybridRender;
 
-		cv::UMat m_ConversionBuffer;
 		gs_texture_t* m_RenderBuffer;
-		gs_texture_t* m_InteropBuffer;
 		
 		std::deque<obs_source_frame*> m_AsyncFrameQueue; 
 	
