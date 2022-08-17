@@ -30,16 +30,38 @@ namespace lvk
 
 		FrameBuffer();
 
+		~FrameBuffer();
+
 		FrameBuffer(FrameBuffer&& buffer);
 
 		void operator=(FrameBuffer&& buffer);
 
+		uint32_t width() const;
+		
+		uint32_t height() const;
+		
 		bool empty() const;
 
-		void load(obs_source_frame* obs_frame);
+		void import_frame(obs_source_frame* obs_frame);
 
-		void save(obs_source_frame* obs_frame);
+		void export_frame(obs_source_frame* obs_frame);
 
+		void import_texture(gs_texture_t* texture);
+
+		void export_texture(gs_texture_t* texture);
+
+	private:
+
+		void prepare_interop_buffer(const uint32_t width, const uint32_t height);
+
+	private:
+
+		cv::UMat m_ConversionBuffer;
+		gs_texture_t* m_InteropBuffer = nullptr;
+
+		gs_stagesurf_t* m_ReadBuffer = nullptr;
+		gs_texture_t* m_WriteBuffer = nullptr;
+		uint8_t* m_MappedData = nullptr;
 	};
 
 }
