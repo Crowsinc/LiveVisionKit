@@ -101,7 +101,7 @@ namespace lvk
 
 			if (s_SourceCaches[m_CacheKey].refs == 0)
 			{
-				log::warn("Releasing vision filter cache for \'%s\'", obs_source_get_name(m_CacheKey));
+				log::warn("Releasing filter cache for \'%s\'", obs_source_get_name(m_CacheKey));
 				s_SourceCaches.erase(m_CacheKey);
 			}
 		}
@@ -161,7 +161,7 @@ namespace lvk
 			);
 
 			log::warn(
-				"Vision filter \'%s\' was fed an unordered frame!", 
+				"%s was fed an unordered frame!", 
 				obs_source_get_name(m_Context)
 			);
 		}
@@ -249,7 +249,7 @@ namespace lvk
 				obs_source_skip_video_filter(m_Context);
 				
 				log::warn(
-					"\'%s\' failed to acquire vision interop frame",
+					"%s failed to acquire the current frame",
 					obs_source_get_name(m_Context)
 				);
 			}
