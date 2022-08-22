@@ -20,8 +20,6 @@
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Utility/Logging.hpp"
 
-#include <thread>
-
 #ifdef _WIN32
 #include <dxgi.h>
 #include <d3d11.h>

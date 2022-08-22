@@ -21,6 +21,8 @@
 #include <opencv2/core/ocl.hpp>
 #include <obs-module.h>
 
+#include <thread>
+
 namespace lvk::ocl 
 {
 
