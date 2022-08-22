@@ -18,8 +18,8 @@
 #include <obs-module.h>
 #include <opencv2/core/ocl.hpp>
 
+#include "OBS/Interop/InteropContext.hpp"
 #include "Diagnostics/Directives.hpp"
-#include "OBS/Interop/FrameIngest.hpp"
 #include "OBS/Utility/Logging.hpp"
 
 #include "OBS/Effects/FSREffect.hpp"
@@ -72,7 +72,7 @@ void attach_ocl_interop_context(void* param, uint32_t cx, uint32_t cy)
 	// also need to attempt it repeatedly in case OBS switches to a new graphics
 	// render thread. If this happens, then our OpenCL execution context will be
 	// attached to the wrong thread, and must be updated before running OpenCL code.
-	lvk::ocl::try_attach_graphics_interop_context();
+	lvk::ocl::InteropContext::TryAttach();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ bool obs_module_load()
 {
 	// Detect LVK capabilities
 	const bool has_opencl = cv::ocl::haveOpenCL();
-	const bool has_interop = lvk::ocl::supports_graphics_interop();
+	const bool has_interop = lvk::ocl::InteropContext::Supported();
 	const bool has_fsr_effect = lvk::FSREffect::Validate();
 	const bool has_cas_effect = lvk::CASEffect::Validate();
 	

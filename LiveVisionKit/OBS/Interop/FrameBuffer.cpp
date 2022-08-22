@@ -18,6 +18,7 @@
 #include "FrameBuffer.hpp"
 
 #include "FrameIngest.hpp"
+#include "InteropContext.hpp"
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Utility/Graphics.hpp"
 
@@ -119,7 +120,7 @@ namespace lvk
 		const uint32_t texture_width = gs_texture_get_width(texture);
 		const uint32_t texture_height = gs_texture_get_height(texture);
 
-		if (lvk::ocl::supports_graphics_interop())
+		if (lvk::ocl::InteropContext::Available())
 		{
 			prepare_interop_buffer(texture_width, texture_height);
 
@@ -131,7 +132,7 @@ namespace lvk
 
 			gs_copy_texture(m_InteropBuffer, texture);
 			
-			lvk::ocl::import_texture(m_InteropBuffer, m_ConversionBuffer);
+			lvk::ocl::InteropContext::Import(m_InteropBuffer, m_ConversionBuffer);
 		}
 		else
 		{
@@ -174,11 +175,11 @@ namespace lvk
 		// Convert from YUV to RGBA
 		cv::cvtColor(frame, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
 
-		if (lvk::ocl::supports_graphics_interop())
+		if (lvk::ocl::InteropContext::Available())
 		{
 			prepare_interop_buffer(frame.cols, frame.rows);
 			
-			lvk::ocl::export_texture(m_ConversionBuffer, m_InteropBuffer);
+			lvk::ocl::InteropContext::Export(m_ConversionBuffer, m_InteropBuffer);
 			gs_copy_texture(texture, m_InteropBuffer);
 		}
 		else

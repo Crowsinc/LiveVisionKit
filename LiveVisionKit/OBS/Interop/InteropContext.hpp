@@ -17,18 +17,46 @@
 
 #pragma once
 
-#include <obs-module.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <obs-module.h>
 
-namespace lvk
+namespace lvk::ocl 
 {
-	// Direct RAM Frame Ingest
 
-	// Converts OBS frame to YUV UMat
-	void import_frame(const obs_source_frame* src, cv::UMat& dst);
+	class InteropContext
+	{
+	public:
 
-	// Converts YUV UMat back to OBS frame, preserves dst alpha channel
-	void export_frame(const cv::UMat& src, obs_source_frame* dst);
+		// Creates context
+		static bool TryAttach();
+
+		// True if the required OpenCL extensions are supported
+		static bool Supported();
+
+		// True if the context is attached to the current thread
+		static bool Attached();
+
+		// True if context exists and is usable
+		static bool Available();
+
+
+		static void Import(gs_texture_t* src, cv::UMat& dst);
+
+
+		static void Export(cv::UMat& src, gs_texture_t* dst);
+
+	private:
+
+		bool static TestContext();
+
+		static cv::ocl::OpenCLExecutionContext s_OCLContext;
+		static graphics_t* s_GraphicsContext;
+		static std::thread::id s_BoundThread;
+		static bool s_TestPassed;
+
+	};
 
 }
+
 
