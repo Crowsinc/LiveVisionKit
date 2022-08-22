@@ -20,6 +20,8 @@
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Utility/Logging.hpp"
 
+#include <thread>
+
 #ifdef _WIN32
 #include <dxgi.h>
 #include <d3d11.h>
@@ -73,7 +75,7 @@ namespace lvk::ocl
 
 		// NOTE: We are making the assumption that 
 		// OBS only ever has one graphics context. 
-		LVK_ASSERT(gs_get_context() == graphics_context);
+		LVK_ASSERT(gs_get_context() == s_GraphicsContext);
 		if (!Attached())
 		{
 			// If the context is not attached to the current thread, then bind it
@@ -163,7 +165,7 @@ namespace lvk::ocl
 
 	void InteropContext::Import(gs_texture_t* src, cv::UMat& dst)
 	{
-		LVK_ASSERT(Available());
+		LVK_ASSERT(Attached());
 		LVK_ASSERT(src != nullptr);
 
 #ifdef _WIN32 // DirectX11 Interop
@@ -199,7 +201,7 @@ namespace lvk::ocl
 	
 	void InteropContext::Export(cv::UMat& src, gs_texture_t* dst)
 	{
-		LVK_ASSERT(Available());
+		LVK_ASSERT(Attached());
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
 		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
