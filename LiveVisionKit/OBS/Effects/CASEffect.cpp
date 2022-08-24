@@ -21,8 +21,8 @@
 #include "OBS/Utility/Logging.hpp"
 
 #define A_CPU 1
-#include "Data/ffx_a.h"
-#include "Data/ffx_cas.h"
+#include "../Data/effects/ffx_a.h"
+#include "../Data/effects/ffx_cas.h"
 
 namespace lvk
 {

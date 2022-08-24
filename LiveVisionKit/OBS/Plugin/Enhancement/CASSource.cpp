@@ -18,11 +18,9 @@
 #include "CASFilter.hpp"
 
 #include <obs-module.h>
+
 #include "OBS/Utility/OBSDispatch.hpp"
-
-//---------------------------------------------------------------------------------------------------------------------
-
-constexpr auto CAS_FILTER_NAME = "(LVK) AMD FidelityFX Sharpening";
+#include "OBS/Utility/Locale.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +37,7 @@ extern void register_cas_source()
 	config.update = lvk::dispatch::filter_configure<lvk::CASFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::CASFilter>;
 
-	config.get_name = [](void* data){return CAS_FILTER_NAME;};
+	config.get_name = [](void* data){return L("cas.name");};
 	config.get_properties = lvk::dispatch::filter_properties<lvk::CASFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CASFilter>;
 

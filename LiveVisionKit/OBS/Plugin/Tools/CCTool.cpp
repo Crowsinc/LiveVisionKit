@@ -20,6 +20,7 @@
 #include <filesystem>
 
 #include "OBS/Utility/Logging.hpp"
+#include "OBS/Utility/Locale.hpp"
 
 namespace lvk
 {
@@ -33,8 +34,8 @@ namespace lvk
 	constexpr auto FRAME_HOLD_COUNT = 20;
 
 	constexpr auto PROP_UTILITY_BTN = "PROP_UTILITY_BTN";
-	constexpr auto UTILITY_BTN_CAPTURE_TEXT = "Capture Frame";
-	constexpr auto UTILITY_BTN_CALIBRATE_TEXT = "Calibrate";
+	const auto UTILITY_BTN_CAPTURE_TEXT = L("cct.capture");
+	const auto UTILITY_BTN_CALIBRATE_TEXT = L("cct.calibrate");
 
 	constexpr auto PROP_RESET_BTN = "PROP_RESET_BTN";
 
@@ -204,14 +205,14 @@ namespace lvk
 		obs_properties_add_text(
 			properties,
 			PROP_PROFILE_NAME,
-			"Profile Name",
+			L("cct.profile-name"),
 			obs_text_type::OBS_TEXT_DEFAULT
 		);
 
 		auto property = obs_properties_add_int(
 			properties,
 			PROP_SQUARE_SIZE,
-			"Square Size",
+			L("cct.square-size"),
 			SQUARE_SIZE_MIN,
 			SQUARE_SIZE_MAX,
 			SQUARE_SIZE_STEP
@@ -228,7 +229,7 @@ namespace lvk
 		property = obs_properties_add_button(
 			properties,
 			PROP_RESET_BTN,
-			"Reset",
+			L("cct.reset"),
 			CCTool::on_reset_button
 		);
 
@@ -370,21 +371,21 @@ namespace lvk
 	std::tuple<std::string, cv::Scalar> CCTool::generate_calibration_status() const
 	{
 		if(m_CalibrationSuccess)
-			return {std::string("calibration successful!"), draw::YUV_GREEN};
+			return {std::string(L("cct.hud.status.successful")), draw::YUV_GREEN};
 
 		if(m_CalibrationFail)
-			return {std::string("calibration failed!"), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.failed")), draw::YUV_RED};
 
 		if(m_ProfileName.empty())
-			return {std::string("invalid profile (empty)"), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.profile-empty")), draw::YUV_RED};
 
 		if(remaining_captures() > 0)
-			return {std::string("more captures required"), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.more-captures")), draw::YUV_RED};
 
 		if(remaining_captures() == 0)
-			return {std::string("ready for calibration"), draw::YUV_MAGENTA};
+			return {std::string(L("cct.hud.status.ready")), draw::YUV_MAGENTA};
 
-		return {"unknown", draw::YUV_RED};
+		return {L("cct.hud.status.unknown"), draw::YUV_RED};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -395,10 +396,11 @@ namespace lvk
 
 		const cv::Point text_offset(0, 50);
 		cv::Point text_origin(5, 40);
+		const std::string separator(": ");
 
 		draw::text(
 			frame,
-			"Profile: " + m_ProfileName,
+			L("cct.hud.profile") + separator + m_ProfileName,
 			text_origin,
 			draw::YUV_MAGENTA
 		);
@@ -406,7 +408,7 @@ namespace lvk
 
 		draw::text(
 			frame,
-			"Square Size: " + std::to_string(m_SquareSize) + "mm",
+			L("cct.hud.square-size") + separator + std::to_string(m_SquareSize) + "mm",
 			text_origin,
 			draw::YUV_MAGENTA
 		);
@@ -414,7 +416,7 @@ namespace lvk
 
 		draw::text(
 			frame,
-			"Captures Remaining: " + std::to_string(remaining_captures()),
+			L("cct.hud.remaining") + separator + std::to_string(remaining_captures()),
 			text_origin,
 			draw::YUV_MAGENTA
 		);
@@ -423,7 +425,7 @@ namespace lvk
 		const auto& [status_text, status_color] = generate_calibration_status();
 		draw::text(
 			frame,
-			"Status: " + status_text,
+			L("cct.hud.status") + separator + status_text,
 			text_origin,
 			status_color
 		);

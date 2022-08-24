@@ -18,11 +18,9 @@
 #include "LCFilter.hpp"
 
 #include <obs-module.h>
+
 #include "OBS/Utility/OBSDispatch.hpp"
-
-//---------------------------------------------------------------------------------------------------------------------
-
-constexpr auto LC_FILTER_NAME = "(LVK) Lens Correction";
+#include "OBS/Utility/Locale.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +37,7 @@ extern void register_lc_source()
 	config.update = lvk::dispatch::filter_configure<lvk::LCFilter>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::LCFilter>;
 
-	config.get_name = [](void* data){return LC_FILTER_NAME;};
+	config.get_name = [](void* data){return L("lc.name");};
 	config.get_properties = lvk::dispatch::filter_properties<lvk::LCFilter>;;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::LCFilter>;;
 
@@ -61,7 +59,7 @@ extern void register_lc_effect_source()
 	config.update = lvk::dispatch::filter_configure<lvk::LCFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::LCFilter>;
 
-	config.get_name = [](void* data) {return LC_FILTER_NAME; };
+	config.get_name = [](void* data) {return L("lc.name"); };
 	config.get_properties = lvk::dispatch::filter_properties<lvk::LCFilter>;;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::LCFilter>;;
 

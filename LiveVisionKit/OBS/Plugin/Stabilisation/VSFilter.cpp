@@ -22,6 +22,7 @@
 
 #include "OBS/Effects/FSREffect.hpp"
 #include "OBS/Effects/DefaultEffect.hpp"
+#include "OBS/Utility/Locale.hpp"
 
 namespace lvk
 {
@@ -77,7 +78,7 @@ namespace lvk
 		auto property = obs_properties_add_int(
 			properties,
 			PROP_SMOOTHING_RADIUS,
-			"Smoothing Radius",
+			L("vs.radius"),
 			SMOOTHING_RADIUS_MIN,
 			SMOOTHING_RADIUS_MAX,
 			2
@@ -86,7 +87,7 @@ namespace lvk
 		property = obs_properties_add_int(
 			properties,
 			PROP_STREAM_DELAY_INFO,
-			"Stream Delay",
+			L("vs.delay"),
 			STREAM_DELAY_INFO_MIN,
 			STREAM_DELAY_INFO_MAX,
 			1
@@ -97,7 +98,7 @@ namespace lvk
 		property = obs_properties_add_int_slider(
 			properties,
 			PROP_CROP_PERCENTAGE,
-			"Crop",
+			L("f.crop"),
 			CROP_PERCENTAGE_MIN,
 			CROP_PERCENTAGE_MAX,
 			1
@@ -107,35 +108,35 @@ namespace lvk
 		property = obs_properties_add_list(
 			properties,
 			PROP_MOTION_MODEL,
-			"Motion Model",
+			L("vs.model"),
 			OBS_COMBO_TYPE_LIST,
 			OBS_COMBO_FORMAT_STRING
 		);
-		obs_property_list_add_string(property, "Dynamic", MOTION_MODEL_DYNAMIC);
-		obs_property_list_add_string(property, "Affine", MOTION_MODEL_AFFINE);
-		obs_property_list_add_string(property, "Homography", MOTION_MODEL_HOMOGRAPHY);
+		obs_property_list_add_string(property, L("vs.model.dynamic"), MOTION_MODEL_DYNAMIC);
+		obs_property_list_add_string(property, L("vs.model.affine"), MOTION_MODEL_AFFINE);
+		obs_property_list_add_string(property, L("vs.model.homography"), MOTION_MODEL_HOMOGRAPHY);
 
 		property = obs_properties_add_list(
 			properties,
 			PROP_SUPPRESSION_MODE,
-			"Suppression Mode",
+			L("vs.suppression"),
 			OBS_COMBO_TYPE_LIST,
 			OBS_COMBO_FORMAT_STRING
 		);
-		obs_property_list_add_string(property, "Off", SUPPRESSION_MODE_OFF);
-		obs_property_list_add_string(property, "Strict", SUPPRESSION_MODE_STRICT);
-		obs_property_list_add_string(property, "Relaxed", SUPPRESSION_MODE_RELAXED);
+		obs_property_list_add_string(property, L("vs.suppression.off"), SUPPRESSION_MODE_OFF);
+		obs_property_list_add_string(property, L("vs.suppression.strict"), SUPPRESSION_MODE_STRICT);
+		obs_property_list_add_string(property, L("vs.suppression.relaxed"), SUPPRESSION_MODE_RELAXED);
 
 		obs_properties_add_bool(
 			properties,
 			PROP_STAB_DISABLED,
-			"Disable Stabilization"
+			L("vs.disable")
 		);
 
 		obs_properties_add_bool(
 			properties,
 			PROP_TEST_MODE,
-			"Test Mode"
+			L("f.testmode")
 		);
 
 		return properties;

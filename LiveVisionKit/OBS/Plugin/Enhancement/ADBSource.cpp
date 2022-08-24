@@ -18,11 +18,9 @@
 #include "ADBFilter.hpp"
 
 #include <obs-module.h>
+
 #include "OBS/Utility/OBSDispatch.hpp"
-
-//---------------------------------------------------------------------------------------------------------------------
-
-constexpr auto ADB_FILTER_NAME = "(LVK) Adapative DeBlocker";
+#include "OBS/Utility/Locale.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +37,7 @@ extern void register_adb_source()
 	config.filter_video = lvk::dispatch::filter_process<lvk::ADBFilter>;
 	config.update = lvk::dispatch::filter_configure<lvk::ADBFilter>;
 
-	config.get_name = [](void* data){return ADB_FILTER_NAME;};
+	config.get_name = [](void* data){return L("adb.name");};
 	config.get_properties = lvk::dispatch::filter_properties<lvk::ADBFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::ADBFilter>;
 
@@ -61,7 +59,7 @@ extern void register_adb_effect_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::ADBFilter>;
 	config.update = lvk::dispatch::filter_configure<lvk::ADBFilter>;
 
-	config.get_name = [](void* data) {return ADB_FILTER_NAME; };
+	config.get_name = [](void* data) {return L("adb.name"); };
 	config.get_properties = lvk::dispatch::filter_properties<lvk::ADBFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::ADBFilter>;
 

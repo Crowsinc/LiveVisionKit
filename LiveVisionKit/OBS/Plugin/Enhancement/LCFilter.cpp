@@ -18,6 +18,7 @@
 #include "LCFilter.hpp"
 
 #include "OBS/Plugin/Tools/CCTool.hpp"
+#include "OBS/Utility/Locale.hpp"
 
 namespace lvk
 {
@@ -39,7 +40,7 @@ namespace lvk
 		auto property = obs_properties_add_list(
 			properties,
 			PROP_PROFILE,
-			"Calibration Profile",
+			L("f.calib-profile"),
 			obs_combo_type::OBS_COMBO_TYPE_LIST,
 			obs_combo_format::OBS_COMBO_FORMAT_STRING
 		);
@@ -52,7 +53,7 @@ namespace lvk
 		obs_properties_add_bool(
 			properties,
 			PROP_CORRECT_DISTORTION,
-			"Correct lens distortion"
+			L("lc.correct-distortion")
 		);
 
 		return properties;

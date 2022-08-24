@@ -19,6 +19,8 @@
 
 #include <util/platform.h>
 
+#include "OBS/Utility/Locale.hpp"
+
 namespace lvk
 {
 
@@ -47,7 +49,7 @@ namespace lvk
 		obs_properties_add_int_slider(
 			properties,
 			PROP_STRENGTH,
-			"Strength",
+			L("adb.strength"),
 			STRENGTH_MIN,
 			STRENGTH_MAX,
 			1
@@ -56,7 +58,7 @@ namespace lvk
 		obs_properties_add_bool(
 			properties,
 			PROP_TEST_MODE,
-			"Test Mode"
+			L("f.testmode")
 		);
 
 		return properties;

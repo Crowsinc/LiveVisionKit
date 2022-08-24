@@ -18,6 +18,7 @@
 #include "FSRFilter.hpp"
 
 #include "OBS/Effects/FSREffect.hpp"
+#include "OBS/Utility/Locale.hpp"
 
 namespace lvk
 {
@@ -27,12 +28,12 @@ namespace lvk
 	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
 
 	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
-	constexpr auto OUTPUT_SIZE_SOURCE = "Original Size";
-	constexpr auto OUTPUT_SIZE_CANVAS = "Canvas Size";
-	constexpr auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_SOURCE;
+#define OUTPUT_SIZE_SOURCE L("fsr.scaling.original")
+#define OUTPUT_SIZE_CANVAS L("fsr.scaling.canvas")
 	const std::vector<std::string> OUTPUT_SIZES = {
 		"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"
 	};
+	const auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_SOURCE;
 
 	constexpr auto PROP_MAINTAIN_ASPECT = "MAINTAIN_ASPECT_RATIO";
 	constexpr auto MAINTAIN_ASPECT_DEFAULT = true;
@@ -57,7 +58,7 @@ namespace lvk
 		auto property = obs_properties_add_list(
 			properties,
 			PROP_OUTPUT_SIZE,
-			"Output Size",
+			L("fsr.output-size"),
 			obs_combo_type::OBS_COMBO_TYPE_EDITABLE,
 			obs_combo_format::OBS_COMBO_FORMAT_STRING
 		);
@@ -71,14 +72,14 @@ namespace lvk
 		obs_properties_add_bool(
 			properties,
 			PROP_MAINTAIN_ASPECT,
-			"Maintain Aspect Ratio"
+			L("fsr.maintain-ratio")
 		);
 
 		obs_properties_t* crop_properties = obs_properties_create();
 		obs_properties_add_group(
 			properties,
 			PROP_CROP_GROUP,
-			"Crop",
+			L("f.crop"),
 			obs_group_type::OBS_GROUP_NORMAL,
 			crop_properties
 		);
@@ -86,7 +87,7 @@ namespace lvk
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_TOP,
-			"Top",
+			L("f.top"),
 			CROP_MIN,
 			CROP_MAX,
 			CROP_STEP
@@ -95,7 +96,7 @@ namespace lvk
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_BOTTOM,
-			"Bottom",
+			L("f.bottom"),
 			CROP_MIN,
 			CROP_MAX,
 			CROP_STEP
@@ -104,7 +105,7 @@ namespace lvk
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_LEFT,
-			"Left",
+			L("f.left"),
 			CROP_MIN,
 			CROP_MAX,
 			CROP_STEP
@@ -113,7 +114,7 @@ namespace lvk
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_RIGHT,
-			"Right",
+			L("f.right"),
 			CROP_MIN,
 			CROP_MAX,
 			CROP_STEP
@@ -142,6 +143,8 @@ namespace lvk
 	void FSRFilter::configure(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
+
+		blog(LOG_INFO, OUTPUT_SIZE_SOURCE);
 
 		m_SizeMultiplier = 1.0;
 		m_MatchCanvasSize = m_MatchSourceSize = false;

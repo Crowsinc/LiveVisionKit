@@ -18,11 +18,9 @@
 #include "CCTool.hpp"
 
 #include <obs-module.h>
+
 #include "OBS/Utility/OBSDispatch.hpp"
-
-//---------------------------------------------------------------------------------------------------------------------
-
-constexpr auto CC_TOOL_NAME = "(LVK) Calibraton Tool";
+#include "OBS/Utility/Locale.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +37,7 @@ extern void register_cct_source()
 	config.update = lvk::dispatch::filter_configure<lvk::CCTool>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::CCTool>;
 
-	config.get_name = [](void* data){return CC_TOOL_NAME;};
+	config.get_name = [](void* data){return L("cct.name");};
 	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;;
 
@@ -61,7 +59,7 @@ extern void register_cct_effect_source()
 	config.update = lvk::dispatch::filter_configure<lvk::CCTool>;
 	config.video_render = lvk::dispatch::filter_render<lvk::CCTool>;
 
-	config.get_name = [](void* data) {return CC_TOOL_NAME; };
+	config.get_name = [](void* data) {return L("cct.name"); };
 	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;;
 

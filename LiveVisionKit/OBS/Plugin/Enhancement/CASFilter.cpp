@@ -18,6 +18,7 @@
 #include "CASFilter.hpp"
 
 #include "OBS/Effects/CASEffect.hpp"
+#include "OBS/Utility/Locale.hpp"
 
 namespace lvk
 {
@@ -39,7 +40,7 @@ namespace lvk
 		obs_properties_add_float_slider(
 			properties,
 			PROP_SHARPNESS,
-			"Sharpness",
+			L("cas.sharpness"),
 			SHARPNESS_MIN,
 			SHARPNESS_MAX,
 			SHARPNESS_STEP

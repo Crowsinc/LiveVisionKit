@@ -21,8 +21,8 @@
 #include "OBS/Utility/Logging.hpp"
 
 #define A_CPU 1
-#include "Data/ffx_a.h"
-#include "Data/ffx_fsr1.h"
+#include "../Data/effects/ffx_a.h"
+#include "../Data/effects/ffx_fsr1.h"
 
 // NOTE: The FSR effect shader fully supports RCAS, but is no longer ran alongside EASU
 // in favour of running the standalone CAS effect instead. Performing a multipass render
