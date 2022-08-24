@@ -90,13 +90,15 @@ namespace lvk
 
 	private:
 
-		obs_source_t* m_Context;
+		obs_source_t* m_Context = nullptr;
 
-		bool m_CaptureNext, m_CalibrateNext;
-		bool m_CalibrationFail, m_CalibrationSuccess;
+		bool m_CaptureNext = false;
+		bool m_CalibrateNext = false;
+		bool m_CalibrationFail = false;
+		bool m_CalibrationSuccess = false;
 
-		cv::UMat m_HoldFrame;
-		int m_FrameHoldCountdown;
+		cv::UMat m_HoldFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		int m_FrameHoldCountdown = 0;
 
 		CameraCalibrator m_Calibrator;
 		std::string m_ProfileName;

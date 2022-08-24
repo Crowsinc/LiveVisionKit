@@ -57,7 +57,7 @@ namespace lvk
 	protected:
 
 		OBSEffect(const std::string& name);
-		
+
 		OBSEffect(gs_effect_t* handle);
 
 		~OBSEffect();
@@ -81,20 +81,20 @@ namespace lvk
 		virtual bool validate() const;
 
 	private:
-		
+
 		static E& Instance();
 
 		static bool is_render_valid(
-			obs_source_t* source, 
-			const cv::Size source_size, 
-			const cv::Size render_size, 
+			obs_source_t* source,
+			const cv::Size source_size,
+			const cv::Size render_size,
 			E& effect,
 			Args... args
 		);
 
 	private:
 
-		gs_effect_t* m_Handle;
+		gs_effect_t* m_Handle = nullptr;
 		bool m_Owner;
 	};
 

@@ -58,7 +58,6 @@ namespace lvk
 
 		cv::UMat m_ConversionBuffer;
 		gs_texture_t* m_InteropBuffer = nullptr;
-
 		gs_stagesurf_t* m_ReadBuffer = nullptr;
 		gs_texture_t* m_WriteBuffer = nullptr;
 		uint8_t* m_MappedData = nullptr;

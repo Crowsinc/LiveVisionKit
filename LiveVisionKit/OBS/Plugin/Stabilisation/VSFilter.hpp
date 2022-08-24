@@ -88,11 +88,12 @@ namespace lvk
 
 	private:
 
-		obs_source_t* m_Context;
+		obs_source_t* m_Context = nullptr;
 
-		bool m_Enabled, m_TestMode;
-		uint32_t m_SmoothingRadius;
-		float m_CropProportion;
+		bool m_Enabled = true;
+		bool m_TestMode = false;
+		float m_CropProportion = 0;
+		uint32_t m_SmoothingRadius = 0;
 
 		cv::Rect m_CropRegion;
 		cv::Size m_OutputSize;
@@ -101,11 +102,12 @@ namespace lvk
 		SlidingBuffer<FrameVector> m_Trajectory;
 		SlidingBuffer<FrameBuffer> m_FrameQueue;
 
-		cv::UMat m_WarpFrame, m_TrackingFrame;
+		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		FrameTracker m_FrameTracker;
 		
 		cv::Point2f m_SuppressionRange;
-		float m_SuppressionFactor;
+		float m_SuppressionFactor = 0.0f;
 	};
 
 }

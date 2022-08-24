@@ -30,9 +30,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	CASEffect::CASEffect()
-		: OBSEffect("cas"),
-		  m_OutputSizeParam(nullptr),
-		  m_CASConstParam(nullptr)
+		: OBSEffect("cas")
 	{
 		if (handle() != nullptr)
 		{

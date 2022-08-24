@@ -220,17 +220,7 @@ namespace lvk
 
 	VSFilter::VSFilter(obs_source_t* context)
 		: VisionFilter(context),
-		  m_Context(context),
-		  m_Enabled(true),
-		  m_TestMode(false),
-		  m_SmoothingRadius(0),
-		  m_CropProportion(0),
-		  m_OutputSize(0, 0),
-		  m_WarpFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_TrackingFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FrameTracker(/* Use defaults */),
-		  m_SuppressionRange(0.0),
-		  m_SuppressionFactor(0.0)
+		  m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
 	}

@@ -81,17 +81,17 @@ namespace lvk
 		static std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> s_Filters;
 		static std::unordered_map<const obs_source_t*, SourceCache> s_SourceCaches;
 		static std::mutex s_CacheMutex;
-		obs_source_t* m_CacheKey;
-
-		obs_source_t* m_Source;
-		obs_source_t* m_Context;
-		bool m_Asynchronous, m_HybridRender;
-
-		gs_texture_t* m_RenderBuffer;
 		
+		obs_source_t* m_Source = nullptr;
+		obs_source_t* m_Context = nullptr;
+		obs_source_t* m_CacheKey = nullptr;
+
+		bool m_Asynchronous, m_HybridRender;
+		double m_RenderTime = 0.0, m_DeltaTime = 0.0;
+
+		gs_texture_t* m_RenderBuffer = nullptr;
 		std::deque<obs_source_frame*> m_AsyncFrameQueue; 
-	
-		double m_RenderTime, m_DeltaTime;
+
 	};
 
 }

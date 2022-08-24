@@ -24,9 +24,7 @@ namespace lvk
 
 	template<typename T>
 	SlidingBuffer<T>::SlidingBuffer(const uint32_t window_size)
-		: m_StartIndex(0),
-		  m_EndIndex(0),
-		  m_WindowSize(window_size)
+		: m_WindowSize(window_size)
 	{
 		LVK_ASSERT(window_size > 0);
 

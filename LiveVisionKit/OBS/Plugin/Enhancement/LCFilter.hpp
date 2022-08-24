@@ -45,16 +45,17 @@ namespace lvk
 
 	private:
 
-		obs_source_t* m_Context;
-
-		bool m_CorrectDistortion;
+		obs_source_t* m_Context = nullptr;
 
 		std::string m_Profile;
 		CameraParameters m_Parameters;
 
-		cv::UMat m_UndistortFrame;
-		cv::UMat m_UndistortMap, m_AuxUndistortMap;
+		bool m_CorrectDistortion = false;
 		cv::Rect m_UndistortCrop;
+		
+		cv::UMat m_UndistortMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_AuxUndistortMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_UndistortFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

@@ -161,7 +161,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	OBSEffect<E, Args...>::OBSEffect(const std::string& name)
 		: m_Handle(nullptr),
-		  m_Owner(true)
+		  m_Owner(true) // We own the handle
 	{
 		const std::string effect_file = name + ".effect";
 		const std::string effect_path = "effects/" + effect_file;
@@ -194,7 +194,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	OBSEffect<E, Args...>::OBSEffect(gs_effect_t* handle)
 		: m_Handle(handle),
-		  m_Owner(false)
+		  m_Owner(false) // We do not own the handle
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------

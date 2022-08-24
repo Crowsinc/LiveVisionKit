@@ -48,17 +48,18 @@ namespace lvk
 
 	private:
 
-		obs_source_t* m_Context;
+		obs_source_t* m_Context = nullptr;
 
-		float m_SizeMultiplier;
 		cv::Size m_RequestedSize;
+		float m_SizeMultiplier = 1.0f;
 		cv::Size m_InputSize, m_OutputSize;
 
 		cv::Rect m_ScalingRegion;
 		cv::Size m_TLCrop, m_BRCrop;
 
-		bool m_MatchCanvasSize, m_MatchSourceSize;
-		bool m_MaintainAspectRatio;
+		bool m_MatchCanvasSize = false;
+		bool m_MatchSourceSize = false;
+		bool m_MaintainAspectRatio = true;
 	};
 
 }

@@ -257,10 +257,6 @@ namespace lvk
 	CCTool::CCTool(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
-		  m_CalibrationFail(false),
-		  m_CalibrationSuccess(false),
-		  m_HoldFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FrameHoldCountdown(0),
 		  m_Calibrator({CALIBRATION_PATTERN_COLS, CALIBRATION_PATTERN_ROWS})
 	{
 		reset();

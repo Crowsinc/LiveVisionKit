@@ -192,17 +192,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FSRFilter::FSRFilter(obs_source_t* context)
-		: m_Context(context),
-		  m_SizeMultiplier(1.0),
-		  m_RequestedSize(0,0),
-		  m_InputSize(0, 0),
-		  m_OutputSize(0, 0),
-		  m_ScalingRegion(0,0,0,0),
-		  m_TLCrop(0,0),
-		  m_BRCrop(0,0),
-		  m_MatchCanvasSize(false),
-		  m_MatchSourceSize(false),
-		  m_MaintainAspectRatio(true)
+		: m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
 	}

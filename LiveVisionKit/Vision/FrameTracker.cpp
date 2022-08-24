@@ -35,8 +35,6 @@ namespace lvk
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
 		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
-		  m_SceneStability(0.0f),
-		  m_DistributionQuality(0, 0),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),

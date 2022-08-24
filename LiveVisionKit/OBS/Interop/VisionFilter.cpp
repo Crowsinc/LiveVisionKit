@@ -24,7 +24,6 @@
 #include "FrameIngest.hpp"
 #include "Math/Logic.hpp"
 
-
 #include <util/platform.h>
 
 namespace lvk
@@ -39,19 +38,15 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	VisionFilter::VisionFilter(obs_source_t* context)
-		: m_CacheKey(nullptr),
-		m_Source(nullptr),
-		m_Context(context),
-		m_Asynchronous(test_bits<uint32_t>(
-			obs_source_get_output_flags(context),
-			OBS_SOURCE_ASYNC_VIDEO
-		)),
-		// NOTE: We initially assume a hybrid render state for each filter, 
-		// then update our assumption as we learn more about them during execution. 
-		m_HybridRender(m_Asynchronous ? false : true),
-		m_RenderBuffer(nullptr),
-		m_DeltaTime(0),
-		m_RenderTime(os_gettime_ns() * 1.0e-9)
+		: m_Context(context),
+		  m_Asynchronous(test_bits<uint32_t>(
+			  obs_source_get_output_flags(context),
+			  OBS_SOURCE_ASYNC_VIDEO
+		  )),
+			// NOTE: We initially assume a hybrid render state for each filter, 
+			// then update our assumption as we learn more about them during execution. 
+		  m_HybridRender(m_Asynchronous ? false : true),
+		  m_RenderTime(os_gettime_ns() * 1.0e-9)
 	{
 		LVK_ASSERT(m_Context != nullptr);
 		LVK_ASSERT(s_Filters.count(context) == 0);

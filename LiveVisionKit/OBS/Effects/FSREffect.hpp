@@ -45,11 +45,11 @@ namespace lvk
 
 	private:
 
-		gs_eparam_t* m_InputSizeParam;
-		gs_eparam_t* m_OutputSizeParam;
-		gs_eparam_t* m_RegionUVOffsetParam;
-		std::array<vec4, 4> m_EASUConstants;
-		std::array<gs_eparam_t*, 4> m_EASUParams;
+		gs_eparam_t* m_InputSizeParam = nullptr;
+		gs_eparam_t* m_OutputSizeParam = nullptr;
+		gs_eparam_t* m_RegionUVOffsetParam = nullptr;
+		std::array<vec4, 4> m_EASUConstants = {vec4{}, vec4{}, vec4{}, vec4{}};
+		std::array<gs_eparam_t*, 4> m_EASUParams = {nullptr, nullptr, nullptr, nullptr};
 	};
 
 }

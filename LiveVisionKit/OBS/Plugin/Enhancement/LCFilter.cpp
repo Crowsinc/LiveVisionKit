@@ -71,11 +71,7 @@ namespace lvk
 
 	LCFilter::LCFilter(obs_source_t* context)
 		: VisionFilter(context),
-		  m_Context(context),
-		  m_CorrectDistortion(false),
-		  m_UndistortFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_UndistortMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_AuxUndistortMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
+		  m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
 	}

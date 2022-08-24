@@ -76,7 +76,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_SceneStability;
+		float m_SceneStability = 0.0f;
 		cv::Point2f m_DistributionQuality;
 
 		MotionModel m_MotionModel;

@@ -70,8 +70,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	CASFilter::CASFilter(obs_source_t* context)
-		: m_Context(context),
-		  m_Sharpness(0.0f)
+		: m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
 	}

@@ -35,12 +35,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FSREffect::FSREffect()
-		: OBSEffect("fsr"),
-		  m_InputSizeParam(nullptr),
-		  m_OutputSizeParam(nullptr),
-		  m_RegionUVOffsetParam(nullptr),
-		  m_EASUParams({nullptr, nullptr, nullptr, nullptr}),
-		  m_EASUConstants()
+		: OBSEffect("fsr")
 	{
 		if(handle() != nullptr)
 		{

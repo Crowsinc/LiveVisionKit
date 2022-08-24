@@ -88,18 +88,7 @@ namespace lvk
 
 	ADBFilter::ADBFilter(obs_source_t* context)
 		: VisionFilter(context),
-		  m_Context(context),
-		  m_TestMode(false),
-		  m_DetectionLevels(0),
-		  m_SmoothFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DetectionFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_ReferenceFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_BlockMask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_KeepBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DeblockBlendMap(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_BlockGrid(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_DeblockBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FloatBuffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY)
+		  m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
 	}

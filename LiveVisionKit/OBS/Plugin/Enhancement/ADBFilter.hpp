@@ -47,14 +47,20 @@ namespace lvk
 
 	private:
 
-		obs_source_t* m_Context;
+		obs_source_t* m_Context = nullptr;
 
-		bool m_TestMode;
-		uint32_t m_DetectionLevels;
+		bool m_TestMode = false;
+		uint32_t m_DetectionLevels = 0;
 
-		cv::UMat m_SmoothFrame, m_DetectionFrame, m_ReferenceFrame;
-		cv::UMat m_BlockMask, m_KeepBlendMap, m_DeblockBlendMap;
-		cv::UMat m_BlockGrid, m_DeblockBuffer, m_FloatBuffer;
+		cv::UMat m_SmoothFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_DetectionFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_ReferenceFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_BlockMask{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_KeepBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_DeblockBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_BlockGrid{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_DeblockBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY}; 
+		cv::UMat m_FloatBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

@@ -90,8 +90,9 @@ namespace lvk
 
 	private:
 
+		uint32_t m_WindowSize;
 		std::vector<T> m_InternalBuffer;
-		uint32_t m_StartIndex, m_EndIndex, m_WindowSize;
+		uint32_t m_StartIndex = 0, m_EndIndex = 0;
 
 	};
 

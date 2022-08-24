@@ -45,8 +45,8 @@ namespace lvk
 
 	private:
 
-		gs_eparam_t* m_CASConstParam;
-		gs_eparam_t* m_OutputSizeParam;
+		gs_eparam_t* m_CASConstParam = nullptr;
+		gs_eparam_t* m_OutputSizeParam = nullptr;
 
 	};
 

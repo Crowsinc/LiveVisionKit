@@ -42,9 +42,9 @@ namespace lvk
 
 	private:
 		
-		obs_source_t* m_Context;
+		obs_source_t* m_Context = nullptr;
 
-		float m_Sharpness;
+		float m_Sharpness = 0.0f;
 	};
 
 }
