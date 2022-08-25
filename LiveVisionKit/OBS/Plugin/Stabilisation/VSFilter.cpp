@@ -68,6 +68,7 @@ namespace lvk
 	constexpr auto TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 6.0;
+	constexpr auto MAX_CLAMP_ITERATIONS = 50;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -333,8 +334,7 @@ namespace lvk
 		// reducing the velocity by lerping it back to identity in small steps.
 
 		constexpr double max_t = 1.0;
-		constexpr int max_iterations = 100;
-		constexpr double step = max_t/max_iterations;
+		constexpr double step = max_t/MAX_CLAMP_ITERATIONS;
 		const auto identity = Homography::Identity();
 
 		double t = step;
