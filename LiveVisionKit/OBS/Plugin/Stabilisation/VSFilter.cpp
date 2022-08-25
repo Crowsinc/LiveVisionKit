@@ -204,13 +204,14 @@ namespace lvk
 		obs_get_video_info(&video_info);
 		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
 
-		const uint32_t stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
-		const uint32_t new_stream_delay = frame_ms * m_FrameQueue.window_size();
+		// The oldest frame is taking the place of the newest, so the delay is one less than the queue size
+		const uint32_t new_stream_delay = frame_ms * (m_FrameQueue.window_size() - 1);
+		const uint32_t old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
 
 		// NOTE: Need to update the property UI to push a stream delay update because
 		// the UI element is disabled. But only if the delay has changed, otherwise
 		// the sliders are interrupted and won't smoothly drag anymore.
-		if(stream_delay != new_stream_delay)
+		if(old_stream_delay != new_stream_delay)
 		{
 			obs_data_set_int(settings, PROP_STREAM_DELAY_INFO, new_stream_delay);
 			obs_source_update_properties(m_Context);
