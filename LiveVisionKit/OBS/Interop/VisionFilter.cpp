@@ -409,6 +409,7 @@ namespace lvk
 		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
 			buffer.import_texture(m_RenderBuffer);
+			buffer.timestamp = os_gettime_ns();
 			return true;
 		}
 		return false;
