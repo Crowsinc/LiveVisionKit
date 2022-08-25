@@ -28,12 +28,12 @@ namespace lvk
 	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
 
 	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
-#define OUTPUT_SIZE_SOURCE L("fsr.scaling.original")
-#define OUTPUT_SIZE_CANVAS L("fsr.scaling.canvas")
 	const std::vector<std::string> OUTPUT_SIZES = {
 		"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"
 	};
-	const auto OUTPUT_SIZE_DEFAULT = OUTPUT_SIZE_SOURCE;
+#define OUTPUT_SIZE_SOURCE L("fsr.scaling.original")
+#define OUTPUT_SIZE_CANVAS L("fsr.scaling.canvas")
+#define OUTPUT_SIZE_DEFAULT OUTPUT_SIZE_SOURCE
 
 	constexpr auto PROP_MAINTAIN_ASPECT = "MAINTAIN_ASPECT_RATIO";
 	constexpr auto MAINTAIN_ASPECT_DEFAULT = true;
@@ -143,8 +143,6 @@ namespace lvk
 	void FSRFilter::configure(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
-
-		blog(LOG_INFO, OUTPUT_SIZE_SOURCE);
 
 		m_SizeMultiplier = 1.0;
 		m_MatchCanvasSize = m_MatchSourceSize = false;
