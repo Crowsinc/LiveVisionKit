@@ -23,12 +23,12 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	SlidingBuffer<T>::SlidingBuffer(const uint32_t window_size)
-		: m_WindowSize(window_size)
+	SlidingBuffer<T>::SlidingBuffer(const uint32_t capacity)
+		: m_Capacity(capacity)
 	{
-		LVK_ASSERT(window_size > 0);
+		LVK_ASSERT(capacity > 0);
 
-		resize(window_size);
+		resize(capacity);
 		clear();
 	}
 
@@ -39,8 +39,8 @@ namespace lvk
 	{
 		if(full())
 		{
-			m_EndIndex = (m_EndIndex + 1) % m_WindowSize;
-			m_StartIndex = (m_StartIndex + 1) % m_WindowSize;
+			m_EndIndex = (m_EndIndex + 1) % m_Capacity;
+			m_StartIndex = (m_StartIndex + 1) % m_Capacity;
 		}
 		else m_EndIndex = m_InternalBuffer.size();
 	}
@@ -102,11 +102,11 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void SlidingBuffer<T>::resize(const uint32_t window_size)
+	void SlidingBuffer<T>::resize(const uint32_t capacity)
 	{
-		LVK_ASSERT(window_size > 0);
+		LVK_ASSERT(capacity > 0);
 
-		if(window_size == m_WindowSize)
+		if(capacity == m_Capacity)
 			return;
 
 		// If the buffer isn't zero-alligned then we need to allign it
@@ -119,9 +119,9 @@ namespace lvk
 			// to conserve 'temporal consistency'.
 
 			std::vector<T> new_buffer;
-			new_buffer.reserve(window_size);
+			new_buffer.reserve(capacity);
 
-			const auto copy_count = std::min(window_size, elements());
+			const auto copy_count = std::min(capacity, elements());
 			const auto copy_start = elements() - copy_count;
 			for(uint32_t i = 0; i < copy_count; i++)
 				if constexpr (std::is_move_constructible_v<T>)
@@ -135,7 +135,7 @@ namespace lvk
 
 		m_StartIndex = 0;
 		m_EndIndex = elements() - 1;
-		m_WindowSize = window_size;
+		m_Capacity = capacity;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ namespace lvk
 		LVK_ASSERT(!kernel.empty());
 		LVK_ASSERT(elements() >= kernel.elements());
 
-		SlidingBuffer<T> buffer(window_size());
+		SlidingBuffer<T> buffer(capacity());
 		for (uint32_t i = 0; i < elements(); i++)
 			buffer.push(convolve_at(kernel, i, initial));
 		
@@ -195,7 +195,7 @@ namespace lvk
 	{
 		LVK_ASSERT(index < elements());
 
-		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
+		return m_InternalBuffer[(m_StartIndex + index) % m_Capacity];
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -213,7 +213,7 @@ namespace lvk
 	{
 		LVK_ASSERT(index < elements());
 
-		return m_InternalBuffer[(m_StartIndex + index) % m_WindowSize];
+		return m_InternalBuffer[(m_StartIndex + index) % m_Capacity];
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ namespace lvk
 	template<typename T>
 	bool SlidingBuffer<T>::full() const
 	{
-		return elements() == window_size();
+		return elements() == capacity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -372,9 +372,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	uint32_t SlidingBuffer<T>::window_size() const
+	uint32_t SlidingBuffer<T>::capacity() const
 	{
-		return m_WindowSize;
+		return m_Capacity;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

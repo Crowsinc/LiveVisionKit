@@ -205,7 +205,7 @@ namespace lvk
 		const float frame_ms = 1000.0 * video_info.fps_den / video_info.fps_num;
 
 		// The oldest frame is taking the place of the newest, so the delay is one less than the queue size
-		const uint32_t new_stream_delay = frame_ms * (m_FrameQueue.window_size() - 1);
+		const uint32_t new_stream_delay = frame_ms * (m_FrameQueue.capacity() - 1);
 		const uint32_t old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
 
 		// NOTE: Need to update the property UI to push a stream delay update because
@@ -419,7 +419,7 @@ namespace lvk
 		const uint32_t queue_size = m_SmoothingRadius + 2;
 		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
 
-		if(window_size != m_Trajectory.window_size() || queue_size != m_FrameQueue.window_size())
+		if(window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
 		{
 			m_FrameQueue.resize(queue_size);
 			m_Trajectory.resize(window_size);
