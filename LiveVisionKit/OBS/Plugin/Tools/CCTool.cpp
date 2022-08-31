@@ -34,8 +34,8 @@ namespace lvk
 	constexpr auto FRAME_HOLD_COUNT = 20;
 
 	constexpr auto PROP_UTILITY_BTN = "PROP_UTILITY_BTN";
-	const auto UTILITY_BTN_CAPTURE_TEXT = L("cct.capture");
-	const auto UTILITY_BTN_CALIBRATE_TEXT = L("cct.calibrate");
+#define UTILITY_BTN_CAPTURE_TEXT L("cct.capture")
+#define UTILITY_BTN_CALIBRATE_TEXT L("cct.calibrate")
 
 	constexpr auto PROP_RESET_BTN = "PROP_RESET_BTN";
 
