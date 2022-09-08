@@ -20,6 +20,8 @@
 #include <opencv2/core.hpp>
 #include <obs-module.h>
 
+#include "FrameIngest.hpp"
+
 namespace lvk
 {
 
@@ -42,9 +44,9 @@ namespace lvk
 		
 		bool empty() const;
 
-		void import_frame(obs_source_frame* obs_frame);
+		void upload_frame(obs_source_frame* obs_frame);
 
-		void export_frame(obs_source_frame* obs_frame);
+		void download_frame(obs_source_frame* obs_frame);
 
 		void import_texture(gs_texture_t* texture);
 
@@ -56,11 +58,15 @@ namespace lvk
 
 	private:
 
-		cv::UMat m_ConversionBuffer;
+		// Frame upload/download
+		std::unique_ptr<FrameIngest> m_FrameIngest;
+
+		// Texture import/export
 		gs_texture_t* m_InteropBuffer = nullptr;
 		gs_stagesurf_t* m_ReadBuffer = nullptr;
 		gs_texture_t* m_WriteBuffer = nullptr;
 		uint8_t* m_MappedData = nullptr;
+		cv::UMat m_ConversionBuffer;
 	};
 
 }

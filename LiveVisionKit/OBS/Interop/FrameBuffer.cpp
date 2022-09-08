@@ -17,7 +17,6 @@
 
 #include "FrameBuffer.hpp"
 
-#include "FrameIngest.hpp"
 #include "InteropContext.hpp"
 #include "Diagnostics/Directives.hpp"
 #include "OBS/Utility/Graphics.hpp"
@@ -93,21 +92,28 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::import_frame(obs_source_frame* obs_frame)
+	void FrameBuffer::upload_frame(obs_source_frame* obs_frame)
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
-		lvk::import_frame(obs_frame, frame);
+		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
+			m_FrameIngest = FrameIngest::Create(obs_frame->format);
+
+		m_FrameIngest->upload(obs_frame, frame);
 		timestamp = obs_frame->timestamp;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::export_frame(obs_source_frame* obs_frame)
+	void FrameBuffer::download_frame(obs_source_frame* obs_frame)
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
-		lvk::export_frame(frame, obs_frame);
+		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
+			m_FrameIngest = FrameIngest::Create(obs_frame->format);
+
+		m_FrameIngest->download(frame, obs_frame);
+		timestamp = obs_frame->timestamp;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

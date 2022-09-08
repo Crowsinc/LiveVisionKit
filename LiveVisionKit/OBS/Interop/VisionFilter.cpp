@@ -136,7 +136,7 @@ namespace lvk
 
 		// Load the frame to the frame buffer if we are at the start of a new chain.
 		if(is_vision_filter_chain_start())
-			buffer.import_frame(input_frame);
+			buffer.upload_frame(input_frame);
 
 		update_timing();
 		filter(buffer);
@@ -183,7 +183,7 @@ namespace lvk
 		// If the next filter is not a vision filter, then we need to save the
 		// frame buffer back into the OBS frame for the non-vision filter.
 		if(is_vision_filter_chain_end())
-			buffer.export_frame(output_frame);
+			buffer.download_frame(output_frame);
 
 		return output_frame;
 	}
