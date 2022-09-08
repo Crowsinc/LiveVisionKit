@@ -631,8 +631,8 @@ namespace lvk
 				m_SteppedConversion = true;
 				m_ForwardStepConversion = cv::COLOR_GRAY2BGR;
 				m_ForwardConversion = cv::COLOR_BGR2YUV;
-				m_BackwardStepConversion = cv::COLOR_BGR2GRAY;
-				m_BackwardConversion = cv::COLOR_YUV2BGR;
+				m_BackwardStepConversion = cv::COLOR_YUV2BGR;
+				m_BackwardConversion = cv::COLOR_BGR2GRAY;
 				break;
 			case video_format::VIDEO_FORMAT_RGBA:
 				m_Components = 4;

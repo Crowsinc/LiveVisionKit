@@ -28,7 +28,9 @@ namespace lvk
 	{
 	public:
 		
-		static std::unique_ptr<FrameIngest> Create(video_format format);
+		static std::unique_ptr<FrameIngest> Select(video_format format);
+
+		virtual ~FrameIngest() = default;
 
 		// Uploads the src obs_source_frame to the dst YUV UMat on the GPU
 		virtual void upload(const obs_source_frame* src, cv::UMat& dst) = 0;

@@ -97,7 +97,7 @@ namespace lvk
 		LVK_ASSERT(obs_frame != nullptr);
 
 		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
-			m_FrameIngest = FrameIngest::Create(obs_frame->format);
+			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
 		m_FrameIngest->upload(obs_frame, frame);
 		timestamp = obs_frame->timestamp;
@@ -110,7 +110,7 @@ namespace lvk
 		LVK_ASSERT(obs_frame != nullptr);
 
 		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
-			m_FrameIngest = FrameIngest::Create(obs_frame->format);
+			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
 		m_FrameIngest->download(frame, obs_frame);
 		timestamp = obs_frame->timestamp;
