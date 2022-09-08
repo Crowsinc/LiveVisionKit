@@ -22,6 +22,12 @@ namespace lvk
 	template<typename T>
 	bool test_bits(const T bits, const T test_flag);
 
+	template<typename T, typename ...Options>
+	bool any_of(T value, Options ...option);
+
+	template<typename T, typename ...Options>
+	bool all_of(T value, Options ...option);
+
 }
 
 #include "Logic.tpp"
