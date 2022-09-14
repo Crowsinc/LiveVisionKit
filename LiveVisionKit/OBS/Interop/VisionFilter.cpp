@@ -78,8 +78,11 @@ namespace lvk
 
 		obs_enter_graphics();
 
-		if(m_RenderBuffer != nullptr)
+		if (m_RenderBuffer != nullptr)
+		{
 			gs_texture_destroy(m_RenderBuffer);
+			m_RenderBuffer = nullptr;
+		}
 
 		obs_leave_graphics();
 	}
