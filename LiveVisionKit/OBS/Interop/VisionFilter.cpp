@@ -78,7 +78,7 @@ namespace lvk
 
 		obs_enter_graphics();
 
-		if(m_RenderBuffer != nullptr)
+		if (m_RenderBuffer != nullptr)
 			gs_texture_destroy(m_RenderBuffer);
 
 		obs_leave_graphics();
@@ -220,6 +220,20 @@ namespace lvk
 		m_Source = obs_filter_get_parent(m_Context);
 		if(m_Source == nullptr)
 		{
+			obs_source_skip_video_filter(m_Context);
+			return;
+		}
+
+		// Disable the filter if we are passed a HDR color space
+		const auto color_space = obs_source_get_color_space(m_Source, 0, nullptr);
+		if (!any_of(color_space, GS_CS_SRGB))
+		{
+			log::error(
+				"\'%s\' was applied with an unsupported color space, disabling the filter...",
+				obs_source_get_name(m_Context)
+			);
+
+			disable();
 			obs_source_skip_video_filter(m_Context);
 			return;
 		}
