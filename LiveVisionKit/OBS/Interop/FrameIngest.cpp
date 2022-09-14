@@ -38,7 +38,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	std::unique_ptr<FrameIngest> FrameIngest::Create(video_format format)
+	std::unique_ptr<FrameIngest> FrameIngest::Select(video_format format)
 	{
 		switch (format)
 		{
@@ -75,7 +75,6 @@ namespace lvk
 
 			// Unsupported formats
 			default:
-				log::error("Frame ingest does not support format %s", get_video_format_name(format));
 				return nullptr;
 		}
 	}
