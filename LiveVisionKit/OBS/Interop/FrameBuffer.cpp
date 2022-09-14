@@ -36,14 +36,23 @@ namespace lvk
 	{
 		obs_enter_graphics();
 
-		if(m_ReadBuffer != nullptr)
+		if (m_ReadBuffer != nullptr)
+		{
 			gs_stagesurface_destroy(m_ReadBuffer);
+			m_ReadBuffer = nullptr;
+		}
 
 		if (m_WriteBuffer != nullptr)
+		{
 			gs_texture_destroy(m_WriteBuffer);
+			m_WriteBuffer = nullptr;
+		}
 
-		if(m_InteropBuffer != nullptr)
+		if (m_InteropBuffer != nullptr)
+		{
 			gs_texture_destroy(m_InteropBuffer);
+			m_InteropBuffer = nullptr;
+		}
 
 		obs_leave_graphics();
 	}
