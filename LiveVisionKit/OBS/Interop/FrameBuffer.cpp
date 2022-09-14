@@ -92,28 +92,39 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::upload_frame(obs_source_frame* obs_frame)
+	bool FrameBuffer::try_upload_frame(obs_source_frame* obs_frame)
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
-		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
+		if (!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
 			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
-		m_FrameIngest->upload(obs_frame, frame);
-		timestamp = obs_frame->timestamp;
+		if (m_FrameIngest)
+		{
+			m_FrameIngest->upload(obs_frame, frame);
+			timestamp = obs_frame->timestamp;
+			return true;
+		}
+		else return false;
+
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::download_frame(obs_source_frame* obs_frame)
+	bool FrameBuffer::try_download_frame(obs_source_frame* obs_frame)
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
 		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
 			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
-		m_FrameIngest->download(frame, obs_frame);
-		timestamp = obs_frame->timestamp;
+		if (m_FrameIngest)
+		{
+			m_FrameIngest->download(frame, obs_frame);
+			timestamp = obs_frame->timestamp;
+			return true;
+		}
+		else return false;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

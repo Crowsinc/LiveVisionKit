@@ -134,9 +134,23 @@ namespace lvk
 
 		auto& buffer = fetch_cache().frame_buffer;
 
-		// Load the frame to the frame buffer if we are at the start of a new chain.
-		if(is_vision_filter_chain_start())
-			buffer.upload_frame(input_frame);
+		// Upload the frame to the frame buffer if we are at the start of a new chain.
+		// If the upload fails, because the frame format isn't supported, then we will
+		// disable this filter and pass the given frame down the filter chain.
+		if (is_vision_filter_chain_start())
+		{
+			if (!buffer.try_upload_frame(input_frame))
+			{
+				log::error(
+					"\'%s\' was applied on an unsupported video stream (%s), disabling the filter...",
+					obs_source_get_name(m_Context),
+					get_video_format_name(input_frame->format)
+				);
+		
+				disable();
+				return input_frame;
+			}
+		}
 
 		update_timing();
 		filter(buffer);
@@ -156,7 +170,7 @@ namespace lvk
 			);
 
 			log::warn(
-				"%s was fed an unordered frame!", 
+				"\'%s\' was fed an unordered frame!", 
 				obs_source_get_name(m_Context)
 			);
 		}
@@ -182,8 +196,17 @@ namespace lvk
 
 		// If the next filter is not a vision filter, then we need to save the
 		// frame buffer back into the OBS frame for the non-vision filter.
-		if(is_vision_filter_chain_end())
-			buffer.download_frame(output_frame);
+		if (is_vision_filter_chain_end())
+		{
+			if (!buffer.try_download_frame(output_frame))
+			{
+				log::error(
+					"\'%s\' tried to download its frame buffer to an unsupported video stream (%s)",
+					obs_source_get_name(m_Context),
+					get_video_format_name(output_frame->format)
+				);
+			}
+		}
 
 		return output_frame;
 	}
@@ -201,27 +224,26 @@ namespace lvk
 			return;
 		}
 
+		// The render target will be nullptr if we are the last effect filter
+		// and OBS is attempting to render the filter preview window. Assuming
+		// this is true, we can avoid re-rendering the filter by rendering the
+		// render buffer, which must contain the most up to date frame because
+		// we are the last filter in the chain.
 		if(gs_get_render_target() == nullptr)
 		{
-			// The render target will be nullptr if we are the last effect 
-			// filter and OBS is attempting to render the filter preview window.
-			// Assuming this is true, we can avoid re-rendering the filter by 
-			// simply presenting the render buffer, which still contains the
-			// most recent frame because we are the last filter in the chain.
-			// NOTE: This assumes that this condition is only caused by the
-			// preview window. 
 			hybrid_render(m_RenderBuffer);
 			return;
 		}
 
+		// All asynchronous vision filters which are configured with a render()
+		// are hybrid render filters by definition, and should be handled here.
 		if (m_Asynchronous)
 		{
-			// An asynchronous filter must be hybrid render for it to find itself in this
-			// scope, so update our assumption. If this assumption doesn't hold through 
-			// the hybrid_render call, because it has not been overwritten, then we 
-			// consider this asynchronous vision filter to be misconfigured.
 			m_HybridRender = true;
 			hybrid_render(nullptr);
+			
+			// m_HybridRender is set to false if hybrid_render() was not 
+			// properly overwritten, meaning the filter is misconfigured. 
 			LVK_ASSERT(m_HybridRender);
 			return;
 		}
@@ -244,7 +266,7 @@ namespace lvk
 				obs_source_skip_video_filter(m_Context);
 				
 				log::warn(
-					"%s failed to acquire the current frame",
+					"\'%s\' failed to acquire the current frame",
 					obs_source_get_name(m_Context)
 				);
 			}
@@ -262,8 +284,8 @@ namespace lvk
 			if (buffer.empty())
 				return;
 
-			// If this happens to be the last filter in the vision filter
-			// chain, then render out the buffer for the non-vision filters. 
+			// If this is the last filter in the vision filter chain,
+			// then render out the buffer for the non-vision filters. 
 			if (is_chain_end = is_vision_filter_chain_end(); is_chain_end)
 			{
 				prepare_render_buffer(buffer.width(), buffer.height());
@@ -279,7 +301,7 @@ namespace lvk
 			m_RenderBuffer = nullptr;
 		}
 	}
-
+	
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool VisionFilter::is_vision_filter_chain_start() const
@@ -299,9 +321,10 @@ namespace lvk
 
 			auto& [start_chain, runflag, ref_filter] = *static_cast<SearchState*>(state);
 		
-			// Determine the chain start state for all filters before the reference filter.
-			// The latest state once we reach the reference filter will belong to the 
-			// previous filter that we are after. 
+			// Determine whether the reference filter is starting a new chain, by testing
+			// the necessary conditions against all filters before the reference filter.  
+			// The tests end once we find the reference filter, meaning that only most
+			// recent test, corresponding to the previous filter, is returned at the end.
 
 			// Deactivate search once we reach the reference filter.
 			if (curr_filter == ref_filter->m_Context)
@@ -358,7 +381,7 @@ namespace lvk
 		obs_source_enum_filters(m_Source, [](auto parent, auto curr_filter, void* state) {
 			
 			auto& [end_chain, runflag, ref_filter] = *static_cast<SearchState*>(state);
-			
+
 			if(runflag && obs_source_enabled(curr_filter))
 			{
 				const auto flags = obs_source_get_output_flags(curr_filter);
@@ -385,7 +408,7 @@ namespace lvk
 				}
 			}
 
-			// Activate search once we reach the reference filter
+			// Only activate the search once we reach the reference filter
 			if (curr_filter == ref_filter->m_Context)
 				runflag = true;
 
@@ -426,6 +449,14 @@ namespace lvk
 			GS_RGBA,
 			GS_RENDER_TARGET
 		);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void VisionFilter::disable()
+	{
+		obs_source_set_enabled(m_Context, false);
+		release_resources();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

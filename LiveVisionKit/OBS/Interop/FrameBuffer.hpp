@@ -44,9 +44,9 @@ namespace lvk
 		
 		bool empty() const;
 
-		void upload_frame(obs_source_frame* obs_frame);
+		bool try_upload_frame(obs_source_frame* obs_frame);
 
-		void download_frame(obs_source_frame* obs_frame);
+		bool try_download_frame(obs_source_frame* obs_frame);
 
 		void import_texture(gs_texture_t* texture);
 

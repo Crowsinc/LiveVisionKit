@@ -49,6 +49,8 @@ namespace lvk
 		virtual void hybrid_render(gs_texture_t* frame);
 
 		double delta_time() const;
+	
+		void disable();
 
 	private:
 
