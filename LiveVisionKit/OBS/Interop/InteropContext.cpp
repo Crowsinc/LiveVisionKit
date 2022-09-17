@@ -34,9 +34,9 @@ namespace lvk::ocl
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::ocl::OpenCLExecutionContext InteropContext::s_OCLContext;
+	std::optional<bool> InteropContext::s_TestPassed = std::nullopt;
 	graphics_t* InteropContext::s_GraphicsContext = nullptr;
 	std::thread::id InteropContext::s_BoundThread;
-	bool InteropContext::s_TestPassed = false;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -44,31 +44,85 @@ namespace lvk::ocl
 	{
 		LVK_ASSERT(gs_get_context() != nullptr);
 
-		if(!Supported())
+		// Don't attempt attachment if not supported, or our last attachment failed to pass tests
+		if(!Supported() || !s_TestPassed.value_or(true))
 			return false;
 
 		// Create the OCL interop context if it does not yet exist
 		if(s_OCLContext.empty())
 		{
-#ifdef _WIN32 
-			// DirectX11 Context
-			auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
-			cv::directx::ocl::initializeContextFromD3D11Device(device);
-#else       
-			// OpenGL Context
-			cv::ogl::ocl::initializeContextFromGL();
+			s_TestPassed = true;
+
+			// Create the interop context.
+			// NOTE: This may fail on some (Linux) systems where driver support is a little
+			// iffy so we must be ready to catch an exception and deal with it correctly.
+
+			try
+			{
+#ifdef _WIN32
+				// DirectX11 Context
+				auto device = static_cast<ID3D11Device*>(gs_get_device_obj());
+				cv::directx::ocl::initializeContextFromD3D11Device(device);
+#else
+				// OpenGL Context
+				cv::ogl::ocl::initializeContextFromGL();
 #endif
+			}
+			catch (const std::exception& e)
+			{
+				s_TestPassed = false;
+			}
+
+			if (!s_TestPassed.value())
+			{
+				lvk::log::error("The interop context failed to initialize (bad drivers?) and was disabled!");
+				return false;
+			}
+			else lvk::log::print("The interop context was successfully created");
 
 			s_OCLContext = cv::ocl::OpenCLExecutionContext::getCurrent();
 			s_BoundThread = std::this_thread::get_id();
 			s_GraphicsContext = gs_get_context();
 
 			// Test the context as some (Linux) systems crash when using interop,
-			// despite having support for creating the interop context.
-			if (s_TestPassed = TestContext(); s_TestPassed)
-				lvk::log::print("Interop support passed all validation tests");
-			else
-				lvk::log::error("Interop support failed to pass validation tests, and was disabled");
+			// despite correctly supporting and initializing the interop context.
+
+			const float test_size = 64;
+
+			gs_texture_t* obs_texture = gs_texture_create(
+				test_size,
+				test_size,
+				GS_RGBA_UNORM,
+				1,
+				nullptr,
+				GS_SHARED_TEX
+			);
+
+			cv::UMat cv_texture(
+				test_size,
+				test_size,
+				CV_8UC4,
+				cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
+			);
+
+			try
+			{
+				Export(cv_texture, obs_texture);
+				Import(obs_texture, cv_texture);
+			}
+			catch (const std::exception& e)
+			{
+				s_TestPassed = false;
+			}
+
+			gs_texture_destroy(obs_texture);
+
+			if (!s_TestPassed.value())
+			{
+				lvk::log::error("Interop support failed to pass validation tests and was disabled!");
+				return false;
+			}
+			else lvk::log::print("Interop support passed all validation tests");
 		}
 
 		// NOTE: We are making the assumption that 
@@ -85,46 +139,6 @@ namespace lvk::ocl
 		return true;
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool InteropContext::TestContext()
-	{
-		LVK_ASSERT(gs_get_context() != nullptr);
-		LVK_ASSERT(Attached());
-
-		const float test_size = 64;
-
-		gs_texture_t* obs_texture = gs_texture_create(
-			test_size,
-			test_size,
-			GS_RGBA_UNORM,
-			1,
-			nullptr,
-			GS_SHARED_TEX
-		);
-
-		cv::UMat cv_texture(
-			test_size,
-			test_size,
-			CV_8UC4,
-			cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
-		);
-
-		bool exception = false;
-		try
-		{
-			Export(cv_texture, obs_texture);
-			Import(obs_texture, cv_texture);
-		}
-		catch (const std::exception& e)
-		{
-			exception = true;
-		}
-		
-		gs_texture_destroy(obs_texture);
-		
-		return !exception;
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -156,7 +170,7 @@ namespace lvk::ocl
 
 	bool InteropContext::Available()
 	{
-		return !s_OCLContext.empty() && s_TestPassed;
+		return !s_OCLContext.empty() && s_TestPassed.value_or(false);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -201,8 +215,8 @@ namespace lvk::ocl
 	{
 		LVK_ASSERT(Attached());
 		LVK_ASSERT(dst != nullptr);
-		LVK_ASSERT(src.cols == gs_texture_get_width(dst));
-		LVK_ASSERT(src.rows == gs_texture_get_height(dst));
+		LVK_ASSERT(src.cols == static_cast<int>(gs_texture_get_width(dst)));
+		LVK_ASSERT(src.rows == static_cast<int>(gs_texture_get_height(dst)));
 
 #ifdef _WIN32 // DirectX11 Interop
 		

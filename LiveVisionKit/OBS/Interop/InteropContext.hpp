@@ -22,6 +22,7 @@
 #include <obs-module.h>
 
 #include <thread>
+#include <optional>
 
 namespace lvk::ocl 
 {
@@ -50,12 +51,10 @@ namespace lvk::ocl
 
 	private:
 
-		bool static TestContext();
-
 		static cv::ocl::OpenCLExecutionContext s_OCLContext;
+		static std::optional<bool> s_TestPassed;
 		static graphics_t* s_GraphicsContext;
 		static std::thread::id s_BoundThread;
-		static bool s_TestPassed;
 
 	};
 
