@@ -79,7 +79,7 @@ namespace lvk::ocl
 			// If the context is not attached to the current thread, then bind it
 			s_OCLContext.bind();
 			s_BoundThread = std::this_thread::get_id();
-			log::warn("The interop context was bound to a new graphics thead");
+			log::warn("The interop context was bound to a new graphics thread");
 		}
 
 		return true;
@@ -116,7 +116,7 @@ namespace lvk::ocl
 			Export(cv_texture, obs_texture);
 			Import(obs_texture, cv_texture);
 		}
-		catch (std::exception e)
+		catch (const std::exception& e)
 		{
 			exception = true;
 		}
