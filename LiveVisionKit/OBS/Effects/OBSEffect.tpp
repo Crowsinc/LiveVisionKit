@@ -20,6 +20,25 @@
 
 namespace lvk
 {
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename E, typename...Args>
+	E& OBSEffect<E,Args...>::Instance()
+	{
+		// Lazily initialize a global instance of the effect
+		static E cached_instance;
+		return cached_instance;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::IsCompiled()
+	{
+		return E::Instance().is_compiled();
+	}
+
 //---------------------------------------------------------------------------------------------------------------------
 	
 	// Render source
@@ -30,33 +49,7 @@ namespace lvk
 		Args... args
 	)
 	{
-		LVK_ASSERT(source != nullptr);
-
-		auto& effect = E::Instance();
-
-		const auto target = obs_filter_get_target(source);
-		const cv::Size source_size(
-			obs_source_get_base_width(target),
-			obs_source_get_base_height(target)
-		);
-
-		if (!is_render_valid(source, source_size, render_size, effect, args...))
-			return false;
-
-		// Perform normal rendering of source filter
-		if (obs_source_process_filter_begin(source, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
-		{
-			obs_source_process_filter_tech_end(
-				source,
-				effect.handle(),
-				render_size.width,
-				render_size.height,
-				effect.configure(source_size, render_size, args...)
-			);
-
-			return true;
-		}
-		return false;
+		return E::Instance().render(source, render_size, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -67,15 +60,7 @@ namespace lvk
 		Args... args
 	)
 	{
-		LVK_ASSERT(source != nullptr);
-
-		const auto target = obs_filter_get_target(source);
-		const cv::Size source_size(
-			obs_source_get_base_width(target),
-			obs_source_get_base_height(target)
-		);
-	
-		return E::Render(source, source_size, args...);
+		return E::Instance().render(source, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -88,16 +73,94 @@ namespace lvk
 		Args... args
 	)
 	{
+		return E::Instance().render(texture, render_size, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::Render(
+		gs_texture_t* texture,
+		Args... args
+	)
+	{
+		return E::Instance().render(texture, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	// Render source
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::render(
+		obs_source_t* source,
+		const cv::Size render_size,
+		Args... args
+	)
+	{
+		LVK_ASSERT(source != nullptr);
+
+		const auto target = obs_filter_get_target(source);
+		const cv::Size source_size(
+			obs_source_get_base_width(target),
+			obs_source_get_base_height(target)
+		);
+
+		if (!is_renderable(source, source_size, render_size, args...))
+			return false;
+
+		// Perform normal rendering of source filter
+		if (obs_source_process_filter_begin(source, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
+		{
+			obs_source_process_filter_tech_end(
+				source,
+				handle(),
+				render_size.width,
+				render_size.height,
+				configure(source_size, render_size, args...)
+			);
+
+			return true;
+		}
+		return false;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::render(
+		obs_source_t* source,
+		Args... args
+	)
+	{
+		LVK_ASSERT(source != nullptr);
+
+		const auto target = obs_filter_get_target(source);
+		const cv::Size source_size(
+			obs_source_get_base_width(target),
+			obs_source_get_base_height(target)
+		);
+
+		return render(source, source_size, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	// Render texture to source
+	template<typename E, typename...Args>
+	bool OBSEffect<E, Args...>::render(
+		gs_texture_t* texture,
+		const cv::Size render_size,
+		Args... args
+	)
+	{
 		LVK_ASSERT(texture != nullptr);
-		
-		auto& effect = E::Instance();
 
 		const cv::Size source_size(
 			gs_texture_get_width(texture),
 			gs_texture_get_height(texture)
 		);
 
-		if (!is_render_valid(nullptr, source_size, render_size, effect, args...))
+		if (!is_renderable(nullptr, source_size, render_size, args...))
 			return false;
 
 		const bool use_srgb = gs_get_linear_srgb();
@@ -105,14 +168,14 @@ namespace lvk
 
 		gs_enable_framebuffer_srgb(use_srgb);
 
-		auto image_param = gs_effect_get_param_by_name(effect.handle(), "image");
+		auto image_param = gs_effect_get_param_by_name(handle(), "image");
 		if (use_srgb)
 			gs_effect_set_texture_srgb(image_param, texture);
 		else
 			gs_effect_set_texture(image_param, texture);
 
-		auto technique = effect.configure(source_size, render_size, args...);
-		while (gs_effect_loop(effect.handle(), technique))
+		auto technique = configure(source_size, render_size, args...);
+		while (gs_effect_loop(handle(), technique))
 			gs_draw_sprite(texture, false, render_size.width, render_size.height);
 
 		gs_enable_framebuffer_srgb(prev_srgb);
@@ -123,7 +186,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Render(
+	bool OBSEffect<E, Args...>::render(
 		gs_texture_t* texture,
 		Args... args
 	)
@@ -135,25 +198,7 @@ namespace lvk
 			gs_texture_get_height(texture)
 		);
 
-		return E::Render(texture, source_size, args...);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Validate()
-	{
-		auto& effect = E::Instance();
-		return effect.handle() != nullptr && effect.validate();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename E, typename...Args>
-	E& OBSEffect<E,Args...>::Instance()
-	{
-		static E effect;
-		return effect;
+		return render(texture, source_size, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -188,7 +233,7 @@ namespace lvk
 		}
 		else log::error("Failed to find effect path \'%s\'", effect_path.c_str());
 	}
-	
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
@@ -200,24 +245,18 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	OBSEffect<E, Args...>::~OBSEffect()
+	bool OBSEffect<E, Args...>::is_compiled()
 	{
-		if (m_Owner && m_Handle != nullptr)
-		{
-			obs_enter_graphics();
-			gs_effect_destroy(m_Handle);
-			obs_leave_graphics();
-		}
+		return handle() != nullptr && validate();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::is_render_valid(
+	bool OBSEffect<E, Args...>::is_renderable(
 		obs_source_t* source,
 		const cv::Size source_size,
 		const cv::Size render_size,
-		E& effect,
 		Args... args
 	)
 	{
@@ -225,7 +264,7 @@ namespace lvk
 			&& (source == nullptr || obs_filter_get_target(source) != nullptr)
 			&& source_size.width > 0 && source_size.height > 0
 			&& render_size.width > 0 && render_size.height > 0
-			&& !effect.should_skip(source_size, render_size, args...);
+			&& !should_skip(source_size, render_size, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -23,7 +23,6 @@ namespace lvk
 {
 	class DefaultEffect : public OBSEffect<DefaultEffect>
 	{
-		friend class OBSEffect<DefaultEffect>;
 	public:
 	
 		static bool Acquire(
@@ -31,10 +30,7 @@ namespace lvk
 			gs_texture_t* texture
 		);
 
-	private:
-
 		DefaultEffect();
-
 	};
 }
 

@@ -76,7 +76,7 @@ namespace lvk
 		// we only care about const1 and the sharpness input, as the rest are for the CAS scaling
 		// functionality which isn't used.
 
-		vec4 tmp = {0}, const_1 = {0};
+		vec4 const_1, tmp;
 		CasSetup((AU1*)tmp.ptr, (AU1*)const_1.ptr, sharpness, 0.0f, 0.0f, 0.0f, 0.0f);
 		gs_effect_set_vec4(m_CASConstParam, &const_1);
 

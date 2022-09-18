@@ -80,8 +80,8 @@ bool obs_module_load()
 	// Detect LVK capabilities
 	const bool has_opencl = cv::ocl::haveOpenCL();
 	const bool has_interop = lvk::ocl::InteropContext::Supported();
-	const bool has_fsr_effect = lvk::FSREffect::Validate();
-	const bool has_cas_effect = lvk::CASEffect::Validate();
+	const bool has_fsr_effect = lvk::FSREffect::IsCompiled();
+	const bool has_cas_effect = lvk::CASEffect::IsCompiled();
 	
 	lvk::log::print_block(
 		"Initializing..."

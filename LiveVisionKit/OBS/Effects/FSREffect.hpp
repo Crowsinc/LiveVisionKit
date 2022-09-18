@@ -24,10 +24,11 @@ namespace lvk
 	
 	class FSREffect : public OBSEffect<FSREffect, const cv::Rect& /* scaling region */>
 	{
-		friend class OBSEffect<FSREffect, const cv::Rect&>;
-	private:
+	public:
 
 		FSREffect();
+
+	private:
 
 		const char* configure(
 			const cv::Size source_size,

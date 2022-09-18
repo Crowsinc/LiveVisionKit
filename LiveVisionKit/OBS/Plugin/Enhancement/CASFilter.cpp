@@ -88,7 +88,7 @@ namespace lvk
 	bool CASFilter::validate() const
 	{
 		return m_Context != nullptr
-			&& CASEffect::Validate();
+			&& CASEffect::IsCompiled();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

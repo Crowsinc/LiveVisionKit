@@ -24,10 +24,11 @@ namespace lvk
 
 	class CASEffect : public OBSEffect<CASEffect, const float /* sharpness */>
 	{
-		friend class OBSEffect<CASEffect, const float>;
-	private:
+	public:
 
 		CASEffect();
+
+	private:
 
 		const char* configure(
 			const cv::Size source_size,

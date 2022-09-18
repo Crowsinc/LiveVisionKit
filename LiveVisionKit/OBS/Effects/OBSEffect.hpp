@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <type_traits>
 #include <string>
 
 #include <obs-module.h>
@@ -30,6 +31,8 @@ namespace lvk
 	{
 	public:
 
+		static E& Instance();
+
 		static bool Render(
 			obs_source_t* source,
 			const cv::Size render_size,
@@ -52,7 +55,33 @@ namespace lvk
 			Args... args
 		);
 
-		static bool Validate();
+		static bool IsCompiled();
+
+	public:
+
+		bool render(
+			obs_source_t* source,
+			const cv::Size render_size,
+			Args... args
+		);
+
+		bool render(
+			obs_source_t* source,
+			Args... args
+		);
+
+		bool render(
+			gs_texture_t* texture,
+			const cv::Size render_size,
+			Args... args
+		);
+
+		bool render(
+			gs_texture_t* texture,
+			Args... args
+		);
+
+		bool is_compiled();
 
 	protected:
 
@@ -60,11 +89,11 @@ namespace lvk
 
 		OBSEffect(gs_effect_t* handle);
 
-		~OBSEffect();
+		OBSEffect(OBSEffect& effect) = delete;
 
-		gs_effect_t* handle();
+		OBSEffect(OBSEffect&& effect) = delete;
 
-		gs_eparam_t* load_param(const char* name);
+		virtual ~OBSEffect() = default;
 
 		virtual const char* configure(
 			const cv::Size source_size,
@@ -80,20 +109,21 @@ namespace lvk
 
 		virtual bool validate() const;
 
+		gs_eparam_t* load_param(const char* name);
+
+		gs_effect_t* handle();
+
 	private:
 
-		static E& Instance();
-
-		static bool is_render_valid(
+		bool is_renderable(
 			obs_source_t* source,
 			const cv::Size source_size,
 			const cv::Size render_size,
-			E& effect,
 			Args... args
 		);
 
 	private:
-
+		// NOTE: the gs_effect_t* is automatically released by OBS when destroying context
 		gs_effect_t* m_Handle = nullptr;
 		bool m_Owner;
 	};

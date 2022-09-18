@@ -510,7 +510,7 @@ namespace lvk
 	bool VSFilter::validate() const
 	{
 		return m_Context != nullptr
-			&& FSREffect::Validate();
+			&& FSREffect::IsCompiled();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
