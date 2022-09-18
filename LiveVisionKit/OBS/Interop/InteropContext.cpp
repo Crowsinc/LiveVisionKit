@@ -75,7 +75,7 @@ namespace lvk::ocl
 
 			if (!s_TestPassed.value())
 			{
-				lvk::log::error("The interop context failed to initialize (bad drivers?) and was disabled!");
+				lvk::log::error("The interop context failed to initialize and has been disabled! (bad drivers?)");
 				return false;
 			}
 			else lvk::log::print("The interop context was successfully created");
@@ -119,7 +119,7 @@ namespace lvk::ocl
 
 			if (!s_TestPassed.value())
 			{
-				lvk::log::error("Interop support failed to pass validation tests and was disabled!");
+				lvk::log::error("Interop support failed to pass validation tests and has been disabled!");
 				return false;
 			}
 			else lvk::log::print("Interop support passed all validation tests");
