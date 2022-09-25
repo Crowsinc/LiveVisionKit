@@ -56,7 +56,6 @@ namespace lvk::ocl
 			// Create the interop context.
 			// NOTE: This may fail on some (Linux) systems where driver support is a little
 			// iffy so we must be ready to catch an exception and deal with it correctly.
-
 			try
 			{
 #ifdef _WIN32
@@ -119,6 +118,7 @@ namespace lvk::ocl
 
 			if (!s_TestPassed.value())
 			{
+				Release();
 				lvk::log::error("Interop support failed to pass validation tests and has been disabled!");
 				return false;
 			}
@@ -139,6 +139,20 @@ namespace lvk::ocl
 		return true;
 	}
 
+//---------------------------------------------------------------------------------------------------------------------
+
+	// Destroys the context
+	void InteropContext::Release()
+	{
+		if(!s_OCLContext.empty())
+		{
+			s_OCLContext.getContext().release();
+			s_OCLContext.release();
+
+			s_BoundThread = {};
+			s_GraphicsContext = nullptr;
+		}
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -223,7 +237,7 @@ namespace lvk::ocl
 		auto texture = static_cast<ID3D11Texture2D*>(gs_texture_get_obj(dst));
 
 		// Pre-validate texture format
-		D3D11_TEXTURE2D_DESC desc = { 0 };
+		D3D11_TEXTURE2D_DESC desc = {0};
 		texture->GetDesc(&desc);
 		LVK_ASSERT(src.type() == cv::directx::getTypeFromDXGI_FORMAT(desc.Format));
 
@@ -248,4 +262,5 @@ namespace lvk::ocl
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
+
 }

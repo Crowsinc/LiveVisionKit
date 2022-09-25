@@ -33,6 +33,9 @@ namespace lvk::ocl
 
 		// Creates context
 		static bool TryAttach();
+		
+		// Destroys the context
+		static void Release();
 
 		// True if the required OpenCL extensions are supported
 		static bool Supported();
