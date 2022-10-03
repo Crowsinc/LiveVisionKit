@@ -27,8 +27,6 @@ namespace lvk
 		: m_Capacity(capacity)
 	{
 		LVK_ASSERT(capacity > 0);
-
-		resize(capacity);
 		clear();
 	}
 
@@ -109,14 +107,12 @@ namespace lvk
 		if(capacity == m_Capacity)
 			return;
 
-		// If the buffer isn't zero-alligned then we need to allign it
-		// to keep element ordering correct with the new window size.
-		if(!m_InternalBuffer.empty() && m_StartIndex != 0)
+		if(!m_InternalBuffer.empty())
 		{
 			// Simplest way to do this is to allocate a new internal buffer
 			// and copy over all the elements which fit in the correct order.
 			// We always copy back to front, keeping the newest N elements
-			// to conserve 'temporal consistency'.
+			// to conserve the temporal nature of the data.
 
 			std::vector<T> new_buffer;
 			new_buffer.reserve(capacity);
@@ -129,13 +125,13 @@ namespace lvk
 				else
 					new_buffer.push_back(at(copy_start + i));
 
-
 			m_InternalBuffer = std::move(new_buffer);
 		}
 
-		m_StartIndex = 0;
-		m_EndIndex = elements() - 1;
 		m_Capacity = capacity;
+		
+		m_StartIndex = 0;
+		m_EndIndex = std::max<uint64_t>(elements(), 1) - 1; // Clamped to [0, capacity)
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

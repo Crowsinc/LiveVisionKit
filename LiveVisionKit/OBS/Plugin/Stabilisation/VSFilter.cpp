@@ -405,8 +405,6 @@ namespace lvk
 		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN);
 		LVK_ASSERT(m_SmoothingRadius % 2 == 0);
 
-		// NOTE: Must release all OBS frames before clearing
-		// the frame buffer queue to avoid leaking memory.
 		m_FrameQueue.clear();
 		m_Trajectory.clear();
 
