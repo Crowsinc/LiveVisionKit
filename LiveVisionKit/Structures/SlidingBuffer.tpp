@@ -223,32 +223,34 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	const T& SlidingBuffer<T>::centre() const
+	const T& SlidingBuffer<T>::centre(const int offset) const
 	{
 		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre for even sizing.
-		return at(centre_index());
+		return at(centre_index() + offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	const T& SlidingBuffer<T>::oldest() const
+	const T& SlidingBuffer<T>::oldest(const int offset) const
 	{
 		LVK_ASSERT(!empty());
+		LVK_ASSERT(offset >= 0);
 
-		return at(0);
+		return at(offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	const T& SlidingBuffer<T>::newest() const
+	const T& SlidingBuffer<T>::newest(const int offset) const
 	{
 		LVK_ASSERT(!empty());
+		LVK_ASSERT(offset <= 0);
 
-		return at(elements() - 1);
+		return at((elements() - 1) + offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -258,38 +260,40 @@ namespace lvk
 	{
 		LVK_ASSERT(elements() > 1);
 
-		return at(elements() - 2);
+		return newest(-1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	T& SlidingBuffer<T>::centre()
+	T& SlidingBuffer<T>::centre(const int offset)
 	{
 		LVK_ASSERT(!empty());
 
 		// NOTE: Gets lower centre for even sizing.
-		return at(centre_index());
+		return at(centre_index() + offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	T& SlidingBuffer<T>::oldest()
+	T& SlidingBuffer<T>::oldest(const int offset)
 	{
 		LVK_ASSERT(!empty());
+		LVK_ASSERT(offset >= 0);
 
-		return at(0);
+		return at(offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	T& SlidingBuffer<T>::newest()
+	T& SlidingBuffer<T>::newest(const int offset)
 	{
 		LVK_ASSERT(!empty());
+		LVK_ASSERT(offset <= 0);
 
-		return at(elements() - 1);
+		return at((elements() - 1) + offset);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -299,7 +303,7 @@ namespace lvk
 	{
 		LVK_ASSERT(elements() > 1);
 
-		return at(elements() - 2);
+		return newest(-1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

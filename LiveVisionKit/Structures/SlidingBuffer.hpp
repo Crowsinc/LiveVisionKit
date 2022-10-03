@@ -50,11 +50,11 @@ namespace lvk
 
 		T& operator[](const uint32_t index);
 
-		T& centre();
+		T& centre(const int offset = 0);
 
-		T& oldest();
+		T& oldest(const int offset = 0);
 
-		T& newest();
+		T& newest(const int offset = 0);
 
 		T& previous();
 
@@ -62,11 +62,11 @@ namespace lvk
 
 		const T& operator[](const uint32_t index) const;
 
-		const T& centre() const;
+		const T& centre(const int offset = 0) const;
 
-		const T& oldest() const;
+		const T& oldest(const int offset = 0) const;
 
-		const T& newest() const;
+		const T& newest(const int offset = 0) const;
 
 		const T& previous() const;
 
