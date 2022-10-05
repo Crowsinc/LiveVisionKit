@@ -27,11 +27,20 @@ namespace lvk
 	{
 		Homography displacement;
 		Homography velocity;
+		uint64_t timestamp;
 
 		FrameVector(
 			const Homography& displacement = Homography::Zero(),
 			const Homography& velocity = Homography::Zero()
 		);
+
+		FrameVector(
+			const uint64_t timestamp,
+			const Homography& displacement = Homography::Zero(),
+			const Homography& velocity = Homography::Zero()
+		);
+
+		FrameVector operator+(const Homography& velocity) const;
 
 		FrameVector operator+(const FrameVector& other) const;
 
@@ -80,7 +89,11 @@ namespace lvk
 
 		bool is_queue_outdated(const FrameBuffer& new_frame) const;
 
+		void sync_buffers();
+
 		void reset_buffers();
+
+		void resize_buffers(const uint32_t new_size);
 
 		Homography suppress(Homography& motion);
 

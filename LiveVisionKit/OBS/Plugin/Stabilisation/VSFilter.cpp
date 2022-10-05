@@ -165,11 +165,8 @@ namespace lvk
 
 		// Update smoothing radius
 		const uint32_t new_radius = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
-		if(m_SmoothingRadius != new_radius)
-		{
-			m_SmoothingRadius = new_radius;
-			reset_buffers();
-		}
+		if (m_SmoothingRadius != new_radius)
+			resize_buffers(new_radius);
 
 		// Update motion model
 		const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
@@ -234,7 +231,7 @@ namespace lvk
 		if(is_stabilisation_ready())
 		{
 			// NOTE: Next frame is the second oldest frame in the queue
-			auto frame_size = m_FrameQueue[1].frame.size();
+			auto frame_size = m_FrameQueue.oldest(1).frame.size();
 
 			m_CropRegion = crop(frame_size, m_CropProportion);
 			m_OutputSize = frame_size;
@@ -272,8 +269,13 @@ namespace lvk
 		if(is_queue_outdated(buffer))
 		{
 			reset_buffers();
-			m_FrameTracker.restart();
 			log::warn("\'%s\' frame queue is outdated, restarting...", obs_source_get_name(m_Context));
+		}
+
+		if (is_stabilisation_ready() && m_FrameQueue.oldest(1).timestamp != m_Trajectory.centre().timestamp)
+		{
+			sync_buffers();
+			log::warn("\'%s\' frame queue is out of sync, restarting...", obs_source_get_name(m_Context));
 		}
 
 		Homography tracked_motion;
@@ -284,6 +286,7 @@ namespace lvk
 		}
 
 		auto& frame_vector = m_Trajectory.advance();
+		frame_vector.timestamp = buffer.timestamp;
 		frame_vector.velocity = suppress(tracked_motion);
 		frame_vector.displacement = m_Trajectory.previous().displacement + frame_vector.velocity;
 		
@@ -304,7 +307,7 @@ namespace lvk
 
 			if(m_Enabled)
 			{
-				const auto& [displacement, velocity] = m_Trajectory.centre();
+				const auto& [displacement, velocity, timestamp] = m_Trajectory.centre();
 
 				const auto trajectory_correction = m_Trajectory.convolve_at(m_Filter, m_Trajectory.centre_index()).displacement - displacement;
 				const auto stabilised_velocity = clamp_velocity(output.frame, velocity + trajectory_correction);
@@ -400,13 +403,49 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	void VSFilter::sync_buffers()
+	{
+		// If the frame queue is empty or the trajectory isn't at least half full, then there
+		// cannot be any links between the frames and frame vectors, so we can never recover
+		// the sync between the buffers. In that case, we just need to reset them. 
+
+		while (m_FrameQueue.elements() > 1 && m_Trajectory.elements() > m_Trajectory.centre_index())
+		{
+			auto vector_timestamp = m_Trajectory.centre().timestamp;
+			auto frame_timestamp = m_FrameQueue.oldest(1).timestamp;
+
+			if (frame_timestamp > vector_timestamp)
+				m_Trajectory.skip();
+			else if (vector_timestamp > frame_timestamp)
+				m_FrameQueue.skip();
+			else break;
+		}
+
+		// If we ended up with an unrecoverable sync, then just reset. 
+		if (m_FrameQueue.empty() || m_Trajectory.elements() <= m_Trajectory.centre_index())
+			reset_buffers();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void VSFilter::reset_buffers()
 	{
-		LVK_ASSERT(m_SmoothingRadius >= SMOOTHING_RADIUS_MIN);
-		LVK_ASSERT(m_SmoothingRadius % 2 == 0);
-
 		m_FrameQueue.clear();
 		m_Trajectory.clear();
+		m_FrameTracker.restart();
+
+		// Fill the trajectory to bring the buffers into the initial synchronised state.
+		m_Trajectory.advance(Homography::Identity());
+		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
+			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void VSFilter::resize_buffers(const uint32_t new_size)
+	{
+		LVK_ASSERT(new_size >= SMOOTHING_RADIUS_MIN);
+		LVK_ASSERT(new_size % 2 == 0);
 
 		// NOTE: Trajectory uses a full window for stabilising the centre element,
 		// so the frame queue needs to supply delayed frames up to the centre.
@@ -414,29 +453,27 @@ namespace lvk
 		// has to be associated with the previous frame, so we add another frame
 		// to the queue to introduce an offset.
 
-		const uint32_t queue_size = m_SmoothingRadius + 2;
-		const uint32_t window_size = 2 * m_SmoothingRadius + 1;
+		m_SmoothingRadius = new_size;
+		const uint32_t queue_size = new_size + 2;
+		const uint32_t window_size = 2 * new_size + 1;
 
-		if(window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
+		if (window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
 		{
 			m_FrameQueue.resize(queue_size);
 			m_Trajectory.resize(window_size);
 			m_Filter.resize(window_size);
+		
+			sync_buffers();
 
 			// NOTE: A low pass Gaussian filter is used because it has both decent time domain
 			// and frequency domain performance. Unlike an average or windowed sinc filter.
 			// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
-			const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size/6.0);
+			const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size / 6.0);
 
 			m_Filter.clear();
-			for(uint32_t i = 0; i < window_size; i++)
+			for (uint32_t i = 0; i < window_size; i++)
 				m_Filter.push(gaussian_kernel.at<double>(i));
 		}
-
-		// Fill the trajectory to bring the buffers into synchronisation.
-		m_Trajectory.advance(Homography::Identity());
-		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
-			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -483,10 +520,7 @@ namespace lvk
 
 	bool VSFilter::is_stabilisation_ready() const
 	{
-		LVK_ASSERT(m_Trajectory.full() == m_FrameQueue.full());
-
-		return m_Trajectory.full()
-			&& m_FrameQueue.full();
+		return m_Trajectory.full() && m_FrameQueue.full();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -514,37 +548,52 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
-		: displacement(displacement),
+		: timestamp(0),
+		  displacement(displacement),
 		  velocity(velocity)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	FrameVector::FrameVector(const uint64_t timestamp, const Homography& displacement, const Homography& velocity)
+		: timestamp(timestamp),
+		  displacement(displacement),
+		  velocity(velocity)
+	{}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	FrameVector FrameVector::operator+(const Homography& velocity) const
+	{
+		return FrameVector(this->timestamp, this->displacement + velocity, this->velocity);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	FrameVector FrameVector::operator+(const FrameVector& other) const
 	{
-		return FrameVector(displacement + other.displacement, velocity + other.velocity);
+		return FrameVector(this->timestamp, this->displacement + other.displacement, this->velocity + other.velocity);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector FrameVector::operator-(const FrameVector& other) const
 	{
-		return FrameVector(displacement - other.displacement, velocity - other.velocity);
+		return FrameVector(this->timestamp, this->displacement - other.displacement, this->velocity - other.velocity);
 	}
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector FrameVector::operator*(const double scaling) const
 	{
-		return FrameVector(displacement * scaling, velocity * scaling);
+		return FrameVector(this->timestamp, this->displacement * scaling, this->velocity * scaling);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector FrameVector::operator/(const double scaling) const
 	{
-		return FrameVector(displacement / scaling, velocity / scaling);
+		return FrameVector(this->timestamp, this->displacement / scaling, this->velocity / scaling);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
