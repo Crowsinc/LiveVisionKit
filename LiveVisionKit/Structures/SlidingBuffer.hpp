@@ -36,9 +36,13 @@ namespace lvk
 		template<typename... Args>
 		T& advance(Args&&... args);
 
-		void clear();
+		void skip(const uint32_t amount = 1);
 
+		void trim(const uint32_t amount = 1);
+		
 		void resize(const uint32_t capacity);
+		
+		void clear();
 
 		template<typename K>
 		T convolve_at(const SlidingBuffer<K>& kernel, const uint32_t index, T initial = T()) const;
@@ -90,7 +94,7 @@ namespace lvk
 
 	private:
 
-		uint32_t m_Capacity;
+		uint32_t m_Capacity, m_Size = 0;
 		std::vector<T> m_InternalBuffer;
 		uint32_t m_StartIndex = 0, m_EndIndex = 0;
 

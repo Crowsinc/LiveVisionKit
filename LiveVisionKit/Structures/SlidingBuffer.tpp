@@ -17,6 +17,8 @@
 
 #include "Diagnostics/Directives.hpp"
 
+#include "SlidingBuffer.hpp"
+
 namespace lvk
 {
 
@@ -35,12 +37,22 @@ namespace lvk
 	template<typename T>
 	void SlidingBuffer<T>::advance_window()
 	{
-		if(full())
+		if (m_InternalBuffer.size() == capacity())
 		{
+			// If the internal buffer is full, then we are running as a circular queue.
+			// However, It is still possible that the queue is not full, so ensure that
+			// we increase the size if we are not overstepping on the start index. 
 			m_EndIndex = (m_EndIndex + 1) % m_Capacity;
-			m_StartIndex = (m_StartIndex + 1) % m_Capacity;
+			if (m_StartIndex == m_EndIndex)
+				m_StartIndex = (m_StartIndex + 1) % m_Capacity;
+			else m_Size++;
 		}
-		else m_EndIndex = m_InternalBuffer.size();
+		else
+		{
+			// If the internal buffer isn't full, then we must be zero-aligned
+			m_EndIndex = m_InternalBuffer.size();
+			m_Size++;
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -50,7 +62,7 @@ namespace lvk
 	{
 		advance_window();
 
-		if(!full())
+		if(m_InternalBuffer.size() != m_Capacity)
 			m_InternalBuffer.push_back(element);
 		else
 			m_InternalBuffer[m_EndIndex] = element;
@@ -63,7 +75,7 @@ namespace lvk
 	{
 		advance_window();
 
-		if(!full())
+		if(m_InternalBuffer.size() != m_Capacity)
 			m_InternalBuffer.push_back(std::move(element));
 		else
 			m_InternalBuffer[m_EndIndex] = std::move(element);
@@ -81,7 +93,7 @@ namespace lvk
 
 		advance_window();
 
-		if(!full())
+		if(m_InternalBuffer.size() != m_Capacity)
 			return m_InternalBuffer.emplace_back(args...);
 		else
 			return m_InternalBuffer[m_EndIndex];
@@ -90,48 +102,89 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void SlidingBuffer<T>::clear()
+	void SlidingBuffer<T>::skip(const uint32_t amount)
 	{
-		m_EndIndex = 0;
-		m_StartIndex = 0;
-		m_InternalBuffer.clear();
+		if (amount == 0)
+			return;
+
+		// Advances the start pointer to pop one element from the front of the buffer.
+		// This is the counter-part to advance() and does not de-allocate memory.
+
+		if (amount >= m_Size)
+		{
+			// If the skip is clearing the buffer, or the buffer is already empty
+			// then reset the buffer to be empty, but do not de-allocate memory. 
+			m_StartIndex = 0;
+			m_EndIndex = 0;
+			m_Size = 0;
+		}
+		else
+		{
+			m_StartIndex = (m_StartIndex + amount) % m_Capacity;
+			m_Size = m_Size - amount;
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void SlidingBuffer<T>::resize(const uint32_t capacity)
+	void SlidingBuffer<T>::trim(const uint32_t amount)
 	{
-		LVK_ASSERT(capacity > 0);
+		// NOTE: trim(0) is equivalent to unravelling the circular queue into an array
 
-		if(capacity == m_Capacity)
-			return;
-
-		if(!m_InternalBuffer.empty())
+		if (amount < m_Size)
 		{
-			// Simplest way to do this is to allocate a new internal buffer
-			// and copy over all the elements which fit in the correct order.
-			// We always copy back to front, keeping the newest N elements
-			// to conserve the temporal nature of the data.
+			const uint32_t new_size = m_Size - amount;
+
+			// Simplest way to do this is to allocate a new internal 
+			// buffer and copy over all the required elements.
 
 			std::vector<T> new_buffer;
-			new_buffer.reserve(capacity);
+			new_buffer.reserve(new_size);
 
-			const auto copy_count = std::min(capacity, elements());
-			const auto copy_start = elements() - copy_count;
-			for(uint32_t i = 0; i < copy_count; i++)
+			for (uint32_t i = 0; i < new_size; i++)
 				if constexpr (std::is_move_constructible_v<T>)
-					new_buffer.push_back(std::move(at(copy_start + i)));
+					new_buffer.push_back(std::move(at(amount + i)));
 				else
-					new_buffer.push_back(at(copy_start + i));
+					new_buffer.push_back(at(amount + i));
 
 			m_InternalBuffer = std::move(new_buffer);
+			
+			m_StartIndex = 0;
+			m_EndIndex = new_size - 1;
+			m_Size = new_size;
 		}
+		else clear();
+	}
 
-		m_Capacity = capacity;
-		
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	void SlidingBuffer<T>::resize(const uint32_t new_capacity)
+	{
+		LVK_ASSERT(m_Capacity > 0);
+
+		if(new_capacity == m_Capacity)
+			return;
+
+		// If the new capacity is less than the number of elements we have, 
+		// then we need to ensure we keep the newest N elements. Regardless,
+		// we need to unravel the circular queue to start at index 0 so that
+		// future pushes to the internal buffer are positioned in the correct
+		// location. Trim will perform this for us, even if we trim nothing. 
+		trim(new_capacity < elements() ? elements() - new_capacity : 0);
+		m_Capacity = new_capacity;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+	void SlidingBuffer<T>::clear()
+	{
+		m_Size = 0;
+		m_EndIndex = 0;
 		m_StartIndex = 0;
-		m_EndIndex = std::max<uint64_t>(elements(), 1) - 1; // Clamped to [0, capacity)
+		m_InternalBuffer.clear();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -319,7 +372,7 @@ namespace lvk
 	template<typename T>
 	bool SlidingBuffer<T>::empty() const
 	{
-		return m_InternalBuffer.empty();
+		return elements() == 0;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -366,7 +419,7 @@ namespace lvk
 	template<typename T>
 	uint32_t SlidingBuffer<T>::elements() const
 	{
-		return m_InternalBuffer.size();
+		return m_Size;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
