@@ -490,12 +490,15 @@ namespace lvk
 	{
 		// If the new frame is over a second away from the previously newest 
 		// frame, then we consider the trajectory and frame data to be outdated.
+		// To avoid issues with uint64_t underflow, we also consider the queue
+		// to be outdated if the previous frame is somehow newer than the next.
 
-		// NOTE: If the new frame is actually older than the previously 
-		// newest frame, the unsigned timestamps will overflow and the queue 
-		// always will be flagged as outdated. This is the desired behaviour.
-		return !m_FrameQueue.empty()
-			&& new_frame.timestamp - m_FrameQueue.newest().timestamp > 1e9;
+		if(m_FrameQueue.empty())
+			return false;
+
+		const auto next_time = new_frame.timestamp;
+		const auto curr_time = m_FrameQueue.newest().timestamp;
+		return (curr_time > next_time) || (next_time - curr_time > 1e9);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
