@@ -228,10 +228,9 @@ namespace lvk
 
 	void VSFilter::tick()
 	{
-		if(is_stabilisation_ready())
+		if(!m_FrameQueue.empty())
 		{
-			// NOTE: Next frame is the second oldest frame in the queue
-			auto frame_size = m_FrameQueue.oldest(1).frame.size();
+			auto frame_size = m_FrameQueue.oldest().frame.size();
 
 			m_CropRegion = crop(frame_size, m_CropProportion);
 			m_OutputSize = frame_size;
@@ -272,14 +271,14 @@ namespace lvk
 			log::warn("\'%s\' frame queue is outdated, restarting...", obs_source_get_name(m_Context));
 		}
 
-		if (is_stabilisation_ready() && m_FrameQueue.oldest(1).timestamp != m_Trajectory.centre().timestamp)
+		if (!is_queue_synchronized())
 		{
 			sync_buffers();
-			log::warn("\'%s\' frame queue is out of sync, restarting...", obs_source_get_name(m_Context));
+			log::warn("\'%s\' frame queue is out of sync, skipping frames...", obs_source_get_name(m_Context));
 		}
 
 		Homography tracked_motion;
-		if (m_Enabled)
+		if(m_Enabled)
 		{
 			cv::extractChannel(buffer.frame, m_TrackingFrame, 0);
 			tracked_motion = m_FrameTracker.track(m_TrackingFrame);
@@ -301,32 +300,41 @@ namespace lvk
 
 		m_FrameQueue.push(std::move(buffer));
 
-		if(is_stabilisation_ready())
+		if(is_stabilization_ready())
 		{
-			FrameBuffer& output = m_FrameQueue.oldest();
+			buffer = std::move(m_FrameQueue.oldest());
 
 			if(m_Enabled)
 			{
 				const auto& [displacement, velocity, timestamp] = m_Trajectory.centre();
 
 				const auto trajectory_correction = m_Trajectory.convolve_at(m_Filter, m_Trajectory.centre_index()).displacement - displacement;
-				const auto stabilised_velocity = clamp_velocity(output.frame, velocity + trajectory_correction);
+				const auto stabilised_velocity = clamp_velocity(buffer.frame, velocity + trajectory_correction);
 
-				stabilised_velocity.warp(output.frame, m_WarpFrame);
-				m_WarpFrame.copyTo(output.frame);
+				stabilised_velocity.warp(buffer.frame, m_WarpFrame);
+				m_WarpFrame.copyTo(buffer.frame);
 			}
 
 			if(m_TestMode)
 			{
 				cv::ocl::finish();
 				draw_debug_hud(
-					output.frame,
+					buffer.frame,
 					os_gettime_ns() - start_time
 				);
 			}
 
-			buffer = std::move(output);
+			// Pop the front of both buffers so they stay synchronised outside of this function
+			m_Trajectory.skip();
+			m_FrameQueue.skip();
 		}
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VSFilter::is_stabilization_ready()
+	{
+		return m_FrameQueue.full() && m_Trajectory.full() && is_queue_synchronized();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -409,10 +417,10 @@ namespace lvk
 		// cannot be any links between the frames and frame vectors, so we can never recover
 		// the sync between the buffers. In that case, we just need to reset them. 
 
-		while (m_FrameQueue.elements() > 1 && m_Trajectory.elements() > m_Trajectory.centre_index())
+		while (!is_queue_synchronized() && m_Trajectory.elements() >= m_SmoothingRadius)
 		{
-			auto vector_timestamp = m_Trajectory.centre().timestamp;
-			auto frame_timestamp = m_FrameQueue.oldest(1).timestamp;
+			auto vector_timestamp = m_Trajectory[m_SmoothingRadius - 1].timestamp;
+			auto frame_timestamp = m_FrameQueue.oldest().timestamp;
 
 			if (frame_timestamp > vector_timestamp)
 				m_Trajectory.skip();
@@ -422,7 +430,7 @@ namespace lvk
 		}
 
 		// If we ended up with an unrecoverable sync, then just reset. 
-		if (m_FrameQueue.empty() || m_Trajectory.elements() <= m_Trajectory.centre_index())
+		if (m_FrameQueue.empty() || !is_queue_synchronized())
 			reset_buffers();
 	}
 
@@ -434,7 +442,7 @@ namespace lvk
 		m_Trajectory.clear();
 		m_FrameTracker.restart();
 
-		// Fill the trajectory to bring the buffers into the initial synchronised state.
+		// Fill the trajectory to bring the buffers into the initial state.
 		m_Trajectory.advance(Homography::Identity());
 		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
 			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
@@ -492,6 +500,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	bool VSFilter::is_queue_synchronized() const
+	{
+		const auto sync_offset = m_SmoothingRadius - 1;
+		return m_Trajectory.elements() == m_FrameQueue.elements() + sync_offset
+			&& (m_FrameQueue.empty() || m_FrameQueue.oldest().timestamp == m_Trajectory[sync_offset].timestamp);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	Homography VSFilter::suppress(Homography& motion)
 	{
 		const float scene_stability = m_FrameTracker.stability();
@@ -514,13 +531,6 @@ namespace lvk
 		);
 
 		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool VSFilter::is_stabilisation_ready() const
-	{
-		return m_Trajectory.full() && m_FrameQueue.full();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

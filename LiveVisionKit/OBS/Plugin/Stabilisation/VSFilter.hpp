@@ -89,15 +89,17 @@ namespace lvk
 
 		bool is_queue_outdated(const FrameBuffer& new_frame) const;
 
+		bool is_queue_synchronized() const;
+
 		void sync_buffers();
 
 		void reset_buffers();
 
 		void resize_buffers(const uint32_t new_size);
-
+		
 		Homography suppress(Homography& motion);
-
-		bool is_stabilisation_ready() const;
+		
+		bool is_stabilization_ready();
 
 	private:
 
