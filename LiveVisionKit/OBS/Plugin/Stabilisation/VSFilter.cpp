@@ -31,7 +31,7 @@ namespace lvk
 
 	constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
 	constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
-	constexpr auto SMOOTHING_RADIUS_MIN = 2;
+	constexpr auto SMOOTHING_RADIUS_MIN = 4;
 	constexpr auto SMOOTHING_RADIUS_MAX = 20;
 
 	constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
@@ -54,7 +54,7 @@ namespace lvk
 	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
 	constexpr auto SUPPRESSION_MODE_STRICT = "SM_STRICT";
 	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
-	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_RELAXED;
+	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_STRICT;
 
 	const auto SUPPRESSION_RANGE_OFF = cv::Point2f(0.0f, 0.0f);
 	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.90f);
