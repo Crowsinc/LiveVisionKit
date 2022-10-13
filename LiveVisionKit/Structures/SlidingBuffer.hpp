@@ -84,7 +84,7 @@ namespace lvk
 
 		T variance() const;
 
-		uint32_t elements() const;
+		uint32_t size() const;
 
 		uint32_t capacity() const;
 

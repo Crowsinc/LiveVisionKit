@@ -417,7 +417,7 @@ namespace lvk
 		// cannot be any links between the frames and frame vectors, so we can never recover
 		// the sync between the buffers. In that case, we just need to reset them. 
 
-		while (!is_queue_synchronized() && m_Trajectory.elements() >= m_SmoothingRadius)
+		while (!is_queue_synchronized() && m_Trajectory.size() >= m_SmoothingRadius)
 		{
 			auto vector_timestamp = m_Trajectory[m_SmoothingRadius - 1].timestamp;
 			auto frame_timestamp = m_FrameQueue.oldest().timestamp;
@@ -444,7 +444,7 @@ namespace lvk
 
 		// Fill the trajectory to bring the buffers into the initial state.
 		m_Trajectory.advance(Homography::Identity());
-		while(m_Trajectory.elements() < m_SmoothingRadius - 1)
+		while(m_Trajectory.size() < m_SmoothingRadius - 1)
 			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
 	}
 
@@ -503,7 +503,7 @@ namespace lvk
 	bool VSFilter::is_queue_synchronized() const
 	{
 		const auto sync_offset = m_SmoothingRadius - 1;
-		return m_Trajectory.elements() == m_FrameQueue.elements() + sync_offset
+		return m_Trajectory.size() == m_FrameQueue.size() + sync_offset
 			&& (m_FrameQueue.empty() || m_FrameQueue.oldest().timestamp == m_Trajectory[sync_offset].timestamp);
 	}
 
