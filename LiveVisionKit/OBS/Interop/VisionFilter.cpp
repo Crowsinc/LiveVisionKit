@@ -227,6 +227,20 @@ namespace lvk
 			return;
 		}
 
+		// Disable the filter if we are passed a HDR color space
+		const auto color_space = obs_source_get_color_space(m_Source, 0, nullptr);
+		if (!any_of(color_space, GS_CS_SRGB))
+		{
+			log::error(
+				"\'%s\' was applied with an unsupported color space, disabling the filter...",
+				obs_source_get_name(m_Context)
+			);
+
+			disable();
+			obs_source_skip_video_filter(m_Context);
+			return;
+		}
+
 		// The render target will be nullptr if we are the last effect filter
 		// and OBS is attempting to render the filter preview window. Assuming
 		// this is true, we can avoid re-rendering the filter by rendering the
