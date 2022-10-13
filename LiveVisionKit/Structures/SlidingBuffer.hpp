@@ -36,9 +36,11 @@ namespace lvk
 		template<typename... Args>
 		T& advance(Args&&... args);
 
-		void skip(const uint32_t amount = 1);
+		T& skip();
+		
+		void skip(const uint32_t amount);
 
-		void trim(const uint32_t amount = 1);
+		void trim(const uint32_t amount);
 		
 		void resize(const uint32_t capacity);
 		

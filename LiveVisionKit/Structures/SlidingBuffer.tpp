@@ -102,13 +102,25 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
+	T& SlidingBuffer<T>::skip()
+	{
+		LVK_ASSERT(!empty());
+
+		// Advances the start pointer to pop one element from the front of the buffer.
+		// This is the counter-part to advance() and does not de-allocate memory.
+
+		T& ref = oldest();
+		skip(1);
+		return ref;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
 	void SlidingBuffer<T>::skip(const uint32_t amount)
 	{
 		if (amount == 0)
 			return;
-
-		// Advances the start pointer to pop one element from the front of the buffer.
-		// This is the counter-part to advance() and does not de-allocate memory.
 
 		if (amount >= m_Size)
 		{
