@@ -498,7 +498,7 @@ namespace lvk
 
 		const auto next_time = new_frame.timestamp;
 		const auto curr_time = m_FrameQueue.newest().timestamp;
-		return (curr_time > next_time) || (next_time - curr_time > 1e9);
+		return (curr_time > next_time) || (next_time - curr_time > 1000000000u); //TODO: turn into 1 second constant
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
