@@ -39,6 +39,8 @@ namespace lvk
 		obs_source_frame* process(obs_source_frame* frame);
 
 		void render();
+		
+		virtual void reset();
 
 	protected:
 
@@ -62,6 +64,8 @@ namespace lvk
 			SourceCache();
 		};
 
+		void update_timing();
+
 		bool is_vision_filter_chain_start() const;
 
 		bool is_vision_filter_chain_end() const;
@@ -76,7 +80,7 @@ namespace lvk
 
 		void prepare_render_buffer(const uint32_t width, const uint32_t height);
 
-		void update_timing();
+		obs_source_frame* match_async_frame(FrameBuffer& output_buffer, obs_source_frame* input_frame);
 
 	private:
 
@@ -92,8 +96,7 @@ namespace lvk
 		double m_RenderTime = 0.0, m_DeltaTime = 0.0;
 
 		gs_texture_t* m_RenderBuffer = nullptr;
-		std::deque<obs_source_frame*> m_AsyncFrameQueue; 
-
+		std::deque<obs_source_frame*> m_AsyncFrameQueue;
 	};
 
 }
