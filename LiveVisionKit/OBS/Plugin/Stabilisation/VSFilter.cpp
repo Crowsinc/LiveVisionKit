@@ -561,17 +561,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
-		: timestamp(0),
-		  displacement(displacement),
-		  velocity(velocity)
+		: displacement(displacement),
+		  velocity(velocity),
+		  timestamp(0)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameVector::FrameVector(const uint64_t timestamp, const Homography& displacement, const Homography& velocity)
-		: timestamp(timestamp),
-		  displacement(displacement),
-		  velocity(velocity)
+		: displacement(displacement),
+		  velocity(velocity),
+		  timestamp(timestamp)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
