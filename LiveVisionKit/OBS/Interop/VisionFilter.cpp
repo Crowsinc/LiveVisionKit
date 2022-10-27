@@ -169,7 +169,7 @@ namespace lvk
 			if (!buffer.try_download_frame(output_frame))
 			{
 				log::error(
-					"\'%s\' tried to download its frame buffer to an unsupported video stream (%s)",
+					"\'%s\' tried to download its frame buffer to an unsupported video stream! (%s)",
 					obs_source_get_name(m_Context),
 					get_video_format_name(output_frame->format)
 				);
@@ -213,7 +213,7 @@ namespace lvk
 
 				log::warn_if(
 					skipped_frames > 0,
-					"\'%s\' released %d skipped frames.",
+					"\'%s\' released %d frames.",
 					obs_source_get_name(m_Context),
 					skipped_frames
 				);
@@ -288,7 +288,7 @@ namespace lvk
 				obs_source_skip_video_filter(m_Context);
 
 				log::warn(
-					"\'%s\' failed to acquire the current frame",
+					"\'%s\' failed to acquire the current frame!",
 					obs_source_get_name(m_Context)
 				);
 			}

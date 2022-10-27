@@ -74,10 +74,10 @@ namespace lvk::ocl
 
 			if (!s_TestPassed.value())
 			{
-				lvk::log::error("The interop context failed to initialize and has been disabled! (bad drivers?)");
+				lvk::log::error("The OpenCL interop context failed to initialize and has been disabled! (bad drivers?)");
 				return false;
 			}
-			else lvk::log::print("The interop context was successfully created");
+			else lvk::log::print("The OpenCL interop context was successfully created!");
 
 			s_OCLContext = cv::ocl::OpenCLExecutionContext::getCurrent();
 			s_BoundThread = std::this_thread::get_id();
@@ -119,10 +119,10 @@ namespace lvk::ocl
 			if (!s_TestPassed.value())
 			{
 				Release();
-				lvk::log::error("Interop support failed to pass validation tests and has been disabled!");
+				lvk::log::error("The OpencL interop context failed to pass validation tests and has been disabled!");
 				return false;
 			}
-			else lvk::log::print("Interop support passed all validation tests");
+			else lvk::log::print("The OpenCL interop context passed all validation tests!");
 		}
 
 		// NOTE: We are making the assumption that 
@@ -133,7 +133,7 @@ namespace lvk::ocl
 			// If the context is not attached to the current thread, then bind it
 			s_OCLContext.bind();
 			s_BoundThread = std::this_thread::get_id();
-			log::warn("The interop context was bound to a new graphics thread");
+			log::warn("The OpenCL interop context was bound to a new graphics thread");
 		}
 
 		return true;

@@ -87,7 +87,7 @@ bool obs_module_load()
 		"Initializing..."
 		"\n    Version: %s"
 		"\n    OpenCL Support: %s"
-		"\n    Interop Support: %s"
+		"\n    OpenCL Interop Support: %s"
 		"\n    FSR Effect Loaded: %s"
 		"\n    CAS Effect Loaded: %s"
 		,
