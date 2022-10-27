@@ -34,15 +34,12 @@ extern void register_vs_source()
 	config.create = lvk::dispatch::filter_create_auto<lvk::VSFilter>;
 	config.destroy = lvk::dispatch::filter_delete<lvk::VSFilter>;
 
-
 	config.update = lvk::dispatch::filter_configure<lvk::VSFilter>;
 	config.video_tick = lvk::dispatch::filter_tick<lvk::VSFilter>;
 	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::VSFilter>;
 
 	config.get_name = [](void* data) {return  L("vs.name"); };
-	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
-	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::VSFilter>;
 
@@ -66,8 +63,6 @@ extern void register_vs_effect_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
 
 	config.get_name = [](void* data) {return  L("vs.name"); };
-	config.get_width = lvk::dispatch::filter_width<lvk::VSFilter>;
-	config.get_height = lvk::dispatch::filter_height<lvk::VSFilter>;
 	config.get_properties = lvk::dispatch::filter_properties<lvk::VSFilter>;
 	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::VSFilter>;
 

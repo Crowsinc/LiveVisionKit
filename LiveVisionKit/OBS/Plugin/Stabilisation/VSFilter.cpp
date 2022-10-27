@@ -488,17 +488,19 @@ namespace lvk
 
 	bool VSFilter::is_queue_outdated(const FrameBuffer& new_frame) const
 	{
-		// If the new frame is over a second away from the previously newest 
-		// frame, then we consider the trajectory and frame data to be outdated.
-		// To avoid issues with uint64_t underflow, we also consider the queue
-		// to be outdated if the previous frame is somehow newer than the next.
+		// We consider the queue as being outdated if the frame size has changed,
+		// the next frame is over a second away from the previous frame. To avoid 
+		// issues with uint64_t underflow, we also consider the queue to be outdated
+		// if the previous frame is somehow newer than the next.
 
 		if(m_FrameQueue.empty())
 			return false;
 
 		const auto next_time = new_frame.timestamp;
 		const auto curr_time = m_FrameQueue.newest().timestamp;
-		return (curr_time > next_time) || (next_time - curr_time > 1000000000u); //TODO: turn into 1 second constant
+		return (curr_time > next_time) 
+			|| (next_time - curr_time > 1000000000u) //TODO: turn into 1 second constant
+			|| m_FrameQueue.newest().frame.size != new_frame.frame.size;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -534,20 +536,6 @@ namespace lvk
 		);
 
 		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t VSFilter::width() const
-	{
-		return m_OutputSize.width;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t VSFilter::height() const
-	{
-		return m_OutputSize.height;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

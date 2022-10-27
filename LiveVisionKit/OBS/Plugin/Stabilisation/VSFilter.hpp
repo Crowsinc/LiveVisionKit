@@ -65,10 +65,6 @@ namespace lvk
 
 		void configure(obs_data_t* settings);
 
-		uint32_t width() const;
-
-		uint32_t height() const;
-
 		bool validate() const;
 
 	private:

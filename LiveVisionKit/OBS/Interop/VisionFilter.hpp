@@ -40,8 +40,6 @@ namespace lvk
 
 		void render();
 		
-		virtual void reset();
-
 	protected:
 
 		virtual void filter(FrameBuffer& buffer);
