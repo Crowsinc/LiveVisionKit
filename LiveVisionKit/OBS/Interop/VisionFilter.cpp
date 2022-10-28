@@ -241,10 +241,7 @@ namespace lvk
 
 		m_Source = obs_filter_get_parent(m_Context);
 		if (m_Source == nullptr)
-		{
-			obs_source_skip_video_filter(m_Context);
 			return;
-		}
 
 		// The render target will be nullptr if we are the last effect filter
 		// and OBS is attempting to render the filter preview window. Assuming
