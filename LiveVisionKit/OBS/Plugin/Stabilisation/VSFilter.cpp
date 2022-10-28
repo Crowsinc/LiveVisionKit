@@ -226,27 +226,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::tick()
-	{
-		if(!m_FrameQueue.empty())
-		{
-			auto frame_size = m_FrameQueue.oldest().frame.size();
-
-			m_CropRegion = crop(frame_size, m_CropProportion);
-			m_OutputSize = frame_size;
-		}
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	void VSFilter::hybrid_render(gs_texture_t* frame)
 	{
+		const auto target = obs_filter_get_target(m_Context);
+		const cv::Size render_size(obs_source_get_base_width(target), obs_source_get_base_height(target));
+		const cv::Rect render_region = crop(render_size, m_CropProportion);
+
 		if (frame == nullptr)
 		{
 			// As Video Filter
-			if (m_TestMode)
-				obs_source_skip_video_filter(m_Context);
-			else if (!FSREffect::Render(m_Context, m_OutputSize, m_CropRegion))
+			if (m_TestMode || !FSREffect::Render(m_Context, render_size, render_region))
 				obs_source_skip_video_filter(m_Context);
 		}
 		else
@@ -254,7 +243,7 @@ namespace lvk
 			// As Effects Filter
 			if(m_TestMode)
 				DefaultEffect::Render(frame);
-			else if (!FSREffect::Render(frame, m_OutputSize, m_CropRegion))
+			else if (!FSREffect::Render(frame, render_size, render_region))
 				obs_source_skip_video_filter(m_Context);
 		}
 	}
@@ -303,6 +292,7 @@ namespace lvk
 		if(is_stabilization_ready())
 		{
 			buffer = std::move(m_FrameQueue.oldest());
+			m_CropRegion = crop(buffer.frame.size(), m_CropProportion);
 
 			if(m_Enabled)
 			{

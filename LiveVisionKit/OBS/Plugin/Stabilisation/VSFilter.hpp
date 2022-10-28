@@ -61,8 +61,6 @@ namespace lvk
 
 		VSFilter(obs_source_t* context);
 
-		void tick();
-
 		void configure(obs_data_t* settings);
 
 		bool validate() const;
@@ -106,16 +104,14 @@ namespace lvk
 		float m_CropProportion = 0;
 		uint32_t m_SmoothingRadius = 0;
 
-		cv::Rect m_CropRegion;
-		cv::Size m_OutputSize;
-
 		SlidingBuffer<double> m_Filter;
 		SlidingBuffer<FrameVector> m_Trajectory;
 		SlidingBuffer<FrameBuffer> m_FrameQueue;
 
+		cv::Rect m_CropRegion;
+		FrameTracker m_FrameTracker;
 		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		FrameTracker m_FrameTracker;
 		
 		cv::Point2f m_SuppressionRange;
 		float m_SuppressionFactor = 0.0f;
