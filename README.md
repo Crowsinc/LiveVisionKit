@@ -9,7 +9,7 @@ Check out the [wiki](https://github.com/Crowsinc/LiveVisionKit/wiki) for more in
 **Please use the official discord server for any support questions or development discussion:** https://discord.gg/8azsNh6rsX
 
 # Demonstrations
-These videos present LiveVisionKit filters within some of the use cases and video scenes they have been designed and optimised to handle. In general, the quality of the filters will vary depending on what is being shown in the screen!
+These videos present LiveVisionKit filters within some of the use cases and video scenes they have been designed for. In general, the quality of the filters will vary depending on what is being shown in the screen!
 
  * Stabilization VR Demonstration: https://youtu.be/NfL5KXUfUko
  * Stabilization IRL Demonstration: https://youtu.be/se3dSCvFdXc
