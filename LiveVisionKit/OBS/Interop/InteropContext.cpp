@@ -35,6 +35,7 @@ namespace lvk::ocl
 
 	cv::ocl::OpenCLExecutionContext InteropContext::s_OCLContext;
 	std::optional<bool> InteropContext::s_TestPassed = std::nullopt;
+	std::optional<bool> InteropContext::s_Supported = std::nullopt;
 	graphics_t* InteropContext::s_GraphicsContext = nullptr;
 	std::thread::id InteropContext::s_BoundThread;
 
@@ -158,19 +159,25 @@ namespace lvk::ocl
 
 	bool InteropContext::Supported()
 	{
-		if (!cv::ocl::haveOpenCL())
-			return false;
-
-		auto& device = cv::ocl::Device::getDefault();
-
+		if (!s_Supported.has_value())
+		{
+			// NOTE: this check is actually relatively slow for what it does (~0.1ms)
+			if (cv::ocl::haveOpenCL())
+			{
+				auto& device = cv::ocl::Device::getDefault();
 #ifdef _WIN32
-		// DirectX11 
-		return device.isExtensionSupported("cl_nv_d3d11_sharing") 
-			|| device.isExtensionSupported("cl_khr_d3d11_sharing");
+				// DirectX11 
+				s_Supported = device.isExtensionSupported("cl_nv_d3d11_sharing") 
+						   || device.isExtensionSupported("cl_khr_d3d11_sharing");
 #else
-		// OpenGL
-		return device.isExtensionSupported("cl_khr_gl_sharing");
+				// OpenGL
+				s_Supported = device.isExtensionSupported("cl_khr_gl_sharing");
 #endif
+			}
+			else s_Supported = false;
+		}
+
+		return s_Supported.value();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

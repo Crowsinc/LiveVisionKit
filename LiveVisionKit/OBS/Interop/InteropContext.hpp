@@ -56,6 +56,7 @@ namespace lvk::ocl
 
 		static cv::ocl::OpenCLExecutionContext s_OCLContext;
 		static std::optional<bool> s_TestPassed;
+		static std::optional<bool> s_Supported;
 		static graphics_t* s_GraphicsContext;
 		static std::thread::id s_BoundThread;
 
