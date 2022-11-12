@@ -45,8 +45,7 @@ namespace lvk
 			)),
 		// NOTE: We initially assume a hybrid render state for each filter, 
 		// then update our assumption as we learn more about them during execution. 
-		m_HybridRender(m_Asynchronous ? false : true),
-		m_RenderTime(os_gettime_ns() * 1.0e-9)
+		m_HybridRender(m_Asynchronous ? false : true)
 	{
 		LVK_ASSERT(m_Context != nullptr);
 		LVK_ASSERT(s_Filters.count(context) == 0);
@@ -155,7 +154,7 @@ namespace lvk
 			}
 		}
 
-		update_timing();
+		m_TickTimer.tick();
 		filter(buffer);
 
 		auto output_frame = match_async_frame(buffer, input_frame);
@@ -310,7 +309,7 @@ namespace lvk
 		// perform filtering on the buffer's captured frame, if any. 
 		if (!buffer.empty())
 		{
-			update_timing();
+			m_TickTimer.tick();
 			filter(buffer);
 
 			// Frame was captured by the filter (probably to introduce delay).
@@ -494,19 +493,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VisionFilter::update_timing()
+	Time VisionFilter::delta_time() const
 	{
-		const double curr_time = os_gettime_ns() * 1.0e-9;
-		
-		m_DeltaTime = curr_time - m_RenderTime;
-		m_RenderTime = curr_time;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	double VisionFilter::delta_time() const
-	{
-		return m_DeltaTime;
+		return m_TickTimer.delta_time();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

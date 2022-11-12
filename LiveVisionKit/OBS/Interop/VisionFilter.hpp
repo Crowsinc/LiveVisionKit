@@ -24,6 +24,7 @@
 #include <deque>
 
 #include "FrameBuffer.hpp"
+#include "Control/Timing/Ticker.hpp"
 
 namespace lvk
 {
@@ -48,7 +49,7 @@ namespace lvk
 
 		virtual void hybrid_render(gs_texture_t* frame);
 
-		double delta_time() const;
+		Time delta_time() const;
 	
 		void disable();
 
@@ -61,8 +62,6 @@ namespace lvk
 
 			SourceCache();
 		};
-
-		void update_timing();
 
 		bool is_vision_filter_chain_start() const;
 
@@ -91,7 +90,7 @@ namespace lvk
 		obs_source_t* m_CacheKey = nullptr;
 
 		bool m_Asynchronous, m_HybridRender;
-		double m_RenderTime = 0.0, m_DeltaTime = 0.0;
+		Ticker m_TickTimer;
 
 		gs_texture_t* m_RenderBuffer = nullptr;
 		std::deque<obs_source_frame*> m_AsyncFrameQueue;

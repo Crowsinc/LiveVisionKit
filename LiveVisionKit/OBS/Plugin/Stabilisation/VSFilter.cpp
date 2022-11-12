@@ -522,7 +522,7 @@ namespace lvk
 		m_SuppressionFactor = step(
 			m_SuppressionFactor,
 			suppression_target,
-			delta_time() * SUPPRESSION_SMOOTHING_STEP
+			delta_time().seconds() * SUPPRESSION_SMOOTHING_STEP
 		);
 
 		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
