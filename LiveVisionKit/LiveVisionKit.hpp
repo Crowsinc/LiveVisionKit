@@ -31,8 +31,8 @@
 #include "Utility/Algorithm.hpp"
 #include "Utility/Drawing.hpp"
 
-#include "Vision/FrameTracker.hpp"
-#include "Vision/GridDetector.hpp"
-#include "Vision/CameraCalibrator.hpp"
+#include "Vision/Tracking/FrameTracker.hpp"
+#include "Vision/Tracking/GridDetector.hpp"
+#include "Vision/Camera/CameraCalibrator.hpp"
 
 #include "Diagnostics/Directives.hpp"
