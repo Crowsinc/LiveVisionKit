@@ -148,21 +148,23 @@ namespace lvk
 		m_MatchCanvasSize = m_MatchSourceSize = false;
 
 		const std::string output_pattern = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
-		if(output_pattern == OUTPUT_SIZE_CANVAS)
+		if (output_pattern == OUTPUT_SIZE_CANVAS)
 			m_MatchCanvasSize = true;
-		else if(output_pattern == OUTPUT_SIZE_SOURCE)
+		else if (output_pattern == OUTPUT_SIZE_SOURCE)
 			m_MatchSourceSize = true;
-		else if(output_pattern.find('x') != std::string::npos)
+		else if (output_pattern.find('x') != std::string::npos) 
 		{
-			std::vector<float> tokens = parse<float>(output_pattern, 'x', [](auto _, float& value, const bool fail){
+			// NOTE: ^^ must be last check in case non-numeric list values include the letter 'x'
+			
+			std::vector<float> tokens = parse<float>(output_pattern, 'x', [](auto _, float& value, const bool fail) {
 				return !fail && value > 0;
-			});
+				});
 
 			// Interpret custom resolution
-			if(tokens.size() == 2 || tokens.size() == 3)
+			if (tokens.size() == 2 || tokens.size() == 3)
 			{
 				// Interpret optional multiplier
-				if(tokens.size() == 3)
+				if (tokens.size() == 3)
 					m_SizeMultiplier = tokens[2];
 
 				m_RequestedSize = {
@@ -172,12 +174,13 @@ namespace lvk
 			}
 
 			// Interpret solo multiplier
-			if(tokens.size() == 1)
+			if (tokens.size() == 1)
 			{
 				m_SizeMultiplier = tokens[0];
 				m_MatchSourceSize = true;
 			}
 		}
+		else m_MatchSourceSize = true; // Default to match source in case of an error
 
 		m_MaintainAspectRatio = obs_data_get_bool(settings, PROP_MAINTAIN_ASPECT);
 
