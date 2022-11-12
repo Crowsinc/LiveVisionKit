@@ -20,11 +20,14 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
-#include "Math/BoundingQuad.hpp"
+#include "Control/Timing/Time.hpp"
+#include "Control/Timing/Stopwatch.hpp"
+#include "Control/Timing/Ticker.hpp"
 
 #include "Math/Math.hpp"
 #include "Math/Logic.hpp"
 #include "Math/Homography.hpp"
+#include "Math/BoundingQuad.hpp"
 
 #include "Structures/SlidingBuffer.hpp"
 
