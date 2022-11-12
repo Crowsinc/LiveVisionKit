@@ -20,9 +20,9 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
-#include "Control/Timing/Time.hpp"
-#include "Control/Timing/Stopwatch.hpp"
-#include "Control/Timing/Ticker.hpp"
+#include "Timing/Time.hpp"
+#include "Timing/Stopwatch.hpp"
+#include "Timing/Ticker.hpp"
 
 #include "Math/Math.hpp"
 #include "Math/Logic.hpp"
