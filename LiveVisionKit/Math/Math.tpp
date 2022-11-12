@@ -59,7 +59,7 @@ namespace lvk
 	template<typename V, typename T>
 	V step(const V& current, const V& target, const T& amount)
 	{
-		LVK_ASSERT(amount > 0);
+		LVK_ASSERT(amount >= 0);
 		if(current > target)
 			return std::max<V>(current - amount, target);
 		else
