@@ -86,6 +86,10 @@ namespace lvk
 		
 		bool operator<=(const Time& other) const;
 
+		Time operator*(const double multiplier) const;
+		
+		Time operator/(const double divisor) const;
+
 	private:
 		std::chrono::nanoseconds m_Time;
 	};

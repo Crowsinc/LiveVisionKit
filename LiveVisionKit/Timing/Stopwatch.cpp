@@ -23,11 +23,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Stopwatch::Stopwatch()
+	Stopwatch::Stopwatch(const uint32_t history)
 		: m_Running(false),
 		m_StartTime(),
 		m_Elapsed()
-	{}
+	{
+		LVK_ASSERT(history > 0);
+	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -45,16 +47,21 @@ namespace lvk
 		
 		m_Elapsed = Time::Now() - m_StartTime;
 		m_Running = false;
+	
+		m_History.push(m_Elapsed);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Stopwatch::restart()
 	{
-		// Collect the current elapsed time, then simply start the stopwatch again. 
-		const auto elapsed = this->elapsed();
+		// NOTE: we must ensure stop is run, or was ran, so 
+		// that the elapsed time and history are properly set!
+		if(is_running())
+			stop();	
+
 		start();
-		return elapsed;
+		return m_Elapsed;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -69,6 +76,13 @@ namespace lvk
 	bool Stopwatch::is_running() const
 	{
 		return m_Running;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const SlidingBuffer<Time>& Stopwatch::history() const
+	{
+		return m_History;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

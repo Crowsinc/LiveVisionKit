@@ -17,6 +17,7 @@
 #pragma once
 
 #include "Time.hpp"
+#include "Structures/SlidingBuffer.hpp"
 
 namespace lvk
 {
@@ -25,7 +26,7 @@ namespace lvk
 	{
 	public:
 
-		Stopwatch();
+		Stopwatch(const uint32_t history = 1);
 
 		void start();
 
@@ -34,14 +35,16 @@ namespace lvk
 		Time restart();
 
 		Time elapsed() const;
-
+		
 		bool is_running() const;
+
+		const SlidingBuffer<Time>& history() const;
 
 	private:
 
-		Time m_StartTime, m_Elapsed;
 		bool m_Running = false;
-
+		Time m_StartTime, m_Elapsed;
+		SlidingBuffer<Time> m_History;
 	};
 
 }
