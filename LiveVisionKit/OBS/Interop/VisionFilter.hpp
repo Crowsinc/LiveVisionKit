@@ -24,7 +24,7 @@
 #include <deque>
 
 #include "FrameBuffer.hpp"
-#include "Timing/Ticker.hpp"
+#include "Utility/Timing/Ticker.hpp"
 
 namespace lvk
 {

@@ -1,4 +1,3 @@
-//    *************************** LiveVisionKit ****************************
 //    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,28 +14,33 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-// Library
+#pragma once
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/ocl.hpp>
+#include "Stopwatch.hpp"
 
+namespace lvk
+{
 
-#include "Math/Math.hpp"
-#include "Math/Logic.hpp"
-#include "Math/Homography.hpp"
-#include "Math/BoundingQuad.hpp"
+	class Ticker
+	{
+	public:
 
-#include "Structures/SlidingBuffer.hpp"
+		Ticker();
 
-#include "Utility/Data/Unique.hpp"
-#include "Utility/Timing/Time.hpp"
-#include "Utility/Timing/Stopwatch.hpp"
-#include "Utility/Timing/Ticker.hpp"
-#include "Utility/Algorithm.hpp"
-#include "Utility/Drawing.hpp"
+		void tick();
 
-#include "Vision/Tracking/FrameTracker.hpp"
-#include "Vision/Tracking/GridDetector.hpp"
-#include "Vision/Camera/CameraCalibrator.hpp"
+		Time delta_time() const; 
 
-#include "Diagnostics/Directives.hpp"
+		Time elapsed_time() const;
+
+		uint64_t tick_count() const;
+
+		void reset_counter();
+
+	private:
+		Time m_DeltaTime;
+		uint64_t m_Counter = 0;
+		Stopwatch m_Stopwatch;
+	};
+
+}

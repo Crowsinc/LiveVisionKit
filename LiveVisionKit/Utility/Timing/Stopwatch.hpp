@@ -1,4 +1,3 @@
-//    *************************** LiveVisionKit ****************************
 //    Copyright (C) 2022  Sebastian Di Marco (crowsinc.dev@gmail.com)
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,28 +14,38 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-// Library
+#pragma once
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/ocl.hpp>
-
-
-#include "Math/Math.hpp"
-#include "Math/Logic.hpp"
-#include "Math/Homography.hpp"
-#include "Math/BoundingQuad.hpp"
-
+#include "Time.hpp"
 #include "Structures/SlidingBuffer.hpp"
 
-#include "Utility/Data/Unique.hpp"
-#include "Utility/Timing/Time.hpp"
-#include "Utility/Timing/Stopwatch.hpp"
-#include "Utility/Timing/Ticker.hpp"
-#include "Utility/Algorithm.hpp"
-#include "Utility/Drawing.hpp"
+namespace lvk
+{
 
-#include "Vision/Tracking/FrameTracker.hpp"
-#include "Vision/Tracking/GridDetector.hpp"
-#include "Vision/Camera/CameraCalibrator.hpp"
+	class Stopwatch
+	{
+	public:
 
-#include "Diagnostics/Directives.hpp"
+		Stopwatch(const uint32_t history = 1);
+
+		void start();
+
+		void stop();
+
+		Time restart();
+
+		Time elapsed() const;
+		
+		bool is_running() const;
+
+		const SlidingBuffer<Time>& history() const;
+
+	private:
+
+		bool m_Running = false;
+		Time m_StartTime, m_Elapsed;
+		SlidingBuffer<Time> m_History;
+	};
+
+}
+
