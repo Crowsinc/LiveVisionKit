@@ -24,7 +24,7 @@
 #include <deque>
 
 #include "FrameBuffer.hpp"
-#include "Utility/Timing/Ticker.hpp"
+#include "Utility/Timing/TickTimer.hpp"
 
 namespace lvk
 {
@@ -90,7 +90,7 @@ namespace lvk
 		obs_source_t* m_CacheKey = nullptr;
 
 		bool m_Asynchronous, m_HybridRender;
-		Ticker m_TickTimer;
+		TickTimer m_TickTimer;
 
 		gs_texture_t* m_RenderBuffer = nullptr;
 		std::deque<obs_source_frame*> m_AsyncFrameQueue;

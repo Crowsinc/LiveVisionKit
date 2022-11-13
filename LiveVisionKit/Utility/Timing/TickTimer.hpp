@@ -21,11 +21,11 @@
 namespace lvk
 {
 
-	class Ticker
+	class TickTimer
 	{
 	public:
 
-		Ticker();
+		TickTimer();
 
 		void tick();
 

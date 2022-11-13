@@ -31,7 +31,7 @@
 #include "Utility/Data/Unique.hpp"
 #include "Utility/Timing/Time.hpp"
 #include "Utility/Timing/Stopwatch.hpp"
-#include "Utility/Timing/Ticker.hpp"
+#include "Utility/Timing/TickTimer.hpp"
 #include "Utility/Algorithm.hpp"
 #include "Utility/Drawing.hpp"
 

@@ -14,19 +14,19 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "Ticker.hpp"
+#include "TickTimer.hpp"
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-	Ticker::Ticker()
+	TickTimer::TickTimer()
 		: m_Counter(0)
 	{}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Ticker::tick()
+	void TickTimer::tick()
 	{
 		m_Counter++;
 		m_DeltaTime = m_Stopwatch.restart();
@@ -34,28 +34,28 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Time Ticker::delta_time() const
+	Time TickTimer::delta_time() const
 	{
 		return m_DeltaTime;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Time Ticker::elapsed_time() const
+	Time TickTimer::elapsed_time() const
 	{
 		return m_Stopwatch.elapsed();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	uint64_t Ticker::tick_count() const
+	uint64_t TickTimer::tick_count() const
 	{
 		return m_Counter;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Ticker::reset_counter()
+	void TickTimer::reset_counter()
 	{
 		m_Counter = 0;
 	}
