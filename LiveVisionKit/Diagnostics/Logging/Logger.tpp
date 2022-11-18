@@ -18,7 +18,6 @@
 #include "Logger.hpp"
 
 #include "Diagnostics/Directives.hpp"
-#include "Utility/Timing/Time.hpp"
 
 namespace lvk
 {
