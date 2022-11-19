@@ -66,6 +66,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	bool Stopwatch::is_running() const
+	{
+		return m_Running;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	Time Stopwatch::elapsed() const
 	{
 		return is_running() ? (Time::Now() - m_StartTime) : m_Elapsed;
@@ -73,9 +80,28 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool Stopwatch::is_running() const
+	Time Stopwatch::average() const
 	{
-		return m_Running;
+		return m_History.empty() ? 0 : m_History.average();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	float Stopwatch::consistency() const
+	{
+		if(m_History.size() < 2)
+			return 1.0f;
+
+		double average_error = 0.0f;
+		const double average_ms = m_History.average().milliseconds();
+
+		for(auto i = 0; i < m_History.size(); i++)
+		{
+			average_error += std::abs(m_History[i].milliseconds() - average_ms)/average_error;
+		}
+		average_error /= m_History.size();
+		
+		return 1.0f - average_error;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

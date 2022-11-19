@@ -29,15 +29,19 @@ namespace lvk
 
 		void tick();
 
+		uint64_t tick_count() const;
+		
+		void reset_counter();
+
 		Time delta_time() const; 
 
 		Time elapsed_time() const;
 
-		const SlidingBuffer<Time>& history() const;
+		Time average() const;
 		
-		uint64_t tick_count() const;
-
-		void reset_counter();
+		float consistency() const;
+		
+		const SlidingBuffer<Time>& history() const;
 
 	private:
 		Time m_DeltaTime;

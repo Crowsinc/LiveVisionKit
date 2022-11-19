@@ -33,10 +33,14 @@ namespace lvk
 		void stop();
 
 		Time restart();
+		
+		bool is_running() const;
 
 		Time elapsed() const;
 		
-		bool is_running() const;
+		Time average() const;
+		
+		float consistency() const;
 
 		const SlidingBuffer<Time>& history() const;
 
