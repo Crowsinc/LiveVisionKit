@@ -25,7 +25,7 @@ namespace lvk
 	{
 	public:
 
-		TickTimer();
+		TickTimer(const uint32_t history = 1);
 
 		void tick();
 
@@ -33,14 +33,16 @@ namespace lvk
 
 		Time elapsed_time() const;
 
+		const SlidingBuffer<Time>& history() const;
+		
 		uint64_t tick_count() const;
 
 		void reset_counter();
 
 	private:
 		Time m_DeltaTime;
-		uint64_t m_Counter = 0;
 		Stopwatch m_Stopwatch;
+		uint64_t m_Counter = 0;
 	};
 
 }
