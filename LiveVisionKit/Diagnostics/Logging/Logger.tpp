@@ -27,7 +27,7 @@ namespace lvk
 	// TODO: don't really like that this is a reference, its possible 
 	// for the ostream to have a shorter lifetime than the logger. 
 	// However the reference has its benefits too. 
-	Logger::Logger(std::ostream& target)
+	inline Logger::Logger(std::ostream& target)
 		: m_Stream(target),
 		  m_BaseFormat(nullptr)
 	{
@@ -39,7 +39,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Logger::~Logger()
+	inline Logger::~Logger()
 	{
 		end_log(m_Stream);
 	}
@@ -47,7 +47,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	Logger& Logger::write(const T& object)
+	inline Logger& Logger::write(const T& object)
 	{
 		if (!m_HoldInputs)
 		{
@@ -67,7 +67,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	Logger& Logger::operator<<(const T& object)
+	inline Logger& Logger::operator<<(const T& object)
 	{
 		return write(object);
 	}
@@ -75,7 +75,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	Logger& Logger::append(const T& object)
+	inline Logger& Logger::append(const T& object)
 	{
 		if(!m_HoldInputs)
 			m_Stream << object;
@@ -86,7 +86,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void Logger::operator+=(const T& object)
+	inline void Logger::operator+=(const T& object)
 	{
 		append(object);
 	}
@@ -94,21 +94,21 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	Logger& Logger::operator+(const T& object)
+	inline Logger& Logger::operator+(const T& object)
 	{
 		return append(object);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	std::ostream& Logger::raw()
+	inline std::ostream& Logger::raw()
 	{
 		return m_Stream;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::next() 
+	inline void Logger::next()
 	{
 		if (!m_HoldRecord)
 		{
@@ -119,14 +119,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::flush()
+	inline void Logger::flush()
 	{
 		m_Stream.flush();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::hold(const bool all_inputs)
+	inline void Logger::hold(const bool all_inputs)
 	{
 		m_HoldRecord = true;
 		m_HoldInputs = all_inputs;
@@ -134,7 +134,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::resume()
+	inline void Logger::resume()
 	{
 		m_HoldInputs = false;
 		m_HoldRecord = false;
@@ -142,48 +142,48 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::reformat() 
+	inline void Logger::reformat()
 	{
 		m_Stream.copyfmt(base_format());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const std::ios& Logger::base_format() const
+	inline const std::ios& Logger::base_format() const
 	{
 		return m_BaseFormat;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool Logger::has_error() const
+	inline bool Logger::has_error() const
 	{
 		return m_Stream.fail();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::begin_log(std::ostream& stream) {}
+	inline void Logger::begin_log(std::ostream& stream) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::end_log(std::ostream& stream) {}
+	inline void Logger::end_log(std::ostream& stream) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::begin_object(std::ostream& stream) {}
+	inline void Logger::begin_object(std::ostream& stream) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::end_object(std::ostream& stream) {}
+	inline void Logger::end_object(std::ostream& stream) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::begin_record(std::ostream& stream) {}
+	inline void Logger::begin_record(std::ostream& stream) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Logger::end_record(std::ostream& stream) 
+	inline void Logger::end_record(std::ostream& stream) 
 	{ 
 		stream << "\n";
 	}
