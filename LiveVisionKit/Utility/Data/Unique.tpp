@@ -27,28 +27,28 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename Scope>
-	Unique<Scope>::Unique()
+	inline Unique<Scope>::Unique()
 		: m_UID(s_NextUID++)
 	{}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename Scope>
-	Unique<Scope>::Unique(const Unique& other)
+	inline Unique<Scope>::Unique(const Unique& other)
 		: m_UID(s_NextUID++)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename Scope>
-	Unique<Scope>::Unique(Unique&& other)
+	inline Unique<Scope>::Unique(Unique&& other)
 		: m_UID(other.m_UID)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename Scope>
-	uint64_t Unique<Scope>::uid() const
+	inline uint64_t Unique<Scope>::uid() const
 	{
 		return m_UID;
 	}
