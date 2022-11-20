@@ -165,14 +165,37 @@ namespace lvk::ocl
 			if (cv::ocl::haveOpenCL())
 			{
 				auto& device = cv::ocl::Device::getDefault();
-#ifdef _WIN32
-				// DirectX11 
-				s_Supported = device.isExtensionSupported("cl_nv_d3d11_sharing") 
-						   || device.isExtensionSupported("cl_khr_d3d11_sharing");
-#else
-				// OpenGL
-				s_Supported = device.isExtensionSupported("cl_khr_gl_sharing");
+				try 
+				{
+					// For the interop context to be supported, we must meet two conditions:
+					// 
+					// * The respective OpenCV DirectX and OpenGL APIs must be included in 
+					//   the libary compilation. This can be tested by calling the API and 
+					//   testing that no exception is generated. Volatile is used to the 
+					//   compiler from optimizing out the test calls. 
+					// 					
+					// * The OpenCL device must support the necessary interop extensions. 
+					//   This can be tested directly from the device's extension list. 
+
+#ifdef _WIN32       // DirectX11 
+					
+					volatile auto test = cv::directx::getTypeFromDXGI_FORMAT(DXGI_FORMAT_UNKNOWN);
+					
+					s_Supported = device.isExtensionSupported("cl_nv_d3d11_sharing")
+						       || device.isExtensionSupported("cl_khr_d3d11_sharing");
+					
+#else               // OpenGL
+					
+					// NOTE: this constructor does not invoke OpenGL texture creation.
+					volatile cv::ogl::Texture2D test;
+
+					s_Supported = device.isExtensionSupported("cl_khr_gl_sharing");
 #endif
+				}
+				catch (const std::exception& e) 
+				{ 
+					s_Supported = false; 
+				}
 			}
 			else s_Supported = false;
 		}
