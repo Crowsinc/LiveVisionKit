@@ -490,4 +490,21 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+	template<typename T>
+	inline std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer)
+	{
+		stream << '[';
+		if(!buffer.empty())
+		{
+			stream << buffer.at(0);
+			for (size_t i = 1; i < buffer.size(); i++)
+				stream << ", " << buffer[i];
+		}
+		stream << ']';
+
+		return stream;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 }

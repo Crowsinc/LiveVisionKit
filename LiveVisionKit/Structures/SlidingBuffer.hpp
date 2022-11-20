@@ -18,6 +18,7 @@
 #pragma once
 
 #include <vector>
+#include <ostream>
 
 namespace lvk
 {
@@ -103,6 +104,9 @@ namespace lvk
 		std::vector<T> m_InternalBuffer;
 		size_t m_StartIndex = 0, m_EndIndex = 0;
 	};
+
+	template<typename T>
+	std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer);
 
 }
 
