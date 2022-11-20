@@ -27,7 +27,7 @@ namespace lvk
 	{
 	public:
 
-		SlidingBuffer(const uint32_t capacity = 5);
+		SlidingBuffer(const size_t capacity = 5);
 
 		void push(const T& element);
 
@@ -38,23 +38,17 @@ namespace lvk
 
 		T& skip();
 		
-		void skip(const uint32_t amount);
+		void skip(const size_t amount);
 
-		void trim(const uint32_t amount);
+		void trim(const size_t amount);
 		
-		void resize(const uint32_t capacity);
+		void resize(const size_t capacity);
 		
 		void clear();
 
-		template<typename K>
-		T convolve_at(const SlidingBuffer<K>& kernel, const uint32_t index, T initial = T()) const;
-		
-		template<typename K>
-		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
+		T& at(const size_t index);
 
-		T& at(const uint32_t index);
-
-		T& operator[](const uint32_t index);
+		T& operator[](const size_t index);
 
 		T& centre(const int offset = 0);
 
@@ -64,9 +58,9 @@ namespace lvk
 
 		T& previous();
 
-		const T& at(const uint32_t index) const;
+		const T& at(const size_t index) const;
 
-		const T& operator[](const uint32_t index) const;
+		const T& operator[](const size_t index) const;
 
 		const T& centre(const int offset = 0) const;
 
@@ -80,26 +74,34 @@ namespace lvk
 
 		bool empty() const;
 
+		size_t size() const;
+
+		size_t capacity() const;
+
+		size_t centre_index() const;
+
+		template<typename K>
+		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
+
+		template<typename K>
+		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial = T()) const;
+
 		T average() const;
 
 		T variance() const;
 
-		uint32_t size() const;
+		T min() const;
 
-		uint32_t capacity() const;
-
-		uint32_t centre_index() const;
+		T max() const;
 
 	private:
 
 		void advance_window();
 
 	private:
-
-		uint32_t m_Capacity, m_Size = 0;
+		size_t m_Capacity, m_Size = 0;
 		std::vector<T> m_InternalBuffer;
-		uint32_t m_StartIndex = 0, m_EndIndex = 0;
-
+		size_t m_StartIndex = 0, m_EndIndex = 0;
 	};
 
 }
