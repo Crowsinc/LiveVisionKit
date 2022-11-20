@@ -97,7 +97,7 @@ namespace lvk
 
 		for(auto i = 0; i < m_History.size(); i++)
 		{
-			average_error += std::abs(m_History[i].milliseconds() - average_ms)/average_error;
+			average_error += std::abs(m_History[i].milliseconds() - average_ms)/average_ms;
 		}
 		average_error /= m_History.size();
 		
