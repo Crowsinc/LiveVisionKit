@@ -39,7 +39,7 @@ namespace lvk
 
 		Time average() const;
 		
-		float consistency() const;
+		Time deviation() const;
 		
 		const SlidingBuffer<Time>& history() const;
 

@@ -71,9 +71,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float TickTimer::consistency() const
+	Time TickTimer::deviation() const
 	{
-		return m_Stopwatch.consistency();
+		return m_Stopwatch.deviation();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

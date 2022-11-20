@@ -17,6 +17,8 @@
 
 #include "VideoFilter.hpp"
 
+#include <opencv2/core/ocl.hpp>
+
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
@@ -30,8 +32,10 @@ namespace lvk
 
     void VideoFilter::process(cv::UMat& frame, const bool debug)
     {
+        //TODO: fix timing issues with OpenCL asynchrony
         m_FrameTimer.start();
         filter(frame, debug);
+        cv::ocl::finish();
         m_FrameTimer.stop();
     }
 
@@ -91,23 +95,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const Time VideoFilter::runtime() const
+    Time VideoFilter::runtime() const
     {
         return m_FrameTimer.elapsed();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const Time VideoFilter::runtime_average() const
+    Time VideoFilter::runtime_average() const
     {
         return m_FrameTimer.average();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    float VideoFilter::runtime_consistency() const
+    Time VideoFilter::runtime_deviation() const
     {
-        return m_FrameTimer.consistency();
+        return m_FrameTimer.deviation();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -87,21 +87,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float Stopwatch::consistency() const
+	Time Stopwatch::deviation() const
 	{
 		if(m_History.size() < 2)
-			return 1.0f;
+			return Time(0);
 
-		double average_error = 0.0f;
-		const double average_ms = m_History.average().milliseconds();
+		const Time average_time = m_History.average();
 
+		Time total_deviation(0);
 		for(auto i = 0; i < m_History.size(); i++)
 		{
-			average_error += std::abs(m_History[i].milliseconds() - average_ms)/average_ms;
+			const auto& current_time = m_History[i];
+			if (average_time > current_time)
+				total_deviation += average_time - current_time;
+			else 
+				total_deviation += current_time - average_time;
 		}
-		average_error /= m_History.size();
 		
-		return 1.0f - average_error;
+		return total_deviation / static_cast<double>(m_History.size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

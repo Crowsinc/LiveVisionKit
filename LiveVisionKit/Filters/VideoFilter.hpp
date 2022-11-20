@@ -63,11 +63,11 @@ namespace lvk
 			const std::function<void(VideoFilter&, cv::UMat&, Logger&)> callback = [](auto&, auto&, auto&) {}
 		);
 	
-		const Time runtime() const;
+		Time runtime() const;
 
-		const Time runtime_average() const;
+		Time runtime_average() const;
 
-		float runtime_consistency() const;
+		Time runtime_deviation() const;
 
 		const std::string& alias() const;
 
