@@ -20,7 +20,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
-
 #include "Math/Math.hpp"
 #include "Math/Logic.hpp"
 #include "Math/Homography.hpp"
@@ -40,3 +39,7 @@
 #include "Vision/Camera/CameraCalibrator.hpp"
 
 #include "Diagnostics/Directives.hpp"
+#include "Diagnostics/Logging/Logger.hpp"
+#include "Diagnostics/Logging/CSVLogger.hpp"
+
+#include "Filters/DeblockingFilter.hpp"
