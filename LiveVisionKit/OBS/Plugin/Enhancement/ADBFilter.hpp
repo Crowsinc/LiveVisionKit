@@ -41,26 +41,14 @@ namespace lvk
 
 		virtual void filter(cv::UMat& frame) override;
 
-		uint64_t draw_debug_frame(cv::UMat& frame);
-
-		void draw_debug_hud(cv::UMat& frame, const uint64_t frame_time_ns);
+		void draw_debug_hud(cv::UMat& frame);
 
 	private:
 
 		obs_source_t* m_Context = nullptr;
 
 		bool m_TestMode = false;
-		uint32_t m_DetectionLevels = 0;
-
-		cv::UMat m_SmoothFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_DetectionFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_ReferenceFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_BlockMask{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_KeepBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_DeblockBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_BlockGrid{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_DeblockBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY}; 
-		cv::UMat m_FloatBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		DeblockingFilter m_Filter;
 	};
 
 }
