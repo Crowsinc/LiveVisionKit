@@ -62,6 +62,8 @@ namespace lvk
 
 	protected:
 		
+		bool is_new_record() const;
+
 		const std::ios& base_format() const;
 
 		virtual void begin_log(std::ostream& stream);

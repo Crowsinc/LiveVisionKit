@@ -39,7 +39,8 @@ namespace lvk
 
 	void CSVLogger::begin_object(std::ostream& stream)
 	{
-		stream << ",";
+		if(!is_new_record())
+			stream << ",";
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

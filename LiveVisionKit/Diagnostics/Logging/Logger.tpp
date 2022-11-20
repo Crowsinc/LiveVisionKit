@@ -52,14 +52,15 @@ namespace lvk
 		if (!m_HoldInputs)
 		{
 			if(m_NewRecord)
-			{
 				begin_record(m_Stream);
-				m_NewRecord = false;
-			}
 
 			begin_object(m_Stream);
 			m_Stream << object;
 			end_object(m_Stream);
+
+			// NOTE: we update his here so that is_new_record() is
+			// accurate through-out the begin/end object functions. 
+			m_NewRecord = false;
 		}
 		return *this;
 	}
@@ -145,6 +146,13 @@ namespace lvk
 	inline void Logger::reformat()
 	{
 		m_Stream.copyfmt(base_format());
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	inline bool Logger::is_new_record() const
+	{
+		return m_NewRecord;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
