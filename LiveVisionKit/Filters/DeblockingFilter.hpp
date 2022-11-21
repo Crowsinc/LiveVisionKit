@@ -38,17 +38,13 @@ namespace lvk
 
 	public:
 
-		DeblockingFilter(DeblockingFilter::Settings settings = {}, const uint32_t timing_samples = 60);
+		DeblockingFilter(DeblockingFilter::Settings settings = {});
 
+		virtual void process(cv::UMat& frame, const bool debug = false) override;
+		
 		void configure(const DeblockingFilter::Settings& new_settings);
-
+		
 		const DeblockingFilter::Settings& settings() const;
-
-	private:
-
-		virtual void filter(cv::UMat& frame, const bool debug) override;
-
-		virtual void write_log(Logger& logger) override;
 
 	private:
 

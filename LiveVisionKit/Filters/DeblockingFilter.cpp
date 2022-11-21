@@ -24,35 +24,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	DeblockingFilter::DeblockingFilter(DeblockingFilter::Settings settings, const uint32_t timing_samples)
-		: VideoFilter("Deblocking Filter", timing_samples)
+	DeblockingFilter::DeblockingFilter(DeblockingFilter::Settings settings)
+		: VideoFilter("Deblocking Filter")
 	{
 		configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-
-	void lvk::DeblockingFilter::configure(const DeblockingFilter::Settings& new_settings)
-	{
-		LVK_ASSERT(new_settings.block_size > 0);
-		LVK_ASSERT(new_settings.filter_size >= 3);
-		LVK_ASSERT(new_settings.filter_size % 2 == 1);
-		LVK_ASSERT(new_settings.detection_levels > 0);
-		LVK_ASSERT(new_settings.filter_scaling > 1.0f);
-
-		m_Settings = new_settings;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	const DeblockingFilter::Settings& DeblockingFilter::settings() const
-	{
-		return m_Settings;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
 	
-	void DeblockingFilter::filter(cv::UMat& frame, const bool debug)
+	void DeblockingFilter::process(cv::UMat& frame, const bool debug)
 	{
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -114,10 +94,22 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void DeblockingFilter::write_log(Logger& logger)
+	void lvk::DeblockingFilter::configure(const DeblockingFilter::Settings& new_settings)
 	{
-		logger << runtime_average().milliseconds() << runtime_deviation().milliseconds();
-		logger.next();
+		LVK_ASSERT(new_settings.block_size > 0);
+		LVK_ASSERT(new_settings.filter_size >= 3);
+		LVK_ASSERT(new_settings.filter_size % 2 == 1);
+		LVK_ASSERT(new_settings.detection_levels > 0);
+		LVK_ASSERT(new_settings.filter_scaling > 1.0f);
+
+		m_Settings = new_settings;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const DeblockingFilter::Settings& DeblockingFilter::settings() const
+	{
+		return m_Settings;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -33,53 +33,40 @@ namespace lvk
 	{
 	public:
 
-		VideoFilter(const std::string filter_name, const uint32_t timing_samples = 300);
+		VideoFilter(const std::string filter_name);
 
 		virtual ~VideoFilter() = default;
 
-		void process(
+		virtual void process(
 			cv::UMat& frame,
 			const bool debug = false
+		) = 0;
+
+		void process(
+			cv::VideoCapture& input_stream,
+			cv::VideoWriter& output_stream,
+			const bool debug = false,
+			const std::function<void(VideoFilter&, cv::UMat&)> callback = [](auto&, auto&) {}
 		);
 		
-		void process(
-			cv::VideoCapture& input_stream,
-			cv::VideoWriter& output_stream,
-			const bool debug = false,
-			const std::function<void(VideoFilter&,cv::UMat&)> callback = [](auto&,auto&) {}
-		);
-
-		void process(
+		virtual void profile(
 			cv::UMat& frame,
-			Logger& logger,
+			Stopwatch& timer,
 			const bool debug = false
 		);
 
-		void process(
+		void profile(
 			cv::VideoCapture& input_stream,
 			cv::VideoWriter& output_stream,
-			Logger& logger,
+			Stopwatch& timer,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, cv::UMat&, Logger&)> callback = [](auto&, auto&, auto&) {}
+			const std::function<void(VideoFilter&, cv::UMat&, Stopwatch&)> callback = [](auto&, auto&, auto&) {}
 		);
-	
-		Time runtime() const;
-
-		Time runtime_average() const;
-
-		Time runtime_deviation() const;
 
 		const std::string& alias() const;
 
-	protected:
-
-		virtual void filter(cv::UMat& frame, const bool debug) = 0;
-
-		virtual void write_log(Logger& logger);
-
 	private:
-		Stopwatch m_FrameTimer;
-		std::string m_Alias;
+		const std::string m_Alias;
 	};
 
 }
