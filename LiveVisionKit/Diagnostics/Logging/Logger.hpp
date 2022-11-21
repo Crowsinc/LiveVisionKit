@@ -19,6 +19,7 @@
 
 #include <ostream>
 #include <iomanip>
+#include <iostream>
 
 namespace lvk
 {
@@ -27,7 +28,7 @@ namespace lvk
 	{
 	public:
 		
-		Logger(std::ostream& stream);
+		Logger(std::ostream& stream = std::cout);
 
 		virtual ~Logger();
 
