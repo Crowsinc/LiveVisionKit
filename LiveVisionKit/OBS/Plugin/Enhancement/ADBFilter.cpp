@@ -18,6 +18,7 @@
 #include "ADBFilter.hpp"
 
 #include <util/platform.h>
+#include <functional>
 
 #include "OBS/Utility/Locale.hpp"
 
@@ -80,9 +81,9 @@ namespace lvk
 		const auto strength = obs_data_get_int(settings, PROP_STRENGTH);
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
-		DeblockingFilter::Settings filter_settings = m_Filter.settings();
-		filter_settings.detection_levels = std::max<uint32_t>(strength, 1);
-		m_Filter.configure(filter_settings);
+		m_Filter.reconfigure([&](DeblockingSettings& settings) {
+			settings.detection_levels = std::max<uint32_t>(strength, 1);
+		});
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

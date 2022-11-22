@@ -24,7 +24,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	DeblockingFilter::DeblockingFilter(DeblockingFilter::Settings settings)
+	DeblockingFilter::DeblockingFilter(DeblockingSettings settings)
 		: VideoFilter("Deblocking Filter")
 	{
 		configure(settings);
@@ -94,22 +94,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void lvk::DeblockingFilter::configure(const DeblockingFilter::Settings& new_settings)
+	void lvk::DeblockingFilter::configure(const DeblockingSettings& settings)
 	{
-		LVK_ASSERT(new_settings.block_size > 0);
-		LVK_ASSERT(new_settings.filter_size >= 3);
-		LVK_ASSERT(new_settings.filter_size % 2 == 1);
-		LVK_ASSERT(new_settings.detection_levels > 0);
-		LVK_ASSERT(new_settings.filter_scaling > 1.0f);
+		LVK_ASSERT(settings.block_size > 0);
+		LVK_ASSERT(settings.filter_size >= 3);
+		LVK_ASSERT(settings.filter_size % 2 == 1);
+		LVK_ASSERT(settings.detection_levels > 0);
+		LVK_ASSERT(settings.filter_scaling > 1.0f);
 
-		m_Settings = new_settings;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	const DeblockingFilter::Settings& DeblockingFilter::settings() const
-	{
-		return m_Settings;
+		m_Settings = settings;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

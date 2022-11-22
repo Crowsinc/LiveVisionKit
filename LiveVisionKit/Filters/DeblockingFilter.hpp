@@ -19,37 +19,30 @@
 
 #include "VideoFilter.hpp"
 
+#include "Utility/Properties/Configurable.hpp"
+
 namespace lvk
 {
 
-	//TODO: deal with mat format changes
+	struct DeblockingSettings 
+	{
+		uint32_t detection_levels = 3; // Must be greater than 0
+		uint32_t block_size = 16; // Must be greater than 0
+		uint32_t filter_size = 5; // Must be odd
+		float filter_scaling = 4; // Smaller is stronger (1/x)
+	};
 
-	class DeblockingFilter : public VideoFilter
+	class DeblockingFilter : public VideoFilter, public Configurable<DeblockingSettings>
 	{
 	public:
 
-		struct Settings
-		{
-			uint32_t detection_levels = 3; // Must be greater than 0
-			uint32_t block_size = 16; // Must be greater than 0
-			uint32_t filter_size = 5; // Must be odd
-			float filter_scaling = 4; // Smaller is stronger (1/x)
-		};
-
-	public:
-
-		DeblockingFilter(DeblockingFilter::Settings settings = {});
+		DeblockingFilter(DeblockingSettings settings = {});
 
 		virtual void process(cv::UMat& frame, const bool debug = false) override;
 		
-		void configure(const DeblockingFilter::Settings& new_settings);
-		
-		const DeblockingFilter::Settings& settings() const;
+		virtual void configure(const DeblockingSettings& settings = {}) override;
 
 	private:
-
-		DeblockingFilter::Settings m_Settings;
-
 		cv::UMat m_SmoothFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_DetectionFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_ReferenceFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
