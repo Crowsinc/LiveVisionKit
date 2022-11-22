@@ -22,7 +22,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 
-#include "Utility/Data/Unique.hpp"
+#include "Utility/Properties/Unique.hpp"
 #include "Utility/Timing/TickTimer.hpp"
 #include "Diagnostics/Logging/Logger.hpp"
 

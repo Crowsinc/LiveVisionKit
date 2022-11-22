@@ -27,7 +27,7 @@
 
 #include "Structures/SlidingBuffer.hpp"
 
-#include "Utility/Data/Unique.hpp"
+#include "Utility/Properties/Unique.hpp"
 #include "Utility/Timing/Time.hpp"
 #include "Utility/Timing/Stopwatch.hpp"
 #include "Utility/Timing/TickTimer.hpp"
