@@ -29,6 +29,9 @@
 namespace lvk
 {
 
+	// TODO: Deal with format changes in video processing for CLI 
+	// That is, videos may be of different formats (BGR, YUV, etc.)
+
 	class VideoFilter : public Unique<VideoFilter>
 	{
 	public:
