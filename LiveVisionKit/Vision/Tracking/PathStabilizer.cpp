@@ -54,7 +54,7 @@ namespace lvk
 			const auto trajectory_correction = m_Trajectory.convolve_at(
 				m_SmoothingFilter,
 				m_Trajectory.centre_index()
-			).displacement;
+			).displacement - displacement;
 
 			auto stabilizing_velocity = velocity + trajectory_correction;
 			if (!m_FocusArea.empty())

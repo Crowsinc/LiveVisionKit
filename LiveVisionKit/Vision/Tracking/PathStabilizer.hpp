@@ -31,8 +31,8 @@ namespace lvk
 	struct PathStabilizerSettings
 	{
 		bool lock_focus = true; // TODO: implement (unlocked crop region)
-		float correction_limit = 1.0f;
-		size_t smoothing_frames = 15;
+		float correction_limit = 0.1f;
+		size_t smoothing_frames = 10;
 	};
 
 	class PathStabilizer : public Configurable<PathStabilizerSettings>
