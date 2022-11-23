@@ -92,7 +92,7 @@ namespace lvk
 		: VisionFilter(context),
 		  m_Context(context),
 		  m_Filter(),
-		  m_FrameTimer(120)
+		  m_FrameTimer(30)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
