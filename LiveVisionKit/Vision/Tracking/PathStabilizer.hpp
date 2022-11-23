@@ -20,6 +20,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
+#include "Filters/VideoFilter.hpp"
 #include "Structures/SlidingBuffer.hpp"
 #include "Utility/Properties/Configurable.hpp"
 
@@ -30,9 +31,10 @@ namespace lvk
 	
 	struct PathStabilizerSettings
 	{
-		bool lock_focus = true; // TODO: implement (unlocked crop region)
-		float correction_limit = 0.1f;
 		size_t smoothing_frames = 10;
+		float correction_margin = 0.1f;
+		bool crop_to_margins = false;
+		bool lock_focus = true; // TODO: implement (unlocked crop region)
 	};
 
 	class PathStabilizer : public Configurable<PathStabilizerSettings>
@@ -41,7 +43,7 @@ namespace lvk
 
 		PathStabilizer(const PathStabilizerSettings& settings = {});
 		
-		const cv::UMat& stabilize(const cv::UMat& frame, const Homography& velocity);
+		void stabilize(const Frame& input, Frame& output, const Homography& velocity);
 
 		virtual void configure(const PathStabilizerSettings& settings = {}) override;
 
@@ -66,12 +68,12 @@ namespace lvk
 		);
 
 	private:
-		SlidingBuffer<cv::UMat> m_FrameQueue;
+		SlidingBuffer<Frame> m_FrameQueue;
 		SlidingBuffer<FrameVector> m_Trajectory;
 		SlidingBuffer<double> m_SmoothingFilter;
 
 		cv::Rect m_FocusArea{0,0,0,0};
-		cv::UMat m_NullFrame, m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 	struct FrameVector

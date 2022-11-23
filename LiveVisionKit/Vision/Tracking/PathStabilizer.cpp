@@ -32,12 +32,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const cv::UMat& PathStabilizer::stabilize(const cv::UMat& frame, const Homography& velocity)
+	void PathStabilizer::stabilize(
+		const Frame& input,
+		Frame& output,
+		const Homography& velocity
+	)
 	{
-		LVK_ASSERT(!frame.empty());
+		LVK_ASSERT(!input.empty());
 
-		auto& new_frame = m_FrameQueue.advance();
-		frame.copyTo(new_frame);
+		m_FrameQueue.advance().copy_from(input);
 
 		auto& frame_vector = m_Trajectory.advance();
 		frame_vector.velocity = velocity;
@@ -45,11 +48,11 @@ namespace lvk
 
 		if(ready())
 		{
-			auto& next_frame = m_FrameQueue.oldest();
+			auto& output_frame = m_FrameQueue.oldest();
 			const auto& [displacement, velocity] = m_Trajectory.centre();
 
 			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{0,0,0,0}
-				: crop(next_frame.size(), m_Settings.correction_limit);
+				: crop(output_frame.size(), m_Settings.correction_margin);
 
 			const auto trajectory_correction = m_Trajectory.convolve_at(
 				m_SmoothingFilter,
@@ -58,12 +61,19 @@ namespace lvk
 
 			auto stabilizing_velocity = velocity + trajectory_correction;
 			if (!m_FocusArea.empty())
-				stabilizing_velocity = clamp_velocity(stabilizing_velocity, next_frame.size(), m_FocusArea);
+				stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_FocusArea);
 
-			stabilizing_velocity.warp(next_frame, m_WarpFrame);
-			return m_WarpFrame;
+			stabilizing_velocity.warp(output_frame.data, m_WarpFrame);
+
+			// NOTE: we create a new Frame everytime we copy the input to the frame queue
+			// so it is safe to directly move the output frame to the output for the user. 
+			output_frame.copy_from(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
+			output = std::move(output_frame);
+
+			// Skip for consistency
+			m_FrameQueue.skip();
+			m_Trajectory.skip();
 		}
-		return m_NullFrame;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -72,7 +82,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings.smoothing_frames >= 2);
 		LVK_ASSERT(settings.smoothing_frames % 2 == 0);
-		LVK_ASSERT(between_strict(settings.correction_limit, 0.0f, 1.0f));
+		LVK_ASSERT(between_strict(settings.correction_margin, 0.0f, 1.0f));
 		LVK_ASSERT(settings.lock_focus == true && "THIS IS UNIMPLEMENTED!"); // TODO: implement & remove
 
 		m_Settings = settings;
