@@ -32,7 +32,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 	
-	void DeblockingFilter::process(cv::UMat& frame, const bool debug)
+	void DeblockingFilter::process(const Frame& input, Frame& output, const bool debug)
 	{
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -46,19 +46,27 @@ namespace lvk
 		// of threshold less strict for the user; multiple thresholds are used, each
 		// with their own weighting that increases as details become stronger.
 
+		// Ensure that the output exists
+		output.try_allocate(input.size(), input.type());
+
 		const int macroblock_size = static_cast<int>(m_Settings.block_size);
-		const cv::Size macroblock_extent = frame.size() / macroblock_size;
+		const cv::Size macroblock_extent = input.size() / macroblock_size;
 		const cv::Rect macroblock_region({0,0}, macroblock_extent * macroblock_size);
-		cv::UMat filter_ref = frame(macroblock_region);
+
+		// Resolutions such as 1920x1080 may not be evenly divisible by macroblocks.
+		// We ignore areas containing partial blocks by applying the filter on only
+		// the region of the frame which consists of only full macroblocks. 
+		cv::UMat input_region = input.data(macroblock_region);
+		cv::UMat output_region = output.data(macroblock_region);
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
-		cv::resize(filter_ref, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
+		cv::resize(input_region, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
 		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, m_Settings.filter_size);
 		cv::resize(m_DeblockBuffer, m_SmoothFrame, macroblock_region.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Generate reference frame
-		cv::extractChannel(filter_ref, m_DetectionFrame, 0);
+		cv::extractChannel(input_region, m_DetectionFrame, 0);
 		cv::resize(m_DetectionFrame, m_BlockGrid, macroblock_extent, 0, 0, cv::INTER_AREA);
 		cv::resize(m_BlockGrid, m_ReferenceFrame, m_DetectionFrame.size(), 0, 0, cv::INTER_NEAREST);
 		cv::absdiff(m_DetectionFrame, m_ReferenceFrame, m_DetectionFrame);
@@ -75,7 +83,7 @@ namespace lvk
 			m_FloatBuffer.setTo(cv::Scalar((l + 1.0) * level_step), m_BlockMask);
 		}
 
-		cv::resize(m_FloatBuffer, m_KeepBlendMap, filter_ref.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_FloatBuffer, m_KeepBlendMap, input_region.size(), 0, 0, cv::INTER_LINEAR);
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Set smoothing frame to magenta so that we can see all the detection levels.
@@ -84,11 +92,11 @@ namespace lvk
 
 		// Adaptively blend original and smooth frames
 		cv::blendLinear(
-			filter_ref,
+			input_region,
 			m_SmoothFrame,
 			m_KeepBlendMap,
 			m_DeblockBlendMap,
-			filter_ref
+			output_region
 		);
 	}
 

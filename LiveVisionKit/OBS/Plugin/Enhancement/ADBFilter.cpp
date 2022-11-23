@@ -101,12 +101,15 @@ namespace lvk
 
 	void ADBFilter::filter(cv::UMat& frame)
 	{
-		if (m_TestMode)
+		//TODO: replace this with FrameBuffer once that is converted
+		Frame buffer = Frame::Wrap(frame);
+		
+		if(m_TestMode)
 		{
-			m_Filter.profile(frame, m_FrameTimer, true);
-			draw_debug_hud(frame);
+			m_Filter.profile(buffer, buffer, m_FrameTimer, true);
+			draw_debug_hud(buffer.data);
 		}
-		else m_Filter.process(frame);
+		else m_Filter.process(buffer, buffer);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

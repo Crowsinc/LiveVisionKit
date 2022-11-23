@@ -38,9 +38,10 @@ namespace lvk
 
 		DeblockingFilter(DeblockingSettings settings = {});
 
-		virtual void process(cv::UMat& frame, const bool debug = false) override;
+		// NOTE: Supports in-place operation. 
+		void process(const Frame& input, Frame& output, const bool debug = false) override;
 		
-		virtual void configure(const DeblockingSettings& settings = {}) override;
+		void configure(const DeblockingSettings& settings = {}) override;
 
 	private:
 		cv::UMat m_SmoothFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};

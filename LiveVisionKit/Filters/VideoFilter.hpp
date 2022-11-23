@@ -17,7 +17,6 @@
 
 #pragma once
 
-
 #include <functional>
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
@@ -32,6 +31,66 @@ namespace lvk
 	// TODO: Deal with format changes in video processing for CLI 
 	// That is, videos may be of different formats (BGR, YUV, etc.)
 
+	struct Frame
+	{
+		cv::UMat data;
+		uint64_t timestamp;
+
+		static Frame&& Allocate(
+			const cv::Size& size,
+			const int type,
+			const uint32_t timestamp = 0
+		);
+
+		static Frame&& Allocate(
+			const uint32_t width,
+			const uint32_t height,
+			const int type,
+			const uint32_t timestamp = 0
+		);
+
+		static Frame&& Wrap(
+			cv::UMat& frame,
+			const uint32_t timestamp = 0
+		);
+
+		static Frame&& Copy(
+			const cv::UMat& frame,
+			const uint32_t timestamp = 0
+		);
+
+		Frame();
+
+		Frame(Frame&& frame);
+
+		virtual ~Frame() = default;
+
+		void operator=(Frame&& frame);
+
+		void try_allocate(const cv::Size& size, const int type);
+		
+		void try_allocate(const uint32_t width, const uint32_t height, const int type);
+
+		void copy_from(const cv::UMat& src);
+		
+		void copy_from(const Frame& src);
+		
+		Frame&& copy() const;
+
+		uint32_t width() const;
+
+		uint32_t height() const;
+
+		cv::Size size() const;
+
+		bool empty() const;
+
+		int type() const;
+
+	};
+
+
+
 	class VideoFilter : public Unique<VideoFilter>
 	{
 	public:
@@ -41,7 +100,8 @@ namespace lvk
 		virtual ~VideoFilter() = default;
 
 		virtual void process(
-			cv::UMat& frame,
+			const Frame& input,
+			Frame& output,
 			const bool debug = false
 		) = 0;
 
@@ -49,11 +109,12 @@ namespace lvk
 			cv::VideoCapture& input_stream,
 			cv::VideoWriter& output_stream,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, cv::UMat&)> callback = [](auto&, auto&) {}
+			const std::function<void(VideoFilter&, Frame&)> callback = [](auto&, auto&) {}
 		);
 		
 		virtual void profile(
-			cv::UMat& frame,
+			const Frame& input,
+			Frame& output,
 			Stopwatch& timer,
 			const bool debug = false
 		);
@@ -63,7 +124,7 @@ namespace lvk
 			cv::VideoWriter& output_stream,
 			Stopwatch& timer,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, cv::UMat&, Stopwatch&)> callback = [](auto&, auto&, auto&) {}
+			const std::function<void(VideoFilter&, Frame&, Stopwatch&)> callback = [](auto&, auto&, auto&) {}
 		);
 
 		const std::string& alias() const;
