@@ -23,10 +23,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Stopwatch::Stopwatch(const uint32_t history)
+	Stopwatch::Stopwatch(const size_t history)
 		: m_Running(false),
-		m_StartTime(),
-		m_Elapsed()
+		  m_StartTime(),
+		  m_Elapsed(),
+		  m_History(history)
 	{
 		LVK_ASSERT(history > 0);
 	}

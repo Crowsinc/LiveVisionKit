@@ -26,7 +26,7 @@ namespace lvk
 	{
 	public:
 
-		Stopwatch(const uint32_t history = 1);
+		Stopwatch(const size_t history = 1);
 
 		void start();
 
