@@ -21,15 +21,13 @@
 #include <obs-module.h>
 
 #include "FrameIngest.hpp"
+#include "Filters/VideoFilter.hpp"
 
 namespace lvk
 {
 
-	struct FrameBuffer
+	struct FrameBuffer : public Frame
 	{
-		cv::UMat frame;
-		uint64_t timestamp;
-
 		FrameBuffer();
 
 		~FrameBuffer();
@@ -37,12 +35,6 @@ namespace lvk
 		FrameBuffer(FrameBuffer&& buffer);
 
 		void operator=(FrameBuffer&& buffer);
-
-		uint32_t width() const;
-		
-		uint32_t height() const;
-		
-		bool empty() const;
 
 		bool try_upload_frame(obs_source_frame* obs_frame);
 

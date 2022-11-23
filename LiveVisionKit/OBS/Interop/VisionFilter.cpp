@@ -294,7 +294,7 @@ namespace lvk
 			// occur during normal operation.
 			if (!acquire_render(buffer))
 			{
-				buffer.frame.release();
+				buffer.data.release();
 				obs_source_skip_video_filter(m_Context);
 
 				log::warn(
@@ -502,7 +502,7 @@ namespace lvk
 
 	void VisionFilter::filter(FrameBuffer& buffer)
 	{
-		filter(buffer.frame);
+		filter(buffer.data);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -27,7 +27,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameBuffer::FrameBuffer()
-		: timestamp(0)
+		: Frame()
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -60,45 +60,16 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameBuffer::FrameBuffer(FrameBuffer&& buffer)
-		: frame(buffer.frame),
-		  timestamp(buffer.timestamp)
-	{
-		buffer.frame.release();
-		buffer.timestamp = 0;
-	}
+		: Frame(static_cast<Frame&&>(buffer))
+	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void FrameBuffer::operator=(FrameBuffer&& buffer)
 	{
-		frame = buffer.frame;
-		timestamp = buffer.timestamp;
-
-		buffer.frame.release();
-		buffer.timestamp = 0;
+		Frame::operator=(std::move(buffer));
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t FrameBuffer::width() const
-	{
-		return frame.cols;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t FrameBuffer::height() const
-	{
-		return frame.rows;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool FrameBuffer::empty() const
-	{
-		return frame.empty();
-	}
-	
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FrameBuffer::try_upload_frame(obs_source_frame* obs_frame)
@@ -110,7 +81,7 @@ namespace lvk
 
 		if (m_FrameIngest)
 		{
-			m_FrameIngest->upload(obs_frame, frame);
+			m_FrameIngest->upload(obs_frame, data);
 			timestamp = obs_frame->timestamp;
 			return true;
 		}
@@ -129,7 +100,7 @@ namespace lvk
 
 		if (m_FrameIngest)
 		{
-			m_FrameIngest->download(frame, obs_frame);
+			m_FrameIngest->download(data, obs_frame);
 			timestamp = obs_frame->timestamp;
 			return true;
 		}
@@ -185,8 +156,8 @@ namespace lvk
 		}
 
 		// Convert from RGBA to YUV
-		cv::cvtColor(m_ConversionBuffer, frame, cv::COLOR_RGBA2RGB);
-		cv::cvtColor(frame, frame, cv::COLOR_RGB2YUV);
+		cv::cvtColor(m_ConversionBuffer, data, cv::COLOR_RGBA2RGB);
+		cv::cvtColor(data, data, cv::COLOR_RGB2YUV);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -195,15 +166,15 @@ namespace lvk
 	{
 		LVK_ASSERT(texture != nullptr);
 		LVK_ASSERT(gs_texture_get_color_format(texture) == GS_RGBA);
-		LVK_ASSERT(gs_texture_get_width(texture) == frame.cols);
-		LVK_ASSERT(gs_texture_get_height(texture) == frame.rows);
+		LVK_ASSERT(gs_texture_get_width(texture) == data.cols);
+		LVK_ASSERT(gs_texture_get_height(texture) == data.rows);
 
 		// Convert from YUV to RGBA
-		cv::cvtColor(frame, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
+		cv::cvtColor(data, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
 
 		if (lvk::ocl::InteropContext::Available())
 		{
-			prepare_interop_buffer(frame.cols, frame.rows);
+			prepare_interop_buffer(data.cols, data.rows);
 			
 			lvk::ocl::InteropContext::Export(m_ConversionBuffer, m_InteropBuffer);
 			gs_copy_texture(texture, m_InteropBuffer);
@@ -212,8 +183,8 @@ namespace lvk
 		{
 			prepare_texture(
 				m_WriteBuffer,
-				frame.cols,
-				frame.rows,
+				data.cols,
+				data.rows,
 				GS_RGBA,
 				GS_DYNAMIC
 			);
@@ -222,8 +193,8 @@ namespace lvk
 			gs_texture_map(m_WriteBuffer, &m_MappedData, &linesize);
 		
 			m_ConversionBuffer.copyTo(cv::Mat(
-				frame.rows,
-				frame.cols,
+				data.rows,
+				data.cols,
 				CV_8UC4,
 				m_MappedData,
 				linesize
