@@ -17,8 +17,10 @@
 
 #pragma once
 
-#include <obs.h>
 #include <string>
+#include <format>
+#include <iostream>
+#include <exception>
 
 // taken from https://stackoverflow.com/a/8488201
 #ifdef _WIN32
@@ -27,12 +29,13 @@
 #define LVK_FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-#ifndef DISABLE_CHECKS
+#ifndef LVK_DISABLE_CHECKS
 
-#define LVK_ASSERT(assertion)															\
-	if(!(assertion))																	\
-	{																					\
-		bcrash("[LiveVisionKit] %s@%s(..) Failed " #assertion " ", LVK_FILE, __func__); \
+#define LVK_ASSERT(assertion)																							\
+	if(!(assertion))																									\
+	{																													\
+		std::cerr << std::format("[LiveVisionKit] {}@{}(..) Failed " #assertion " ", LVK_FILE, __func__) << std::endl;  \
+		std::terminate();																								\
 	} 
 
 #else
