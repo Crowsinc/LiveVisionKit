@@ -46,13 +46,13 @@ namespace lvk
 		frame_vector.velocity = velocity;
 		frame_vector.displacement = m_Trajectory.previous().displacement + velocity;
 
-		if(ready())
+		if (ready())
 		{
 			auto& output_frame = m_FrameQueue.oldest();
 			const auto& [displacement, velocity] = m_Trajectory.centre();
 
-			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{0,0,0,0}
-				: crop(output_frame.size(), m_Settings.correction_margin);
+			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{ 0,0,0,0 }
+			: crop(output_frame.size(), m_Settings.correction_margin);
 
 			const auto trajectory_correction = m_Trajectory.convolve_at(
 				m_SmoothingFilter,
@@ -71,6 +71,7 @@ namespace lvk
 			output_frame.copy_from(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
 			output = std::move(output_frame);
 		}
+		else output = std::move(m_NullFrame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

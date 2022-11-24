@@ -72,6 +72,7 @@ namespace lvk
 		SlidingBuffer<FrameVector> m_Trajectory;
 		SlidingBuffer<double> m_SmoothingFilter;
 
+		Frame m_NullFrame;
 		cv::Rect m_FocusArea{0,0,0,0};
 		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
