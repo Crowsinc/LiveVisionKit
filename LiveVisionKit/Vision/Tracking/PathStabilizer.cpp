@@ -40,7 +40,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!input.empty());
 
-		m_FrameQueue.advance().copy_from(input);
+		m_FrameQueue.advance().copy(input);
 
 		auto& frame_vector = m_Trajectory.advance();
 		frame_vector.velocity = velocity;
@@ -68,7 +68,7 @@ namespace lvk
 			// NOTE: we create a new Frame everytime we copy the input to the frame queue
 			// so it is safe to directly move the output frame to the output for the user. 
 			// Also note that this does mean that the oldest frame will become empty. 
-			output_frame.copy_from(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
+			output_frame.copy(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
 			output = std::move(output_frame);
 		}
 		else output = std::move(m_NullFrame);

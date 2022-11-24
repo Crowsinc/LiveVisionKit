@@ -31,65 +31,7 @@ namespace lvk
 	// TODO: Deal with format changes in video processing for CLI 
 	// That is, videos may be of different formats (BGR, YUV, etc.)
 
-	struct Frame
-	{
-		cv::UMat data;
-		uint64_t timestamp;
-
-		static Frame&& Allocate(
-			const cv::Size& size,
-			const int type,
-			const uint32_t timestamp = 0
-		);
-
-		static Frame&& Allocate(
-			const uint32_t width,
-			const uint32_t height,
-			const int type,
-			const uint32_t timestamp = 0
-		);
-
-		static Frame&& Wrap(
-			cv::UMat& frame,
-			const uint32_t timestamp = 0
-		);
-
-		static Frame&& Copy(
-			const cv::UMat& frame,
-			const uint32_t timestamp = 0
-		);
-
-		Frame();
-
-		Frame(Frame&& frame);
-
-		virtual ~Frame() = default;
-
-		void operator=(Frame&& frame);
-
-		void try_allocate(const cv::Size& size, const int type);
-		
-		void try_allocate(const uint32_t width, const uint32_t height, const int type);
-
-		void copy_from(const cv::UMat& src);
-		
-		void copy_from(const Frame& src);
-		
-		Frame&& copy() const;
-
-		uint32_t width() const;
-
-		uint32_t height() const;
-
-		cv::Size size() const;
-
-		bool empty() const;
-
-		int type() const;
-
-	};
-
-
+	struct Frame;
 
 	class VideoFilter : public Unique<VideoFilter>
 	{
@@ -131,6 +73,66 @@ namespace lvk
 
 	private:
 		const std::string m_Alias;
+	};
+
+
+	struct Frame
+	{
+		cv::UMat data;
+		uint64_t timestamp;
+
+		static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
+
+		Frame(const uint64_t timestamp = 0);
+
+		// NOTE: copies the frame, use Wrap() to reference
+		Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
+
+		Frame(
+			const cv::Size& size,
+			const int type,
+			const uint64_t timestamp = 0
+		);
+
+		Frame(
+			const uint32_t width,
+			const uint32_t height,
+			const int type,
+			const uint64_t timestamp = 0
+		);
+
+		Frame(const Frame& frame);
+
+		Frame(Frame&& frame) noexcept;
+
+		virtual ~Frame() = default;
+
+		void operator=(Frame&& frame) noexcept;
+
+		void default_to(const cv::Size& size, const int type);
+		
+		void default_to(const uint32_t width, const uint32_t height, const int type);
+
+		void allocate(const cv::Size& size, const int type);
+
+		void allocate(const uint32_t width, const uint32_t height, const int type);
+
+		void copy(const cv::UMat& src);
+
+		void copy(const Frame& src);
+
+		Frame clone() const;
+
+		uint32_t width() const;
+
+		uint32_t height() const;
+
+		cv::Size size() const;
+
+		bool empty() const;
+
+		int type() const;
+
 	};
 
 }

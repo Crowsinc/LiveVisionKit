@@ -47,7 +47,7 @@ namespace lvk
 		// with their own weighting that increases as details become stronger.
 
 		// Ensure that the output exists
-		output.try_allocate(input.size(), input.type());
+		output.default_to(input.size(), input.type());
 
 		const int macroblock_size = static_cast<int>(m_Settings.block_size);
 		const cv::Size macroblock_extent = input.size() / macroblock_size;

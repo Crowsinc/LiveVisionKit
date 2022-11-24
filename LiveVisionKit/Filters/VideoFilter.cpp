@@ -113,59 +113,51 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame&& Frame::Allocate(
-        const cv::Size& size,
-        const int type,
-        const uint32_t timestamp
-    )
-    {
-        Frame frame;
-        frame.timestamp = timestamp;
-        frame.try_allocate(size, type);
-        return std::move(frame);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    Frame&& Frame::Allocate(
-        const uint32_t width,
-        const uint32_t height,
-        const int type,
-        const uint32_t timestamp
-    )
-    {
-        Frame frame;
-        frame.timestamp = timestamp;
-        frame.try_allocate(width, height, type);
-        return std::move(frame);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    Frame&& Frame::Wrap(cv::UMat& frame, const uint32_t timestamp)
+    Frame Frame::Wrap(cv::UMat& frame, const uint64_t timestamp)
     {
         Frame wrapped_frame;
         wrapped_frame.data = frame;
         wrapped_frame.timestamp = timestamp;
-        return std::move(wrapped_frame);
+        return wrapped_frame;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame&& Frame::Copy(const cv::UMat& frame, const uint32_t timestamp = 0)
-    {
-        Frame copy_frame;
-        copy_frame.copy_from(frame);
-        copy_frame.timestamp = timestamp;
-        return std::move(copy_frame);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    Frame::Frame()
+    Frame::Frame(const uint64_t timestamp)
         : data(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-          timestamp(0)
+          timestamp(timestamp)
     {}
+
+//---------------------------------------------------------------------------------------------------------------------
+    
+    Frame::Frame(const cv::UMat& frame, const uint64_t timestamp)
+        : data(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+          timestamp(timestamp)
+    {
+        frame.copyTo(data);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame::Frame(const cv::Size& size, const int type, const uint64_t timestamp)
+        : data(size, type, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+          timestamp(timestamp)
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame::Frame(const uint32_t width, const uint32_t height, const int type, const uint64_t timestamp)
+        : data(height, width, type, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+          timestamp(timestamp)
+    {}
+
+ //---------------------------------------------------------------------------------------------------------------------
+
+    Frame::Frame(const Frame& frame)
+        : timestamp(frame.timestamp)
+    {
+        frame.data.copyTo(data);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -190,8 +182,25 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Frame::try_allocate(const cv::Size& size, const int type)
+    void Frame::default_to(const cv::Size& size, const int type)
     {
+        if(empty())
+            allocate(size, type);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Frame::default_to(const uint32_t width, const uint32_t height, const int type)
+    {
+        if(empty())
+            allocate(width, height, type);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Frame::allocate(const cv::Size& size, const int type)
+    {
+        data.release();
         data.create(
             size,
             type,
@@ -201,8 +210,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Frame::try_allocate(const uint32_t width, const uint32_t height, const int type)
+    void Frame::allocate(const uint32_t width, const uint32_t height, const int type)
     {
+        data.release();
         data.create(
             height,
             width,
@@ -213,23 +223,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Frame::copy_from(const cv::UMat& src)
+    void Frame::copy(const cv::UMat& src)
     {
         src.copyTo(data);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Frame::copy_from(const Frame& src)
+    void Frame::copy(const Frame& src)
     {
         src.data.copyTo(data);
+        timestamp = src.timestamp;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame&& Frame::copy() const
+    Frame Frame::clone() const
     {
-        return Frame::Copy(data, timestamp);
+        return Frame(data, timestamp);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
