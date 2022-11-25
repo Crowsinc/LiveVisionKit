@@ -51,8 +51,11 @@ namespace lvk
 		//TODO: Replace with C++20 time calender and timezone functionality
 		std::tm tm;
 		std::time_t time = std::time(0);
+#ifdef WIN32
 		localtime_s(&tm, &time);
-
+#else
+        localtime_r(&time, &tm);
+#endif
 		stream << std::put_time(&tm, format);
 		return stream.str();
 	}
