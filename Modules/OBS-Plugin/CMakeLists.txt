@@ -3,6 +3,7 @@ project(lvk-obs VERSION 1.3.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 add_library(${PROJECT_NAME} SHARED)
+set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "LVK OBS-Plugin")
 
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 message(STATUS "${MI}Plugin Version: ${PROJECT_VERSION}")

@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${LVK_DEBUG_POSTFIX})
+set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "LiveVisionKit")
 
 if(DISABLE_CHECKS)
     add_definitions(-DLVK_DISABLE_CHECKS)
