@@ -18,8 +18,7 @@
 #include "FrameBuffer.hpp"
 
 #include "InteropContext.hpp"
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Utility/Graphics.hpp"
+#include "Utility/Graphics.hpp"
 
 namespace lvk
 {

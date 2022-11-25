@@ -17,12 +17,10 @@
 
 #include "VisionFilter.hpp"
 
-#include "OBS/Effects/DefaultEffect.hpp"
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Utility/Graphics.hpp"
-#include "OBS/Utility/Logging.hpp"
+#include "Effects/DefaultEffect.hpp"
+#include "Utility/Graphics.hpp"
+#include "Utility/Logging.hpp"
 #include "FrameIngest.hpp"
-#include "Math/Logic.hpp"
 
 #include <util/platform.h>
 

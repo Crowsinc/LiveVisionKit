@@ -17,14 +17,15 @@
 
 #pragma once
 
-#include <obs-module.h>
+#include <LiveVisionKit.hpp>
 #include <opencv2/core.hpp>
+#include <obs-module.h>
+
 #include <unordered_map>
 #include <mutex>
 #include <deque>
 
 #include "FrameBuffer.hpp"
-#include "Utility/Timing/TickTimer.hpp"
 
 namespace lvk
 {

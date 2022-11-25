@@ -15,8 +15,9 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "OBS/Utility/Logging.hpp"
-#include "Diagnostics/Directives.hpp"
+#include <Diagnostics/Directives.hpp>
+
+#include "Utility/Logging.hpp"
 
 namespace lvk
 {

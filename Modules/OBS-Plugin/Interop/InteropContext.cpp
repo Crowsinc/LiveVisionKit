@@ -17,8 +17,9 @@
 
 #include "InteropContext.hpp"
 
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Utility/Logging.hpp"
+#include <LiveVisionKit.hpp>
+
+#include "Utility/Logging.hpp"
 
 #ifdef _WIN32
 #include <dxgi.h>

@@ -17,8 +17,8 @@
 
 #include "FSRFilter.hpp"
 
-#include "OBS/Effects/FSREffect.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Effects/FSREffect.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

@@ -19,8 +19,8 @@
 
 #include <obs-module.h>
 
-#include "OBS/Utility/OBSDispatch.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Utility/OBSDispatch.hpp"
+#include "Utility/Locale.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 

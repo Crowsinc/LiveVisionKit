@@ -20,9 +20,9 @@
 #include <sstream>
 #include <util/platform.h>
 
-#include "OBS/Effects/FSREffect.hpp"
-#include "OBS/Effects/DefaultEffect.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Effects/FSREffect.hpp"
+#include "Effects/DefaultEffect.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

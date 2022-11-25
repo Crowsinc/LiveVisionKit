@@ -17,8 +17,7 @@
 
 #include "DefaultEffect.hpp"
 
-#include "Diagnostics/Directives.hpp"
-#include "Math/Logic.hpp"
+#include <LiveVisionKit.hpp>
 
 namespace lvk
 {

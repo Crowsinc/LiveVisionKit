@@ -20,9 +20,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <obs-module.h>
-
-#include <thread>
 #include <optional>
+#include <thread>
 
 namespace lvk::ocl 
 {

@@ -17,7 +17,7 @@
 
 #include "Graphics.hpp"
 
-#include "Diagnostics/Directives.hpp"
+#include <LiveVisionKit.hpp>
 
 namespace lvk
 {

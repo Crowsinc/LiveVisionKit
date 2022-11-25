@@ -17,8 +17,8 @@
 
 #include "CASFilter.hpp"
 
-#include "OBS/Effects/CASEffect.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Effects/CASEffect.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

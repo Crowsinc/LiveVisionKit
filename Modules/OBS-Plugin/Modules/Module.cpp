@@ -18,12 +18,13 @@
 #include <obs-module.h>
 #include <opencv2/core/ocl.hpp>
 
-#include "OBS/Interop/InteropContext.hpp"
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Utility/Logging.hpp"
+#include <LiveVisionKit.hpp>
 
-#include "OBS/Effects/FSREffect.hpp"
-#include "OBS/Effects/CASEffect.hpp"
+#include "Interop/InteropContext.hpp"
+#include "Utility/Logging.hpp"
+
+#include "Effects/FSREffect.hpp"
+#include "Effects/CASEffect.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 

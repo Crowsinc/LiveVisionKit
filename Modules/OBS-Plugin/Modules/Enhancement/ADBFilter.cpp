@@ -20,7 +20,7 @@
 #include <util/platform.h>
 #include <functional>
 
-#include "OBS/Utility/Locale.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

@@ -17,11 +17,11 @@
 
 #pragma once
 
+#include <LiveVisionKit.hpp>
 #include <opencv2/core.hpp>
 #include <obs-module.h>
 
 #include "FrameIngest.hpp"
-#include "Filters/VideoFilter.hpp"
 
 namespace lvk
 {

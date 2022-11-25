@@ -18,11 +18,11 @@
 #include "CASEffect.hpp"
 
 #include "Math/Math.hpp"
-#include "OBS/Utility/Logging.hpp"
+#include "Utility/Logging.hpp"
 
 #define A_CPU 1
-#include "../Data/effects/ffx_a.h"
-#include "../Data/effects/ffx_cas.h"
+#include "Data/effects/ffx_a.h"
+#include "Data/effects/ffx_cas.h"
 
 namespace lvk
 {

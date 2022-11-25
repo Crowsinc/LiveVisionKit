@@ -17,8 +17,8 @@
 
 #include "LCFilter.hpp"
 
-#include "OBS/Plugin/Tools/CCTool.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Modules/Tools/CCTool.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

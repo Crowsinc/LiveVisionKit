@@ -16,8 +16,8 @@
 // 	  **********************************************************************
 
 #include <obs-module.h>
+#include <Diagnostics/Directives.hpp>
 
-#include "Diagnostics/Directives.hpp"
 #include "Logging.hpp"
 
 namespace lvk::dispatch

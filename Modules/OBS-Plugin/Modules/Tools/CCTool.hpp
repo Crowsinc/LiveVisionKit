@@ -18,12 +18,11 @@
 #pragma once
 
 #include <util/config-file.h>
-
-#include "LiveVisionKit.hpp"
-#include "OBS/Interop/VisionFilter.hpp"
-
+#include <LiveVisionKit.hpp>
 #include <optional>
 #include <string>
+
+#include "Interop/VisionFilter.hpp"
 
 namespace lvk
 {

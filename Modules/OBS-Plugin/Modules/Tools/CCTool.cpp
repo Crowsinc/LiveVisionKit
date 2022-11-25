@@ -19,8 +19,8 @@
 
 #include <filesystem>
 
-#include "OBS/Utility/Logging.hpp"
-#include "OBS/Utility/Locale.hpp"
+#include "Utility/Logging.hpp"
+#include "Utility/Locale.hpp"
 
 namespace lvk
 {

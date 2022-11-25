@@ -19,11 +19,9 @@
 
 #include <tuple>
 #include <thread>
+#include <LiveVisionKit.hpp>
 
-#include "Math/Math.hpp"
-#include "Math/Logic.hpp"
-#include "Diagnostics/Directives.hpp"
-#include "OBS/Utility/Logging.hpp"
+#include "Utility/Logging.hpp"
 
 #ifdef _WIN32
 #include <dxgi.h>
