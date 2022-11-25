@@ -35,7 +35,12 @@ endif()
 set(OBS_BUILD_PATH "" CACHE PATH "The path to the OBS-Studio build folder")
 
 set(OBS_REL_INCLUDE_PATH "/../libobs/")
-set(OBS_REL_LIB_PATH "/install/bin/64bit/obs.lib")
+if(WIN32)
+    set(OBS_REL_LIB_PATH "/install/bin/64bit/obs.lib")
+else()
+    set(OBS_REL_LIB_PATH "/install/bin/obs")
+endif()
+
 if(OBS_BUILD_PATH STREQUAL "")
     message(FATAL_ERROR "OBS_BUILD_PATH was not provided!")
 else()
