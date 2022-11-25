@@ -39,7 +39,7 @@ namespace lvk
 		if (m_Settings.stabilize_output)
 		{
 			cv::extractChannel(input.data, m_TrackingFrame, 0);
-			auto tracked_motion = m_FrameTracker.track(m_TrackingFrame);
+			tracked_motion = m_FrameTracker.track(m_TrackingFrame);
 
 			if (debug)
 			{
