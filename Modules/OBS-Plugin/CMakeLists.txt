@@ -137,7 +137,7 @@ else()
         install(
             TARGETS ${PROJECT_NAME}
             CONFIGURATIONS Release MinSizeRel RelWithDebInfo
-            RUNTIME DESTINATION "${INSTALL_DIR}${PLUGIN_RELEASE_BIN_DIR}"
+            DESTINATION "${INSTALL_DIR}${PLUGIN_RELEASE_BIN_DIR}"
         )
         install(
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Data/
@@ -150,7 +150,7 @@ else()
     install(
         TARGETS ${PROJECT_NAME}
         CONFIGURATIONS Debug
-        RUNTIME DESTINATION "${PLUGIN_DEBUG_RELEASE_ROOT_DIR}${PLUGIN_RELEASE_BIN_DIR}"
+        DESTINATION "${PLUGIN_DEBUG_RELEASE_ROOT_DIR}${PLUGIN_RELEASE_BIN_DIR}"
     )
     install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Data/
