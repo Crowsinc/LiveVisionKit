@@ -18,7 +18,7 @@
 #pragma once
 
 #include <string>
-#include <format>
+#include <cstring>
 #include <iostream>
 #include <exception>
 
@@ -31,12 +31,12 @@
 
 #ifndef LVK_DISABLE_CHECKS
 
-#define LVK_ASSERT(assertion)																							\
-	if(!(assertion))																									\
-	{																													\
-		std::cerr << std::format("[LiveVisionKit] {}@{}(..) Failed " #assertion " ", LVK_FILE, __func__) << std::endl;  \
-		std::terminate();																								\
-	} 
+#define LVK_ASSERT(assertion)																						   \
+	if(!(assertion))																								   \
+	{                                                                                                                  \
+        std::cerr << "[LiveVisionKit] " << (LVK_FILE) << "@" << __func__ << "(..) Failed " #assertion " " << std::endl;\
+		std::abort();																							       \
+	}
 
 #else
 

@@ -17,7 +17,6 @@
 
 #include "VSFilter.hpp"
 
-#include <sstream>
 #include <util/platform.h>
 
 #include "Effects/FSREffect.hpp"
@@ -279,7 +278,7 @@ namespace lvk
 
 		draw::text(
 			frame,
-			std::format("{:.2f}ms ({:.2f}ms)", frame_time_ms, deviation_ms),
+            cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			crop_region.tl() + cv::Point(5, 40),
 			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
 		);

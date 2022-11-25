@@ -119,9 +119,10 @@ namespace lvk
 		const float frame_time_ms = m_FrameTimer.average().milliseconds();
 		const float deviation_ms = m_FrameTimer.deviation().milliseconds();
 
+
 		draw::text(
 			frame,
-			std::format("{:.2f}ms ({:.2f}ms)", frame_time_ms, deviation_ms),
+            cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			cv::Point(5, 40),
 			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
 		);
