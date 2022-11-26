@@ -30,7 +30,7 @@ namespace lvk
 		
 		Logger(std::ostream& stream = std::cout);
 
-		virtual ~Logger();
+		virtual ~Logger() = default;
 
 		template<typename T>
 		Logger& write(const T& object);
