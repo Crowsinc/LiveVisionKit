@@ -48,7 +48,7 @@ namespace lvk
 		Logger& operator+(const T& object);
 
 		std::ostream& raw();
-		
+
 		void next();
 
 		virtual void flush();
@@ -66,10 +66,6 @@ namespace lvk
 		bool is_new_record() const;
 
 		const std::ios& base_format() const;
-
-		virtual void begin_log(std::ostream& stream);
-
-		virtual void end_log(std::ostream& stream);
 
 		virtual void begin_record(std::ostream& stream);
 
