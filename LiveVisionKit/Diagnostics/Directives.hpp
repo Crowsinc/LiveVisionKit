@@ -40,7 +40,7 @@ namespace lvk::global
 #ifndef LVK_DISABLE_CHECKS
 
 #define LVK_ASSERT(assertion)																						   \
-	if(!!(assertion))																								   \
+	if(!(assertion))																								   \
 	{                                                                                                                  \
         lvk::global::assert_handler(LVK_FILE, __func__, #assertion);                                                   \
 	}
