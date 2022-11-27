@@ -19,8 +19,6 @@
 
 #include <obs-module.h>
 
-// #define LOCALE_SHOW_TAG
-
 #ifndef LOCALE_SHOW_TAG
 
 #define L(tag) obs_module_text(tag)

@@ -11,6 +11,16 @@ message(STATUS "${MI}Plugin Version: ${PROJECT_VERSION}")
 
 # SETTINGS
 option(
+    OBS_PLUGIN_SHOW_LOCALE_TAG
+    "Show locale tags for translations"
+    "OFF"
+)
+if(OBS_PLUGIN_SHOW_LOCALE_TAG)
+    add_definitions(-DLOCALE_SHOW_TAG)
+endif()
+message(STATUS "${MI}Show Locale Tags: ${OBS_PLUGIN_SHOW_LOCALE_TAG}")
+
+option(
     OBS_PLUGIN_AUTO_INSTALL 
     "Automatically install the plugin into the given obs-studio folders (RELEASE ONLY)"
 )
