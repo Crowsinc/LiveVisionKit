@@ -30,11 +30,11 @@ namespace lvk
 	{
 		FrameBuffer();
 
-		~FrameBuffer();
+		~FrameBuffer() override;
 
-		FrameBuffer(FrameBuffer&& buffer);
+		FrameBuffer(FrameBuffer&& buffer) noexcept;
 
-		void operator=(FrameBuffer&& buffer);
+		FrameBuffer& operator=(FrameBuffer&& buffer) noexcept;
 
 		bool try_upload_frame(obs_source_frame* obs_frame);
 

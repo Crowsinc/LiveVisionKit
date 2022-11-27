@@ -28,7 +28,7 @@ namespace lvk
 	StabilizationFilter::StabilizationFilter(const StabilizationSettings& settings)
 		: VideoFilter("Stabilization Filter")
 	{
-		configure(settings);
+		this->configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -53,11 +53,11 @@ namespace lvk
 					2
 				);
 
-				m_Stabilizer.stabilize(debug_frame, output, tracked_motion);
+				m_Stabilizer.stabilize(debug_frame, output, suppress(tracked_motion));
 				return;
 			}
 		}
-		m_Stabilizer.stabilize(input, output, tracked_motion);
+		m_Stabilizer.stabilize(input, output, suppress(tracked_motion));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ namespace lvk
 		// Reset the tracking when disabling the stabilization otherwise we will have 
 		// a discontinuity in the tracking once we start up again with a brand new scene. 
 		if(m_Settings.stabilize_output && !settings.stabilize_output)
-			reset_tracking();
+            reset_context();
 
 		m_Settings = settings;
 
@@ -96,12 +96,12 @@ namespace lvk
 	void StabilizationFilter::restart()
 	{
 		m_Stabilizer.restart();
-		reset_tracking();
+        reset_context();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::reset_tracking()
+	void StabilizationFilter::reset_context()
 	{
 		m_FrameTracker.restart();
 	}

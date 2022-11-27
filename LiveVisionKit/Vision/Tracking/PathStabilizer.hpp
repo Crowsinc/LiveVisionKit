@@ -37,15 +37,15 @@ namespace lvk
 		bool lock_focus = true; // TODO: implement (unlocked crop region)
 	};
 
-	class PathStabilizer : public Configurable<PathStabilizerSettings>
+	class PathStabilizer final : public Configurable<PathStabilizerSettings>
 	{
 	public:
 
-		PathStabilizer(const PathStabilizerSettings& settings = {});
+		explicit PathStabilizer(const PathStabilizerSettings& settings = {});
 		
-		void stabilize(const Frame& input, Frame& output, const Homography& velocity);
+		void stabilize(const Frame& input, Frame& output, const Homography& frame_velocity);
 
-		virtual void configure(const PathStabilizerSettings& settings = {}) override;
+		void configure(const PathStabilizerSettings& settings) override;
 
 		void restart();
 
@@ -82,12 +82,12 @@ namespace lvk
 		Homography displacement;
 		Homography velocity;
 
-		FrameVector(
-			const Homography& displacement = Homography::Zero(),
-			const Homography& velocity = Homography::Zero()
+		explicit FrameVector(
+			Homography frame_displacement = Homography::Zero(),
+			Homography frame_velocity = Homography::Zero()
 		);
 
-		FrameVector operator+(const Homography& velocity) const;
+		FrameVector operator+(const Homography& frame_velocity) const;
 
 		FrameVector operator+(const FrameVector& other) const;
 

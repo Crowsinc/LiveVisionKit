@@ -36,7 +36,7 @@ namespace lvk
 	constexpr auto TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 3.0;
-	constexpr auto TIMING_SAMPLES = 200;
+	constexpr auto TIMING_SAMPLES = 30;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -92,33 +92,30 @@ namespace lvk
 		: VisionFilter(context),
 		  m_Context(context),
 		  m_Filter(),
-		  m_FrameTimer(30)
+		  m_FrameTimer(TIMING_SAMPLES)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADBFilter::filter(cv::UMat& frame)
+	void ADBFilter::filter(FrameBuffer& frame)
 	{
 		//TODO: replace this with FrameBuffer once that is converted
-		Frame buffer = Frame::Wrap(frame);
-		
 		if(m_TestMode)
 		{
-			m_Filter.profile(buffer, buffer, m_FrameTimer, true);
-			draw_debug_hud(buffer.data);
+			m_Filter.profile(frame, frame, m_FrameTimer, true);
+			draw_debug_hud(frame.data);
 		}
-		else m_Filter.process(buffer, buffer);
+		else m_Filter.process(frame, frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void ADBFilter::draw_debug_hud(cv::UMat& frame)
 	{
-		const float frame_time_ms = m_FrameTimer.average().milliseconds();
-		const float deviation_ms = m_FrameTimer.deviation().milliseconds();
-
+		const auto frame_time_ms = m_FrameTimer.average().milliseconds();
+		const auto deviation_ms = m_FrameTimer.deviation().milliseconds();
 
 		draw::text(
 			frame,

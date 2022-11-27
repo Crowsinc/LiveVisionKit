@@ -88,13 +88,16 @@ namespace lvk
 	{
 		// Construct detection grid
 		m_DetectGrid.clear();
-		for(int r = 0; r < m_DetectGridSize.height; r++)
+		for(uint32_t r = 0; r < m_DetectGridSize.height; r++)
 		{
-			for(int c = 0; c < m_DetectGridSize.width; c++)
+			for(uint32_t c = 0; c < m_DetectGridSize.width; c++)
 			{
 				auto& block = m_DetectGrid.emplace_back();
 				block.bounds = cv::Rect2f(
-					cv::Point2f(c * m_DetectBlockSize.width, r * m_DetectBlockSize.height),
+					cv::Point2f(
+                        static_cast<float>(c * m_DetectBlockSize.width),
+                        static_cast<float>(r * m_DetectBlockSize.height)
+                    ),
 					m_DetectBlockSize
 				);
 				block.fast_threshold = DEFAULT_FAST_THRESHOLD;
@@ -120,11 +123,11 @@ namespace lvk
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
 		// Detect new features over the detect grid and process into the feature grid
-		for(auto& [propagations, bounds, fast_threshold] : m_DetectGrid)
+		for(auto& [bounds, fast_threshold, propagations] : m_DetectGrid)
 		{
-			const float propagation_load = static_cast<float>(propagations) / m_FeaturesPerDetectBlock;
+			const float grid_load = static_cast<float>(propagations) / static_cast<float>(m_FeaturesPerDetectBlock);
 
-			if(propagation_load < m_DetectionLoad)
+			if(grid_load < m_DetectionLoad)
 			{
 				m_FASTFeatureBuffer.clear();
 
@@ -293,10 +296,10 @@ namespace lvk
 		const auto centroid = distribution_centroid();
 
 		// Present independent vertical and horizontal qualities. 
-		return cv::Point2f(
-			1.0f - 2 * std::abs((centroid.x / m_Resolution.width) - 0.5f),
-			1.0f - 2 * std::abs((centroid.y / m_Resolution.height) - 0.5f)
-		);
+		return {
+            1.0f - 2 * std::abs((centroid.x / static_cast<float>(m_Resolution.width)) - 0.5f),
+            1.0f - 2 * std::abs((centroid.y / static_cast<float>(m_Resolution.height)) - 0.5f)
+        };
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

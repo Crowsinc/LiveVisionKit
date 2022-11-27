@@ -35,7 +35,7 @@ namespace lvk
 	{
 	public:
 
-		FrameTracker(
+		explicit FrameTracker(
 			const MotionModel model = MotionModel::DYNAMIC,
 			const float estimation_threshold = 0.05,
 			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,1), cv::Size(32,18), 0.3)
@@ -49,9 +49,9 @@ namespace lvk
 
 		MotionModel model() const;
 
-		const float stability() const;
+		float stability() const;
 
-		const std::vector<cv::Point2f> tracking_points() const;
+		const std::vector<cv::Point2f>& tracking_points() const;
 
 	private:
 

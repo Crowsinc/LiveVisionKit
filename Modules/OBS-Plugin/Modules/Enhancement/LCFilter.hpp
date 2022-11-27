@@ -32,7 +32,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		LCFilter(obs_source_t* context);
+		explicit LCFilter(obs_source_t* context);
 
 		void configure(obs_data_t* settings);
 
@@ -42,7 +42,7 @@ namespace lvk
 
 		void prepare_undistort_maps(cv::UMat& frame);
 
-		virtual void filter(cv::UMat& frame) override;
+		void filter(cv::UMat& frame) override;
 
 	private:
 

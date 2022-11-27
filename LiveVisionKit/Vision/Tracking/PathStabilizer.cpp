@@ -17,6 +17,8 @@
 
 #include "PathStabilizer.hpp"
 
+#include <utility>
+
 #include "Math/Math.hpp"
 #include "Math/BoundingQuad.hpp"
 
@@ -27,7 +29,7 @@ namespace lvk
 
 	PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
 	{
-		configure(settings);
+		this->configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -35,16 +37,16 @@ namespace lvk
 	void PathStabilizer::stabilize(
 		const Frame& input,
 		Frame& output,
-		const Homography& velocity
+		const Homography& frame_velocity
 	)
 	{
-		LVK_ASSERT(!input.empty());
+		LVK_ASSERT(!input.is_empty());
 
 		m_FrameQueue.advance().copy(input);
 
 		auto& frame_vector = m_Trajectory.advance();
-		frame_vector.velocity = velocity;
-		frame_vector.displacement = m_Trajectory.previous().displacement + velocity;
+		frame_vector.velocity = frame_velocity;
+		frame_vector.displacement = m_Trajectory.previous().displacement + frame_velocity;
 
 		if (ready())
 		{
@@ -98,7 +100,7 @@ namespace lvk
 
 	bool PathStabilizer::ready() const
 	{
-		return m_FrameQueue.full() && m_Trajectory.full();
+		return m_FrameQueue.is_full() && m_Trajectory.is_full();
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -146,7 +148,8 @@ namespace lvk
 		if (window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
 		{
 			// NOTE: this is equivalent to the change in smoothing frame count. 
-			const int time_shift = static_cast<int>(queue_size) - m_FrameQueue.capacity();
+			const auto time_shift = static_cast<int64_t>(queue_size)
+                                  - static_cast<int64_t>(m_FrameQueue.capacity());
 		
 			m_FrameQueue.resize(queue_size);
 			m_Trajectory.resize(window_size);
@@ -158,19 +161,23 @@ namespace lvk
 			// the new centre point, which represents the current frame in time.
 			// The frames correspnding to such data need to be skipped as they 
 			// are now in the past. 
-			m_FrameQueue.skip(std::max(time_shift, 0));
-			if(m_FrameQueue.empty())
+			m_FrameQueue.skip(std::max<int64_t>(time_shift, 0));
+			if(m_FrameQueue.is_empty())
 				reset_buffers();
 
-			// NOTE: A low pass Gaussian filter is used because it has both decent time domain
-			// and frequency domain performance. Unlike an average or windowed sinc filter.
-			// As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
-			
-			m_SmoothingFilter.resize(window_size);
-			m_SmoothingFilter.clear();
-		
-			const auto gaussian_kernel = cv::getGaussianKernel(window_size, window_size / 6.0);
-			for (uint32_t i = 0; i < window_size; i++)
+
+            // NOTE: A low pass Gaussian filter is used because it has both decent time domain
+            // and frequency domain performance. Unlike an average or windowed sinc filter.
+            // As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
+			const auto gaussian_kernel = cv::getGaussianKernel(
+                static_cast<int>(window_size),
+                static_cast<double>(window_size) / 6.0
+            );
+
+            m_SmoothingFilter.resize(window_size);
+            m_SmoothingFilter.clear();
+
+			for (int i = 0; i < window_size; i++)
 				m_SmoothingFilter.push(gaussian_kernel.at<double>(i));
 		}
 	}
@@ -209,14 +216,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameVector::FrameVector(const Homography& displacement, const Homography& velocity)
-		: displacement(displacement),
-		  velocity(velocity)
+	FrameVector::FrameVector(Homography frame_displacement, Homography frame_velocity)
+		: displacement(std::move(frame_displacement)),
+		  velocity(std::move(frame_velocity))
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameVector FrameVector::operator+(const Homography& velocity) const
+	FrameVector FrameVector::operator+(const Homography& frame_velocity) const
 	{
 		return FrameVector(this->displacement + velocity, this->velocity);
 	}

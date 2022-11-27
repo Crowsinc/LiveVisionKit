@@ -34,7 +34,9 @@ namespace lvk
 	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
 		: m_GridDetector(detector),
 		  m_TrackingResolution(detector.resolution()),
-		  m_MinMatchThreshold(estimation_threshold * detector.feature_capacity()),
+		  m_MinMatchThreshold(static_cast<uint32_t>(
+              estimation_threshold * static_cast<float>(detector.feature_capacity())
+          )),
 		  m_MotionModel(model),
 		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
 		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
@@ -86,10 +88,10 @@ namespace lvk
 		cv::resize(frame, m_NextFrame, m_TrackingResolution, 0, 0, cv::INTER_AREA);
 		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
 
-		return cv::Point2f(
-			static_cast<float>(frame.cols) / m_TrackingResolution.width,
-			static_cast<float>(frame.rows) / m_TrackingResolution.height
-		);
+		return {
+            static_cast<float>(frame.cols) / static_cast<float>(m_TrackingResolution.width),
+            static_cast<float>(frame.rows) / static_cast<float>(m_TrackingResolution.height)
+        };
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -185,7 +187,7 @@ namespace lvk
 			m_GridDetector.propagate(m_MatchedPoints);
 
 			update_metrics(
-				static_cast<float>(m_MatchedPoints.size()) / m_TrackedPoints.size(),
+				static_cast<float>(m_MatchedPoints.size()) / static_cast<float>(m_TrackedPoints.size()),
 				m_GridDetector.distribution_quality()
 			);
 
@@ -273,14 +275,14 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	const float FrameTracker::stability() const
+	float FrameTracker::stability() const
 	{
 		return m_SceneStability;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const std::vector<cv::Point2f> FrameTracker::tracking_points() const
+	const std::vector<cv::Point2f>& FrameTracker::tracking_points() const
 	{
 		return m_ScaledMatchedPoints;
 	}

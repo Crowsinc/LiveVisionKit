@@ -226,7 +226,7 @@ namespace lvk
 			CCTool::on_utility_button
 		);
 
-		property = obs_properties_add_button(
+		obs_properties_add_button(
 			properties,
 			PROP_RESET_BTN,
 			L("cct.reset"),
@@ -257,7 +257,8 @@ namespace lvk
 	CCTool::CCTool(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
-		  m_Calibrator({CALIBRATION_PATTERN_COLS, CALIBRATION_PATTERN_ROWS})
+		  m_Calibrator({CALIBRATION_PATTERN_COLS, CALIBRATION_PATTERN_ROWS}),
+          m_SquareSize(SQUARE_SIZE_DEFAULT)
 	{
 		reset();
 	}
@@ -281,7 +282,7 @@ namespace lvk
 		void* data
 	)
 	{
-		CCTool* tool = static_cast<CCTool*>(data);
+		auto tool = static_cast<CCTool*>(data);
 
 		if(tool->calibration_complete())
 			return false;
@@ -311,7 +312,7 @@ namespace lvk
 		void* data
 	)
 	{
-		CCTool* tool = static_cast<CCTool*>(data);
+		auto tool = static_cast<CCTool*>(data);
 
 		tool->reset();
 
@@ -359,7 +360,7 @@ namespace lvk
 
 	uint32_t CCTool::remaining_captures() const
 	{
-		return std::max<int>(REQ_CALIBRATION_FRAMES - m_Calibrator.calibration_frames(), 0);
+		return std::max<int>(REQ_CALIBRATION_FRAMES - static_cast<int>(m_Calibrator.calibration_frames()), 0);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

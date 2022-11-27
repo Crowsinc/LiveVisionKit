@@ -58,16 +58,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameBuffer::FrameBuffer(FrameBuffer&& buffer)
+	FrameBuffer::FrameBuffer(FrameBuffer&& buffer) noexcept
 		: Frame(static_cast<Frame&&>(buffer))
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameBuffer::operator=(FrameBuffer&& buffer)
+    FrameBuffer& FrameBuffer::operator=(FrameBuffer&& buffer) noexcept
 	{
 		Frame::operator=(std::move(buffer));
-	}
+	    return *this;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -139,16 +140,16 @@ namespace lvk
 				GS_RGBA
 			);
 
-			uint32_t linesize = 0;
+			uint32_t line_size = 0;
 			gs_stage_texture(m_ReadBuffer, texture);
-			gs_stagesurface_map(m_ReadBuffer, &m_MappedData, &linesize);
+			gs_stagesurface_map(m_ReadBuffer, &m_MappedData, &line_size);
 			
 			cv::Mat(
-				texture_height, 
-				texture_width, 
-				CV_8UC4, 
-				m_MappedData, 
-				linesize
+                static_cast<int>(texture_height),
+                static_cast<int>(texture_width),
+                CV_8UC4,
+                m_MappedData,
+                line_size
 			).copyTo(m_ConversionBuffer);
 			
 			gs_stagesurface_unmap(m_ReadBuffer);

@@ -25,7 +25,6 @@
 # Executables
 *.exe
 *.out
-*.a
 
 # Eclipse CDT 
 **/.project
@@ -57,7 +56,6 @@
 *.VC.db
 *.VC.VC.opendb
 *.rsuser
-*.suo
 *.user
 *.userosscache
 *.sln.docstates
@@ -72,9 +70,7 @@
 *_h.h
 *.ilk
 *.meta
-*.obj
 *.iobj
-*.pch
 *.pdb
 *.ipdb
 *.pgc
@@ -117,7 +113,6 @@ cmake-build-*/
 *.iws
 
 # Build System
-**/[Bb]uild/
 **/[Bb]uild/
 CMakeLists.txt.user
 CMakeCache.txt

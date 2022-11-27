@@ -88,7 +88,7 @@ namespace lvk::ocl
 			// Test the context as some (Linux) systems crash when using interop,
 			// despite correctly supporting and initializing the interop context.
 
-			const float test_size = 64;
+			const int test_size = 64;
 
 			gs_texture_t* obs_texture = gs_texture_create(
 				test_size,
@@ -121,7 +121,7 @@ namespace lvk::ocl
 			if (!s_TestPassed.value())
 			{
 				Release();
-				lvk::log::error("The OpencL interop context failed to pass validation tests and has been disabled!");
+				lvk::log::error("The OpenCL interop context failed to pass validation tests and has been disabled!");
 				return false;
 			}
 			else lvk::log::print("The OpenCL interop context passed all validation tests!");

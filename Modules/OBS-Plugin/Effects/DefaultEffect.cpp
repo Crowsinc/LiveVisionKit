@@ -36,12 +36,12 @@ namespace lvk
 		const auto target = obs_filter_get_target(source);
 		
 		const cv::Size source_size(
-			obs_source_get_base_width(target),
-			obs_source_get_base_height(target)
+			static_cast<int>(obs_source_get_base_width(target)),
+			static_cast<int>(obs_source_get_base_height(target))
 		);
 		const cv::Size texture_size(
-			gs_texture_get_width(texture),
-			gs_texture_get_height(texture)
+			static_cast<int>(gs_texture_get_width(texture)),
+			static_cast<int>(gs_texture_get_height(texture))
 		);
 
 		const bool render_valid = target != nullptr && parent != nullptr
@@ -68,10 +68,14 @@ namespace lvk
 			gs_blend_state_push();
 			gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
 			gs_set_viewport(0, 0, source_size.width, source_size.height);
-			gs_ortho(0.0f, source_size.width, 0.0f, source_size.height, -100.0f, 100.0f);
+			gs_ortho(
+                0.0f, static_cast<float>(source_size.width),
+                0.0f, static_cast<float>(source_size.height),
+                -100.0f, 100.0f
+            );
 			
 			// Clear render texture and perform the render
-			vec4 clear_color;
+			vec4 clear_color = {};
 			vec4_zero(&clear_color);
 			gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
 

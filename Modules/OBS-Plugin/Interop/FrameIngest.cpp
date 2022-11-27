@@ -23,14 +23,6 @@
 
 #include "Utility/Logging.hpp"
 
-#ifdef _WIN32
-#include <dxgi.h>
-#include <d3d11.h>
-#include <opencv2/core/directx.hpp>
-#else
-#include <opencv2/core/opengl.hpp>
-#endif
-
 namespace lvk
 {
 
@@ -486,7 +478,7 @@ namespace lvk
 		auto& frame = *src;
 
 		const cv::Size frame_size(frame.width, frame.height);
-		const cv::Size chroma_size(frame.width * 0.5, frame.height * 0.5);
+		const cv::Size chroma_size(frame.width/2, frame.height/2);
 
 		auto [y_roi, uv_roi] = upload_planes(
 			frame,
@@ -520,8 +512,8 @@ namespace lvk
 
 	P422Ingest::P422Ingest(video_format packed_422_format)
 		: FrameIngest(packed_422_format),
-		  m_YFirst(packed_422_format == VIDEO_FORMAT_UYVY ? false : true),
-		  m_UFirst(packed_422_format == VIDEO_FORMAT_YVYU ? false : true)
+		  m_YFirst(packed_422_format != VIDEO_FORMAT_UYVY),
+		  m_UFirst(packed_422_format != VIDEO_FORMAT_YVYU)
 	{
 		LVK_ASSERT(any_of(packed_422_format, VIDEO_FORMAT_YVYU, VIDEO_FORMAT_YUY2, VIDEO_FORMAT_UYVY));
 	}

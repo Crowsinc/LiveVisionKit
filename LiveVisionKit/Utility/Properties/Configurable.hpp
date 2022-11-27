@@ -22,17 +22,20 @@
 namespace lvk
 {
 
+    // NOTE: classes which use this should be marked as final
 	template<typename T>
 	class Configurable
 	{
 	public:
 
 		// NOTE: configure() is not called on construction
-		Configurable(const T& settings = {});
+		explicit Configurable(const T& settings = {});
 
-		virtual void configure(const T& settings = {}) = 0;
+        void configure_default();
 
-		void reconfigure(const std::function<void(T&)> updater);
+		virtual void configure(const T& settings) = 0;
+
+        void reconfigure(const std::function<void(T&)>& updater);
 
 		const T& settings() const;
 

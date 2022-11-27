@@ -32,7 +32,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		ADBFilter(obs_source_t* context);
+		explicit ADBFilter(obs_source_t* context);
 
 		void configure(obs_data_t* settings);
 
@@ -40,7 +40,7 @@ namespace lvk
 
 	private:
 
-		virtual void filter(cv::UMat& frame) override;
+        void filter(FrameBuffer& frame) override;
 
 		void draw_debug_hud(cv::UMat& frame);
 

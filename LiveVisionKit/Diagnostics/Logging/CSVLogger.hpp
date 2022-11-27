@@ -28,9 +28,9 @@ namespace lvk
 	{
 	public:
 
-		CSVLogger(std::ostream& target);
+		explicit CSVLogger(std::ostream& target);
 
-		~CSVLogger() = default;
+		~CSVLogger() override = default;
 
 	protected:
 

@@ -41,7 +41,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename Scope>
-	inline Unique<Scope>::Unique(Unique&& other)
+	inline Unique<Scope>::Unique(Unique&& other) noexcept
 		: m_UID(other.m_UID)
 	{}
 

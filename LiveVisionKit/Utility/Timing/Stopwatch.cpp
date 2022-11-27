@@ -83,7 +83,7 @@ namespace lvk
 
 	Time Stopwatch::average() const
 	{
-		return m_History.empty() ? Time() : m_History.average();
+		return m_History.is_empty() ? Time() : m_History.average();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

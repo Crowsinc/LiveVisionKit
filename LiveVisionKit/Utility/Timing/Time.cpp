@@ -39,7 +39,7 @@ namespace lvk
 
 	Time Time::Now()
 	{
-		return {std::chrono::high_resolution_clock::now()};
+		return Time(std::chrono::high_resolution_clock::now());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ namespace lvk
 		std::stringstream stream;
 
 		//TODO: Replace with C++20 time calender and timezone functionality
-		std::tm tm;
+		std::tm tm = {};
 		std::time_t time = std::time(0);
 #ifdef WIN32
 		localtime_s(&tm, &time);
@@ -78,28 +78,28 @@ namespace lvk
 
 	Time Time::Seconds(const double amount)
 	{
-		return {static_cast<uint64_t>(amount * ns_s_ratio)};
+		return Time(static_cast<uint64_t>(amount * ns_s_ratio));
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Time::Milliseconds(const double amount)
 	{
-		return {static_cast<uint64_t>(amount * ns_ms_ratio)};
+		return Time(static_cast<uint64_t>(amount * ns_ms_ratio));
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Time::Microseconds(const double amount)
 	{
-		return {static_cast<uint64_t>(amount * ns_us_ratio)};
+		return Time(static_cast<uint64_t>(amount * ns_us_ratio));
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Time::Nanoseconds(const uint64_t amount)
 	{
-		return {amount};
+		return Time(amount);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -176,9 +176,10 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Time::operator=(const Time& other)
+	Time& Time::operator=(const Time& other)
 	{
 		m_Time = other.m_Time;
+		return *this;
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -199,14 +200,14 @@ namespace lvk
 
 	Time Time::operator+(const Time& other) const
 	{
-		return {m_Time + other.m_Time};
+		return Time(m_Time + other.m_Time);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Time::operator-(const Time& other) const
 	{
-		return {m_Time - other.m_Time};
+		return Time(m_Time - other.m_Time);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------

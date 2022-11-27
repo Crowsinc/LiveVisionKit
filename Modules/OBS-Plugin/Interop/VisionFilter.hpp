@@ -34,7 +34,7 @@ namespace lvk
 	{
 	public:
 
-		VisionFilter(obs_source_t* filter);
+		explicit VisionFilter(obs_source_t* filter);
 
 		virtual ~VisionFilter();
 

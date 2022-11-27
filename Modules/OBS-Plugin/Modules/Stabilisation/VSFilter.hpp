@@ -32,7 +32,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		VSFilter(obs_source_t* context);
+		explicit VSFilter(obs_source_t* context);
 
 		void configure(obs_data_t* settings);
 
@@ -40,9 +40,9 @@ namespace lvk
 
 	private:
 
-		virtual void filter(FrameBuffer& buffer) override;
+        void filter(FrameBuffer& buffer) override;
 
-		virtual void hybrid_render(gs_texture_t* frame) override;
+		void hybrid_render(gs_texture_t* frame) override;
 
 		void draw_debug_hud(cv::UMat& frame);
 

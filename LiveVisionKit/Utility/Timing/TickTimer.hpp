@@ -25,7 +25,7 @@ namespace lvk
 	{
 	public:
 
-		TickTimer(const uint32_t history = 1);
+		explicit TickTimer(const uint32_t history = 1);
 
 		void tick();
 

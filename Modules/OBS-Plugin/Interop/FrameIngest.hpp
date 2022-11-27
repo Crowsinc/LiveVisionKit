@@ -42,7 +42,7 @@ namespace lvk
 
 	protected:
 
-		FrameIngest(video_format format);
+		explicit FrameIngest(video_format format);
 
 		// NOTE: returns ROI to internal buffers
 		cv::UMat upload_planes(
@@ -120,7 +120,7 @@ namespace lvk
 	{
 	public:
 
-		I4XXIngest(video_format i4xx_format);
+		explicit I4XXIngest(video_format i4xx_format);
 
 		void upload(const obs_source_frame* src, cv::UMat& dst) override;
 	
@@ -141,9 +141,9 @@ namespace lvk
 
 		NV12Ingest();
 
-		virtual void upload(const obs_source_frame* src, cv::UMat& dst) override;
+        void upload(const obs_source_frame* src, cv::UMat& dst) override;
 		
-		virtual void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void download(const cv::UMat& src, obs_source_frame* dst) override;
 
 	private:
 		// NOTE: We assume this will automatically initialize on the GPU
@@ -155,11 +155,11 @@ namespace lvk
 	{
 	public:
 
-		P422Ingest(video_format packed_422_format);
+		explicit P422Ingest(video_format packed_422_format);
 
-		virtual void upload(const obs_source_frame* src, cv::UMat& dst) override;
+		void upload(const obs_source_frame* src, cv::UMat& dst) override;
 		
-		virtual void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void download(const cv::UMat& src, obs_source_frame* dst) override;
 	
 	private:
 		bool m_YFirst, m_UFirst;
@@ -175,9 +175,9 @@ namespace lvk
 
 		P444Ingest();
 
-		virtual void upload(const obs_source_frame* src, cv::UMat& dst) override;
+		void upload(const obs_source_frame* src, cv::UMat& dst) override;
 		
-		virtual void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void download(const cv::UMat& src, obs_source_frame* dst) override;
 
 	private:
 		// NOTE: We assume this will automatically initialize on the GPU
@@ -189,11 +189,11 @@ namespace lvk
 	{
 	public:
 
-		DirectIngest(video_format uncompressed_format);
+		explicit DirectIngest(video_format uncompressed_format);
 
-		virtual void upload(const obs_source_frame* src, cv::UMat& dst) override;
+		void upload(const obs_source_frame* src, cv::UMat& dst) override;
 
-		virtual void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void download(const cv::UMat& src, obs_source_frame* dst) override;
 
 	private:
 		int m_Components;
@@ -202,7 +202,8 @@ namespace lvk
 		cv::ColorConversionCodes m_BackwardConversion, m_BackwardStepConversion;
 
 		// NOTE: We assume this will automatically initialize on the GPU
-		cv::UMat m_ConversionBuffer, m_StepConversionBuffer;
+		cv::UMat m_ConversionBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        cv::UMat m_StepConversionBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

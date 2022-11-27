@@ -152,10 +152,10 @@ namespace lvk
 			m_MatchCanvasSize = true;
 		else if (output_pattern == OUTPUT_SIZE_SOURCE)
 			m_MatchSourceSize = true;
-		else if (output_pattern.find('x') != std::string::npos) 
+		else if (output_pattern.find('x') != std::string::npos)
 		{
 			// NOTE: ^^ must be last check in case non-numeric list values include the letter 'x'
-			
+
 			std::vector<float> tokens = parse<float>(output_pattern, 'x', [](auto _, float& value, const bool fail) {
 				return !fail && value > 0;
 				});
@@ -211,11 +211,11 @@ namespace lvk
 
 		if(m_MatchCanvasSize)
 		{
-			obs_video_info video_info;
+			obs_video_info video_info = {};
 			obs_get_video_info(&video_info);
 
-			m_OutputSize.width = video_info.base_width;
-			m_OutputSize.height = video_info.base_height;
+			m_OutputSize.width = static_cast<int>(video_info.base_width);
+			m_OutputSize.height = static_cast<int>(video_info.base_height);
 		}
 		else if(m_MatchSourceSize)
 			m_OutputSize = cv::Size2f(m_InputSize) * m_SizeMultiplier;
@@ -258,8 +258,8 @@ namespace lvk
 	{
 		const auto filter_target = obs_filter_get_target(m_Context);
 		m_InputSize = cv::Size(
-			obs_source_get_base_width(filter_target),
-			obs_source_get_base_height(filter_target)
+			static_cast<int>(obs_source_get_base_width(filter_target)),
+			static_cast<int>(obs_source_get_base_height(filter_target))
 		);
 
 		// Bad parameters will automatically get rejected by the effect.

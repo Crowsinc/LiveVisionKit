@@ -28,7 +28,7 @@ namespace lvk
 	{
 	public:
 		
-		Logger(std::ostream& stream = std::cout);
+		explicit Logger(std::ostream& target = std::cout);
 
 		virtual ~Logger() = default;
 

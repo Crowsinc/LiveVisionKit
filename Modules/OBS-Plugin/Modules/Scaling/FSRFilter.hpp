@@ -31,7 +31,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		FSRFilter(obs_source_t* context);
+		explicit FSRFilter(obs_source_t* context);
 
 		void tick();
 

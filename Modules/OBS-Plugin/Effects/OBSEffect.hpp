@@ -59,6 +59,10 @@ namespace lvk
 
 	public:
 
+        OBSEffect(OBSEffect& effect) = delete;
+
+        OBSEffect(OBSEffect&& effect) = delete;
+
 		bool render(
 			obs_source_t* source,
 			const cv::Size render_size,
@@ -85,13 +89,9 @@ namespace lvk
 
 	protected:
 
-		OBSEffect(const std::string& name);
+		explicit OBSEffect(const std::string& name);
 
-		OBSEffect(gs_effect_t* handle);
-
-		OBSEffect(OBSEffect& effect) = delete;
-
-		OBSEffect(OBSEffect&& effect) = delete;
+		explicit OBSEffect(gs_effect_t* handle);
 
 		virtual ~OBSEffect() = default;
 
@@ -109,9 +109,9 @@ namespace lvk
 
 		virtual bool validate() const;
 
-		gs_eparam_t* load_param(const char* name);
+        gs_eparam_t* load_param(const char* name);
 
-		gs_effect_t* handle();
+        gs_effect_t* handle();
 
 	private:
 
@@ -125,7 +125,6 @@ namespace lvk
 	private:
 		// NOTE: the gs_effect_t* is automatically released by OBS when destroying context
 		gs_effect_t* m_Handle = nullptr;
-		bool m_Owner;
 	};
 
 }

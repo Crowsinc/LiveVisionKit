@@ -44,13 +44,13 @@ namespace lvk
 
 		Time();
 
-		Time(const TimePoint& time);
+		explicit Time(const TimePoint& time);
 
-		Time(const uint64_t nanoseconds);
+        explicit Time(const uint64_t nanoseconds);
 
-		Time(const std::chrono::nanoseconds nanoseconds);
+        explicit Time(const std::chrono::nanoseconds nanoseconds);
 
-		Time(const Time& other);
+        Time(const Time& other);
 
 		double hours() const;
 
@@ -64,7 +64,7 @@ namespace lvk
 		
 		double nanoseconds() const;
 	
-		void operator=(const Time& other);
+		Time& operator=(const Time& other);
 
 		void operator+=(const Time& other);
 

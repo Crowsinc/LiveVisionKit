@@ -45,9 +45,7 @@ namespace lvk::ocl
 		// True if context exists and is usable
 		static bool Available();
 
-
 		static void Import(gs_texture_t* src, cv::UMat& dst);
-
 
 		static void Export(cv::UMat& src, gs_texture_t* dst);
 

@@ -32,7 +32,7 @@ namespace lvk
 
 		Unique(const Unique& other);
 
-		Unique(Unique&& other);
+		Unique(Unique&& other) noexcept;
 
 		uint64_t uid() const;
 	

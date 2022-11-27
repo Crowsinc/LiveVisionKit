@@ -102,8 +102,8 @@ namespace lvk
 
 		const auto target = obs_filter_get_target(source);
 		const cv::Size source_size(
-			obs_source_get_base_width(target),
-			obs_source_get_base_height(target)
+			static_cast<int>(obs_source_get_base_width(target)),
+            static_cast<int>(obs_source_get_base_height(target))
 		);
 
 		if (!is_renderable(source, source_size, render_size, args...))
@@ -137,8 +137,8 @@ namespace lvk
 
 		const auto target = obs_filter_get_target(source);
 		const cv::Size source_size(
-			obs_source_get_base_width(target),
-			obs_source_get_base_height(target)
+            static_cast<int>(obs_source_get_base_width(target)),
+            static_cast<int>(obs_source_get_base_height(target))
 		);
 
 		return render(source, source_size, args...);
@@ -157,8 +157,8 @@ namespace lvk
 		LVK_ASSERT(texture != nullptr);
 
 		const cv::Size source_size(
-			gs_texture_get_width(texture),
-			gs_texture_get_height(texture)
+            static_cast<int>(gs_texture_get_width(texture)),
+            static_cast<int>(gs_texture_get_height(texture))
 		);
 
 		if (!is_renderable(nullptr, source_size, render_size, args...))
@@ -195,8 +195,8 @@ namespace lvk
 		LVK_ASSERT(texture != nullptr);
 
 		const cv::Size source_size(
-			gs_texture_get_width(texture),
-			gs_texture_get_height(texture)
+			static_cast<int>(gs_texture_get_width(texture)),
+            static_cast<int>(gs_texture_get_height(texture))
 		);
 
 		return render(texture, source_size, args...);
@@ -206,8 +206,7 @@ namespace lvk
 
 	template<typename E, typename...Args>
 	OBSEffect<E, Args...>::OBSEffect(const std::string& name)
-		: m_Handle(nullptr),
-		  m_Owner(true) // We own the handle
+		: m_Handle(nullptr)
 	{
 		const std::string effect_file = name + ".effect";
 		const std::string effect_path = "effects/" + effect_file;
@@ -239,8 +238,7 @@ namespace lvk
 
 	template<typename E, typename...Args>
 	OBSEffect<E, Args...>::OBSEffect(gs_effect_t* handle)
-		: m_Handle(handle),
-		  m_Owner(false) // We do not own the handle
+		: m_Handle(handle)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -296,8 +294,8 @@ namespace lvk
 	
 	template<typename E, typename...Args>
 	const char* OBSEffect<E, Args...>::configure(
-		const cv::Size input_size,
-		const cv::Size output_size,
+		const cv::Size source_size,
+		const cv::Size render_size,
 		Args... args
 	)
 	{
@@ -308,8 +306,8 @@ namespace lvk
 	
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::should_skip(
-		const cv::Size input_size,
-		const cv::Size output_size,
+		const cv::Size source_size,
+		const cv::Size render_size,
 		Args... args
 	) const
 	{

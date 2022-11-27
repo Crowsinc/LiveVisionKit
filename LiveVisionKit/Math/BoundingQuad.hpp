@@ -28,7 +28,7 @@ namespace lvk
 	{
 	public:
 
-		BoundingQuad(const cv::Size2d& size, const Homography& homography = Homography::Identity());
+		explicit BoundingQuad(const cv::Size2d& size, const Homography& homography = Homography::Identity());
 
 		void transform(const Homography& homography);
 

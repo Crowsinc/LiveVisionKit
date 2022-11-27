@@ -38,8 +38,8 @@ extern void register_cct_source()
 	config.filter_video = lvk::dispatch::filter_process<lvk::CCTool>;
 
 	config.get_name = [](void* data){return L("cct.name");};
-	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;;
-	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;;
+	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;
 
 	obs_register_source(&config);
 }
@@ -60,8 +60,8 @@ extern void register_cct_effect_source()
 	config.video_render = lvk::dispatch::filter_render<lvk::CCTool>;
 
 	config.get_name = [](void* data) {return L("cct.name"); };
-	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;;
-	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;;
+	config.get_properties = lvk::dispatch::filter_properties<lvk::CCTool>;
+	config.get_defaults = lvk::dispatch::filter_load_defaults<lvk::CCTool>;
 
 	obs_register_source(&config);
 }

@@ -15,7 +15,6 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "Configurable.hpp"
 
 namespace lvk
 {
@@ -29,8 +28,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T> void Configurable<T>::configure_default()
+    {
+        configure(T{});
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
-	inline void Configurable<T>::reconfigure(const std::function<void(T&)> updater)
+	inline void Configurable<T>::reconfigure(const std::function<void(T&)>& updater)
 	{
 		T new_settings = settings();
 		updater(new_settings);

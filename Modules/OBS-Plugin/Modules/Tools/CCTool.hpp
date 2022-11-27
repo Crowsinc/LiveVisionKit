@@ -47,7 +47,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		CCTool(obs_source_t* context);
+		explicit CCTool(obs_source_t* context);
 
 		void configure(obs_data_t* settings);
 
@@ -85,7 +85,7 @@ namespace lvk
 
 		void draw_calibration_hud(cv::UMat& frame) const;
 
-		virtual void filter(cv::UMat& frame) override;
+		void filter(cv::UMat& frame) override;
 
 	private:
 
@@ -100,10 +100,9 @@ namespace lvk
 		int m_FrameHoldCountdown = 0;
 
 		CameraCalibrator m_Calibrator;
-		std::string m_ProfileName;
-		uint32_t m_SquareSize;
-		cv::Size m_ImageSize;
-
-	};
+        std::string m_ProfileName;
+        uint32_t m_SquareSize;
+        cv::Size m_ImageSize;
+    };
 
 }

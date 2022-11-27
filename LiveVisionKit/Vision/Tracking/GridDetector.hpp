@@ -52,15 +52,15 @@ namespace lvk
 
 		struct DetectBlock
 		{
-			size_t propagations;
-			cv::Rect2f bounds;
-			int fast_threshold;
+            cv::Rect2f bounds;
+            int fast_threshold = 0;
+            size_t propagations = 0;
 		};
 
 		struct FeatureBlock
 		{
 			std::optional<cv::KeyPoint> feature;
-			bool propagated;
+			bool propagated = false;
 		};
 
 		void construct_grids();

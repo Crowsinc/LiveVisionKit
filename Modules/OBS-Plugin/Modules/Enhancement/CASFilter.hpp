@@ -31,7 +31,7 @@ namespace lvk
 
 		static void LoadDefaults(obs_data_t* settings);
 
-		CASFilter(obs_source_t* context);
+		explicit CASFilter(obs_source_t* context);
 
 		void render();
 

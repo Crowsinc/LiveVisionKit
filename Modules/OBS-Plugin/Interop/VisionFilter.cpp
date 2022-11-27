@@ -42,8 +42,12 @@ namespace lvk
 			OBS_SOURCE_ASYNC_VIDEO
 			)),
 		// NOTE: We initially assume a hybrid render state for each filter, 
-		// then update our assumption as we learn more about them during execution. 
-		m_HybridRender(m_Asynchronous ? false : true)
+		// then update our assumption as we learn more about them during execution.
+        // - Synchronous filters are assumed to be hybrid render, but the assumption
+        //   is revoked if their hybrid_render() function is not implemented.
+        // - Asynchrnous filters are not hybrid render by default, and only become
+        //   if their hybrid_render function has been implemented.
+		m_HybridRender(!m_Asynchronous)
 	{
 		LVK_ASSERT(m_Context != nullptr);
 		LVK_ASSERT(s_Filters.count(context) == 0);
@@ -182,7 +186,7 @@ namespace lvk
 	{
 		obs_source_frame* output_frame = nullptr;
 
-		if(!output_buffer.empty())
+		if(!output_buffer.is_empty())
 		{
 			// Directly return the frame if there is no existing or introduced filter delay.
 			if (m_AsyncFrameQueue.empty() && output_buffer.timestamp == input_frame->timestamp)
@@ -305,13 +309,13 @@ namespace lvk
 
 		// Here we are travelling back down the filter chain so 
 		// perform filtering on the buffer's captured frame, if any. 
-		if (!buffer.empty())
+		if (!buffer.is_empty())
 		{
 			m_TickTimer.tick();
 			filter(buffer);
 
 			// Frame was captured by the filter (probably to introduce delay).
-			if (buffer.empty())
+			if (buffer.is_empty())
 				return;
 
 			// If this is the last filter in the vision filter chain,

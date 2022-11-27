@@ -42,7 +42,7 @@ namespace lvk
 			obs_leave_graphics();
 		}
 	
-		log::error_if(!validate(), "CAS effect failed to validate");
+		log::error_if(!this->validate(), "CAS effect failed to validate");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -65,8 +65,12 @@ namespace lvk
 		const float sharpness
 	)
 	{
-		vec2 size_param;
-		vec2_set(&size_param, render_size.width, render_size.height);
+		vec2 size_param = {};
+		vec2_set(
+            &size_param,
+            static_cast<float>(render_size.width),
+            static_cast<float>(render_size.height)
+        );
 		gs_effect_set_vec2(m_OutputSizeParam, &size_param);
 
 		// NOTE: The CAS constant is a vector of four uint32_t but its bits actually represent floats.
@@ -76,7 +80,7 @@ namespace lvk
 		// we only care about const1 and the sharpness input, as the rest are for the CAS scaling
 		// functionality which isn't used.
 
-		vec4 const_1, tmp;
+		vec4 const_1 = {}, tmp = {};
 		CasSetup((AU1*)tmp.ptr, (AU1*)const_1.ptr, sharpness, 0.0f, 0.0f, 0.0f, 0.0f);
 		gs_effect_set_vec4(m_CASConstParam, &const_1);
 

@@ -37,36 +37,47 @@ namespace lvk
 	{
 	public:
 
-		VideoFilter(const std::string filter_name);
+		explicit VideoFilter(const std::string& filter_name);
 
 		virtual ~VideoFilter() = default;
 
 		virtual void process(
 			const Frame& input,
 			Frame& output,
-			const bool debug = false
+			const bool debug
 		) = 0;
+
+        void process(
+            const Frame& input,
+            Frame& output
+        );
 
 		void process(
 			cv::VideoCapture& input_stream,
 			cv::VideoWriter& output_stream,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, Frame&)> callback = [](auto&, auto&) {}
+			const std::function<void(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {}
 		);
 		
 		virtual void profile(
 			const Frame& input,
 			Frame& output,
 			Stopwatch& timer,
-			const bool debug = false
+			const bool debug
 		);
 
-		void profile(
+        void profile(
+            const Frame& input,
+            Frame& output,
+            Stopwatch& timer
+        );
+
+        void profile(
 			cv::VideoCapture& input_stream,
 			cv::VideoWriter& output_stream,
 			Stopwatch& timer,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, Frame&, Stopwatch&)> callback = [](auto&, auto&, auto&) {}
+			const std::function<void(VideoFilter&, Frame&, Stopwatch&)>& callback = [](auto&, auto&, auto&) {}
 		);
 
 		const std::string& alias() const;
@@ -83,10 +94,10 @@ namespace lvk
 
 		static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
 
-		Frame(const uint64_t timestamp = 0);
+		explicit Frame(const uint64_t timestamp = 0);
 
 		// NOTE: copies the frame, use Wrap() to reference
-		Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
+        explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
 
 		Frame(
 			const cv::Size& size,
@@ -107,7 +118,7 @@ namespace lvk
 
 		virtual ~Frame() = default;
 
-		void operator=(Frame&& frame) noexcept;
+		Frame& operator=(Frame&& frame) noexcept;
 
 		void default_to(const cv::Size& size, const int type);
 		
@@ -129,7 +140,7 @@ namespace lvk
 
 		cv::Size size() const;
 
-		bool empty() const;
+		bool is_empty() const;
 
 		int type() const;
 

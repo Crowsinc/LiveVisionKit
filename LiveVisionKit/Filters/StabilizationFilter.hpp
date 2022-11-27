@@ -45,22 +45,22 @@ namespace lvk
 
 	// TODO: fix bad timing when using profile and debug due to stopwatch
 
-	class StabilizationFilter : public VideoFilter, public Configurable<StabilizationSettings>
+	class StabilizationFilter final : public VideoFilter, public Configurable<StabilizationSettings>
 	{
 	public:
 
-		StabilizationFilter(const StabilizationSettings& settings = {});
+		explicit StabilizationFilter(const StabilizationSettings& settings = {});
 
-		void process(const Frame& input, Frame& output, const bool debug = false) override;
+        using VideoFilter::process;
+        void process(const Frame& input, Frame& output, const bool debug) override;
 		
-		void configure(const StabilizationSettings& settings = {}) override;
+		void configure(const StabilizationSettings& settings) override;
 
 		bool ready() const;
 
 		void restart();
 
-		// TODO: rename this
-		void reset_tracking();
+		void reset_context();
 
 		float stability() const;
 

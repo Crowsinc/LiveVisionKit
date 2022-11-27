@@ -23,9 +23,16 @@ namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-    VideoFilter::VideoFilter(const std::string filter_name)
+    VideoFilter::VideoFilter(const std::string& filter_name)
         : m_Alias(filter_name + std::to_string(this->uid()))
     {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::process(const Frame& input, Frame& output)
+    {
+        process(input, output, false);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -33,7 +40,7 @@ namespace lvk
         cv::VideoCapture& input_stream, 
         cv::VideoWriter& output_stream,
         const bool debug,
-        const std::function<void(VideoFilter&, Frame&)> callback
+        const std::function<void(VideoFilter&, Frame&)>& callback
     )
     {
         LVK_ASSERT(input_stream.isOpened());
@@ -49,7 +56,7 @@ namespace lvk
             
             process(input_frame, output_frame, debug);
 
-            if(!output_frame.empty())
+            if(!output_frame.is_empty())
                 output_stream.write(output_frame.data);
             
             callback(*this, output_frame);
@@ -76,11 +83,22 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     void VideoFilter::profile(
+        const Frame& input,
+        Frame& output,
+        Stopwatch& timer
+    )
+    {
+        profile(input, output, timer, false);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::profile(
         cv::VideoCapture& input_stream,
         cv::VideoWriter& output_stream,
         Stopwatch& timer,
         const bool debug,
-        const std::function<void(VideoFilter&, Frame&, Stopwatch&)> callback
+        const std::function<void(VideoFilter&, Frame&, Stopwatch&)>& callback
     )
     {
         LVK_ASSERT(input_stream.isOpened());
@@ -97,7 +115,7 @@ namespace lvk
 
             profile(input_frame, output_frame, timer, debug);
 
-            if (!output_frame.empty())
+            if (!output_frame.is_empty())
                 output_stream.write(output_frame.data);
 
             callback(*this, output_frame, timer);
@@ -147,7 +165,12 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     Frame::Frame(const uint32_t width, const uint32_t height, const int type, const uint64_t timestamp)
-        : data(height, width, type, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+        : data(
+            static_cast<int>(height),
+            static_cast<int>(width),
+            type,
+            cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
+          ),
           timestamp(timestamp)
     {}
 
@@ -162,7 +185,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     Frame::Frame(Frame&& frame) noexcept
-        : data(frame.data),
+        : data(std::move(frame.data)),
           timestamp(frame.timestamp)
     {
         frame.data.release();
@@ -171,20 +194,22 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Frame::operator=(Frame&& frame) noexcept
+    Frame& Frame::operator=(Frame&& frame) noexcept
     {
         data = frame.data;
         timestamp = frame.timestamp;
 
         frame.data.release();
         frame.timestamp = 0;
+
+        return *this;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void Frame::default_to(const cv::Size& size, const int type)
     {
-        if(empty())
+        if(is_empty())
             allocate(size, type);
     }
 
@@ -192,7 +217,7 @@ namespace lvk
 
     void Frame::default_to(const uint32_t width, const uint32_t height, const int type)
     {
-        if(empty())
+        if(is_empty())
             allocate(width, height, type);
     }
 
@@ -214,8 +239,8 @@ namespace lvk
     {
         data.release();
         data.create(
-            height,
-            width,
+            static_cast<int>(height),
+            static_cast<int>(width),
             type,
             cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
         );
@@ -266,7 +291,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool Frame::empty() const
+    bool Frame::is_empty() const
     {
         return data.empty();
     }

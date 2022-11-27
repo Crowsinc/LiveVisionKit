@@ -27,7 +27,7 @@ namespace lvk
 	DeblockingFilter::DeblockingFilter(DeblockingSettings settings)
 		: VideoFilter("Deblocking Filter")
 	{
-		configure(settings);
+        this->configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ namespace lvk
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
 		cv::resize(input_region, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
-		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, m_Settings.filter_size);
+		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, static_cast<int>(m_Settings.filter_size));
 		cv::resize(m_DeblockBuffer, m_SmoothFrame, macroblock_region.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Generate reference frame
@@ -77,7 +77,7 @@ namespace lvk
 		m_FloatBuffer.setTo(cv::Scalar(0.0));
 
 		const double level_step = 1.0 / m_Settings.detection_levels;
-		for(double l = 0; l < m_Settings.detection_levels; l++)
+		for(int l = 0; l < m_Settings.detection_levels; l++)
 		{
 			cv::threshold(m_BlockGrid, m_BlockMask, l, 255, cv::THRESH_BINARY);
 			m_FloatBuffer.setTo(cv::Scalar((l + 1.0) * level_step), m_BlockMask);

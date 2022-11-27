@@ -36,11 +36,11 @@ namespace lvk
 
 		Homography();
 
-		Homography(const cv::Mat& matrix);
+		explicit Homography(const cv::Mat& matrix);
 
-		Homography(const Homography& other);
+        Homography(const Homography& other);
 
-		Homography(Homography&& other);
+        Homography(Homography&& other) noexcept;
 
 		cv::Point2d transform(const cv::Point2d& point) const;
 
@@ -56,9 +56,9 @@ namespace lvk
 
 		cv::Mat as_matrix() const;
 
-		void operator=(const Homography& other);
+        Homography& operator=(const Homography& other);
 
-		void operator=(Homography&& other);
+        Homography& operator=(Homography&& other) noexcept;
 
 		void operator+=(const Homography& other);
 

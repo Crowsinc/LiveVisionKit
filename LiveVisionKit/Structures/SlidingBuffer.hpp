@@ -28,7 +28,7 @@ namespace lvk
 	{
 	public:
 
-		SlidingBuffer(const size_t capacity = 5);
+		explicit SlidingBuffer(const size_t capacity = 5);
 
 		void push(const T& element);
 
@@ -71,9 +71,9 @@ namespace lvk
 
 		const T& previous() const;
 
-		bool full() const;
+		bool is_full() const;
 
-		bool empty() const;
+		bool is_empty() const;
 
 		size_t size() const;
 

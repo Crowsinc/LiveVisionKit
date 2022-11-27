@@ -22,7 +22,7 @@
 namespace lvk
 {
 	
-	class FSREffect : public OBSEffect<FSREffect, const cv::Rect& /* scaling region */>
+	class FSREffect final : public OBSEffect<FSREffect, const cv::Rect& /* scaling region */>
 	{
 	public:
 
@@ -42,7 +42,7 @@ namespace lvk
 			const cv::Rect& region
 		) const override;
 
-		bool validate() const override;
+		[[nodiscard]] bool validate() const override;
 
 	private:
 

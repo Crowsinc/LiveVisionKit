@@ -24,14 +24,12 @@ namespace lvk
 	template<typename T>
 	T round_even(const T& value);
 
-
 	template<typename T>
 	int sign(const T& value, const T& reference = T());
 
 	// 2D Line based sign operation
 	template<typename T>
 	int sign_2d(const cv::Point_<T>& p, const cv::Point_<T>& l1 = {0,0}, const cv::Point_<T>& l2 = {0,1});
-
 
 	template<typename V, typename T>
 	inline V lerp(const V& from, const V& to, const T& t);
@@ -50,7 +48,6 @@ namespace lvk
 	// Exclusive
 	template<typename T>
 	bool between_strict(const T& value, const T& min, const T& max);
-
 
 	template<typename T>
 	T exponential_moving_average(const T average, const T new_sample, const float smoothing_factor);

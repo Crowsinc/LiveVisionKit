@@ -45,7 +45,7 @@ namespace lvk
 		if(matrix.cols == 3 && matrix.rows == 2)
 			return FromAffineMatrix(matrix);
 		else
-			return {matrix};
+			return Homography(matrix);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -89,8 +89,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography::Homography(Homography&& other)
-		: m_Matrix(other.m_Matrix)
+	Homography::Homography(Homography&& other) noexcept
+		: m_Matrix(std::move(other.m_Matrix))
 	{
 		other.m_Matrix.release();
 	}
@@ -166,18 +166,20 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Homography::operator=(const Homography& other)
+    Homography& Homography::operator=(const Homography& other)
 	{
 		m_Matrix = other.m_Matrix.clone();
+        return *this;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Homography::operator=(Homography&& other)
+    Homography& Homography::operator=(Homography&& other) noexcept
 	{
 		m_Matrix = other.m_Matrix;
 		other.m_Matrix.release();
-	}
+        return *this;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

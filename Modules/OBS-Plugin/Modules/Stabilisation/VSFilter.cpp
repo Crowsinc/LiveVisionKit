@@ -55,7 +55,6 @@ namespace lvk
 	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
 	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_STRICT;
 
-	const auto SUPPRESSION_RANGE_OFF = cv::Point2f(0.0f, 0.0f);
 	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.90f);
 	const auto SUPPRESSION_RANGE_RELAXED = cv::Point2f(0.0f, 0.30f);
 	constexpr auto SUPPRESSION_SMOOTHING_STEP = 3.0f;
@@ -67,7 +66,7 @@ namespace lvk
 	constexpr auto TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 6.0;
-	constexpr auto MAX_CLAMP_ITERATIONS = 50;
+    constexpr auto TIMING_SAMPLES = 30;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -75,7 +74,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
-		auto property = obs_properties_add_int(
+		obs_properties_add_int(
 			properties,
 			PROP_SMOOTHING_RADIUS,
 			L("vs.radius"),
@@ -84,7 +83,7 @@ namespace lvk
 			2
 		);
 
-		property = obs_properties_add_int(
+		auto property = obs_properties_add_int(
 			properties,
 			PROP_STREAM_DELAY_INFO,
 			L("vs.delay"),
@@ -162,10 +161,10 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_video_info video_info;
+		obs_video_info video_info = {};
 		obs_get_video_info(&video_info);
-		const float video_fps = static_cast<float>(video_info.fps_num) / video_info.fps_den;
-		const float frame_ms = 1000.0/video_fps;
+		const float video_fps = static_cast<float>(video_info.fps_num) / static_cast<float>(video_info.fps_den);
+		const float frame_ms = 1000.0f/video_fps;
 
 		m_Filter.reconfigure([&](StabilizationSettings& stab_settings) {
 			stab_settings.smoothing_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
@@ -220,7 +219,7 @@ namespace lvk
 	VSFilter::VSFilter(obs_source_t* context)
 		: VisionFilter(context),
 		  m_Context(context),
-		  m_FrameTimer(30)
+		  m_FrameTimer(TIMING_SAMPLES)
 	{
 		LVK_ASSERT(context != nullptr);
 	}
@@ -272,8 +271,8 @@ namespace lvk
 
 	void VSFilter::draw_debug_hud(cv::UMat& frame)
 	{
-		const float frame_time_ms = m_FrameTimer.average().milliseconds();
-		const float deviation_ms = m_FrameTimer.deviation().milliseconds();
+		const double frame_time_ms = m_FrameTimer.average().milliseconds();
+		const double deviation_ms = m_FrameTimer.deviation().milliseconds();
 		const auto& crop_region = m_Filter.crop_region();
 
 		draw::text(

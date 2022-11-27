@@ -22,7 +22,7 @@
 namespace lvk
 {
 
-	class CASEffect : public OBSEffect<CASEffect, const float /* sharpness */>
+	class CASEffect final : public OBSEffect<CASEffect, const float /* sharpness */>
 	{
 	public:
 
@@ -42,7 +42,7 @@ namespace lvk
 			const float sharpness
 		) const override;
 
-		bool validate() const override;
+		[[nodiscard]] bool validate() const override;
 
 	private:
 

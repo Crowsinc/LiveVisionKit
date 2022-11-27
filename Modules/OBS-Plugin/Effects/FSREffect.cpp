@@ -54,7 +54,7 @@ namespace lvk
 			obs_leave_graphics();
 		}
 
-		log::error_if(handle() == nullptr || !validate(), "FSR effect failed to validate");
+		log::error_if(handle() == nullptr || !this->validate(), "FSR effect failed to validate");
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -81,21 +81,21 @@ namespace lvk
 		const cv::Rect& region
 	)
 	{
-		vec2 param;
+		vec2 param = {};
 
 		// Input Size
-		vec2_set(&param, input_size.width, input_size.height);
+		vec2_set(&param, static_cast<float>(input_size.width), static_cast<float>(input_size.height));
 		gs_effect_set_vec2(m_InputSizeParam, &param);
 
 		// Output Size
-		vec2_set(&param, output_size.width, output_size.height);
+		vec2_set(&param, static_cast<float>(output_size.width), static_cast<float>(output_size.height));
 		gs_effect_set_vec2(m_OutputSizeParam, &param);
 
 		// Region UV Offset
 		vec2_set(
 			&param,
-			static_cast<float>(region.x) / input_size.width,
-			static_cast<float>(region.y) / input_size.height
+			static_cast<float>(region.x) / static_cast<float>(input_size.width),
+			static_cast<float>(region.y) / static_cast<float>(input_size.height)
 		);
 		gs_effect_set_vec2(m_RegionUVOffsetParam, &param);
 
@@ -110,12 +110,12 @@ namespace lvk
 			(AU1*)m_EASUConstants[1].ptr,
 			(AU1*)m_EASUConstants[2].ptr,
 			(AU1*)m_EASUConstants[3].ptr,
-			region.width,
-			region.height,
-			input_size.width,
-			input_size.height,
-			output_size.width,
-			output_size.height
+			static_cast<AF1>(region.width),
+            static_cast<AF1>(region.height),
+            static_cast<AF1>(input_size.width),
+            static_cast<AF1>(input_size.height),
+            static_cast<AF1>(output_size.width),
+            static_cast<AF1>(output_size.height)
 		);
 
 		for (size_t i = 0; i < m_EASUParams.size(); i++)

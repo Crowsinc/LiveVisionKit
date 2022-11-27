@@ -64,7 +64,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		m_Sharpness = obs_data_get_double(settings, PROP_SHARPNESS);
+		m_Sharpness = static_cast<float>(obs_data_get_double(settings, PROP_SHARPNESS));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

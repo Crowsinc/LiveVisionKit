@@ -104,7 +104,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::skip()
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// Advances the start pointer to pop one element from the front of the buffer.
 		// This is the counter-part to advance() and does not de-allocate memory.
@@ -242,7 +242,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::centre(const int offset) const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// NOTE: Gets lower centre for even sizing.
 		return at(centre_index() + offset);
@@ -253,7 +253,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::oldest(const int offset) const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset >= 0);
 
 		return at(offset);
@@ -264,7 +264,7 @@ namespace lvk
 	template<typename T>
 	const T& SlidingBuffer<T>::newest(const int offset) const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset <= 0);
 
 		return at((size() - 1) + offset);
@@ -285,7 +285,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::centre(const int offset)
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// NOTE: Gets lower centre for even sizing.
 		return at(centre_index() + offset);
@@ -296,7 +296,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::oldest(const int offset)
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset >= 0);
 
 		return at(offset);
@@ -307,7 +307,7 @@ namespace lvk
 	template<typename T>
 	T& SlidingBuffer<T>::newest(const int offset)
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset <= 0);
 
 		return at((size() - 1) + offset);
@@ -326,7 +326,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	bool SlidingBuffer<T>::full() const
+	bool SlidingBuffer<T>::is_full() const
 	{
 		return size() == capacity();
 	}
@@ -334,7 +334,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	bool SlidingBuffer<T>::empty() const
+	bool SlidingBuffer<T>::is_empty() const
 	{
 		return size() == 0;
 	}
@@ -360,7 +360,7 @@ namespace lvk
 	template<typename T>
 	size_t SlidingBuffer<T>::centre_index() const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// NOTE: Gets lower centre index for even sizing.
 		// NOTE: This is an external 0-N index to be used with SlidingBuffer at() and [] operations.
@@ -373,8 +373,8 @@ namespace lvk
 	template<typename K>
 	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial) const
 	{
-		LVK_ASSERT(!empty());
-		LVK_ASSERT(!kernel.empty());
+		LVK_ASSERT(!is_empty());
+		LVK_ASSERT(!kernel.is_empty());
 		LVK_ASSERT(size() >= kernel.size());
 
 		const auto kernel_centre_index = kernel.centre_index();
@@ -413,8 +413,8 @@ namespace lvk
 	template<typename K>
 	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
 	{
-		LVK_ASSERT(!empty());
-		LVK_ASSERT(!kernel.empty());
+		LVK_ASSERT(!is_empty());
+		LVK_ASSERT(!kernel.is_empty());
 		LVK_ASSERT(size() >= kernel.size());
 
 		SlidingBuffer<T> buffer(capacity());
@@ -429,7 +429,7 @@ namespace lvk
 	template<typename T>
 	T SlidingBuffer<T>::average() const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// Kick start calculation with element 0 to avoid
 		// requirement of a default initialisation of T.
@@ -445,7 +445,7 @@ namespace lvk
 	template<typename T>
 	T SlidingBuffer<T>::variance() const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		// Kick start calculation with element 0 to avoid
 		// requirement of a default initialisation of T.
@@ -467,7 +467,7 @@ namespace lvk
 	template<typename T>
 	T SlidingBuffer<T>::min() const
 	{
-		LVK_ASSERT(!empty());
+		LVK_ASSERT(!is_empty());
 
 		T min = at(0);
 		for(size_t i = 1; i < size(); i++)
@@ -494,7 +494,7 @@ namespace lvk
 	inline std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer)
 	{
 		stream << '[';
-		if(!buffer.empty())
+		if(!buffer.is_empty())
 		{
 			stream << buffer.at(0);
 			for (size_t i = 1; i < buffer.size(); i++)
