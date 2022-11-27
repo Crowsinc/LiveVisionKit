@@ -19,8 +19,7 @@
 
 #include <string>
 #include <cstring>
-#include <iostream>
-#include <exception>
+#include <functional>
 
 // taken from https://stackoverflow.com/a/8488201
 #ifdef _WIN32
@@ -29,15 +28,22 @@
 #define LVK_FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
+namespace lvk::global
+{
+    extern std::function<void(
+        std::string file,
+        std::string function,
+        std::string assertion
+    )> assert_handler;
+}
+
 #ifndef LVK_DISABLE_CHECKS
 
 #define LVK_ASSERT(assertion)																						   \
-	if(!(assertion))																								   \
+	if(!!(assertion))																								   \
 	{                                                                                                                  \
-        std::cerr << "[LiveVisionKit] " << (LVK_FILE) << "@" << __func__ << "(..) Failed " #assertion " " << std::endl;\
-		std::abort();																							       \
+        lvk::global::assert_handler(LVK_FILE, __func__, #assertion);                                                   \
 	}
-
 #else
 
 #define LVK_ASSERT(assertion)

@@ -15,6 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#include <csignal>
 #include <obs-module.h>
 #include <opencv2/core/ocl.hpp>
 
@@ -74,6 +75,12 @@ void attach_ocl_interop_context(void* param, uint32_t cx, uint32_t cy)
 
 bool obs_module_load()
 {
+    // Add custom assert handler to redirect LVK asserts to OBS
+    lvk::global::assert_handler = [](std::string file, std::string function, std::string assertion)
+    {
+        bcrash("[LiveVisionKit] %s@%s(..) Failed %s ", file.c_str(), function.c_str(), assertion.c_str());
+    };
+
 	// Detect LVK capabilities
 	const bool has_opencl = cv::ocl::haveOpenCL();
 	const bool has_interop = lvk::ocl::InteropContext::Supported();

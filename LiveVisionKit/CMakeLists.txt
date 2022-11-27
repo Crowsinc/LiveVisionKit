@@ -53,6 +53,7 @@ target_sources(
     ${PROJECT_NAME}
     PRIVATE
         Diagnostics/Directives.hpp
+        Diagnostics/Directives.cpp
         Diagnostics/Logging/CSVLogger.cpp
         Diagnostics/Logging/CSVLogger.hpp
         Diagnostics/Logging/Logger.hpp
