@@ -32,7 +32,7 @@ namespace lvk
 		float filter_scaling = 4; // Smaller is stronger (1/x)
 	};
 
-	class DeblockingFilter : public VideoFilter, public Configurable<DeblockingSettings>
+	class DeblockingFilter final : public VideoFilter, public Configurable<DeblockingSettings>
 	{
 	public:
 
