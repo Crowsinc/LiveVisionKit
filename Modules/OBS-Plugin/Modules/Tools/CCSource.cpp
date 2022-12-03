@@ -48,7 +48,7 @@ extern void register_cct_source()
 
 extern void register_cct_effect_source()
 {
-	obs_source_info config = { 0 };
+	obs_source_info config = {0};
 	config.id = "LVK~CCT~Effect";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_CUSTOM_DRAW;

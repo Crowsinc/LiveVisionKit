@@ -45,10 +45,8 @@ namespace lvk
 		[[nodiscard]] bool validate() const override;
 
 	private:
-
 		gs_eparam_t* m_CASConstParam = nullptr;
 		gs_eparam_t* m_OutputSizeParam = nullptr;
-
 	};
 
 

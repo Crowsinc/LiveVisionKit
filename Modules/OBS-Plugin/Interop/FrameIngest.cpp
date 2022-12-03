@@ -21,10 +21,15 @@
 #include <thread>
 #include <LiveVisionKit.hpp>
 
-#include "Utility/Logging.hpp"
-
 namespace lvk
 {
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // NOTE: The maximmum size is to avoid any possibility of integer overflow when uploading the
+    // textures to UMats, whose sizing is specified in 32bit integers. This is most relevant when
+    // uploading the frames, as they are uploaded in bulk as 1 dimensionsl buffers.
+    constexpr auto MAX_TEXTURE_SIZE = 8192;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -168,7 +173,14 @@ namespace lvk
 		const uint32_t channels
 	)
 	{
-		return upload_planes(src, cv::Size(src.width, src.height), channels);
+		return upload_planes(
+            src,
+            cv::Size(
+                static_cast<int>(src.width),
+                static_cast<int>(src.height)
+            ),
+            channels
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -180,15 +192,26 @@ namespace lvk
 		const uint32_t plane_0_channels
 	)
 	{
+        LVK_ASSERT(src.data[0] != nullptr);
+        LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
 
-		const uint64_t import_length = plane_0_size.area() * static_cast<uint64_t>(plane_0_channels);
+		const int import_length = plane_0_size.area() * static_cast<int>(plane_0_channels);
 
-		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(m_ImportBuffer);
+		cv::Mat(
+            1,
+            import_length,
+            CV_8UC1,
+            src.data[0]
+        ).copyTo(m_ImportBuffer);
 
-		return m_ImportBuffer.reshape(plane_0_channels, plane_0_size.height);
+		return m_ImportBuffer.reshape(
+            static_cast<int>(plane_0_channels),
+            plane_0_size.height
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -204,6 +227,8 @@ namespace lvk
 	{
 		LVK_ASSERT(src.data[0] != nullptr);
 		LVK_ASSERT(src.data[1] != nullptr);
+        LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
@@ -211,24 +236,32 @@ namespace lvk
 		LVK_ASSERT(between<uint32_t>(plane_1_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_1_size.height, 1, src.height));
 
-
 		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
 		// Padding exists between planes which must be avoided.
 
-		const uint64_t plane_0_length = plane_0_size.area() * static_cast<uint64_t>(plane_0_channels);
-		const uint64_t plane_1_length = plane_1_size.area() * static_cast<uint64_t>(plane_1_channels);
+		const int plane_0_length = plane_0_size.area() * static_cast<int>(plane_0_channels);
+		const int plane_1_length = plane_1_size.area() * static_cast<int>(plane_1_channels);
 
-		const uint64_t plane_1_offset = src.data[1] - src.data[0];
-		const uint64_t import_length = plane_1_offset + plane_1_length;
+		const int plane_1_offset = static_cast<int>(src.data[1] - src.data[0]);
+		const int import_length = plane_1_offset + plane_1_length;
 
-		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(m_ImportBuffer);
+		cv::Mat(
+            1,
+            import_length,
+            CV_8UC1,
+            src.data[0]
+        ).copyTo(m_ImportBuffer);
 
 		return std::make_tuple<cv::UMat, cv::UMat>(
-			m_ImportBuffer.colRange(0, plane_0_length)
-				.reshape(plane_0_channels, plane_0_size.height),
-			m_ImportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length)
-				.reshape(plane_1_channels, plane_1_size.height)
+			m_ImportBuffer.colRange(0, plane_0_length).reshape(
+                static_cast<int>(plane_0_channels),
+                plane_0_size.height
+            ),
+			m_ImportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length).reshape(
+                static_cast<int>(plane_1_channels),
+                plane_1_size.height
+            )
 		);
 	}
 
@@ -248,6 +281,8 @@ namespace lvk
 		LVK_ASSERT(src.data[0] != nullptr);
 		LVK_ASSERT(src.data[1] != nullptr);
 		LVK_ASSERT(src.data[2] != nullptr);
+        LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
 		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
@@ -262,23 +297,34 @@ namespace lvk
 		// are all stored in one contiguous span of memory starting at src.data[0].
 		// Padding exists between planes which must be avoided.
 
-		const uint64_t plane_0_length = plane_0_size.area() * static_cast<uint64_t>(plane_0_channels);
-		const uint64_t plane_1_length = plane_1_size.area() * static_cast<uint64_t>(plane_1_channels);
-		const uint64_t plane_2_length = plane_2_size.area() * static_cast<uint64_t>(plane_2_channels);
+		const int plane_0_length = plane_0_size.area() * static_cast<int>(plane_0_channels);
+		const int plane_1_length = plane_1_size.area() * static_cast<int>(plane_1_channels);
+		const int plane_2_length = plane_2_size.area() * static_cast<int>(plane_2_channels);
 
-		const uint64_t plane_1_offset = src.data[1] - src.data[0];
-		const uint64_t plane_2_offset = src.data[2] - src.data[0];
-		const uint64_t import_length = plane_2_offset + plane_2_length;
+		const int plane_1_offset = static_cast<int>(src.data[1] - src.data[0]);
+		const int plane_2_offset = static_cast<int>(src.data[2] - src.data[0]);
+		const int import_length = plane_2_offset + plane_2_length;
 
-		cv::Mat(1, import_length, CV_8UC1, src.data[0]).copyTo(m_ImportBuffer);
+		cv::Mat(
+            1,
+            import_length,
+            CV_8UC1,
+            src.data[0]
+        ).copyTo(m_ImportBuffer);
 
 		return std::make_tuple(
-			m_ImportBuffer.colRange(0, plane_0_length)
-				.reshape(plane_0_channels, plane_0_size.height),
-			m_ImportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length)
-				.reshape(plane_1_channels, plane_1_size.height),
-			m_ImportBuffer.colRange(plane_2_offset, plane_2_offset + plane_2_length)
-				.reshape(plane_2_channels, plane_2_size.height)
+			m_ImportBuffer.colRange(0, plane_0_length).reshape(
+                static_cast<int>(plane_0_channels),
+                plane_0_size.height
+            ),
+			m_ImportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length).reshape(
+                static_cast<int>(plane_1_channels),
+                plane_1_size.height
+            ),
+			m_ImportBuffer.colRange(plane_2_offset, plane_2_offset + plane_2_length).reshape(
+                static_cast<int>(plane_2_channels),
+                plane_2_size.height
+            )
 		);
 	}
 
@@ -290,10 +336,13 @@ namespace lvk
 	)
 	{
 		LVK_ASSERT(!plane_0.empty());
+        LVK_ASSERT(dst.data[0] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
 		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
 
-		const uint64_t export_length = plane_0.total() * plane_0.elemSize();
+		const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
 
 		plane_0.reshape(1, 1).copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
 	}
@@ -310,6 +359,8 @@ namespace lvk
 		LVK_ASSERT(!plane_1.empty());
 		LVK_ASSERT(dst.data[0] != nullptr);
 		LVK_ASSERT(dst.data[1] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
 		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
 		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
@@ -319,11 +370,11 @@ namespace lvk
 		// are all stored in one contiguous span of memory starting at src.data[0].
 		// We must conserve the padding which exists between planes in memory.
 
-		const uint64_t plane_0_length = plane_0.total() * plane_0.elemSize();
-		const uint64_t plane_1_length = plane_1.total() * plane_1.elemSize();
+		const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
+		const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
 
-		const uint64_t plane_1_offset = dst.data[1] - dst.data[0];
-		const uint64_t export_length = plane_1_offset + plane_1_length;
+		const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
+		const int export_length = plane_1_offset + plane_1_length;
 
 		m_ExportBuffer.create(1, export_length, CV_8UC1);
 
@@ -348,6 +399,8 @@ namespace lvk
 		LVK_ASSERT(dst.data[0] != nullptr);
 		LVK_ASSERT(dst.data[1] != nullptr);
 		LVK_ASSERT(dst.data[2] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
 		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
 		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
@@ -359,13 +412,13 @@ namespace lvk
 		// are all stored in one contiguous span of memory starting at src.data[0].
 		// We must conserve the padding which exists between planes in memory.
 
-		const uint64_t plane_0_length = plane_0.total() * plane_0.elemSize();
-		const uint64_t plane_1_length = plane_1.total() * plane_1.elemSize();
-		const uint64_t plane_2_length = plane_2.total() * plane_2.elemSize();
+		const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
+		const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
+		const int plane_2_length = static_cast<int>(plane_2.total() * plane_2.elemSize());
 
-		const uint64_t plane_1_offset = dst.data[1] - dst.data[0];
-		const uint64_t plane_2_offset = dst.data[2] - dst.data[0];
-		const uint64_t export_length = plane_2_offset + plane_2_length;
+		const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
+		const int plane_2_offset = static_cast<int>(dst.data[2] - dst.data[0]);
+		const int export_length = plane_2_offset + plane_2_length;
 
 		m_ExportBuffer.create(1, export_length, CV_8UC1);
 
@@ -400,13 +453,13 @@ namespace lvk
 		auto& frame = *src;
 		
 		const cv::Size frame_size(
-			src->width,
-			src->height
+			static_cast<int>(src->width),
+			static_cast<int>(src->height)
 		);
 
 		const cv::Size chroma_size(
-			m_ChromaScaling.width * frame_size.width,
-			m_ChromaScaling.height * frame_size.height
+			static_cast<int>(m_ChromaScaling.width * static_cast<float>(frame_size.width)),
+			static_cast<int>(m_ChromaScaling.height * static_cast<float>(frame_size.height))
 		);
 
 		auto [y_roi, u_roi, v_roi] = upload_planes(
@@ -477,8 +530,8 @@ namespace lvk
 		LVK_ASSERT(test_obs_frame(src));
 		auto& frame = *src;
 
-		const cv::Size frame_size(frame.width, frame.height);
-		const cv::Size chroma_size(frame.width/2, frame.height/2);
+		const cv::Size frame_size(static_cast<int>(frame.width), static_cast<int>(frame.height));
+		const cv::Size chroma_size = frame_size/2;
 
 		auto [y_roi, uv_roi] = upload_planes(
 			frame,

@@ -167,8 +167,8 @@ namespace lvk
 		const float frame_ms = 1000.0f/video_fps;
 
 		m_Filter.reconfigure([&](StabilizationSettings& stab_settings) {
+			stab_settings.crop_proportion = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
 			stab_settings.smoothing_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
-			stab_settings.crop_proportion = obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 			stab_settings.suppression_smoothing_rate = SUPPRESSION_SMOOTHING_STEP / video_fps;
 
@@ -202,7 +202,7 @@ namespace lvk
 
 		// Update the frame delay indicator for the user
 		const auto old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
-		const auto new_stream_delay = static_cast<int>(frame_ms * m_Filter.frame_delay());
+		const auto new_stream_delay = static_cast<int>(frame_ms * static_cast<float>(m_Filter.frame_delay()));
 
 		// NOTE: Need to update the property UI to push a stream delay update because
 		// the UI element is disabled. But only if the delay has changed, otherwise
@@ -229,7 +229,10 @@ namespace lvk
 	void VSFilter::hybrid_render(gs_texture_t* frame)
 	{
 		const auto target = obs_filter_get_target(m_Context);
-		const cv::Size render_size(obs_source_get_base_width(target), obs_source_get_base_height(target));
+		const cv::Size render_size(
+            static_cast<int>(obs_source_get_base_width(target)),
+            static_cast<int>(obs_source_get_base_height(target))
+        );
 		const cv::Rect render_region = crop(render_size, m_Filter.settings().crop_proportion);
 
 		if (frame == nullptr)

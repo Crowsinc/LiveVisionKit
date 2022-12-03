@@ -148,11 +148,9 @@ namespace lvk
 		m_MatchCanvasSize = m_MatchSourceSize = false;
 
 		const std::string output_pattern = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
-		if (output_pattern == OUTPUT_SIZE_CANVAS)
+		if(output_pattern == OUTPUT_SIZE_CANVAS)
 			m_MatchCanvasSize = true;
-		else if (output_pattern == OUTPUT_SIZE_SOURCE)
-			m_MatchSourceSize = true;
-		else if (output_pattern.find('x') != std::string::npos)
+		else if(output_pattern.find('x') != std::string::npos)
 		{
 			// NOTE: ^^ must be last check in case non-numeric list values include the letter 'x'
 
@@ -180,14 +178,14 @@ namespace lvk
 				m_MatchSourceSize = true;
 			}
 		}
-		else m_MatchSourceSize = true; // Default to match source in case of an error
+		else m_MatchSourceSize = true; // Error or (output_pattern == OUTPUT_SIZE_SOURCE)
 
 		m_MaintainAspectRatio = obs_data_get_bool(settings, PROP_MAINTAIN_ASPECT);
 
-		m_TLCrop.width = obs_data_get_int(settings, PROP_CROP_LEFT);
-		m_TLCrop.height = obs_data_get_int(settings, PROP_CROP_TOP);
-		m_BRCrop.width = obs_data_get_int(settings, PROP_CROP_RIGHT);
-		m_BRCrop.height = obs_data_get_int(settings, PROP_CROP_BOTTOM);
+		m_TLCrop.width = static_cast<int>(obs_data_get_int(settings, PROP_CROP_LEFT));
+		m_TLCrop.height = static_cast<int>(obs_data_get_int(settings, PROP_CROP_TOP));
+		m_BRCrop.width = static_cast<int>(obs_data_get_int(settings, PROP_CROP_RIGHT));
+		m_BRCrop.height = static_cast<int>(obs_data_get_int(settings, PROP_CROP_BOTTOM));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -240,8 +238,8 @@ namespace lvk
 			// There are two possible scalings to use, we need to ensure that we pick the one
 			// which doesn't result in scaling beyond the user's output dimensions.
 			const auto safe_scale = std::min<float>(
-				static_cast<float>(m_OutputSize.width) / m_ScalingRegion.width,
-				static_cast<float>(m_OutputSize.height) / m_ScalingRegion.height
+				static_cast<float>(m_OutputSize.width) / static_cast<float>(m_ScalingRegion.width),
+				static_cast<float>(m_OutputSize.height) / static_cast<float>(m_ScalingRegion.height)
 			);
 
 			m_OutputSize = cv::Size2f(m_ScalingRegion.size()) * safe_scale;

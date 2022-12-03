@@ -50,7 +50,7 @@ namespace lvk
 
         explicit Time(const std::chrono::nanoseconds nanoseconds);
 
-        Time(const Time& other);
+        Time(const Time& other) = default;
 
 		double hours() const;
 
@@ -64,7 +64,7 @@ namespace lvk
 		
 		double nanoseconds() const;
 	
-		Time& operator=(const Time& other);
+		Time& operator=(const Time& other) = default;
 
 		void operator+=(const Time& other);
 

@@ -26,7 +26,7 @@
 
 extern void register_adb_source()
 {
-	obs_source_info config = {0};
+	obs_source_info config = {nullptr};
 	config.id = "LVK~ADB";
 	config.type = OBS_SOURCE_TYPE_FILTER;
 	config.output_flags = OBS_SOURCE_ASYNC_VIDEO;

@@ -17,7 +17,6 @@
 #include "Time.hpp"
 
 #include <ctime>
-#include <time.h>
 #include <sstream>
 #include <iomanip>
 
@@ -50,7 +49,7 @@ namespace lvk
 
 		//TODO: Replace with C++20 time calender and timezone functionality
 		std::tm tm = {};
-		std::time_t time = std::time(0);
+		std::time_t time = std::time(nullptr);
 #ifdef WIN32
 		localtime_s(&tm, &time);
 #else
@@ -128,12 +127,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Time::Time(const Time& other)
-		: m_Time(other.m_Time)
-	{}
-	
-//---------------------------------------------------------------------------------------------------------------------
-
 	double Time::hours() const
 	{
 		return seconds() * (1.0 / s_h_ratio);
@@ -171,17 +164,9 @@ namespace lvk
 
 	double Time::nanoseconds() const
 	{
-		return m_Time.count();
+		return static_cast<double>(m_Time.count());
 	}
-	
-//---------------------------------------------------------------------------------------------------------------------
 
-	Time& Time::operator=(const Time& other)
-	{
-		m_Time = other.m_Time;
-		return *this;
-	}
-	
 //---------------------------------------------------------------------------------------------------------------------
 
 	void Time::operator+=(const Time& other)
@@ -256,14 +241,14 @@ namespace lvk
 
 	Time Time::operator*(const double multiplier) const
 	{
-		return Time((m_Time * multiplier).count());
+		return Time(static_cast<uint64_t>((m_Time * multiplier).count()));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Time::operator/(const double divisor) const
 	{
-		return Time((m_Time / divisor).count());
+        return Time(static_cast<uint64_t>((m_Time / divisor).count()));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
