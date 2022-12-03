@@ -18,7 +18,6 @@
 #include "Homography.hpp"
 
 #include "Diagnostics/Directives.hpp"
-#include "Math.hpp"
 
 namespace lvk
 {

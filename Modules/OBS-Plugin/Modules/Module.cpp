@@ -19,8 +19,6 @@
 #include <obs-module.h>
 #include <opencv2/core/ocl.hpp>
 
-#include <LiveVisionKit.hpp>
-
 #include "Interop/InteropContext.hpp"
 #include "Utility/Logging.hpp"
 
