@@ -24,7 +24,7 @@ set(LVK_BINARY_DIR "Binaries")
 set(LVK_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LiveVisionKit/")
 set(DISABLE_CHECKS "OFF" CACHE BOOL "Compile without asserts and pre-condition checks")
 set(BUILD_OBS_PLUGIN "ON" CACHE BOOL "Build the OBS plugin")
-set(BUILD_VIDEO_PROCESSOR "ON" CACHE BOOL "Build the CLT Video Processor")
+set(BUILD_VIDEO_PROCESSOR_CLT "ON" CACHE BOOL "Build the Video Processor Command-Line Tool")
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(
@@ -72,8 +72,8 @@ endif()
 
 # MODULES
 add_subdirectory(LiveVisionKit)
-if(BUILD_VIDEO_PROCESSOR)
-    message(STATUS "\nBuilding with LVK Video Processor...")
+if(BUILD_VIDEO_PROCESSOR_CLT)
+    message(STATUS "\nBuilding with LVK Video Processor CLT...")
     add_subdirectory(Modules/LVK-Processor)
 endif()
 if(BUILD_OBS_PLUGIN)
