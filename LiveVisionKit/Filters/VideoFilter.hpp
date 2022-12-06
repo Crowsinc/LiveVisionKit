@@ -27,17 +27,71 @@
 
 namespace lvk
 {
+    struct Frame
+    {
+        cv::UMat data;
+        uint64_t timestamp;
 
-	// TODO: Deal with format changes in video processing for CLI 
-	// That is, videos may be of different formats (BGR, YUV, etc.)
+        static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
 
-	struct Frame;
+        explicit Frame(const uint64_t timestamp = 0);
+
+        // NOTE: copies the frame, use Wrap() to reference
+        explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
+
+        Frame(
+            const cv::Size& size,
+            const int type,
+            const uint64_t timestamp = 0
+        );
+
+        Frame(
+            const uint32_t width,
+            const uint32_t height,
+            const int type,
+            const uint64_t timestamp = 0
+        );
+
+        Frame(const Frame& frame);
+
+        Frame(Frame&& frame) noexcept;
+
+        virtual ~Frame() = default;
+
+        Frame& operator=(Frame&& frame) noexcept;
+
+        void default_to(const cv::Size& size, const int type);
+
+        void default_to(const uint32_t width, const uint32_t height, const int type);
+
+        void allocate(const cv::Size& size, const int type);
+
+        void allocate(const uint32_t width, const uint32_t height, const int type);
+
+        void copy(const cv::UMat& src);
+
+        void copy(const Frame& src);
+
+        Frame clone() const;
+
+        uint32_t width() const;
+
+        uint32_t height() const;
+
+        cv::Size size() const;
+
+        bool is_empty() const;
+
+        int type() const;
+
+    };
+
 
 	class VideoFilter : public Unique<VideoFilter>
 	{
 	public:
 
-		explicit VideoFilter(const std::string& filter_name);
+		explicit VideoFilter(const std::string& filter_name = "Identity Filter");
 
 		virtual ~VideoFilter() = default;
 
@@ -45,7 +99,7 @@ namespace lvk
 			const Frame& input,
 			Frame& output,
 			const bool debug
-		) = 0;
+		);
 
         void process(
             const Frame& input,
@@ -86,64 +140,6 @@ namespace lvk
 		const std::string m_Alias;
 	};
 
-
-	struct Frame
-	{
-		cv::UMat data;
-		uint64_t timestamp;
-
-		static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
-
-		explicit Frame(const uint64_t timestamp = 0);
-
-		// NOTE: copies the frame, use Wrap() to reference
-        explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
-
-		Frame(
-			const cv::Size& size,
-			const int type,
-			const uint64_t timestamp = 0
-		);
-
-		Frame(
-			const uint32_t width,
-			const uint32_t height,
-			const int type,
-			const uint64_t timestamp = 0
-		);
-
-		Frame(const Frame& frame);
-
-		Frame(Frame&& frame) noexcept;
-
-		virtual ~Frame() = default;
-
-		Frame& operator=(Frame&& frame) noexcept;
-
-		void default_to(const cv::Size& size, const int type);
-		
-		void default_to(const uint32_t width, const uint32_t height, const int type);
-
-		void allocate(const cv::Size& size, const int type);
-
-		void allocate(const uint32_t width, const uint32_t height, const int type);
-
-		void copy(const cv::UMat& src);
-
-		void copy(const Frame& src);
-
-		Frame clone() const;
-
-		uint32_t width() const;
-
-		uint32_t height() const;
-
-		cv::Size size() const;
-
-		bool is_empty() const;
-
-		int type() const;
-
-	};
-
+    // Default VideoFilter is essentially an identity filter.
+    typedef VideoFilter IdentityFilter;
 }
