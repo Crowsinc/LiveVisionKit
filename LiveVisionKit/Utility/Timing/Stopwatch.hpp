@@ -44,6 +44,8 @@ namespace lvk
 
 		const SlidingBuffer<Time>& history() const;
 
+        void reset_history();
+
 	private:
 
 		bool m_Running = false;
