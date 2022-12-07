@@ -31,13 +31,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     ConversionFilter::ConversionFilter(const cv::ColorConversionCodes conversion_code)
-        : ConversionFilter(std::vector<cv::ColorConversionCodes>(1, conversion_code))
-    {}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    ConversionFilter::ConversionFilter(const std::vector<cv::ColorConversionCodes>& conversion_codes)
-        : ConversionFilter(ConversionFilterSettings{.conversion_chain=conversion_codes})
+        : ConversionFilter(ConversionFilterSettings{.conversion_code = conversion_code})
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -48,24 +42,14 @@ namespace lvk
         const bool debug
     )
     {
-        auto& conversion_chain = m_Settings.conversion_chain;
+        output.timestamp = input.timestamp;
 
-        // If there is no conversion, then this is simply identity
-        if(conversion_chain.empty())
-            output = input.clone();
-
-        // If there is only one conversion, then apply it directly onto the output
-        if(conversion_chain.size() == 1)
-            cv::cvtColor(input.data, output.data, m_Settings.conversion_chain.front());
-
-
-        cv::UMat src_buffer = input.data;
-        for(size_t i = 0; i < m_ConversionBuffers.size(); i++)
-        {
-            cv::cvtColor(src_buffer, m_ConversionBuffers[i], conversion_chain[i]);
-            src_buffer = m_ConversionBuffers[i];
-        }
-        cv::cvtColor(m_ConversionBuffers.back(), output.data, conversion_chain.back());
+        cv::cvtColor(
+            input.data,
+            output.data,
+            m_Settings.conversion_code,
+            static_cast<int>(m_Settings.output_channels.value_or(0))
+        );
     }
 
 
@@ -74,16 +58,6 @@ namespace lvk
     void ConversionFilter::configure(const ConversionFilterSettings& settings)
     {
         m_Settings = settings;
-
-        if(settings.conversion_chain.size() > 1)
-        {
-            // Make sure we have the exact amount of conversion buffers
-            // required to perform all the conversions. Note that the
-            // final conversion is done straight to the output.
-
-            m_ConversionBuffers.resize(settings.conversion_chain.size() - 1);
-        }
-        else m_ConversionBuffers.clear();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
