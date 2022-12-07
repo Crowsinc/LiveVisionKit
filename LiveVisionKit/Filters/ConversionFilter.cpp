@@ -52,20 +52,20 @@ namespace lvk
 
         // If there is no conversion, then this is simply identity
         if(conversion_chain.empty())
-            VideoFilter::process(input, output, false);
+            output = input.clone();
 
-        // If there is only one conversion, then convert directly to the output
+        // If there is only one conversion, then apply it directly onto the output
         if(conversion_chain.size() == 1)
             cv::cvtColor(input.data, output.data, m_Settings.conversion_chain.front());
 
 
         cv::UMat src_buffer = input.data;
-        for(size_t i = 0; i < m_IntermediateBuffers.size(); i++)
+        for(size_t i = 0; i < m_ConversionBuffers.size(); i++)
         {
-            cv::cvtColor(src_buffer, m_IntermediateBuffers[i], conversion_chain[i]);
-            src_buffer = m_IntermediateBuffers[i];
+            cv::cvtColor(src_buffer, m_ConversionBuffers[i], conversion_chain[i]);
+            src_buffer = m_ConversionBuffers[i];
         }
-        cv::cvtColor(m_IntermediateBuffers.back(), output.data, conversion_chain.back());
+        cv::cvtColor(m_ConversionBuffers.back(), output.data, conversion_chain.back());
     }
 
 
@@ -77,13 +77,13 @@ namespace lvk
 
         if(settings.conversion_chain.size() > 1)
         {
-            // Make sure we have the exact amount of intermediate buffers
-            // required to perform all the conversions. Note that the final
-            // conversion is done straight to the output.
+            // Make sure we have the exact amount of conversion buffers
+            // required to perform all the conversions. Note that the
+            // final conversion is done straight to the output.
 
-            m_IntermediateBuffers.resize(settings.conversion_chain.size() - 1);
+            m_ConversionBuffers.resize(settings.conversion_chain.size() - 1);
         }
-        else m_IntermediateBuffers.clear();
+        else m_ConversionBuffers.clear();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -46,7 +46,7 @@ namespace lvk
         void configure(const ConversionFilterSettings& settings) override;
 
     private:
-        std::vector<cv::UMat> m_IntermediateBuffers;
+        std::vector<cv::UMat> m_ConversionBuffers;
     };
 
 }
