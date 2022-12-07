@@ -43,6 +43,8 @@ namespace lvk
 		
 		const SlidingBuffer<Time>& history() const;
 
+        void reset_history();
+
 	private:
 		Time m_DeltaTime;
 		Stopwatch m_Stopwatch;
