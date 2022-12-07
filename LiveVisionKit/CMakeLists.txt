@@ -65,6 +65,8 @@ target_sources(
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
+        Filters/ConversionFilter.cpp
+        Filters/ConversionFilter.hpp
         Filters/DeblockingFilter.cpp
         Filters/DeblockingFilter.hpp
         Filters/StabilizationFilter.cpp
