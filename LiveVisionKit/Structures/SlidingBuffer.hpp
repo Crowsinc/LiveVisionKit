@@ -95,6 +95,8 @@ namespace lvk
 
 		T max() const;
 
+        T sum() const;
+
 	private:
 
 		void advance_window();
@@ -105,7 +107,8 @@ namespace lvk
 		size_t m_StartIndex = 0, m_EndIndex = 0;
 	};
 
-	template<typename T>
+
+    template<typename T>
 	std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer);
 
 }

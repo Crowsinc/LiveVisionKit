@@ -431,13 +431,7 @@ namespace lvk
 	{
 		LVK_ASSERT(!is_empty());
 
-		// Kick start calculation with element 0 to avoid
-		// requirement of a default initialisation of T.
-		T avg = at(0);
-		for(size_t i = 1; i < size(); i++)
-			avg = avg + at(i);
-
-		return avg / size();
+		return sum() / size();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -487,6 +481,22 @@ namespace lvk
 
 		return max;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    T SlidingBuffer<T>::sum() const
+    {
+        LVK_ASSERT(!is_empty());
+
+        // Kick start calculation with element 0 to avoid
+        // requirement of a default initialisation of T.
+        T sum = at(0);
+        for(size_t i = 1; i < size(); i++)
+            sum = sum + at(i);
+
+        return sum;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
