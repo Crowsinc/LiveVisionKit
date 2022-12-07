@@ -25,9 +25,16 @@
 namespace lvk
 {
 
-class ConversionFilter final : public VideoFilter, public Configurable<std::vector<cv::ColorConversionCodes>>
+    struct ConversionFilterSettings
+    {
+        std::vector<cv::ColorConversionCodes> conversion_chain;
+    };
+
+    class ConversionFilter final : public VideoFilter, public Configurable<ConversionFilterSettings>
     {
     public:
+
+        explicit ConversionFilter(const ConversionFilterSettings& settings = {});
 
         explicit ConversionFilter(const cv::ColorConversionCodes conversion_code);
 
@@ -36,7 +43,7 @@ class ConversionFilter final : public VideoFilter, public Configurable<std::vect
         using VideoFilter::process;
         void process(const Frame& input, Frame& output, const bool debug) override;
 
-        void configure(const std::vector<cv::ColorConversionCodes>& conversion_codes) override;
+        void configure(const ConversionFilterSettings& settings) override;
 
     private:
         std::vector<cv::UMat> m_IntermediateBuffers;

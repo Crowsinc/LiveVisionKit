@@ -22,6 +22,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    ConversionFilter::ConversionFilter(const ConversionFilterSettings& settings)
+        : VideoFilter("Conversion Filter")
+    {
+        this->configure(settings);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     ConversionFilter::ConversionFilter(const cv::ColorConversionCodes conversion_code)
         : ConversionFilter(std::vector<cv::ColorConversionCodes>(1, conversion_code))
     {}
@@ -29,10 +37,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     ConversionFilter::ConversionFilter(const std::vector<cv::ColorConversionCodes>& conversion_codes)
-        : VideoFilter("Conversion Filter")
-    {
-        this->configure(conversion_codes);
-    }
+        : ConversionFilter(ConversionFilterSettings{.conversion_chain=conversion_codes})
+    {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -42,37 +48,40 @@ namespace lvk
         const bool debug
     )
     {
+        auto& conversion_chain = m_Settings.conversion_chain;
+
         // If there is no conversion, then this is simply identity
-        if(m_Settings.empty())
+        if(conversion_chain.empty())
             VideoFilter::process(input, output, false);
 
         // If there is only one conversion, then convert directly to the output
-        if(m_Settings.size() == 1)
-            cv::cvtColor(input.data, output.data, m_Settings.front());
+        if(conversion_chain.size() == 1)
+            cv::cvtColor(input.data, output.data, m_Settings.conversion_chain.front());
 
 
         cv::UMat src_buffer = input.data;
         for(size_t i = 0; i < m_IntermediateBuffers.size(); i++)
         {
-            cv::cvtColor(src_buffer, m_IntermediateBuffers[i], m_Settings[i]);
+            cv::cvtColor(src_buffer, m_IntermediateBuffers[i], conversion_chain[i]);
             src_buffer = m_IntermediateBuffers[i];
         }
-        cv::cvtColor(m_IntermediateBuffers.back(), output.data, m_Settings.back());
+        cv::cvtColor(m_IntermediateBuffers.back(), output.data, conversion_chain.back());
     }
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ConversionFilter::configure(const std::vector<cv::ColorConversionCodes>& conversion_codes)
+    void ConversionFilter::configure(const ConversionFilterSettings& settings)
     {
-        m_Settings = conversion_codes;
+        m_Settings = settings;
 
-        if(conversion_codes.size() > 1)
+        if(settings.conversion_chain.size() > 1)
         {
             // Make sure we have the exact amount of intermediate buffers
             // required to perform all the conversions. Note that the final
             // conversion is done straight to the output.
 
-            m_IntermediateBuffers.resize(conversion_codes.size() - 1);
+            m_IntermediateBuffers.resize(settings.conversion_chain.size() - 1);
         }
         else m_IntermediateBuffers.clear();
     }
