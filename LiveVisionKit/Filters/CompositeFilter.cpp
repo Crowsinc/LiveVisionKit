@@ -54,30 +54,24 @@ namespace lvk
         if(filter_chain.empty())
             VideoFilter::process(input, output, debug);
 
-
-        size_t prev_filter = 0;
-        bool input_processed = false;
-        for(size_t curr_filter = 0; curr_filter < filter_chain.size(); curr_filter++)
+        const Frame* prev_filter_output = &input;
+        for(size_t i = 0; i < filter_chain.size(); i++)
         {
-            const bool filter_enabled = m_FilterRunState[curr_filter];
-
-            if(filter_enabled)
+            if(bool filter_enabled = m_FilterRunState[i]; filter_enabled)
             {
-                filter_chain[curr_filter]->process(
-                    input_processed ? m_FilterOutputs[prev_filter] : input,
-                    m_FilterOutputs[curr_filter],
+                const Frame& filter_input = *prev_filter_output;
+                Frame& filter_output = m_FilterOutputs[i];
+
+                filter_chain[i]->process(
+                    filter_input,
+                    filter_output,
                     debug
                 );
-
-                prev_filter = curr_filter;
-                input_processed = true;
+                prev_filter_output = &filter_output;
             }
         }
 
-        if(input_processed)
-            output.copy(m_FilterOutputs[prev_filter]);
-        else
-            output.copy(input);
+        output.copy(*prev_filter_output);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
