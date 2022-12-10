@@ -47,5 +47,7 @@
 #include "Diagnostics/Logging/CSVLogger.hpp"
 
 #include "Filters/VideoFilter.hpp"
+#include "Filters/CompositeFilter.hpp"
+#include "Filters/ConversionFilter.hpp"
 #include "Filters/DeblockingFilter.hpp"
 #include "Filters/StabilizationFilter.hpp"
