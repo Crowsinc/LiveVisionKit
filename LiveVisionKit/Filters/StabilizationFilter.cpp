@@ -35,6 +35,8 @@ namespace lvk
 
 	void StabilizationFilter::process(const Frame& input, Frame& output, const bool debug)
 	{
+        LVK_ASSERT(!input.is_empty());
+
 		Homography tracked_motion = Homography::Identity();
 		if (m_Settings.stabilize_output)
 		{

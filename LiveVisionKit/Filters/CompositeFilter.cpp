@@ -48,6 +48,8 @@ namespace lvk
         const bool debug
     )
     {
+        LVK_ASSERT(!input.is_empty());
+
         auto& filter_chain = m_Settings.filter_chain;
 
         // If there are no filters, then this is simply an identity filter
@@ -68,6 +70,10 @@ namespace lvk
                     debug
                 );
                 prev_filter_output = &filter_output;
+
+                // Exit the chain if one filter output nothing
+                if(filter_output.is_empty())
+                    break;
             }
         }
 

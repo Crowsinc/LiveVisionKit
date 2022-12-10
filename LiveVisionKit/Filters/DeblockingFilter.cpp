@@ -34,6 +34,8 @@ namespace lvk
 	
 	void DeblockingFilter::process(const Frame& input, Frame& output, const bool debug)
 	{
+        LVK_ASSERT(!input.is_empty());
+
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
 		// its performance and effective area. Blend maps are made by comparing the

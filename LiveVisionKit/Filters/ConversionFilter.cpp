@@ -42,6 +42,8 @@ namespace lvk
         const bool debug
     )
     {
+        LVK_ASSERT(!input.is_empty());
+
         output.timestamp = input.timestamp;
 
         cv::cvtColor(
