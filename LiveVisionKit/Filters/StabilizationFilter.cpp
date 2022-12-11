@@ -20,6 +20,8 @@
 #include "Math/Math.hpp"
 #include "Utility/Drawing.hpp"
 
+#include <opencv2/core/ocl.hpp>
+
 namespace lvk
 {
 
@@ -33,33 +35,59 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::process(const Frame& input, Frame& output, const bool debug)
+	void StabilizationFilter::filter(
+        const Frame& input,
+        Frame& output,
+        Stopwatch& timer,
+        const bool debug
+    )
 	{
         LVK_ASSERT(!input.is_empty());
 
-		Homography tracked_motion = Homography::Identity();
-		if (m_Settings.stabilize_output)
-		{
-			cv::extractChannel(input.data, m_TrackingFrame, 0);
-			tracked_motion = m_FrameTracker.track(m_TrackingFrame);
+        timer.start();
 
-			if (debug)
-			{
-				Frame debug_frame = input.clone();
-				draw::plot_markers(
-					debug_frame.data,
-					m_FrameTracker.tracking_points(),
-					lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
-					cv::MarkerTypes::MARKER_CROSS,
-					8,
-					2
-				);
+        // Track the frame
+        Homography frame_motion = Homography::Identity();
+		if(m_Settings.stabilize_output)
+        {
+            cv::extractChannel(input.data, m_TrackingFrame, 0);
+            frame_motion = m_FrameTracker.track(m_TrackingFrame);
+        }
 
-				m_Stabilizer.stabilize(debug_frame, output, suppress(tracked_motion));
-				return;
-			}
-		}
-		m_Stabilizer.stabilize(input, output, suppress(tracked_motion));
+        // Stabilize the input
+        if(debug)
+        {
+            // Ensure we do not time any debug rendering
+            cv::ocl::finish();
+            timer.pause();
+
+            Frame debug_frame = input.clone();
+            if(m_Settings.stabilize_output)
+            {
+                // Draw tracking markers onto frame
+                draw::plot_markers(
+                    debug_frame.data,
+                    m_FrameTracker.tracking_points(),
+                    lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
+                    cv::MarkerTypes::MARKER_CROSS,
+                    8,
+                    2
+                );
+            }
+            cv::ocl::finish();
+            timer.start();
+
+            m_Stabilizer.stabilize(debug_frame, output, suppress(frame_motion));
+        }
+        else m_Stabilizer.stabilize(input, output, suppress(frame_motion));
+
+        // If in debug mode, wait for all processing to finish before stopping the timer.
+        // This leads to more accurate timing, but can lead to performance drops.
+        if(debug)
+        {
+            cv::ocl::finish();
+            timer.stop();
+        } else timer.stop();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

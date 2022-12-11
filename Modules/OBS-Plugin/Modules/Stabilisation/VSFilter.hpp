@@ -52,7 +52,6 @@ namespace lvk
 
 		obs_source_t* m_Context = nullptr;
 
-		Stopwatch m_FrameTimer;
 		StabilizationFilter m_Filter;
 		uint64_t m_LastTimestamp = 0;
 		bool m_TestMode = false;

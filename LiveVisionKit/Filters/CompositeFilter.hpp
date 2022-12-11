@@ -42,9 +42,6 @@ namespace lvk
             const CompositeFilterSettings& settings = {}
         );
 
-        using VideoFilter::process;
-        void process(const Frame& input, Frame& output, const bool debug) override;
-
         void configure(const CompositeFilterSettings& settings) override;
 
         const std::vector<std::shared_ptr<lvk::VideoFilter>>& filters() const;
@@ -64,6 +61,14 @@ namespace lvk
         void enable_all_filters();
 
     private:
+
+        void filter(
+            const Frame& input,
+            Frame& output,
+            Stopwatch& timer,
+            const bool debug
+        ) override;
+
         std::vector<bool> m_FilterRunState;
         std::vector<Frame> m_FilterOutputs;
     };

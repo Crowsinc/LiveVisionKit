@@ -51,9 +51,7 @@ namespace lvk
 
 		explicit StabilizationFilter(const StabilizationSettings& settings = {});
 
-        using VideoFilter::process;
-        void process(const Frame& input, Frame& output, const bool debug) override;
-		
+
 		void configure(const StabilizationSettings& settings) override;
 
 		bool ready() const;
@@ -69,6 +67,13 @@ namespace lvk
 		const cv::Rect& crop_region() const;
 
 	private:
+
+        void filter(
+            const Frame& input,
+            Frame& output,
+            Stopwatch& timer,
+            const bool debug
+        ) override;
 
 		Homography suppress(Homography& motion);
 

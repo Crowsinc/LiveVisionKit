@@ -218,11 +218,12 @@ namespace lvk
 
 	VSFilter::VSFilter(obs_source_t* context)
 		: VisionFilter(context),
-		  m_Context(context),
-		  m_FrameTimer(TIMING_SAMPLES)
+		  m_Context(context)
 	{
 		LVK_ASSERT(context != nullptr);
-	}
+
+        m_Filter.set_timing_samples(TIMING_SAMPLES);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -263,7 +264,7 @@ namespace lvk
 
 		if (m_TestMode)
 		{
-			m_Filter.profile(buffer, buffer, m_FrameTimer, true);
+			m_Filter.process(buffer, buffer, true);
 			if(m_Filter.ready())
 				draw_debug_hud(buffer.data);
 		}
@@ -274,8 +275,8 @@ namespace lvk
 
 	void VSFilter::draw_debug_hud(cv::UMat& frame)
 	{
-		const double frame_time_ms = m_FrameTimer.average().milliseconds();
-		const double deviation_ms = m_FrameTimer.deviation().milliseconds();
+		const double frame_time_ms = m_Filter.timings().average().milliseconds();
+		const double deviation_ms = m_Filter.timings().deviation().milliseconds();
 		const auto& crop_region = m_Filter.crop_region();
 
 		draw::text(

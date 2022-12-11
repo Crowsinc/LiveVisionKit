@@ -19,6 +19,9 @@
 
 #include "Utility/Drawing.hpp"
 
+#include <opencv2/core/ocl.hpp>
+
+
 namespace lvk
 {
 
@@ -31,10 +34,17 @@ namespace lvk
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-	
-	void DeblockingFilter::process(const Frame& input, Frame& output, const bool debug)
+
+    void DeblockingFilter::filter(
+        const Frame& input,
+        Frame& output,
+        Stopwatch& timer,
+        const bool debug
+    )
 	{
         LVK_ASSERT(!input.is_empty());
+
+        timer.start();
 
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -100,6 +110,14 @@ namespace lvk
 			m_DeblockBlendMap,
 			output_region
 		);
+
+        // If in debug mode, wait for all processing to finish before stopping the timer.
+        // This leads to more accurate timing, but can lead to performance drops.
+        if(debug)
+        {
+            cv::ocl::finish();
+            timer.stop();
+        } else timer.stop();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

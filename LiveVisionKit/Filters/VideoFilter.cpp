@@ -17,7 +17,8 @@
 
 #include "VideoFilter.hpp"
 
-#include <opencv2/core/ocl.hpp>
+#include <thread>
+#include <mutex>
 
 namespace lvk
 {
@@ -199,7 +200,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     VideoFilter::VideoFilter(const std::string& filter_name)
-        : m_Alias(filter_name + " (" + std::to_string(this->uid()) + ")")
+        : m_Alias(filter_name + " (" + std::to_string(this->uid()) + ")"),
+          m_FrameTimer(30)
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -210,14 +212,18 @@ namespace lvk
         const bool debug
     )
     {
-        output.copy(input);
+        filter(input, output, m_FrameTimer, debug);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::process(const Frame& input, Frame& output)
+    void VideoFilter::render(
+        const Frame& input,
+        bool debug
+    )
     {
-        process(input, output, false);
+        filter(input, m_FrameBuffer, m_FrameTimer, debug);
+        cv::imshow(alias(), m_FrameBuffer.data);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -226,7 +232,7 @@ namespace lvk
         cv::VideoCapture& input_stream, 
         cv::VideoWriter& output_stream,
         const bool debug,
-        const std::function<void(VideoFilter&, Frame&)>& callback
+        const std::function<bool(VideoFilter&, Frame&)>& callback
     )
     {
         LVK_ASSERT(input_stream.isOpened());
@@ -245,74 +251,69 @@ namespace lvk
             if(!output_frame.is_empty())
                 output_stream.write(output_frame.data);
             
-            callback(*this, output_frame);
+            if(callback(*this, output_frame))
+                break;
         }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::profile(
+    void VideoFilter::render(
+        cv::VideoCapture& input_stream,
+        const bool debug,
+        const std::function<bool(VideoFilter&, Frame&)>& callback
+    )
+    {
+        LVK_ASSERT(input_stream.isOpened());
+
+        Frame input_frame, output_frame;
+        while (input_stream.read(input_frame.data))
+        {
+            // NOTE: not all input streams support timestamps (webcam etc.), such
+            // stream will likely default to a timestamp of zero for all frames.
+            const auto stream_position = std::max<double>(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
+            input_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
+
+            process(input_frame, output_frame, debug);
+            cv::imshow(alias(), output_frame.data);
+
+            if(callback(*this, output_frame))
+                break;
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::set_timing_samples(const uint32_t samples)
+    {
+        m_FrameTimer = Stopwatch(samples);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const Stopwatch& VideoFilter::timings() const
+    {
+        return m_FrameTimer;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const std::string& VideoFilter::alias() const
+    {
+        return m_Alias;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::filter(
         const Frame& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
     )
     {
-        timer.start();
-
-        process(input, output, debug);
-        cv::ocl::finish();
-        
-        timer.stop();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void VideoFilter::profile(
-        const Frame& input,
-        Frame& output,
-        Stopwatch& timer
-    )
-    {
-        profile(input, output, timer, false);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void VideoFilter::profile(
-        cv::VideoCapture& input_stream,
-        cv::VideoWriter& output_stream,
-        Stopwatch& timer,
-        const bool debug,
-        const std::function<void(VideoFilter&, Frame&, Stopwatch&)>& callback
-    )
-    {
-        LVK_ASSERT(input_stream.isOpened());
-        LVK_ASSERT(output_stream.isOpened());
-
-
-        Frame input_frame, output_frame;
-        while (input_stream.read(input_frame.data))
-        {
-            // NOTE: not all input streams support timestamps (webcam etc.), such
-            // stream will likely default to a timestamp of zero for all frames. 
-            const auto stream_position = std::max<double>(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
-            input_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
-
-            profile(input_frame, output_frame, timer, debug);
-
-            if (!output_frame.is_empty())
-                output_stream.write(output_frame.data);
-
-            callback(*this, output_frame, timer);
-        }
-    }
-   
-//---------------------------------------------------------------------------------------------------------------------
-
-    const std::string& VideoFilter::alias() const
-    {
-        return m_Alias;
+        // Default filter is simply an identity operation
+        output.copy(input);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -48,7 +48,6 @@ namespace lvk
 
 		obs_source_t* m_Context = nullptr;
 
-		Stopwatch m_FrameTimer;
 		DeblockingFilter m_Filter;
 		bool m_TestMode = false;
 	};

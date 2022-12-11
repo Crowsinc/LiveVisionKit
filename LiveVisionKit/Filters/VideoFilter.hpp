@@ -95,48 +95,52 @@ namespace lvk
 
 		virtual ~VideoFilter() = default;
 
-		virtual void process(
-			const Frame& input,
-			Frame& output,
-			const bool debug
-		);
-
         void process(
             const Frame& input,
-            Frame& output
+            Frame& output,
+            bool debug = false
+        );
+
+        void render(
+            const Frame& input,
+            bool debug = false
         );
 
 		void process(
 			cv::VideoCapture& input_stream,
 			cv::VideoWriter& output_stream,
 			const bool debug = false,
-			const std::function<void(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {}
-		);
-		
-		virtual void profile(
-			const Frame& input,
-			Frame& output,
-			Stopwatch& timer,
-			const bool debug
+			const std::function<bool(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {
+                return false;
+            }
 		);
 
-        void profile(
-            const Frame& input,
-            Frame& output,
-            Stopwatch& timer
+        void render(
+            cv::VideoCapture& input_stream,
+            const bool debug = false,
+            const std::function<bool(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {
+                return false;
+            }
         );
 
-        void profile(
-			cv::VideoCapture& input_stream,
-			cv::VideoWriter& output_stream,
-			Stopwatch& timer,
-			const bool debug = false,
-			const std::function<void(VideoFilter&, Frame&, Stopwatch&)>& callback = [](auto&, auto&, auto&) {}
-		);
+        void set_timing_samples(const uint32_t samples);
+
+        const Stopwatch& timings() const;
 
 		const std::string& alias() const;
 
+    protected:
+
+        virtual void filter(
+            const Frame& input,
+            Frame& output,
+            Stopwatch& timer,
+            const bool debug
+        );
+
 	private:
+        Frame m_FrameBuffer;
+        Stopwatch m_FrameTimer;
 		const std::string m_Alias;
 	};
 

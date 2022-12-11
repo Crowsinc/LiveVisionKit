@@ -39,10 +39,16 @@ namespace lvk
 
         explicit ConversionFilter(const cv::ColorConversionCodes conversion_code);
 
-        using VideoFilter::process;
-        void process(const Frame& input, Frame& output, const bool debug) override;
-
         void configure(const ConversionFilterSettings& settings) override;
+
+    private:
+
+        void filter(
+            const Frame& input,
+            Frame& output,
+            Stopwatch& timer,
+            const bool debug
+        ) override;
 
     };
 
