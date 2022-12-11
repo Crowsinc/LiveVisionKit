@@ -25,9 +25,9 @@ namespace lvk
 
 	Stopwatch::Stopwatch(const size_t history)
 		: m_Running(false),
-		  m_StartTime(),
-		  m_Elapsed(),
-		  m_History(history)
+          m_Memory(0),
+          m_StartTime(0),
+          m_History(history)
 	{
 		LVK_ASSERT(history > 0);
 	}
@@ -42,27 +42,45 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void Stopwatch::stop()
+	Time Stopwatch::stop()
 	{
-		LVK_ASSERT(is_running());
-		
-		m_Elapsed = Time::Now() - m_StartTime;
-		m_Running = false;
-	
-		m_History.push(m_Elapsed);
+        // If running or paused, we want to stop and reset the stopwatch
+        if(is_running() || is_paused())
+        {
+            auto elapsed_time = pause();
+            m_History.push(elapsed_time);
+
+            m_Memory = Time(0);
+
+            return elapsed_time;
+        }
+
+        return Time(0);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Time Stopwatch::pause()
+    {
+        // If paused, returns the last pause time.
+        // If stopped, returns zero as memory should be reset.
+        if(!is_running())
+            return m_Memory;
+
+        m_Memory += (Time::Now() - m_StartTime);
+        m_Running = false;
+
+        return m_Memory;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Stopwatch::restart()
 	{
-		// NOTE: we must ensure stop is run, or was ran, so 
-		// that the elapsed time and history are properly set!
-		if(is_running())
-			stop();	
+        auto elapsed = stop();
+        start();
 
-		start();
-		return m_Elapsed;
+		return elapsed;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -74,16 +92,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    bool Stopwatch::is_paused() const
+    {
+        return !m_Running && m_Memory.nanoseconds() > 0;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	Time Stopwatch::elapsed() const
 	{
-		return is_running() ? (Time::Now() - m_StartTime) : m_Elapsed;
+		return is_running() ? (m_Memory + (Time::Now() - m_StartTime)) : m_Memory;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time Stopwatch::average() const
 	{
-		return m_History.is_empty() ? Time() : m_History.average();
+		return m_History.is_empty() ? Time(0) : m_History.average();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

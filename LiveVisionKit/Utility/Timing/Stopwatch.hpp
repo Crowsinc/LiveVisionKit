@@ -28,13 +28,17 @@ namespace lvk
 
 		explicit Stopwatch(const size_t history = 1);
 
-		void start();
+        void start();
 
-		void stop();
+		Time stop();
+
+        Time pause();
 
 		Time restart();
-		
+
 		bool is_running() const;
+
+        bool is_paused() const;
 
 		Time elapsed() const;
 		
@@ -47,9 +51,8 @@ namespace lvk
         void reset_history();
 
 	private:
-
-		bool m_Running = false;
-		Time m_StartTime, m_Elapsed;
+        bool m_Running = false;
+		Time m_Memory, m_StartTime;
 		SlidingBuffer<Time> m_History;
 	};
 
