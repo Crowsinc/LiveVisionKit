@@ -75,6 +75,8 @@ target_sources(
         Filters/StabilizationFilter.hpp
         Filters/VideoFilter.cpp
         Filters/VideoFilter.hpp
+        Filters/VideoFrame.cpp
+        Filters/VideoFrame.hpp
 )
 
 # MATH SOURCES
