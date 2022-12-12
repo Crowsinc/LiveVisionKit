@@ -25,9 +25,10 @@ namespace lvk
 
 	Stopwatch::Stopwatch(const size_t history)
 		: m_Running(false),
-          m_Memory(0),
+          m_History(history),
+          m_ElapsedTime(0),
           m_StartTime(0),
-          m_History(history)
+          m_Memory(0)
 	{
 		LVK_ASSERT(history > 0);
 	}
@@ -47,12 +48,12 @@ namespace lvk
         // If running or paused, we want to stop and reset the stopwatch
         if(is_running() || is_paused())
         {
-            auto elapsed_time = pause();
-            m_History.push(elapsed_time);
+            m_ElapsedTime = pause();
+            m_History.push(m_ElapsedTime);
 
             m_Memory = Time(0);
 
-            return elapsed_time;
+            return m_ElapsedTime;
         }
 
         return Time(0);
@@ -68,6 +69,7 @@ namespace lvk
             return m_Memory;
 
         m_Memory += (Time::Now() - m_StartTime);
+        m_ElapsedTime = m_Memory;
         m_Running = false;
 
         return m_Memory;
@@ -101,7 +103,7 @@ namespace lvk
 
 	Time Stopwatch::elapsed() const
 	{
-		return is_running() ? (m_Memory + (Time::Now() - m_StartTime)) : m_Memory;
+		return is_running() ? (m_Memory + (Time::Now() - m_StartTime)) : m_ElapsedTime;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

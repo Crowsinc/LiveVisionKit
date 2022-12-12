@@ -52,8 +52,8 @@ namespace lvk
 
 	private:
         bool m_Running = false;
-		Time m_Memory, m_StartTime;
 		SlidingBuffer<Time> m_History;
+		Time m_ElapsedTime, m_StartTime, m_Memory;
 	};
 
 }
