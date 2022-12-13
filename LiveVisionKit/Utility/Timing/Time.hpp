@@ -65,6 +65,8 @@ namespace lvk
 		double microseconds() const;
 		
 		double nanoseconds() const;
+
+        double frequency() const;
 	
 		Time& operator=(const Time& other) = default;
 
