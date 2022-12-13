@@ -43,6 +43,10 @@ endif()
 target_sources(
     ${CLT_NAME}
     PRIVATE
-        lvk.cpp
+        Application.cpp
+        OptionParser.hpp
+        OptionParser.tpp
+        FilterParser.hpp
+        FilterParser.tpp
 )
 
