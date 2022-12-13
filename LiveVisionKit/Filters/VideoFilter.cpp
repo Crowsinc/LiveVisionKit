@@ -17,6 +17,8 @@
 
 #include "VideoFilter.hpp"
 
+#include <condition_variable>
+#include <chrono>
 #include <thread>
 #include <mutex>
 
@@ -42,6 +44,160 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void VideoFilter::process(
+        cv::VideoCapture& input_stream,
+        const std::function<bool(VideoFilter&, Frame&)>& callback,
+        const bool debug
+    )
+    {
+        LVK_ASSERT(input_stream.isOpened());
+
+        const size_t max_buffer_frames = 15;
+
+        std::mutex input_mutex, output_mutex;
+        std::queue<Frame> input_queue, output_queue;
+
+        std::condition_variable input_consume_flag, output_consume_flag;
+        std::condition_variable input_available_flag, output_available_flag;
+        std::atomic<bool> input_finished = false, filter_finished = false, terminate_input = false;
+
+        // Input Processor
+        // This reads frames from the input stream and passes them off for filtering.
+        auto input_thread = std::thread([&](){
+            Frame read_frame;
+            while(input_stream.read(read_frame.data) && !terminate_input)
+            {
+                // Set frame timestamp if supported, otherwise set it to zero.
+                const auto stream_position = std::max(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
+                read_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
+
+                // Push new frame onto the input queue
+                {
+                    std::unique_lock<std::mutex> queue_lock(input_mutex);
+
+                    // If the input queue is saturated, wait until a frame is consumed
+                    while(input_queue.size() >= max_buffer_frames)
+                        input_consume_flag.wait(queue_lock);
+
+                    input_queue.push(std::move(read_frame));
+                    if(input_queue.size() == 1)
+                        input_available_flag.notify_one();
+                }
+            }
+            input_finished = true;
+            input_available_flag.notify_one();
+        });
+
+
+        // Filter Processor
+        // This grabs frames delivered by the input processor, filters them, and passes them off for output.
+        auto filter_thread = std::thread([&](){
+            Frame input_frame, filtered_frame;
+            while(true)
+            {
+                // Pop a frame from the input queue
+                {
+                    std::unique_lock<std::mutex> queue_lock(input_mutex);
+                    while(input_queue.empty())
+                    {
+                        // If there are no new frames incoming, then we have filtered everything
+                        if(input_finished)
+                        {
+                            filter_finished = true;
+                            output_available_flag.notify_one();
+                            return;
+                        }
+
+                        input_available_flag.wait(queue_lock);
+                    }
+
+                    input_frame = std::move(input_queue.front());
+                    input_queue.pop();
+
+                    input_consume_flag.notify_one();
+                }
+
+                // Process the frame
+                process(input_frame, filtered_frame, debug);
+                if(filtered_frame.is_empty())
+                    continue;
+
+                // Push processed frame onto the output queue
+                {
+                    std::unique_lock<std::mutex> queue_lock(output_mutex);
+
+                    // If the output queue is saturated, wait until a frame is consumed
+                    while(output_queue.size() >= max_buffer_frames)
+                        output_consume_flag.wait(queue_lock);
+
+                    output_queue.push(std::move(filtered_frame));
+                    if(output_queue.size() == 1)
+                        output_available_flag.notify_one();
+                }
+            }
+        });
+
+
+        // Output Processor
+        // This grabs filtered frames delivered by the filter processor and sends them to the user callback.
+        Frame output_frame;
+        while(true)
+        {
+            // Pop next frame from the output queue
+            {
+                std::unique_lock<std::mutex> queue_lock(output_mutex);
+                while(output_queue.empty())
+                {
+                    // If there are no new frames incoming, then we have finished processing
+                    if(filter_finished)
+                    {
+                        input_thread.join();
+                        filter_thread.join();
+                        return;
+                    }
+
+                    output_available_flag.wait(queue_lock);
+                }
+
+                output_frame = std::move(output_queue.front());
+                output_queue.pop();
+
+                output_consume_flag.notify_one();
+            }
+
+            // Send frame to the output
+            if(callback(*this, output_frame))
+            {
+                // User called for the processing to be terminated.
+
+                // To avoid complicating the multi-threading process we will simply
+                // terminate the input, then starve out the input and output queues
+                // to emulate reaching the end of the input stream.
+
+                // Terminate input and starve out the filter thread.
+                terminate_input = true;
+                {
+                    std::unique_lock<std::mutex> queue_lock(input_mutex);
+                    while(!input_queue.empty()) input_queue.pop();
+                    input_consume_flag.notify_one();
+                }
+                input_thread.join();
+
+                // Make space in the output queue to avoid saturating the filter thread.
+                {
+                    std::unique_lock<std::mutex> queue_lock(output_mutex);
+                    while(!output_queue.empty()) output_queue.pop();
+                    output_consume_flag.notify_one();
+                }
+                filter_thread.join();
+                return;
+            }
+        }
+
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void VideoFilter::render(
         const Frame& input,
         bool debug
@@ -53,58 +209,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::process(
-        cv::VideoCapture& input_stream, 
-        cv::VideoWriter& output_stream,
-        const bool debug,
-        const std::function<bool(VideoFilter&, Frame&)>& callback
-    )
-    {
-        LVK_ASSERT(input_stream.isOpened());
-        LVK_ASSERT(output_stream.isOpened());
-
-        Frame input_frame, output_frame;
-        while (input_stream.read(input_frame.data))
-        {
-            // NOTE: not all input streams support timestamps (webcam etc.), such
-            // stream will likely default to a timestamp of zero for all frames. 
-            const auto stream_position = std::max<double>(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
-            input_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
-            
-            process(input_frame, output_frame, debug);
-
-            if(!output_frame.is_empty())
-                output_stream.write(output_frame.data);
-            
-            if(callback(*this, output_frame))
-                break;
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     void VideoFilter::render(
         cv::VideoCapture& input_stream,
-        const bool debug,
-        const std::function<bool(VideoFilter&, Frame&)>& callback
+        const uint32_t target_fps,
+        const bool debug
     )
     {
         LVK_ASSERT(input_stream.isOpened());
 
-        Frame input_frame, output_frame;
-        while (input_stream.read(input_frame.data))
-        {
-            // NOTE: not all input streams support timestamps (webcam etc.), such
-            // stream will likely default to a timestamp of zero for all frames.
-            const auto stream_position = std::max<double>(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
-            input_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
+        Stopwatch frame_timer;
+        Time target_frametime = Time::Timestep(
+            (target_fps == 0) ? input_stream.get(cv::CAP_PROP_FPS) : target_fps
+        );
 
-            process(input_frame, output_frame, debug);
-            cv::imshow(alias(), output_frame.data);
+        frame_timer.start();
+        process(input_stream, [&](VideoFilter& filter, Frame& frame){
+            cv::imshow(filter.alias(), frame.data);
 
-            if(callback(*this, output_frame))
-                break;
-        }
+            while(frame_timer.elapsed() < target_frametime)
+                std::this_thread::yield();
+
+            frame_timer.restart();
+
+            return cv::pollKey() == 27; // Esc
+        }, debug);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

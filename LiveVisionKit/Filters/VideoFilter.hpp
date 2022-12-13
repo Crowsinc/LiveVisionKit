@@ -42,26 +42,21 @@ namespace lvk
             bool debug = false
         );
 
+        void process(
+            cv::VideoCapture& input_stream,
+            const std::function<bool(VideoFilter&, Frame&)>& callback,
+            const bool debug = false
+        );
+
         void render(
             const Frame& input,
             bool debug = false
         );
 
-		void process(
-			cv::VideoCapture& input_stream,
-			cv::VideoWriter& output_stream,
-			const bool debug = false,
-			const std::function<bool(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {
-                return false;
-            }
-		);
-
         void render(
             cv::VideoCapture& input_stream,
-            const bool debug = false,
-            const std::function<bool(VideoFilter&, Frame&)>& callback = [](auto&, auto&) {
-                return false;
-            }
+            const uint32_t target_fps = 0,
+            const bool debug = false
         );
 
         void set_timing_samples(const uint32_t samples);
@@ -79,7 +74,7 @@ namespace lvk
             const bool debug
         );
 
-	private:
+    private:
         Frame m_FrameBuffer;
         Stopwatch m_FrameTimer;
 		const std::string m_Alias;
