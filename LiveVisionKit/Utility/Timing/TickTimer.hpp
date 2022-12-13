@@ -21,7 +21,7 @@
 namespace lvk
 {
 
-	class TickTimer
+    class TickTimer : public Stopwatch
 	{
 	public:
 
@@ -33,21 +33,10 @@ namespace lvk
 		
 		void reset_counter();
 
-		Time delta_time() const; 
-
-		Time elapsed_time() const;
-
-		Time average() const;
-		
-		Time deviation() const;
-		
-		const SlidingBuffer<Time>& history() const;
-
-        void reset_history();
+		Time delta() const;
 
 	private:
 		Time m_DeltaTime;
-		Stopwatch m_Stopwatch;
 		uint64_t m_Counter = 0;
 	};
 

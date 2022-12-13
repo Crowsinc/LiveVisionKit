@@ -53,6 +53,8 @@ namespace lvk
 		LVK_ASSERT(s_Filters.count(context) == 0);
 
 		s_Filters.emplace(context, std::ref(*this));
+
+        m_TickTimer.start();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -497,7 +499,7 @@ namespace lvk
 
 	Time VisionFilter::delta_time() const
 	{
-		return m_TickTimer.delta_time();
+		return m_TickTimer.delta();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
