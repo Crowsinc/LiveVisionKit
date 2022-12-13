@@ -15,9 +15,9 @@
 // 	  **********************************************************************
 
 #include "Time.hpp"
+#include "Diagnostics/Directives.hpp"
 
 #include <ctime>
-#include <sstream>
 #include <iomanip>
 
 namespace lvk
@@ -100,7 +100,16 @@ namespace lvk
 	{
 		return Time(amount);
 	}
-	
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Time Time::Timestep(const double frequency)
+    {
+        LVK_ASSERT(frequency > 0.0);
+
+        return Time::Seconds(1.0 / frequency);
+    }
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	Time::Time()

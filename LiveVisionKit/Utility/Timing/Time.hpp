@@ -42,6 +42,8 @@ namespace lvk
 		
 		static Time Nanoseconds(const uint64_t amount);
 
+        static Time Timestep(const double frequency);
+
 		Time();
 
 		explicit Time(const TimePoint& time);
