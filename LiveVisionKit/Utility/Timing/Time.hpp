@@ -67,6 +67,8 @@ namespace lvk
 		double nanoseconds() const;
 
         double frequency() const;
+
+        std::string hms() const;
 	
 		Time& operator=(const Time& other) = default;
 

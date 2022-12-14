@@ -19,6 +19,7 @@
 
 #include <ctime>
 #include <iomanip>
+#include <opencv2/opencv.hpp>
 
 namespace lvk
 {
@@ -266,6 +267,18 @@ namespace lvk
 	{
         return Time(static_cast<uint64_t>((m_Time / divisor).count()));
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::string Time::hms() const
+    {
+        const auto s = static_cast<uint64_t>(seconds());
+        const auto m = s / 60;
+        const auto h = m / 60;
+
+        // TODO: switch to std::format when widely available for GCC
+        return cv::format("%02llu:%02llu:%02llu", h, m % 60, s % 60);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
