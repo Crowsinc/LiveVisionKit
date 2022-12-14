@@ -44,6 +44,8 @@ target_sources(
     ${CLT_NAME}
     PRIVATE
         Application.cpp
+        ConsoleLogger.hpp
+        ConsoleLogger.cpp
         OptionParser.hpp
         OptionParser.tpp
         FilterParser.hpp
