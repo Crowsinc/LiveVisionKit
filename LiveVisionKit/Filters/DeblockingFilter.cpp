@@ -60,6 +60,7 @@ namespace lvk
 
 		// Ensure that the output exists
 		output.default_to(input.size(), input.type());
+        output.timestamp = input.timestamp;
 
 		const int macroblock_size = static_cast<int>(m_Settings.block_size);
 		const cv::Size macroblock_extent = input.size() / macroblock_size;
@@ -70,6 +71,7 @@ namespace lvk
 		// the region of the frame which consists of only full macroblocks. 
 		cv::UMat input_region = input.data(macroblock_region);
 		cv::UMat output_region = output.data(macroblock_region);
+
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
@@ -110,6 +112,35 @@ namespace lvk
 			m_DeblockBlendMap,
 			output_region
 		);
+
+
+        // TODO: test if this faster than just copying the input over to the output.
+        // If the output and input regions do not match the input frame size
+        // due to the frames not evenly dividing the macroblock, then we need
+        // to copy over the vertical or horizontal slices that weren't filtered.
+        if(input_region.cols < input.data.cols)
+        {
+            const cv::Rect vertical_slice(
+                cv::Point(input_region.cols, 0),
+                cv::Size(
+                    input.data.cols - input_region.cols,
+                    input_region.rows
+                )
+            );
+            input.data(vertical_slice).copyTo(output.data(vertical_slice));
+        }
+        if(input_region.rows < input.data.rows)
+        {
+            const cv::Rect horizontal_slice(
+                cv::Point(0, input_region.rows),
+                cv::Size(
+                    input.data.cols,
+                    input.data.rows - input_region.rows
+                )
+            );
+            input.data(horizontal_slice).copyTo(output.data(horizontal_slice));
+        }
+
 
         // If in debug mode, wait for all processing to finish before stopping the timer.
         // This leads to more accurate timing, but can lead to performance drops.
