@@ -60,6 +60,8 @@ namespace lvk
 
         void enable_all_filters();
 
+        size_t filter_count() const;
+
     private:
 
         void filter(
