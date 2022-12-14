@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <iostream>
+#include <csignal>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -14,10 +15,11 @@
 
 #include "OptionParser.hpp"
 #include "FilterParser.hpp"
+#include "ConsoleLogger.hpp"
 
 /* TODO:
- * 1. Fix error on a bad device capture stream (e.g. using 2)
- * 2. Finalize console output
+ * 1. Fix error on a bad device capture stream (e.g. using 2) <DONE>
+ * 2. Finalize console output <
  * 3. Add more options, e.g. logging, device capture resolution, etc.
  * ?. Write help manual
  * ?. Add proper error message handling within parsers
@@ -27,9 +29,17 @@
 using ArgQueue = std::deque<std::string>;
 using FilterChain = std::vector<std::shared_ptr<lvk::VideoFilter>>;
 
+// Globals & Constants
+
+std::function<void()> signal_handler;
+
+constexpr size_t FILTER_TIMING_SAMPLES = 300;
+
 // Helper Functions
 
 void print_manual();
+
+std::string make_progress_bar(const uint32_t length, const double progress);
 
 template<typename... T>
 void abort_with_error(const char* fmt, T... args);
@@ -38,18 +48,27 @@ void abort_with_error(const char* fmt, T... args);
 
 struct Settings
 {
-    bool debug_mode = false;
-    bool display_output = false;
-
-    // TODO: std::optional<std::filesystem::path> log_output;
-
-    bool is_device_capture = false;
+    // IO Settings
     cv::VideoCapture input_stream;
-    lvk::CompositeFilter video_processor;
+    bool is_device_capture = false;
+    std::optional<std::filesystem::path> input_path;
     std::optional<std::filesystem::path> output_path;
-    int output_codec = cv::VideoWriter::fourcc('H','2','6','4');
+
+    int output_codec = cv::VideoWriter::fourcc('M','J','P','G');
     double output_fps = 0;
+
+    std::optional<lvk::CSVLogger> data_logger;
+
+    // Filtering Settings
+    lvk::CompositeFilter video_processor;
+    bool display_output = false;
+    bool debug_mode = false;
+    bool verbose = false;
+
+    // Runtime flags
+    bool terminate = false;
 };
+
 
 void register_filters(clt::FilterParser& parser);
 
@@ -63,11 +82,32 @@ void finalize_filters(FilterChain& filter_chain, Settings& settings);
 
 void run_video_processor(Settings& settings);
 
+void log_verbose(Settings& settings, clt::ConsoleLogger& console);
+
+void log_timing_data(
+    Settings& settings,
+    lvk::TickTimer& frame_timer,
+    lvk::CSVLogger& logger
+);
+
+void log_video_processor(
+    Settings& settings,
+    clt::ConsoleLogger& console,
+    const lvk::TickTimer& frame_timer,
+    const lvk::Stopwatch& process_timer
+);
+
 int main(int argc, char* argv[])
 {
     Settings settings;
 
     // INITIALIZATION
+    // Set up signal to terminate the processor early on ctrl+c
+    signal_handler = [&](){
+        settings.terminate = true;
+    };
+    signal(SIGINT, [](int s){signal_handler();});
+
     clt::OptionsParser option_parser;
     register_options(option_parser, settings);
 
@@ -119,6 +159,25 @@ void print_manual()
 
 //---------------------------------------------------------------------------------------------------------------------
 
+std::string make_progress_bar(const uint32_t length, const double progress)
+{
+    LVK_ASSERT(lvk::between(progress, 0.0, 1.0));
+
+    const auto position = static_cast<uint32_t>(progress * static_cast<double>(length));
+
+    std::string bar;
+    bar.reserve(length + 10);
+
+    bar.push_back('[');
+    for(uint32_t i = 0; i < length; i++)
+        bar.push_back(i < position ? '=' : ' ');
+    bar += "| " + cv::format("%0.1f%%", 100.0 * progress) + ']';
+
+    return bar;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 template<typename... T>
 void abort_with_error(const char* fmt, T... args)
 {
@@ -144,6 +203,7 @@ void parse_io(ArgQueue& args, Settings& settings)
         // If input is a file path, then it is either a video file or an image set
         settings.input_stream = cv::VideoCapture(path.string());
         input_format = path.extension().string();
+        settings.input_path = path;
     }
     else if(std::all_of(input.begin(), input.end(), [](int c){return std::isalnum(c);}))
     {
@@ -242,7 +302,10 @@ void finalize_filters(FilterChain& filter_chain, Settings& settings)
         );
 
         for(auto& filter : filter_chain)
+        {
+            filter->set_timing_samples(FILTER_TIMING_SAMPLES);
             composite_settings.filter_chain.push_back(filter);
+        }
 
         composite_settings.filter_chain.emplace_back(
             new lvk::ConversionFilter({.conversion_code=cv::COLOR_YUV2BGR})
@@ -254,17 +317,21 @@ void finalize_filters(FilterChain& filter_chain, Settings& settings)
 
 void run_video_processor(Settings& settings)
 {
+    lvk::TickTimer frame_timer(FILTER_TIMING_SAMPLES);
+    lvk::Stopwatch process_timer;
+    clt::ConsoleLogger console;
+    lvk::Time last_log_time;
+
+    process_timer.start();
     cv::VideoWriter output_stream;
-    const bool has_output = settings.output_path.has_value();
-
-    lvk::TickTimer frame_timer(std::min<uint32_t>(30, settings.input_stream.get(cv::CAP_PROP_FPS)));
-
     settings.video_processor.process(
         settings.input_stream,
         [&](lvk::VideoFilter& filter, lvk::Frame& frame)
         {
+            frame_timer.tick();
+
             // Write to output if one was specified
-            if(has_output)
+            if(settings.output_path.has_value())
             {
                 // Initialize the output on the first frame to get sizing information
                 if(!output_stream.isOpened())
@@ -305,38 +372,143 @@ void run_video_processor(Settings& settings)
                     // also terminate the processing. This is so that we can decide when to
                     // end indefinite device capture streams, and to avoid accidentally
                     // leaving the processor running in the background indefinitely.
-                    return !has_output || settings.is_device_capture;
+                    return !settings.output_path.has_value() || settings.is_device_capture;
                 }
             }
 
-            // Update console display
-            frame_timer.tick();
-            std::cout << "Processing Frame " << frame_timer.tick_count() << " at a rate of "
-                      << static_cast<uint32_t>(frame_timer.average().frequency()) << "FPS";
-            if(!settings.is_device_capture && has_output)
+            // Update terminal displays every 0.5 seconds
+            if(process_timer.elapsed().seconds() > last_log_time.seconds() + 0.5)
             {
-                std::cout << " | Progress...";
+                last_log_time = process_timer.elapsed();
+                log_video_processor(settings, console, frame_timer, process_timer);
+                if(settings.verbose) log_verbose(settings, console);
 
-                // Add progress bar for video to video processing
-                double curr_position = settings.input_stream.get(cv::CAP_PROP_POS_FRAMES);
-                double total_frames = settings.input_stream.get(cv::CAP_PROP_FRAME_COUNT);
-                double progress = curr_position / total_frames;
+                if(settings.data_logger.has_value())
+                    log_timing_data(settings, frame_timer, settings.data_logger.value());
+            }
 
-                const size_t bar_length = 30;
-                std::cout << "   [";
-                for(size_t i = 0; i < bar_length; i++)
-                    std::cout << ((i < progress * bar_length) ? "=" : " ");
-                std::cout << "]";
-
-            };
-            std::cout << "\r";
-
-            return false;
+            return settings.terminate;
         },
         settings.debug_mode
     );
 
-    std::cout << "Completed!" << '\r';
+    // Run loggers one last time to ensure we have the latest statistics displayed.
+    log_video_processor(settings, console, frame_timer, process_timer);
+    if(settings.verbose) log_verbose(settings, console);
+
+    console << lvk::Logger::Next << "Processing Complete!" << lvk::Logger::Next;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+void log_video_processor(
+    Settings& settings,
+    clt::ConsoleLogger& console,
+    const lvk::TickTimer& frame_timer,
+    const lvk::Stopwatch& process_timer
+)
+{
+    console.clear();
+
+    // NOTE: The frame count is not valid for device capture streams
+    double frame_count = settings.input_stream.get(cv::CAP_PROP_FRAME_COUNT);
+    double frame_number = settings.input_stream.get(cv::CAP_PROP_POS_FRAMES);
+
+    // Input Stream Info
+    console << "Processing target: ";
+    if(!settings.is_device_capture)
+    {
+        console << settings.input_path->string() << "  "
+                << make_progress_bar(40, frame_number / frame_count)
+                << lvk::Logger::Next;
+    }
+    else console << "Device Capture" << lvk::Logger::Next;
+
+    // Print Elapsed time
+    console << "   Elapsed: " << process_timer.elapsed().hms();
+    if(!settings.is_device_capture)
+    {
+        lvk::Time est_remaining_time = lvk::Time::Seconds(
+            std::ceil((frame_count - frame_number) / frame_timer.average().frequency())
+        );
+        console << " (est. " << est_remaining_time.hms() << " remaining)";
+    }
+    console << lvk::Logger::Next;
+
+    // Print current frame input
+    // NOTE: CAP_PROP_POS_FRAMES may not be supported by the VideoCapture backend, leading
+    // to an invalid frame number. If we suspect this is the case, switch over to using the
+    // frame timers tick count, which counts all but any empty output frames.
+    console << "   Frame: "
+            << ((frame_number <= 0) ? frame_timer.tick_count() : static_cast<uint64_t>(frame_number))
+            << lvk::Logger::Next;
+
+    // Print current FPS
+    console << "   FPS: "
+            << std::fixed << std::setprecision(0) << frame_timer.average().frequency()
+            << lvk::Logger::Next;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+void log_verbose(Settings& settings, clt::ConsoleLogger& console)
+{
+    auto& processor = settings.video_processor;
+
+    // Log timing data for each of the filters
+    console << std::setprecision(2);
+    console << lvk::Logger::Next << "Filters: " << lvk::Logger::Next;
+    for(size_t i = 0; i < processor.filter_count(); i++)
+    {
+        auto filter = processor.filters(i);
+        auto average_timing = filter->timings().average();
+
+        console << std::to_string(i) <<  ".   "
+                << filter->alias()
+                << "\t" << average_timing.milliseconds() << "ms"
+                << " +/- " << filter->timings().deviation().milliseconds() << "ms"
+                << "   (" << static_cast<uint64_t>(average_timing.frequency()) << "FPS)"
+                << lvk::Logger::Next;
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+void log_timing_data(Settings& settings, lvk::TickTimer& frame_timer, lvk::CSVLogger& logger)
+{
+    auto& processor = settings.video_processor;
+
+    // On first log, add all the headers as filter names
+    if(!logger.has_started())
+    {
+        logger << "Output Frame";
+
+        // First log all the frame times
+        logger << "Processor Frametime (ms)";
+        for(auto& filter : processor.filters())
+            logger << (filter->alias() + " Frametime (ms)");
+
+        // Then log all the frame deviation times
+        logger << "Processor Deviation (ms)";
+        for(auto& filter : processor.filters())
+            logger << (filter->alias() + " Deviation (ms)");
+
+        logger.next();
+    }
+
+    logger << frame_timer.tick_count();
+
+    // Log all frametimes
+    logger << frame_timer.average().milliseconds();
+    for(auto& filter : processor.filters())
+        logger << filter->timings().average().milliseconds();
+
+    // Log all frame deviation times
+    logger << frame_timer.deviation().milliseconds();
+    for(auto& filter : processor.filters())
+        logger << filter->timings().deviation().milliseconds();
+
+    logger.next();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -366,6 +538,7 @@ void register_options(clt::OptionsParser& parser, Settings& settings)
     parser.add_switch("-d", &settings.debug_mode);
     parser.add_switch("-s", &settings.display_output);
     parser.add_variable("-r", &settings.output_fps);
+    parser.add_switch("-v", &settings.verbose);
 
     parser.add_variable<std::string>("-c", [&](std::string fourcc){
         if(fourcc.length() != 4)
@@ -373,6 +546,24 @@ void register_options(clt::OptionsParser& parser, Settings& settings)
 
         settings.output_codec = cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
     });
+
+    parser.add_variable<std::string>("-L", [&](std::string path_arg){
+        const std::filesystem::path path = path_arg;
+        if(path.extension() != ".csv")
+        {
+            abort_with_error(
+                "Invalid data logging file, got %s, expected \'.csv\'",
+                path.extension().string().c_str()
+            );
+        }
+
+        static std::ofstream data_logger(path);
+        if(!data_logger.good())
+            abort_with_error("Failed to open data logging stream");
+
+        settings.data_logger.emplace(data_logger);
+    });
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+
