@@ -15,8 +15,6 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "Logger.hpp"
-
 #include "Diagnostics/Directives.hpp"
 
 namespace lvk
@@ -50,7 +48,7 @@ namespace lvk
 			end_object(m_Stream);
 
 			// NOTE: we update his here so that is_new_record() is
-			// accurate through-out the begin/end object functions. 
+			// accurate through-out the begin/end object functions.
 			m_NewRecord = false;
 		}
 		return *this;
@@ -63,6 +61,14 @@ namespace lvk
 	{
 		return write(object);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline Logger& Logger::operator<<(const NextSignal& signal)
+    {
+        next();
+        return *this;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

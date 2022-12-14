@@ -26,8 +26,11 @@ namespace lvk
 
 	class Logger
 	{
+        struct NextSignal {};
 	public:
-		
+
+        const static NextSignal Next;
+
 		explicit Logger(std::ostream& target = std::cout);
 
 		virtual ~Logger() = default;
@@ -38,7 +41,9 @@ namespace lvk
 		template<typename T>
 		Logger& operator<<(const T& object);
 
-		template<typename T> 
+        Logger& operator<<(const NextSignal& signal);
+
+		template<typename T>
 		Logger& append(const T& object);
 
 		template<typename T>
