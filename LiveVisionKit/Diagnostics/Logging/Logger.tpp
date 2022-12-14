@@ -16,6 +16,8 @@
 // 	  **********************************************************************
 
 #include "Diagnostics/Directives.hpp"
+#include "Logger.hpp"
+
 
 namespace lvk
 {
@@ -38,7 +40,9 @@ namespace lvk
 	template<typename T>
 	inline Logger& Logger::write(const T& object)
 	{
-		if (!m_HoldInputs)
+        m_Started = true;
+
+        if (!m_HoldInputs)
 		{
 			if(m_NewRecord)
 				begin_record(m_Stream);
@@ -75,6 +79,8 @@ namespace lvk
 	template<typename T>
 	inline Logger& Logger::append(const T& object)
 	{
+        m_Started = true;
+
 		if(!m_HoldInputs)
 			m_Stream << object;
 		
@@ -108,7 +114,9 @@ namespace lvk
 
 	inline void Logger::next()
 	{
-		if (!m_HoldRecord)
+        m_Started = true;
+
+        if (!m_HoldRecord)
 		{
 			end_record(m_Stream);
 			m_NewRecord = true;
@@ -165,6 +173,13 @@ namespace lvk
 	{
 		return m_Stream.fail();
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline bool Logger::has_started() const
+    {
+        return m_Started;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

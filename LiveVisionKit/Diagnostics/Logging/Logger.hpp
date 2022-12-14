@@ -66,6 +66,8 @@ namespace lvk
 		
 		bool has_error() const;
 
+        bool has_started() const;
+
 	protected:
 		
 		bool is_new_record() const;
@@ -83,7 +85,8 @@ namespace lvk
 	private:
 		std::ostream& m_Stream;
 		std::ios m_BaseFormat;
-		
+
+        bool m_Started = false;
 		bool m_NewRecord = true;
 		bool m_HoldRecord = false;
 		bool m_HoldInputs = false;
