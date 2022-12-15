@@ -69,6 +69,8 @@ namespace lvk
         double frequency() const;
 
         std::string hms() const;
+
+        bool is_zero() const;
 	
 		Time& operator=(const Time& other) = default;
 
