@@ -35,7 +35,7 @@ namespace lvk
 		bool crop_output = false;
 		float crop_proportion = 0.05f;
 
-		bool auto_suppression = true;
+		bool auto_suppression = false;
 		float suppression_threshold = 0.9f;
 		float suppression_saturation_limit = 0.7f;
 		float suppression_smoothing_rate = 0.05f;
@@ -43,7 +43,6 @@ namespace lvk
 		MotionModel motion_model = MotionModel::DYNAMIC;
 	};
 
-	// TODO: fix bad timing when using profile and debug due to stopwatch
 
 	class StabilizationFilter final : public VideoFilter, public Configurable<StabilizationSettings>
 	{
