@@ -16,6 +16,7 @@
 //     **********************************************************************
 
 #include <sstream>
+#include "OptionParser.hpp"
 
 namespace clt
 {
@@ -75,11 +76,16 @@ namespace clt
 
     template<typename T>
     void OptionsParser::add_variable(
-        const std::initializer_list<std::string>& alias,
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
         const std::function<void(T)>& callback
     )
     {
-        for(const auto& name : alias)
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, true);
+
+        for(const auto& name : aliases)
         {
             m_VariableOptions[name] = [=](const std::string& argument)
             {
@@ -90,7 +96,11 @@ namespace clt
                     callback(parsed_argument.value());
                     return true;
                 }
-                else return false;
+                else
+                {
+                    m_ErrorHandler(name, argument);
+                    return false;
+                }
             };
         }
     }
@@ -100,21 +110,27 @@ namespace clt
     template<typename T>
     void OptionsParser::add_variable(
         const std::string& name,
+        const std::string& description,
         const std::function<void(T)>& callback
     )
     {
-        add_variable({name}, callback);
+        add_variable({name}, description, callback);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
     void OptionsParser::add_variable(
-        const std::initializer_list<std::string>& alias,
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
         T* location
     )
     {
-        for(const auto& name : alias)
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, true);
+
+        for(const auto& name : aliases)
         {
             m_VariableOptions[name] = [=](const std::string& argument)
             {
@@ -125,7 +141,11 @@ namespace clt
                     *location = parsed_argument.value();
                     return true;
                 }
-                else return false;
+                else
+                {
+                    m_ErrorHandler(name, argument);
+                    return false;
+                }
             };
         }
     }
@@ -135,20 +155,26 @@ namespace clt
     template<typename T>
     void OptionsParser::add_variable(
         const std::string& name,
+        const std::string& description,
         T* location
     )
     {
-        add_variable({name}, location);
+        add_variable({name}, description, location);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void OptionsParser::add_switch(
-        const std::initializer_list<std::string>& alias,
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
         bool* location
     )
     {
-        for(const auto& name : alias)
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, false);
+
+        for(const auto& name : aliases)
         {
             m_SwitchOptions[name] = [=]()
             {
@@ -161,47 +187,52 @@ namespace clt
 
     void OptionsParser::add_switch(
         const std::string& name,
+        const std::string& description,
         bool* location
     )
     {
-        add_switch({name}, location);
+        add_switch({name}, description, location);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void OptionsParser::add_switch(
-        const std::initializer_list<std::string>& alias,
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
         const std::function<void()>& callback
     )
     {
-        for(const auto& name : alias)
-        {
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, false);
+
+        for(const auto& name : aliases)
             m_SwitchOptions[name] = callback;
-        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void OptionsParser::add_switch(
         const std::string& name,
+        const std::string& description,
         const std::function<void()>& callback
     )
     {
-        add_switch({name}, callback);
+        add_switch({name}, description, callback);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::has_variable(const std::string& alias) const
+    bool OptionsParser::has_variable(const std::string& name) const
     {
-        return m_VariableOptions.contains(alias);
+        return m_VariableOptions.contains(name);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::has_switch(const std::string& alias) const
+    bool OptionsParser::has_switch(const std::string& name) const
     {
-        return m_SwitchOptions.contains(alias);
+        return m_SwitchOptions.contains(name);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -209,6 +240,79 @@ namespace clt
     bool OptionsParser::is_empty() const
     {
         return m_SwitchOptions.empty() && m_VariableOptions.empty();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void OptionsParser::set_error_handler(const OptionsParser::ErrorHandler& handler)
+    {
+        LVK_ASSERT(handler);
+
+        m_ErrorHandler = handler;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void OptionsParser::generate_manual_entry(
+        const std::initializer_list<std::string>& alias,
+        const std::string& description,
+        const bool has_arg
+    )
+    {
+        LVK_ASSERT(!empty(alias));
+
+        // Create name string
+        std::string name_entry;
+        for(const auto& name : alias)
+        {
+            if(name_entry.empty())
+                name_entry += name;
+            else
+                name_entry += ", " + name;
+        }
+        if(has_arg) name_entry += " <arg>";
+
+        m_LongestNameEntryLength = std::max(m_LongestNameEntryLength, name_entry.length());
+
+        // Register the manual entry
+        const size_t index = m_ManualEntries.size();
+        m_ManualEntries.emplace_back(name_entry, description);
+        for(const auto& name : alias)
+            m_ManualLookup[name] = index;
+
+        compile_manual();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void OptionsParser::compile_manual()
+    {
+        m_Manual.clear();
+        for(const auto& [name_entry, description] : m_ManualEntries)
+        {
+            m_Manual += '\t';
+            m_Manual += name_entry;
+            m_Manual += std::string((m_LongestNameEntryLength - name_entry.length()) + 4, ' ');
+            m_Manual += description;
+            m_Manual += '\n';
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const std::string& OptionsParser::manual() const
+    {
+        return m_Manual;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::string OptionsParser::manual(const std::string& option) const
+    {
+        LVK_ASSERT(m_ManualLookup.contains(option));
+
+        const auto& [name_entry, description] = m_ManualEntries[m_ManualLookup.at(option)];
+        return name_entry + '\t' + description;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

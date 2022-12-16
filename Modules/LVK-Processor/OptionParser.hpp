@@ -36,64 +36,99 @@ namespace clt
         template<typename T>
         void add_variable(
             const std::string& name,
+            const std::string& description,
             T* location
         );
 
         template<typename T>
         void add_variable(
-            const std::initializer_list<std::string>& alias,
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
             T* location
         );
 
         template<typename T>
         void add_variable(
             const std::string& name,
+            const std::string& description,
             const std::function<void(T)>& callback
         );
 
         template<typename T>
         void add_variable(
-            const std::initializer_list<std::string>& alias,
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
             const std::function<void(T)>& callback
         );
 
         void add_switch(
             const std::string& name,
+            const std::string& description,
             bool* location
         );
 
         void add_switch(
-            const std::initializer_list<std::string>& alias,
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
             bool* location
         );
 
         void add_switch(
             const std::string& name,
+            const std::string& description,
             const std::function<void()>& callback = {}
         );
 
         void add_switch(
-            const std::initializer_list<std::string>& alias,
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
             const std::function<void()>& callback = {}
         );
 
-        bool has_variable(const std::string& alias) const;
+        const std::string& manual() const;
 
-        bool has_switch(const std::string& alias) const;
+        std::string manual(const std::string& option) const;
+
+        bool has_variable(const std::string& name) const;
+
+        bool has_switch(const std::string& name) const;
 
         bool is_empty() const;
+
+        using ErrorHandler = std::function<void(
+            const std::string& alias,
+            const std::string& value
+        )>;
+
+        void set_error_handler(const ErrorHandler& handler);
 
     private:
 
         template<typename T>
         std::optional<T> parse_as(const std::string& argument);
 
+        void generate_manual_entry(
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
+            const bool has_arg
+        );
+
+        void compile_manual();
+
     private:
+
+        ErrorHandler m_ErrorHandler = [](auto,auto){};
+
         using VariableOptionHandler= std::function<bool(const std::string&)>;
         std::unordered_map<std::string, VariableOptionHandler> m_VariableOptions;
 
         using SwitchOptionHandler = std::function<void()>;
         std::unordered_map<std::string, SwitchOptionHandler> m_SwitchOptions;
+
+        std::string m_Manual;
+        size_t m_LongestNameEntryLength = 0;
+        std::unordered_map<std::string, size_t> m_ManualLookup;
+        std::vector<std::tuple<std::string /* Name Entry */, std::string /* Description */>> m_ManualEntries;
     };
 
 }

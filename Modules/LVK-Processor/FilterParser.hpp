@@ -25,7 +25,7 @@
 namespace clt
 {
 
-    class FilterParser
+    class FilterParser : private OptionsParser
     {
     public:
 
@@ -33,17 +33,40 @@ namespace clt
 
         template<typename F, typename C>
         void add_filter(
-            const std::initializer_list<std::string>& alias,
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
             const std::function<void(OptionsParser&, C&)>& config_connector
         );
 
         template<typename F, typename C>
         void add_filter(
             const std::string& name,
+            const std::string& description,
             const std::function<void(OptionsParser&, C&)>& config_connector
         );
 
-        bool has_filter(const std::string& alias) const;
+        bool has_filter(const std::string& aliases) const;
+
+        const std::string& config_manual(const std::string& filter) const;
+
+        std::string manual(const std::string& filter) const;
+
+        const std::string& manual() const;
+
+        void set_error_handler(const ErrorHandler& handler);
+
+    private:
+
+        template<typename C>
+        void generate_config_manual(
+            const std::initializer_list<std::string>& aliases,
+            const std::function<void(OptionsParser&, C&)>& config_connector
+        );
+
+        template<typename F, typename C>
+        void generate_filter_constructor(
+            const std::function<void(OptionsParser&, C&)>& config_connector
+        );
 
     private:
 
@@ -55,6 +78,13 @@ namespace clt
 
         using FilterConstructor = std::function<ConfigurableFilter()>;
         std::unordered_map<std::string, FilterConstructor> m_FilterConstructors;
+
+        FilterConstructor m_ParsedConstructor;
+        ErrorHandler m_ErrorHandler = [](auto&, auto&){};
+
+        std::vector<std::string> m_ConfigManuals;
+        std::unordered_map<std::string, size_t> m_ManualLookup;
+
     };
 
 }

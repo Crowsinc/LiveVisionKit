@@ -18,6 +18,8 @@
 #include <type_traits>
 
 #include <iostream>
+#include "FilterParser.hpp"
+
 
 namespace clt
 {
@@ -25,65 +27,76 @@ namespace clt
 
     std::shared_ptr<lvk::VideoFilter> FilterParser::try_parse(std::deque<std::string>& args)
     {
-        if(args.empty())
-            return nullptr;
-
-        const auto filter_name = std::string(args.front());
-
-        if(has_filter(filter_name))
+        if(OptionsParser::try_parse(args))
         {
-            args.pop_front();
-
-            auto filter = m_FilterConstructors[filter_name]();
+            // m_ParsedConstructor is set when the options parsers finds a filter.
+            auto filter = m_ParsedConstructor();
             filter.configure(args);
 
             return filter.instance;
         }
-
         return nullptr;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename F, typename C>
+    void FilterParser::generate_filter_constructor(
+        const std::function<void(OptionsParser&, C&)>& config_connector
+    )
+    {
+        m_ParsedConstructor = [&](){
+            ConfigurableFilter filter;
+            filter.instance = std::make_shared<F>();
+            filter.configure = [&](std::deque<std::string>& args) {
+
+                C filter_config;
+                OptionsParser config_parser;
+                config_parser.set_error_handler(m_ErrorHandler);
+
+                config_connector(config_parser, filter_config);
+
+                while(config_parser.try_parse(args));
+
+                std::static_pointer_cast<lvk::Configurable<C>>(
+                    std::static_pointer_cast<F>(filter.instance)
+                )->configure(filter_config);
+            };
+            return filter;
+        };
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename F, typename C>
     void FilterParser::add_filter(
-        const std::initializer_list<std::string>& alias,
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
         const std::function<void(OptionsParser&, C&)>& config_connector
     )
     {
         static_assert(std::is_base_of_v<lvk::VideoFilter, F>, "Filter is not a derivation of VideoFilter");
         static_assert(std::is_base_of_v<lvk::Configurable<C>, F>, "Filter is not a derivation of Configurable<C>");
-        for(const auto& name : alias)
-        {
-            m_FilterConstructors[name] = [=](){
-                ConfigurableFilter filter;
-                filter.instance = std::make_shared<F>();
-                filter.configure = [=](std::deque<std::string>& args) {
-                    C config;
-                    OptionsParser config_parser;
-                    config_connector(config_parser, config);
 
-                    while(config_parser.try_parse(args));
+        generate_config_manual(aliases, config_connector);
 
-                    std::static_pointer_cast<lvk::Configurable<C>>(
-                        std::static_pointer_cast<F>(filter.instance)
-                    )->configure(config);
-                };
-                return filter;
-            };
-        }
+        OptionsParser::add_switch(
+            aliases,
+            description,
+            [=](){generate_filter_constructor<F, C>(config_connector);}
+        );
     }
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename F, typename C>
     void FilterParser::add_filter(
         const std::string& name,
+        const std::string& description,
         const std::function<void(OptionsParser&, C&)>& config_connector
     )
     {
-        add_filter({name}, config_connector);
+        add_filter({name}, description, config_connector);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -91,6 +104,58 @@ namespace clt
     bool FilterParser::has_filter(const std::string& alias) const
     {
         return m_FilterConstructors.contains(alias);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename C>
+    void FilterParser::generate_config_manual(
+        const std::initializer_list<std::string>& aliases,
+        const std::function<void(OptionsParser&, C&)>& config_connector
+    )
+    {
+        // Create temporary config and option parser so we can grab the parser's manual
+        C temp_config = {};
+        OptionsParser config_parser;
+
+        config_connector(config_parser, temp_config);
+
+        const size_t index = m_ConfigManuals.size();
+        m_ConfigManuals.push_back(config_parser.manual());
+        for(const auto& name : aliases)
+            m_ManualLookup[name] = index;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const std::string& FilterParser::config_manual(const std::string& filter) const
+    {
+        LVK_ASSERT(m_ManualLookup.contains(filter));
+
+        return m_ConfigManuals[m_ManualLookup.at(filter)];
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::string FilterParser::manual(const std::string& filter) const
+    {
+        return OptionsParser::manual(filter);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const std::string& FilterParser::manual() const
+    {
+        return OptionsParser::manual();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FilterParser::set_error_handler(const ErrorHandler& handler)
+    {
+        LVK_ASSERT(handler);
+
+        m_ErrorHandler = handler;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
