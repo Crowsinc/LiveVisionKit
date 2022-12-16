@@ -17,14 +17,7 @@
 #include "FilterParser.hpp"
 #include "ConsoleLogger.hpp"
 
-/* TODO:
- * 1. Fix error on a bad device capture stream (e.g. using 2) <DONE>
- * 2. Finalize console output <
- * 3. Add more options, e.g. logging, device capture resolution, etc.
- * ?. Write help manual
- * ?. Add proper error message handling within parsers
- * ?. Add all filters and options
- */
+// TODO: this is essentially a messy prototype, re-create this in a class in a neat and efficient way
 
 using ArgQueue = std::deque<std::string>;
 using FilterChain = std::vector<std::shared_ptr<lvk::VideoFilter>>;
@@ -34,17 +27,6 @@ using FilterChain = std::vector<std::shared_ptr<lvk::VideoFilter>>;
 std::function<void()> signal_handler;
 
 constexpr size_t FILTER_TIMING_SAMPLES = 300;
-
-// Helper Functions
-
-void print_manual();
-
-std::string make_progress_bar(const uint32_t length, const double progress);
-
-template<typename... T>
-void abort_with_error(const char* fmt, T... args);
-
-// Processing Functions
 
 struct Settings
 {
@@ -60,25 +42,42 @@ struct Settings
     std::optional<lvk::CSVLogger> data_logger;
 
     // Filtering Settings
+    FilterChain filter_chain;
     lvk::CompositeFilter video_processor;
     bool display_output = false;
     bool debug_mode = false;
     bool verbose = false;
 
+    lvk::Time log_period = lvk::Time::Seconds(0.5);
+
     // Runtime flags
     bool terminate = false;
+
+    ArgQueue args;
+    clt::OptionsParser option_parser;
+    clt::FilterParser filter_parser;
 };
 
+// Helper Functions
 
-void register_filters(clt::FilterParser& parser);
+void print_manual(Settings& settings);
 
-void register_options(clt::OptionsParser& parser, Settings& settings);
+std::string make_progress_bar(const uint32_t length, const double progress);
+
+template<typename... T>
+void abort_with_error(const char* fmt, T... args);
+
+// Processing Functions
+
+void register_filters(Settings& settings);
+
+void register_options(Settings& settings);
 
 void parse_io(ArgQueue& args, Settings& settings);
 
 void parse_profile(ArgQueue& args);
 
-void finalize_filters(FilterChain& filter_chain, Settings& settings);
+void finalize_filters(Settings& settings);
 
 void run_video_processor(Settings& settings);
 
@@ -100,49 +99,46 @@ void log_video_processor(
 int main(int argc, char* argv[])
 {
     Settings settings;
+    register_options(settings);
+    register_filters(settings);
 
-    // INITIALIZATION
     // Set up signal to terminate the processor early on ctrl+c
     signal_handler = [&](){
         settings.terminate = true;
     };
     signal(SIGINT, [](int s){signal_handler();});
 
-    clt::OptionsParser option_parser;
-    register_options(option_parser, settings);
+    lvk::global::assert_handler = [](auto, auto, const std::string& assertion){
+        abort_with_error("Failed to parse argument, failed condition: %s", assertion.c_str());
+    };
 
-    clt::FilterParser filter_parser;
-    register_filters(filter_parser);
-
-    ArgQueue args;
+    ArgQueue& args = settings.args;
     for(int i = 1; i < argc; i++)
         args.emplace_back(argv[i]);
 
-    parse_io(args, settings);
+    // Parse Help Options
+    if(argc == 1)
+    {
+        print_manual(settings);
+        return 0;
+    }
+    while(args.front().starts_with("-h"))
+    {
+        if(!settings.option_parser.try_parse(args))
+            abort_with_error("Incorrect use of -h");
+    }
 
-    FilterChain filter_chain;
+    // Parse inputs
+    parse_io(args, settings);
 
     // Parse filters and options
     while(!args.empty())
     {
-        if(args.front().starts_with("-p"))
-        {
-            args.pop_front();
-            parse_profile(args);
-        }
-        else if(args.front().starts_with("-f"))
-        {
-            // Parse filter & filter config options
-            args.pop_front();
-            if(auto filter = filter_parser.try_parse(args); filter != nullptr)
-                filter_chain.push_back(filter);
-            else abort_with_error("Unknown filter \'%s\', use -h to see available options", args.front().c_str());
-        }
-        else if(!option_parser.try_parse(args))
+        if(!settings.option_parser.try_parse(args))
             abort_with_error("Unknown argument \'%s\', use -h to see available options", args.front().c_str());
     }
 
-    finalize_filters(filter_chain, settings);
+    finalize_filters(settings);
 
     // Run the processor
     run_video_processor(settings);
@@ -152,9 +148,24 @@ int main(int argc, char* argv[])
 
 //---------------------------------------------------------------------------------------------------------------------
 
-void print_manual()
+void print_manual(Settings& settings)
 {
-    std::cout << "Manual..." << std::endl;
+    std::cout << "\n";
+    std::cout << "Format: lvk [-h...] Input [Output] [Options...]" << "\n\n";
+    std::cout << "Where...\n"
+              << "\t * Input may either be an input video file, a set of images, or an index specifying a capture "
+                 "device to read from.\n"
+              << "\t * Output is an optional video file path to which filtered video data is written. If paired with a "
+                 "video file input, they must be of matching extensions. \n"
+              << "\t * If no output is specified, or a device capture input is used, a display window will be used to "
+                 "show output frames. This window can be closed using <escape>, ending all processing."
+              << "\n\n";
+
+    std::cout << "Options: \n";
+    std::cout << settings.option_parser.manual() << "\n\n";
+
+    std::cout << "Filters: \n";
+    std::cout << settings.filter_parser.manual() << "\n\n";
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -182,7 +193,6 @@ template<typename... T>
 void abort_with_error(const char* fmt, T... args)
 {
     std::cerr << "ERROR: " << cv::format(fmt, args...) << "\n\n" << std::endl;
-    print_manual();
     abort();
 }
 
@@ -200,8 +210,17 @@ void parse_io(ArgQueue& args, Settings& settings)
     std::optional<std::string> input_format;
     if(std::filesystem::path path = input; path.has_filename() && path.has_extension())
     {
+        std::vector<int> properties = {
+            cv::CAP_PROP_HW_ACCELERATION, 1,
+            cv::CAP_PROP_HW_ACCELERATION_USE_OPENCL, 1
+        };
+
         // If input is a file path, then it is either a video file or an image set
-        settings.input_stream = cv::VideoCapture(path.string());
+        settings.input_stream = cv::VideoCapture(
+            path.string(),
+            cv::CAP_FFMPEG,
+            properties
+        );
         input_format = path.extension().string();
         settings.input_path = path;
     }
@@ -253,17 +272,16 @@ void parse_io(ArgQueue& args, Settings& settings)
 
 //---------------------------------------------------------------------------------------------------------------------
 
+// TODO: needs to be re-written to work properly within the options parser
 void parse_profile(ArgQueue& args)
 {
     if(args.empty()) abort_with_error("No profile specified, expected path after -p");
 
-    if(std::filesystem::path path = args.front(); std::filesystem::exists(path) && path.has_extension())
+    if(std::filesystem::path path = args[1]; std::filesystem::exists(path) && path.has_extension())
     {
         std::ifstream file(path);
         if(!file.good())
             abort_with_error("Failed to open profile at \'%s\'", path.string().c_str());
-
-        args.pop_front();
 
         // Read entire profile and split it into individual arguments
         std::stringstream profile;
@@ -283,14 +301,14 @@ void parse_profile(ArgQueue& args)
         // Add new args to the front of the queue in reverse so its in the correct order
         // TODO: check if ranges::view::reverse is available on GCC ubuntu 20.04
         for(auto arg_iter = profile_args.rbegin(); arg_iter != profile_args.rend(); ++arg_iter)
-            args.push_front(*arg_iter);
+            args.insert(args.begin() + 2, *arg_iter);
     }
     else abort_with_error("Profile \'%s\' does not exist", path.string().c_str());
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-void finalize_filters(FilterChain& filter_chain, Settings& settings)
+void finalize_filters(Settings& settings)
 {
     // All LVK filters operate on YUV frames as a standard, however
     // most OpenCV video captures and writers provide BGR frames. So
@@ -301,7 +319,7 @@ void finalize_filters(FilterChain& filter_chain, Settings& settings)
             new lvk::ConversionFilter({.conversion_code=cv::COLOR_BGR2YUV})
         );
 
-        for(auto& filter : filter_chain)
+        for(auto& filter : settings.filter_chain)
         {
             filter->set_timing_samples(FILTER_TIMING_SAMPLES);
             composite_settings.filter_chain.push_back(filter);
@@ -320,8 +338,12 @@ void run_video_processor(Settings& settings)
     lvk::TickTimer frame_timer(FILTER_TIMING_SAMPLES);
     lvk::Stopwatch process_timer;
     clt::ConsoleLogger console;
-    lvk::Time last_log_time;
+    lvk::Time last_log_time(0);
 
+    if(settings.display_output)
+        cv::namedWindow("LVK Output", cv::WINDOW_NORMAL);
+
+    frame_timer.start();
     process_timer.start();
     cv::VideoWriter output_stream;
     settings.video_processor.process(
@@ -336,21 +358,36 @@ void run_video_processor(Settings& settings)
                 // Initialize the output on the first frame to get sizing information
                 if(!output_stream.isOpened())
                 {
-                    output_stream = cv::VideoWriter(
-                        settings.output_path->string(),
-                        settings.output_codec,
-                        settings.output_fps,
-                        frame.size(),
-                        true
-                    );
+                    std::vector<int> properties = {
+                        cv::VideoWriterProperties::VIDEOWRITER_PROP_HW_ACCELERATION, 1,
+                        cv::VideoWriterProperties::VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL, 1
+                    };
+
+                    try{
+                        output_stream = cv::VideoWriter(
+                            settings.output_path->string(),
+                            cv::CAP_FFMPEG,
+                            settings.output_codec,
+                            settings.output_fps,
+                            frame.size(),
+                            properties
+                        );
+                    } catch(std::exception& e)
+                    {
+                        abort_with_error(
+                            "Failed to create output stream: %s",
+                            e.what()
+                        );
+                    }
 
                     if(!output_stream.isOpened())
                     {
                         abort_with_error(
-                            "Failed to create output stream",
+                            "Failed to create output stream at \'%s\'",
                             settings.output_path->string().c_str()
                         );
                     }
+
                 }
                 output_stream.write(frame.data);
             }
@@ -376,10 +413,11 @@ void run_video_processor(Settings& settings)
                 }
             }
 
-            // Update terminal displays every 0.5 seconds
-            if(process_timer.elapsed().seconds() > last_log_time.seconds() + 0.5)
+            // Update terminal displays
+            const auto process_time = process_timer.elapsed();
+            if(last_log_time.is_zero() || process_time > last_log_time + settings.log_period)
             {
-                last_log_time = process_timer.elapsed();
+                last_log_time = process_time;
                 log_video_processor(settings, console, frame_timer, process_timer);
                 if(settings.verbose) log_verbose(settings, console);
 
@@ -513,56 +551,188 @@ void log_timing_data(Settings& settings, lvk::TickTimer& frame_timer, lvk::CSVLo
 
 //---------------------------------------------------------------------------------------------------------------------
 
-void register_filters(clt::FilterParser& parser)
+// TODO: add testing of variable values
+void register_filters(Settings& settings)
 {
+    auto& parser = settings.filter_parser;
+
+    parser.set_error_handler([](auto& config, auto& argument)
+    {
+         abort_with_error(
+             "Failed to parse argument \'%s\' for filter config \'%s\'",
+             argument.c_str(),
+             config.c_str()
+         );
+    });
+
     parser.add_filter<lvk::StabilizationFilter, lvk::StabilizationSettings>(
         {"vs", "stab"},
+        "A video stabilization filter used to smoothen percieved camera motions.",
         [](clt::OptionsParser& config_parser, lvk::StabilizationSettings& config){
-            config_parser.add_variable({".crop_prop", ".cp"}, &config.crop_proportion);
-            config_parser.add_switch({".crop_out", ".co"}, &config.crop_output);
+            config_parser.add_variable(
+                {".crop_prop", ".cp"},
+                "Used to percentage crop and movement area allowed for stabilization",
+                &config.crop_proportion
+            );
+            config_parser.add_switch(
+                {".crop_out", ".co"},
+                "Specifies that the output should be automatically cropped",
+                &config.crop_output
+            );
+            config_parser.add_variable(
+                {".smoothing", ".s"},
+                "The amount of camera smoothing to apply to the video, this must be an even number greater than 2. "
+                "Some frames will be lost at the end of the video due to the smoothing amount.",
+                &config.smoothing_frames
+            );
+            config_parser.add_variable(
+                {".autosuppress", ".as"},
+                "Specifies that the filter should automatically turn off if it believes the stabilization quality "
+                "will be low.",
+                &config.smoothing_frames
+            );
         }
     );
 
     parser.add_filter<lvk::DeblockingFilter, lvk::DeblockingSettings>(
         {"adb", "deblocker"},
+        "An adaptive deblocking filter used to lessen the effect of blocking encoding artifacts.",
         [](clt::OptionsParser& config_parser, lvk::DeblockingSettings& config){
-            config_parser.add_variable({".strength", ".str"}, &config.detection_levels);
+            config_parser.add_variable(
+                {".levels", ".l"},
+                "Used to specify the number of deblocking passes to perform.",
+                &config.detection_levels
+            );
         }
     );
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-void register_options(clt::OptionsParser& parser, Settings& settings)
+void register_options(Settings& settings)
 {
-    parser.add_switch("-d", &settings.debug_mode);
-    parser.add_switch("-s", &settings.display_output);
-    parser.add_variable("-r", &settings.output_fps);
-    parser.add_switch("-v", &settings.verbose);
+    auto& parser = settings.option_parser;
 
-    parser.add_variable<std::string>("-c", [&](std::string fourcc){
-        if(fourcc.length() != 4)
-            abort_with_error("Unknown codec, expected fourcc code, got \'%s\'", fourcc.c_str());
-
-        settings.output_codec = cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+    parser.set_error_handler([](auto& option, auto& argument)
+    {
+        // Variable type option
+        abort_with_error(
+            "Failed to parse argument \'%s\' for option \'%s\'",
+            argument.c_str(),
+            option.c_str()
+        );
     });
 
-    parser.add_variable<std::string>("-L", [&](std::string path_arg){
-        const std::filesystem::path path = path_arg;
-        if(path.extension() != ".csv")
+    parser.add_switch(
+        "-h",
+        "Displays the complete manual for video processor.",
+        [&]() { print_manual(settings); }
+    );
+
+    parser.add_variable<std::string>(
+        "-h",
+        "Displays all configuration options for the specified filter.",
+        [&](const std::string& filter)
         {
-            abort_with_error(
-                "Invalid data logging file, got %s, expected \'.csv\'",
-                path.extension().string().c_str()
-            );
+            std::cout << "Filter: \n"
+                      << "\t" << settings.filter_parser.manual(filter) << "\n\n"
+                      << "Configuration Options: \n"
+                      << settings.filter_parser.config_manual(filter) << "\n";
+        }
+    );
+
+    parser.add_variable<std::string>(
+        "-f",
+        "Adds a filter used for processing. Filters are processed left to right and can be modified by supplying "
+        "configuration options after the filter specification. See the filter listing below and -h <filter> for more "
+        "information.",
+        [&](const std::string& filter_name)
+        {
+            settings.args.pop_front();
+            if(auto filter = settings.filter_parser.try_parse(settings.args); filter != nullptr)
+                settings.filter_chain.push_back(filter);
+            else abort_with_error("Unknown filter \'%s\', use -h to see available options", filter_name.c_str());
+
+            // TODO: this is a hack that's necessary because the parser only pops args after running this function
+            settings.args.emplace_front("tmp");
+            settings.args.emplace_front("tmp");
         }
 
-        static std::ofstream data_logger(path);
-        if(!data_logger.good())
-            abort_with_error("Failed to open data logging stream");
+    );
 
-        settings.data_logger.emplace(data_logger);
-    });
+    parser.add_variable<std::string>(
+        "-p",
+        "Loads a set of arguments from the specified file, allowing for saved filter sets and profiles",
+        [&](const std::string& profile_path)
+        {
+            parse_profile(settings.args);
+        }
+    );
+
+    parser.add_switch(
+        "-d",
+        "Runs all filters in debug mode, allowing for more accurate timing data and special filter debug rendering.",
+        &settings.debug_mode
+    );
+
+    parser.add_switch(
+        "-s",
+        "Displays the processor output onto an interactable window that can be closed by pressing escape",
+        &settings.display_output
+    );
+
+    parser.add_switch(
+        "-v",
+        "Turns on verbose logging, providing extra runtime information such as filter runtimes and configurations.",
+        &settings.verbose
+    );
+
+    parser.add_variable<double>(
+        "-u",
+        "Used to specify the numeric amount of seconds to wait between each logging operation.",
+        [&](double seconds) {settings.log_period = lvk::Time::Seconds(seconds);}
+    );
+
+    parser.add_variable(
+        "-r",
+        "Used to specify the desired integer framerate of the output video.",
+        &settings.output_fps
+    );
+
+    parser.add_variable<std::string>(
+        "-c",
+        "Used to suggest the fourcc encoder designation to be used for the output video. Encoding support is "
+        "not guaranteed.",
+        [&](const std::string& fourcc)
+        {
+            if(fourcc.length() != 4)
+                abort_with_error("Unknown codec, expected fourcc code, got \'%s\'", fourcc.c_str());
+
+            settings.output_codec = cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+        }
+    );
+
+    parser.add_variable<std::string>(
+        "-L",
+        "Turns on filter timing-data logging to the specified CSV filepath.",
+        [&](const std::string& path_arg)
+        {
+            const std::filesystem::path path = path_arg;
+            if(path.extension() != ".csv")
+            {
+                abort_with_error(
+                    "Invalid data logging file, got %s, expected \'.csv\'",
+                    path.extension().string().c_str()
+                );
+            }
+
+            static std::ofstream data_logger(path);
+            if(!data_logger.good())
+                abort_with_error("Failed to open data logging stream");
+
+            settings.data_logger.emplace(data_logger);
+        }
+    );
 }
 
 //---------------------------------------------------------------------------------------------------------------------
