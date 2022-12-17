@@ -407,7 +407,7 @@ namespace lvk
 		// cannot be any links between the frames and frame vectors, so we can never recover
 		// the sync between the buffers. In that case, we just need to reset them. 
 
-		while (!is_queue_synchronized() && m_Trajectory.size() >= m_SmoothingRadius)
+		while (!m_FrameQueue.empty() && !is_queue_synchronized() && m_Trajectory.size() >= m_SmoothingRadius)
 		{
 			auto vector_timestamp = m_Trajectory[m_SmoothingRadius - 1].timestamp;
 			auto frame_timestamp = m_FrameQueue.oldest().timestamp;
