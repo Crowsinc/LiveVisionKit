@@ -87,7 +87,7 @@ namespace clt
 
         for(const auto& name : aliases)
         {
-            m_VariableOptions[name] = [=](const std::string& argument)
+            m_VariableOptions[name] = [=,this](const std::string& argument)
             {
                 std::optional<T> parsed_argument = parse_as<T>(argument);
 
@@ -132,7 +132,7 @@ namespace clt
 
         for(const auto& name : aliases)
         {
-            m_VariableOptions[name] = [=](const std::string& argument)
+            m_VariableOptions[name] = [=,this](const std::string& argument)
             {
                 std::optional<T> parsed_argument = parse_as<T>(argument);
 

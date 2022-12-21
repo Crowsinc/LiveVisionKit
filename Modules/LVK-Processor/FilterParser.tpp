@@ -45,11 +45,10 @@ namespace clt
         const std::function<void(OptionsParser&, C&)>& config_connector
     )
     {
-        m_ParsedConstructor = [&](){
+        m_ParsedConstructor = [=, this](){
             ConfigurableFilter filter;
             filter.instance = std::make_shared<F>();
-            filter.configure = [&](std::deque<std::string>& args) {
-
+            filter.configure = [=, this](std::deque<std::string>& args) {
                 C filter_config;
                 OptionsParser config_parser;
                 config_parser.set_error_handler(m_ErrorHandler);
@@ -83,7 +82,7 @@ namespace clt
         OptionsParser::add_switch(
             aliases,
             description,
-            [=](){generate_filter_constructor<F, C>(config_connector);}
+            [=,this](){generate_filter_constructor<F, C>(config_connector);}
         );
     }
 
