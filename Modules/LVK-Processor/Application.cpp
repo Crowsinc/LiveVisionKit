@@ -1,5 +1,4 @@
 
-#include <opencv2/videoio.hpp>
 #include <LiveVisionKit.hpp>
 
 #include <unordered_map>
@@ -316,7 +315,7 @@ void finalize_filters(Settings& settings)
 
     settings.video_processor.reconfigure([&](auto& composite_settings){
         composite_settings.filter_chain.emplace_back(
-            new lvk::ConversionFilter({.conversion_code=cv::COLOR_BGR2YUV})
+            new lvk::ConversionFilter(lvk::ConversionFilterSettings{.conversion_code=cv::COLOR_BGR2YUV})
         );
 
         for(auto& filter : settings.filter_chain)
@@ -326,7 +325,7 @@ void finalize_filters(Settings& settings)
         }
 
         composite_settings.filter_chain.emplace_back(
-            new lvk::ConversionFilter({.conversion_code=cv::COLOR_YUV2BGR})
+            new lvk::ConversionFilter(lvk::ConversionFilterSettings{.conversion_code=cv::COLOR_YUV2BGR})
         );
     });
 }
