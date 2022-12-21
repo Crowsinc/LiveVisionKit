@@ -15,6 +15,9 @@ endif()
 
 
 # DEPENDENCIES
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 target_include_directories(
     ${PROJECT_NAME} 
     PUBLIC 
@@ -24,6 +27,7 @@ target_include_directories(
 target_link_libraries(
     ${PROJECT_NAME} 
     ${OpenCV_LIBS}
+    Threads::Threads
 )
 
 
