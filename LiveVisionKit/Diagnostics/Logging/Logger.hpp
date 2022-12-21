@@ -26,10 +26,9 @@ namespace lvk
 
 	class Logger
 	{
-        struct NextSignal {};
+		struct NextSignal {};
 	public:
-
-        const static NextSignal Next;
+        inline const static NextSignal Next = {};
 
 		explicit Logger(std::ostream& target = std::cout);
 
