@@ -43,7 +43,7 @@ else()
     set(OPENCV_BUILD_PATH "" CACHE PATH "An optional path to the desired OpenCV build folder")
     set(
         OPENCV_MODULES 
-        core;calib3d;features2d;imgproc;videoio;video
+        core;calib3d;features2d;imgproc;videoio;video;highgui;
         CACHE STRING 
         "The OpenCV modules to link"
     )
