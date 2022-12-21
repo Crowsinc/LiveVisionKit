@@ -21,6 +21,7 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 namespace lvk
 {
