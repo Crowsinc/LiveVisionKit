@@ -426,76 +426,132 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    T SlidingBuffer<T>::average(const size_t start, const size_t count) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(start < size());
+        LVK_ASSERT(start + count <= size());
+
+        return sum(start, count) / count;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
 	T SlidingBuffer<T>::average() const
 	{
-		LVK_ASSERT(!is_empty());
-
-		return sum() / size();
+		return average(0, size());
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    T SlidingBuffer<T>::variance(const size_t start, const size_t count) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(start < size());
+        LVK_ASSERT(start + count <= size());
+
+        // Kick start calculation with first element to avoid
+        // requirement of a default initialisation of T.
+        const T avg = average(start, count);
+        T diff = at(start) - avg;
+        T var = diff * diff;
+
+        for(size_t i = start + 1; i < start + count; i++)
+        {
+            diff = at(i) - avg;
+            var = var + diff * diff;
+        }
+
+        return var / count;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T SlidingBuffer<T>::variance() const
 	{
-		LVK_ASSERT(!is_empty());
-
-		// Kick start calculation with element 0 to avoid
-		// requirement of a default initialisation of T.
-		const T avg = average();
-		T diff = at(0) - avg;
-		T var = diff * diff;
-
-		for(size_t i = 1; i < size(); i++)
-		{
-			diff = at(i) - avg;
-			var = var + diff * diff;
-		}
-
-		return var / size();
+		return variance(0, size());
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    T SlidingBuffer<T>::min(const size_t start, const size_t count) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(start < size());
+        LVK_ASSERT(start + count <= size());
+
+        // Kick start calculation with first element to avoid
+        // requirement of a default initialisation of T.
+        T min = at(start);
+        for(size_t i = start + 1; i < start + count; i++)
+            min = std::min(min, at(i));
+
+        return min;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T SlidingBuffer<T>::min() const
 	{
-		LVK_ASSERT(!is_empty());
-
-		T min = at(0);
-		for(size_t i = 1; i < size(); i++)
-			min = std::min(min, at(i));
-
-		return min;
+        return min(0, size());
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    T SlidingBuffer<T>::max(const size_t start, const size_t count) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(start < size());
+        LVK_ASSERT(start + count <= size());
+
+        // Kick start calculation with first element to avoid
+        // requirement of a default initialisation of T.
+        T max = at(start);
+        for (size_t i = start + 1; i < start + count; i++)
+            max = std::max(max, at(i));
+
+        return max;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	T SlidingBuffer<T>::max() const
 	{
-		T max = at(0);
-		for (size_t i = 1; i < size(); i++)
-			max = std::max(max, at(i));
-
-		return max;
+        return max(0, size());
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    T SlidingBuffer<T>::sum(const size_t start, const size_t count) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(start < size());
+        LVK_ASSERT(start + count <= size());
+
+        // Kick start calculation with first element to avoid
+        // requirement of a default initialisation of T.
+        T sum = at(start);
+        for(size_t i = start + 1; i < start + count; i++)
+            sum = sum + at(i);
+
+        return sum;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
     T SlidingBuffer<T>::sum() const
     {
-        LVK_ASSERT(!is_empty());
-
-        // Kick start calculation with element 0 to avoid
-        // requirement of a default initialisation of T.
-        T sum = at(0);
-        for(size_t i = 1; i < size(); i++)
-            sum = sum + at(i);
-
-        return sum;
+        return sum(0, size());
     }
 
 //---------------------------------------------------------------------------------------------------------------------

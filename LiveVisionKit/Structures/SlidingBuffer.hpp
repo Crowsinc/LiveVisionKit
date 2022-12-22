@@ -87,13 +87,23 @@ namespace lvk
 		template<typename K>
 		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial = T()) const;
 
-		T average() const;
+        T average(const size_t start, const size_t count) const;
 
-		T variance() const;
+        T average() const;
 
-		T min() const;
+        T variance(const size_t start, const size_t count) const;
 
-		T max() const;
+        T variance() const;
+
+        T min(const size_t start, const size_t count) const;
+
+        T min() const;
+
+        T max(const size_t start, const size_t count) const;
+
+        T max() const;
+
+        T sum(const size_t start, const size_t count) const;
 
         T sum() const;
 
