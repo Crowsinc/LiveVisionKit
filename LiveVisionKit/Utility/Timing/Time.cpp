@@ -277,7 +277,12 @@ namespace lvk
         const auto h = m / 60;
 
         // TODO: switch to std::format when widely available for GCC
-        return cv::format("%02lu:%02lu:%02lu", h, m % 60, s % 60);
+        return cv::format(
+            "%02llu:%02llu:%02llu",
+            static_cast<unsigned long long>(h),
+            static_cast<unsigned long long>(m % 60),
+            static_cast<unsigned long long>(s % 60)
+        );
     }
 
 //---------------------------------------------------------------------------------------------------------------------
