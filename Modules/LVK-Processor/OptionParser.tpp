@@ -29,23 +29,12 @@ namespace clt
 
         const auto option = args.front();
 
-        // Option Priority:
-        // 1. Custom Parsers
-        // 2. Variable Options
-        // 3. Switch Options
-
-        // Parser Option
-        if(has_parser(option))
-        {
-            return m_ParserOptions.at(option)(args);
-        }
-
-        // Variable Option
         if(has_variable(option) && args.size() >= 2)
         {
+            // Variable Option
             const auto argument = args[1];
 
-            // Only 'consume' the arguments if successful
+            // Only 'consume' the arguments if parsing was successful
             if(m_VariableOptions.at(option)(argument))
             {
                 args.pop_front();
@@ -53,13 +42,17 @@ namespace clt
                 return true;
             }
         }
-
-        // Switch Option
-        if(has_switch(option))
+        else if(has_switch(option))
         {
+            // Switch Option
             m_SwitchOptions.at(option)();
             args.pop_front();
             return true;
+        }
+        else if(has_parser(option))
+        {
+            // Parser Option
+            return m_ParserOptions.at(option)(args);
         }
 
         return false;
