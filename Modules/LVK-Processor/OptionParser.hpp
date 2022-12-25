@@ -27,11 +27,13 @@
 namespace clt
 {
 
+    using ArgQueue = std::deque<std::string>;
+
     class OptionsParser
     {
     public:
 
-        bool try_parse(std::deque<std::string>& args) const;
+        bool try_parse(ArgQueue& args) const;
 
         template<typename T>
         void add_variable(
@@ -83,6 +85,18 @@ namespace clt
             const std::initializer_list<std::string>& aliases,
             const std::string& description,
             const std::function<void()>& callback = {}
+        );
+
+        void add_parser(
+            const std::string& name,
+            const std::string& description,
+            const std::function<bool(ArgQueue&)>& parser
+        );
+
+        void add_parser(
+            const std::initializer_list<std::string>& aliases,
+            const std::string& description,
+            const std::function<bool(ArgQueue&)>& parser
         );
 
         const std::string& manual() const;
@@ -92,6 +106,8 @@ namespace clt
         bool has_variable(const std::string& name) const;
 
         bool has_switch(const std::string& name) const;
+
+        bool has_parser(const std::string& name) const;
 
         bool is_empty() const;
 
@@ -119,7 +135,10 @@ namespace clt
 
         ErrorHandler m_ErrorHandler = [](auto,auto){};
 
-        using VariableOptionHandler= std::function<bool(const std::string&)>;
+        using ParserOptionHandler = std::function<bool(ArgQueue& queue)>;
+        std::unordered_map<std::string, ParserOptionHandler> m_ParserOptions;
+
+        using VariableOptionHandler = std::function<bool(const std::string&)>;
         std::unordered_map<std::string, VariableOptionHandler> m_VariableOptions;
 
         using SwitchOptionHandler = std::function<void()>;

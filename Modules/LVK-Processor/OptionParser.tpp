@@ -16,23 +16,31 @@
 //     **********************************************************************
 
 #include <sstream>
-#include "OptionParser.hpp"
 
 namespace clt
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::try_parse(std::deque<std::string>& args) const
+    inline bool OptionsParser::try_parse(ArgQueue& args) const
     {
         if(args.empty())
             return false;
 
         const auto option = args.front();
 
-        // NOTE: For duplicate alias between variabel and switch type options, we
-        // prioritise parsing as a variable first, then as a switch if it fails.
+        // Option Priority:
+        // 1. Custom Parsers
+        // 2. Variable Options
+        // 3. Switch Options
 
+        // Parser Option
+        if(has_parser(option))
+        {
+            return m_ParserOptions.at(option)(args);
+        }
+
+        // Variable Option
         if(has_variable(option) && args.size() >= 2)
         {
             const auto argument = args[1];
@@ -46,6 +54,7 @@ namespace clt
             }
         }
 
+        // Switch Option
         if(has_switch(option))
         {
             m_SwitchOptions.at(option)();
@@ -59,7 +68,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    std::optional<T> OptionsParser::parse_as(const std::string& argument)
+    inline std::optional<T> OptionsParser::parse_as(const std::string& argument)
     {
         std::stringstream parser(argument);
 
@@ -75,52 +84,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    void OptionsParser::add_variable(
-        const std::initializer_list<std::string>& aliases,
-        const std::string& description,
-        const std::function<void(T)>& callback
-    )
-    {
-        LVK_ASSERT(!empty(aliases));
-
-        generate_manual_entry(aliases, description, true);
-
-        for(const auto& name : aliases)
-        {
-            m_VariableOptions[name] = [=,this](const std::string& argument)
-            {
-                std::optional<T> parsed_argument = parse_as<T>(argument);
-
-                if(parsed_argument.has_value())
-                {
-                    callback(parsed_argument.value());
-                    return true;
-                }
-                else
-                {
-                    m_ErrorHandler(name, argument);
-                    return false;
-                }
-            };
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    void OptionsParser::add_variable(
-        const std::string& name,
-        const std::string& description,
-        const std::function<void(T)>& callback
-    )
-    {
-        add_variable({name}, description, callback);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    void OptionsParser::add_variable(
+    inline void OptionsParser::add_variable(
         const std::initializer_list<std::string>& aliases,
         const std::string& description,
         T* location
@@ -153,7 +117,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    void OptionsParser::add_variable(
+    inline void OptionsParser::add_variable(
         const std::string& name,
         const std::string& description,
         T* location
@@ -164,7 +128,52 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::add_switch(
+    template<typename T>
+    inline void OptionsParser::add_variable(
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
+        const std::function<void(T)>& callback
+    )
+    {
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, true);
+
+        for(const auto& name : aliases)
+        {
+            m_VariableOptions[name] = [=,this](const std::string& argument)
+            {
+                std::optional<T> parsed_argument = parse_as<T>(argument);
+
+                if(parsed_argument.has_value())
+                {
+                    callback(parsed_argument.value());
+                    return true;
+                }
+                else
+                {
+                    m_ErrorHandler(name, argument);
+                    return false;
+                }
+            };
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline void OptionsParser::add_variable(
+        const std::string& name,
+        const std::string& description,
+        const std::function<void(T)>& callback
+    )
+    {
+        add_variable({name}, description, callback);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline void OptionsParser::add_switch(
         const std::initializer_list<std::string>& aliases,
         const std::string& description,
         bool* location
@@ -185,7 +194,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::add_switch(
+    inline void OptionsParser::add_switch(
         const std::string& name,
         const std::string& description,
         bool* location
@@ -196,7 +205,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::add_switch(
+    inline void OptionsParser::add_switch(
         const std::initializer_list<std::string>& aliases,
         const std::string& description,
         const std::function<void()>& callback
@@ -212,7 +221,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::add_switch(
+    inline void OptionsParser::add_switch(
         const std::string& name,
         const std::string& description,
         const std::function<void()>& callback
@@ -223,28 +232,62 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::has_variable(const std::string& name) const
+    inline void OptionsParser::add_parser(
+        const std::initializer_list<std::string>& aliases,
+        const std::string& description,
+        const std::function<bool(ArgQueue&)>& parser
+    )
+    {
+        LVK_ASSERT(!empty(aliases));
+
+        generate_manual_entry(aliases, description, true);
+
+        for(const auto& name : aliases)
+            m_ParserOptions[name] = parser;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline void OptionsParser::add_parser(
+        const std::string& name,
+        const std::string& description,
+        const std::function<bool(ArgQueue&)>& parser
+    )
+    {
+        add_parser({name}, description, parser);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline bool OptionsParser::has_variable(const std::string& name) const
     {
         return m_VariableOptions.contains(name);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::has_switch(const std::string& name) const
+    inline bool OptionsParser::has_switch(const std::string& name) const
     {
         return m_SwitchOptions.contains(name);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool OptionsParser::is_empty() const
+    inline bool OptionsParser::has_parser(const std::string& name) const
+    {
+        return m_ParserOptions.contains(name);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline bool OptionsParser::is_empty() const
     {
         return m_SwitchOptions.empty() && m_VariableOptions.empty();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::set_error_handler(const OptionsParser::ErrorHandler& handler)
+    inline void OptionsParser::set_error_handler(const OptionsParser::ErrorHandler& handler)
     {
         LVK_ASSERT(handler);
 
@@ -253,7 +296,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::generate_manual_entry(
+    inline void OptionsParser::generate_manual_entry(
         const std::initializer_list<std::string>& alias,
         const std::string& description,
         const bool has_arg
@@ -285,7 +328,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void OptionsParser::compile_manual()
+    inline void OptionsParser::compile_manual()
     {
         m_Manual.clear();
         for(const auto& [name_entry, description] : m_ManualEntries)
@@ -300,14 +343,14 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const std::string& OptionsParser::manual() const
+    inline const std::string& OptionsParser::manual() const
     {
         return m_Manual;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::string OptionsParser::manual(const std::string& option) const
+    inline std::string OptionsParser::manual(const std::string& option) const
     {
         LVK_ASSERT(m_ManualLookup.contains(option));
 
