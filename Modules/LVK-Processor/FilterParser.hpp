@@ -45,7 +45,7 @@ namespace clt
             const std::function<void(OptionsParser&, C&)>& config_connector
         );
 
-        bool has_filter(const std::string& aliases) const;
+        bool has_filter(const std::string& name) const;
 
         const std::string& config_manual(const std::string& filter) const;
 
@@ -75,9 +75,7 @@ namespace clt
             std::shared_ptr<lvk::VideoFilter> instance;
             std::function<void(std::deque<std::string>&)> configure;
         };
-
         using FilterConstructor = std::function<ConfigurableFilter()>;
-        std::unordered_map<std::string, FilterConstructor> m_FilterConstructors;
 
         FilterConstructor m_ParsedConstructor;
         ErrorHandler m_ErrorHandler = [](auto&, auto&){};

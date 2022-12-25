@@ -96,9 +96,9 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    inline bool FilterParser::has_filter(const std::string& alias) const
+    inline bool FilterParser::has_filter(const std::string& name) const
     {
-        return m_FilterConstructors.contains(alias);
+        return OptionsParser::has_switch(name);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
