@@ -19,8 +19,8 @@
 
 #include "OptionParser.hpp"
 
-#include <deque>
 #include <LiveVisionKit.hpp>
+#include <deque>
 
 namespace clt
 {

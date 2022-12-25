@@ -17,15 +17,11 @@
 
 #include <type_traits>
 
-#include <iostream>
-#include "FilterParser.hpp"
-
-
 namespace clt
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<lvk::VideoFilter> FilterParser::try_parse(std::deque<std::string>& args)
+    inline std::shared_ptr<lvk::VideoFilter> FilterParser::try_parse(std::deque<std::string>& args)
     {
         if(OptionsParser::try_parse(args))
         {
@@ -41,7 +37,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename F, typename C>
-    void FilterParser::generate_filter_constructor(
+    inline void FilterParser::generate_filter_constructor(
         const std::function<void(OptionsParser&, C&)>& config_connector
     )
     {
@@ -68,7 +64,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename F, typename C>
-    void FilterParser::add_filter(
+    inline void FilterParser::add_filter(
         const std::initializer_list<std::string>& aliases,
         const std::string& description,
         const std::function<void(OptionsParser&, C&)>& config_connector
@@ -89,7 +85,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename F, typename C>
-    void FilterParser::add_filter(
+    inline void FilterParser::add_filter(
         const std::string& name,
         const std::string& description,
         const std::function<void(OptionsParser&, C&)>& config_connector
@@ -100,7 +96,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool FilterParser::has_filter(const std::string& alias) const
+    inline bool FilterParser::has_filter(const std::string& alias) const
     {
         return m_FilterConstructors.contains(alias);
     }
@@ -108,7 +104,7 @@ namespace clt
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename C>
-    void FilterParser::generate_config_manual(
+    inline void FilterParser::generate_config_manual(
         const std::initializer_list<std::string>& aliases,
         const std::function<void(OptionsParser&, C&)>& config_connector
     )
@@ -127,7 +123,7 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const std::string& FilterParser::config_manual(const std::string& filter) const
+    inline const std::string& FilterParser::config_manual(const std::string& filter) const
     {
         LVK_ASSERT(m_ManualLookup.contains(filter));
 
@@ -136,21 +132,21 @@ namespace clt
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::string FilterParser::manual(const std::string& filter) const
+    inline std::string FilterParser::manual(const std::string& filter) const
     {
         return OptionsParser::manual(filter);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const std::string& FilterParser::manual() const
+    inline const std::string& FilterParser::manual() const
     {
         return OptionsParser::manual();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void FilterParser::set_error_handler(const ErrorHandler& handler)
+    inline void FilterParser::set_error_handler(const ErrorHandler& handler)
     {
         LVK_ASSERT(handler);
 
