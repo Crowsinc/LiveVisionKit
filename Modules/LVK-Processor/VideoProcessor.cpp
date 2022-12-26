@@ -177,7 +177,6 @@ namespace clt
             m_InputStream,
             [&, this](lvk::VideoFilter& filter, lvk::Frame& frame)
             {
-                m_FrameTimer.tick();
 
                 // Write output
                 if(m_Configuration.output_target.has_value())
@@ -193,7 +192,7 @@ namespace clt
                     m_OutputStream.write(frame.data);
                 }
 
-                // Render output
+                // Display output
                 if(m_Configuration.render_output)
                 {
                     cv::imshow(RENDER_WINDOW_NAME, frame.data);
@@ -213,6 +212,15 @@ namespace clt
                         return m_DeviceCapture || !m_Configuration.output_target.has_value();
                     }
                 }
+
+                // Update the frame timer
+                if(m_Configuration.render_output && m_Configuration.render_period.has_value())
+                {
+                    // If we are displaying the output at a fixed frequency,
+                    // then we need to wait to match the user's timestep here.
+                    m_FrameTimer.tick(m_Configuration.render_period.value());
+                }
+                else m_FrameTimer.tick();
 
                 // Run all update procedures (logging etc.)
                 const auto elapsed_time = m_ProcessTimer.elapsed();

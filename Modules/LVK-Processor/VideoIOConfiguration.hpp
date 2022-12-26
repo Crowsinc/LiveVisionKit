@@ -37,10 +37,12 @@ namespace clt
         bool debug_mode = false;
 
         // Output Settings
-        bool render_output = false;
         std::optional<std::filesystem::path> output_target;
         std::optional<double> output_framerate;
         std::optional<int> output_codec;
+
+        bool render_output = false;
+        std::optional<lvk::Time> render_period;
 
         // Runtime Settings
         bool print_progress = true;

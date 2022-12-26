@@ -345,12 +345,32 @@ namespace clt
             &render_output
         );
 
+        m_OptionParser.add_variable<uint32_t>(
+            "-S",
+            "Equivalent to -s, but locks the maximum processing framerate to the given amount.",
+            [this](const uint32_t framerate){
+                render_output = true;
+                if(framerate > 0) render_period = lvk::Time::Timestep(static_cast<double>(framerate));
+            }
+        );
+
         // Logging Options
 
         m_OptionParser.add_variable<double>(
             "-u",
             "Used to specify the numeric amount of seconds to wait between each logging operation.",
-            [this](double seconds) {update_period = lvk::Time::Seconds(seconds);}
+            [this](double seconds) {
+                if(seconds <= 0)
+                {
+                    m_ParserError = cv::format(
+                        "Update period cannot be zero or negative, got \'%.2f\' seconds",
+                        seconds
+                    );
+                    return;
+                }
+
+                update_period = lvk::Time::Seconds(seconds);
+            }
         );
 
         m_OptionParser.add_switch(
