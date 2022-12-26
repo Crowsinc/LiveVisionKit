@@ -175,25 +175,25 @@ endif()
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Modules/Module.cpp
-        Modules/Enhancement/ADBFilter.cpp
-        Modules/Enhancement/ADBFilter.hpp
-        Modules/Enhancement/ADBSource.cpp
-        Modules/Enhancement/CASFilter.cpp
-        Modules/Enhancement/CASFilter.hpp
-        Modules/Enhancement/CASSource.cpp
-        Modules/Enhancement/LCFilter.cpp
-        Modules/Enhancement/LCFilter.hpp
-        Modules/Enhancement/LCSource.cpp
-        Modules/Scaling/FSRFilter.cpp
-        Modules/Scaling/FSRFilter.hpp
-        Modules/Scaling/FSRSource.cpp
-        Modules/Stabilisation/VSFilter.cpp
-        Modules/Stabilisation/VSFilter.hpp
-        Modules/Stabilisation/VSSource.cpp
-        Modules/Tools/CCSource.cpp
-        Modules/Tools/CCTool.cpp
-        Modules/Tools/CCTool.hpp
+        Sources/Module.cpp
+        Sources/Enhancement/ADBFilter.cpp
+        Sources/Enhancement/ADBFilter.hpp
+        Sources/Enhancement/ADBSource.cpp
+        Sources/Enhancement/CASFilter.cpp
+        Sources/Enhancement/CASFilter.hpp
+        Sources/Enhancement/CASSource.cpp
+        Sources/Enhancement/LCFilter.cpp
+        Sources/Enhancement/LCFilter.hpp
+        Sources/Enhancement/LCSource.cpp
+        Sources/Scaling/FSRFilter.cpp
+        Sources/Scaling/FSRFilter.hpp
+        Sources/Scaling/FSRSource.cpp
+        Sources/Stabilisation/VSFilter.cpp
+        Sources/Stabilisation/VSFilter.hpp
+        Sources/Stabilisation/VSSource.cpp
+        Sources/Tools/CCSource.cpp
+        Sources/Tools/CCTool.cpp
+        Sources/Tools/CCTool.hpp
 )
 
 # EFFECT SOURCES
