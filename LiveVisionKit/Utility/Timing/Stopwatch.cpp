@@ -87,6 +87,25 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    Time Stopwatch::wait_until(const Time& required_time)
+    {
+        if(!is_running()) start();
+
+        // Block until elapsed time is met.
+        // We yield here because it is more power efficient than busy waiting.
+        // We don't sleep because it is far too imprecise to get any consistency.
+        Time elapsed_time = elapsed();
+        while(elapsed_time < required_time)
+        {
+            std::this_thread::yield();
+            elapsed_time = elapsed();
+        }
+
+        return elapsed_time;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	bool Stopwatch::is_running() const
 	{
 		return m_Running;

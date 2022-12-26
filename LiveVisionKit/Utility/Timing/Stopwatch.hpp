@@ -36,6 +36,8 @@ namespace lvk
 
 		Time restart();
 
+        Time wait_until(const Time& required_time);
+
 		bool is_running() const;
 
         bool is_paused() const;

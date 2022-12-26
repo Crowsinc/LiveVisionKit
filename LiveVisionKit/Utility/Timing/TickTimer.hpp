@@ -27,7 +27,9 @@ namespace lvk
 
 		explicit TickTimer(const uint32_t history = 1);
 
-		void tick();
+		Time tick();
+
+        Time tick(const Time& timestep);
 
 		uint64_t tick_count() const;
 		
