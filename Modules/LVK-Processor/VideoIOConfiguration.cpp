@@ -307,10 +307,20 @@ namespace clt
         );
 
         // Output Options
-        m_OptionParser.add_variable<uint32_t>(
+        m_OptionParser.add_variable<int>(
             "-r",
             "Used to specify the desired integer framerate of the output video.",
-            [this](const uint32_t framerate) { output_framerate = static_cast<int>(framerate); }
+            [this](const int framerate) {
+                if(framerate <= 0)
+                {
+                    m_ParserError = cv::format(
+                        "Output framerate cannot be zero or negative, got \'%d\' FPS",
+                        framerate
+                    );
+                    return;
+                }
+                output_framerate = framerate;
+            }
         );
 
         m_OptionParser.add_variable<std::string>(
@@ -345,12 +355,20 @@ namespace clt
             &render_output
         );
 
-        m_OptionParser.add_variable<uint32_t>(
+        m_OptionParser.add_variable<int>(
             "-S",
             "Equivalent to -s, but locks the maximum processing framerate to the given amount.",
-            [this](const uint32_t framerate){
+            [this](const int framerate){
+                if(framerate <= 0)
+                {
+                    m_ParserError = cv::format(
+                        "Display framerate cannot be zero or negative, got \'%d\' FPS",
+                        framerate
+                    );
+                    return;
+                }
                 render_output = true;
-                if(framerate > 0) render_period = lvk::Time::Timestep(static_cast<double>(framerate));
+                render_period = lvk::Time::Timestep(static_cast<double>(framerate));
             }
         );
 
