@@ -8,7 +8,7 @@ add_executable(${CLT_NAME})
 set_target_properties(${CLT_NAME} PROPERTIES DEBUG_POSTFIX ${LVK_DEBUG_POSTFIX})
 set_property(TARGET ${CLT_NAME} PROPERTY PROJECT_LABEL "LVK Video Processor")
 
-message("${MI}Project Unavailable")
+message("${MI}No Configuration Options...")
 
 
 # DEPENDENCIES
@@ -44,6 +44,10 @@ target_sources(
     ${CLT_NAME}
     PRIVATE
         Application.cpp
+        VideoProcessor.hpp
+        VideoProcessor.cpp
+        VideoIOConfiguration.cpp
+        VideoIOConfiguration.hpp
         ConsoleLogger.hpp
         ConsoleLogger.cpp
         OptionParser.hpp
