@@ -81,7 +81,7 @@ namespace lvk
 		const auto strength = obs_data_get_int(settings, PROP_STRENGTH);
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
-		m_Filter.reconfigure([&](DeblockingSettings& settings) {
+		m_Filter.reconfigure([&](DeblockingFilterSettings& settings) {
 			settings.detection_levels = std::max<uint32_t>(strength, 1);
 		});
 	}

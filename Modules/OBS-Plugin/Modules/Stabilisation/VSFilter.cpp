@@ -166,7 +166,7 @@ namespace lvk
 		const float video_fps = static_cast<float>(video_info.fps_num) / static_cast<float>(video_info.fps_den);
 		const float frame_ms = 1000.0f/video_fps;
 
-		m_Filter.reconfigure([&](StabilizationSettings& stab_settings) {
+		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
 			stab_settings.crop_proportion = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
 			stab_settings.smoothing_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);

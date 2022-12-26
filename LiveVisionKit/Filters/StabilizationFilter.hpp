@@ -27,7 +27,7 @@ namespace lvk
 
 	// TODO: FrameTracker settings are hidden, perhaps make it configurable?
 
-	struct StabilizationSettings
+	struct StabilizationFilterSettings
 	{
 		size_t smoothing_frames = 10;
 		bool stabilize_output = true;
@@ -44,14 +44,14 @@ namespace lvk
 	};
 
 
-	class StabilizationFilter final : public VideoFilter, public Configurable<StabilizationSettings>
+	class StabilizationFilter final : public VideoFilter, public Configurable<StabilizationFilterSettings>
 	{
 	public:
 
-		explicit StabilizationFilter(const StabilizationSettings& settings = {});
+		explicit StabilizationFilter(const StabilizationFilterSettings& settings = {});
 
 
-		void configure(const StabilizationSettings& settings) override;
+		void configure(const StabilizationFilterSettings& settings) override;
 
 		bool ready() const;
 

@@ -27,7 +27,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	StabilizationFilter::StabilizationFilter(const StabilizationSettings& settings)
+	StabilizationFilter::StabilizationFilter(const StabilizationFilterSettings& settings)
 		: VideoFilter("Stabilization Filter")
 	{
 		this->configure(settings);
@@ -92,7 +92,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::configure(const StabilizationSettings& settings)
+	void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
 	{
 		LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
 		LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));

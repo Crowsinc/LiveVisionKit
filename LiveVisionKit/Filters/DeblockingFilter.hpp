@@ -24,7 +24,7 @@
 namespace lvk
 {
 
-	struct DeblockingSettings 
+	struct DeblockingFilterSettings
 	{
 		uint32_t detection_levels = 3; // Must be greater than 0
 		uint32_t block_size = 16; // Must be greater than 0
@@ -32,13 +32,13 @@ namespace lvk
 		float filter_scaling = 4; // Smaller is stronger (1/x)
 	};
 
-	class DeblockingFilter final : public VideoFilter, public Configurable<DeblockingSettings>
+	class DeblockingFilter final : public VideoFilter, public Configurable<DeblockingFilterSettings>
 	{
 	public:
 
-		explicit DeblockingFilter(DeblockingSettings settings = {});
+		explicit DeblockingFilter(DeblockingFilterSettings settings = {});
 		
-		void configure(const DeblockingSettings& settings) override;
+		void configure(const DeblockingFilterSettings& settings) override;
 
 	private:
 

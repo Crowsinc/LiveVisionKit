@@ -382,10 +382,10 @@ namespace clt
     // TODO: add testing of config values
     void VideoIOConfiguration::register_filters()
     {
-        m_FilterParser.add_filter<lvk::StabilizationFilter, lvk::StabilizationSettings>(
+        m_FilterParser.add_filter<lvk::StabilizationFilter, lvk::StabilizationFilterSettings>(
             {"vs", "stab"},
             "A video stabilization filter used to smoothen percieved camera motions.",
-            [](clt::OptionsParser& config_parser, lvk::StabilizationSettings& config){
+            [](clt::OptionsParser& config_parser, lvk::StabilizationFilterSettings& config){
                 config_parser.add_variable(
                     {".crop_prop", ".cp"},
                     "Used to percentage crop and movement area allowed for stabilization",
@@ -411,10 +411,10 @@ namespace clt
             }
         );
 
-        m_FilterParser.add_filter<lvk::DeblockingFilter, lvk::DeblockingSettings>(
+        m_FilterParser.add_filter<lvk::DeblockingFilter, lvk::DeblockingFilterSettings>(
             {"adb", "deblocker"},
             "An adaptive deblocking filter used to lessen the effect of blocking encoding artifacts.",
-            [](clt::OptionsParser& config_parser, lvk::DeblockingSettings& config){
+            [](clt::OptionsParser& config_parser, lvk::DeblockingFilterSettings& config){
                 config_parser.add_variable(
                     {".levels", ".l"},
                     "Used to specify the number of deblocking passes to perform.",

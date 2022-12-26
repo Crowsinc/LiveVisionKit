@@ -27,7 +27,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	DeblockingFilter::DeblockingFilter(DeblockingSettings settings)
+	DeblockingFilter::DeblockingFilter(DeblockingFilterSettings settings)
 		: VideoFilter("Deblocking Filter")
 	{
         this->configure(settings);
@@ -153,7 +153,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void lvk::DeblockingFilter::configure(const DeblockingSettings& settings)
+	void lvk::DeblockingFilter::configure(const DeblockingFilterSettings& settings)
 	{
 		LVK_ASSERT(settings.block_size > 0);
 		LVK_ASSERT(settings.filter_size >= 3);
