@@ -44,6 +44,7 @@ namespace lvk
 	{
         LVK_ASSERT(!input.is_empty());
 
+        if(debug) cv::ocl::finish();
         timer.start();
 
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
@@ -141,14 +142,8 @@ namespace lvk
             input.data(horizontal_slice).copyTo(output.data(horizontal_slice));
         }
 
-
-        // If in debug mode, wait for all processing to finish before stopping the timer.
-        // This leads to more accurate timing, but can lead to performance drops.
-        if(debug)
-        {
-            cv::ocl::finish();
-            timer.stop();
-        } else timer.stop();
+        if(debug) cv::ocl::finish();
+        timer.stop();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

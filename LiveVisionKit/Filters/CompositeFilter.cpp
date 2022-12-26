@@ -53,6 +53,7 @@ namespace lvk
     {
         LVK_ASSERT(!input.is_empty());
 
+        if(debug) cv::ocl::finish();
         timer.start();
 
         auto& filter_chain = m_Settings.filter_chain;
@@ -84,13 +85,8 @@ namespace lvk
 
         output.copy(*prev_filter_output);
 
-        // If in debug mode, wait for all processing to finish before stopping the timer.
-        // This leads to more accurate timing, but can lead to performance drops.
-        if(debug)
-        {
-            cv::ocl::finish();
-            timer.stop();
-        } else timer.stop();
+        if(debug) cv::ocl::finish();
+        timer.stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
