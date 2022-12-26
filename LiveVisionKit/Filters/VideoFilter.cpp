@@ -218,7 +218,7 @@ namespace lvk
     {
         LVK_ASSERT(input_stream.isOpened());
 
-        Stopwatch frame_timer;
+        TickTimer frame_timer;
         Time target_frametime = Time::Timestep(
             (target_fps == 0) ? input_stream.get(cv::CAP_PROP_FPS) : target_fps
         );
@@ -227,10 +227,7 @@ namespace lvk
         process(input_stream, [&](VideoFilter& filter, Frame& frame){
             cv::imshow(filter.alias(), frame.data);
 
-            while(frame_timer.elapsed() < target_frametime)
-                std::this_thread::yield();
-
-            frame_timer.restart();
+            frame_timer.tick(target_frametime);
 
             return cv::pollKey() == 27; // Esc
         }, debug);
