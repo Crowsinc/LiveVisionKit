@@ -260,17 +260,13 @@ namespace lvk
 		LVK_ASSERT(between(distribution_quality.x, 0.0f, 1.0f));
 		LVK_ASSERT(between(distribution_quality.y, 0.0f, 1.0f));
 
-		m_DistributionQuality = exponential_moving_average(
-			m_DistributionQuality,
-			distribution_quality,
-			METRIC_SMOOTHING_FACTOR
-		);
+		m_DistributionQuality = exp_moving_average(
+            m_DistributionQuality, distribution_quality, METRIC_SMOOTHING_FACTOR
+        );
 
-		m_SceneStability = exponential_moving_average(
-			m_SceneStability,
-			inlier_ratio,
-			METRIC_SMOOTHING_FACTOR
-		);
+		m_SceneStability = exp_moving_average(
+            m_SceneStability, inlier_ratio, METRIC_SMOOTHING_FACTOR
+        );
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
