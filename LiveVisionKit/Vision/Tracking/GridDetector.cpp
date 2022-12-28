@@ -125,7 +125,8 @@ namespace lvk
 		// Detect new features over the detect grid and process into the feature grid
 		for(auto& [bounds, fast_threshold, propagations] : m_DetectGrid)
 		{
-			const float grid_load = static_cast<float>(propagations) / static_cast<float>(m_FeaturesPerDetectBlock);
+			const float grid_load = static_cast<float>(propagations)
+				                  / static_cast<float>(m_FeaturesPerDetectBlock);
 
 			if(grid_load < m_DetectionLoad)
 			{
@@ -150,6 +151,7 @@ namespace lvk
 
 		m_FeaturePoints.clear();
 		extract_features(m_FeaturePoints);
+        calculate_distribution_map();
 
 		points = m_FeaturePoints;
 	}
@@ -177,7 +179,7 @@ namespace lvk
 		for(const auto& [feature, propagated] : m_FeatureGrid)
 			if(feature.has_value())
 				feature_points.push_back(feature->pt);
-	}
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -189,8 +191,13 @@ namespace lvk
 		for(const auto& point : points)
 		{
 			// Silently ignore points which are out of bounds
-			if (within_bounds(point))
+			if(within_bounds(point))
 			{
+
+				if(point.x < 0)
+					std::cout << "ERROROROROOR - " << std::setprecision(2) << point.x << " == " << (int)point.x <<
+					std::endl;
+
 				auto& [feature, active] = fetch_feature_block(point);
 				if (!feature.has_value())
 				{
@@ -203,6 +210,40 @@ namespace lvk
 			}
 		}
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void GridDetector::calculate_distribution_map()
+    {
+        // Reset distribution map
+        for(auto& sector : m_DistributionMap)
+            sector = 0.0;
+
+        // Fill the distribution map as a count of each sector's number of points,
+        // normalized with respect to the ideal number of points per sector.
+
+        const double normalized_sample_score = static_cast<double>(m_DistributionMap.size())
+                                             / static_cast<double>(m_FeaturePoints.size());
+
+        for(const auto& point : m_FeaturePoints)
+        {
+            const size_t index = spatial_index(point, m_Resolution, m_DistributionMapResolution);
+            m_DistributionMap[index] += normalized_sample_score;
+        }
+
+        // Calculate global distribution quality by determining the total error from
+        // the ideal normalized distribution of 1, then converting to a percentage
+        // of the total worst case error. The quality is then the inverse.
+        m_GlobalDistributionQuality = 0.0;
+        for(const auto& distribution : m_DistributionMap)
+            m_GlobalDistributionQuality += std::abs(1.0 - distribution);
+
+        // Given n sectors, the worst case is when all points are in one sector. At which point
+        // we have 'n - 1' empty sectors with a distance of 1.0. And one sector with a distance
+        // of 'n - 1' as it contains a maximal distribution of 'n'.
+        m_GlobalDistributionQuality /= 2.0 * static_cast<double>(m_DistributionMap.size() - 1);
+        m_GlobalDistributionQuality = 1.0 - m_GlobalDistributionQuality;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -225,11 +266,7 @@ namespace lvk
 	GridDetector::FeatureBlock& GridDetector::fetch_feature_block(const cv::Point& point)
 	{
 		LVK_ASSERT(within_bounds(point));
-
-		const size_t block_x = point.x / m_FeatureBlockSize.width;
-		const size_t block_y = point.y / m_FeatureBlockSize.height;
-
-		return m_FeatureGrid[block_y * m_FeatureGridSize.width + block_x];
+		return m_FeatureGrid[spatial_index(point, m_Resolution, m_FeatureGridSize)];
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -237,11 +274,7 @@ namespace lvk
 	GridDetector::DetectBlock& GridDetector::fetch_detect_block(const cv::Point& point)
 	{
 		LVK_ASSERT(within_bounds(point));
-
-		const size_t block_x = point.x / m_DetectBlockSize.width;
-		const size_t block_y = point.y / m_DetectBlockSize.height;
-
-		return m_DetectGrid[block_y * m_DetectGridSize.width + block_x];
+		return m_DetectGrid[spatial_index(point, m_Resolution, m_DetectGridSize)];
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -284,26 +317,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f GridDetector::distribution_quality() const 
+	double GridDetector::distribution_quality() const
 	{
-		// In terms of the GridDetector, a good distribution of points is 
-		// one in which the points evenly and fairly describe the frame.
-		// We can define an an ideally distributed set of tracking points 
-		// as being perfectly symmetrical across all of the frame's lines
-		// of symmetry. Therefore we can measure the distribution quality 
-		// by how close the centroid is from the centre of the frame.
-
-		const auto centroid = distribution_centroid();
-
-		// Present independent vertical and horizontal qualities. 
-		return {
-            1.0f - 2 * std::abs((centroid.x / static_cast<float>(m_Resolution.width)) - 0.5f),
-            1.0f - 2 * std::abs((centroid.y / static_cast<float>(m_Resolution.height)) - 0.5f)
-        };
+		return m_GlobalDistributionQuality;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    double GridDetector::distribution(const cv::Point2f& location) const
+    {
+        return m_DistributionMap[spatial_index(location, m_Resolution, m_DistributionMapResolution)];
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 }
-
-
