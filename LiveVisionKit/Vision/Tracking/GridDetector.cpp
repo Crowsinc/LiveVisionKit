@@ -64,10 +64,6 @@ namespace lvk
 		LVK_ASSERT(resolution.height % feature_grid_size.height == 0);
 		LVK_ASSERT(resolution.width % feature_grid_size.width == 0);
 		
-		// Feature grid must evenly divide the detect grid
-		LVK_ASSERT(m_DetectBlockSize.width % m_FeatureBlockSize.width == 0);
-		LVK_ASSERT(m_DetectBlockSize.height % m_FeatureBlockSize.height == 0);
-		
 		// Detect grid must be smaller or equal to feature grid
 		// Feature grid must be smaller or equal to resolution
 		LVK_ASSERT(between(detect_grid_size.width, 1, feature_grid_size.width));
