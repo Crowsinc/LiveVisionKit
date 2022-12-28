@@ -117,17 +117,17 @@ namespace lvk
 	template<typename T>
 	inline size_t spatial_index(const cv::Point_<T> point, const cv::Size resolution, cv::Size divisor)
 	{
-		LVK_ASSERT(point.x >= 0 && point.y >= 0);
 		LVK_ASSERT(divisor.width > 0 && divisor.height > 0);
 		LVK_ASSERT(resolution.width > 0 && resolution.height > 0);
 
-		const cv::Size spatial_size(
-			resolution.width / divisor.width,
-			resolution.height / divisor.height
-		);
+        // Clamp point within the resolution
+        const cv::Point_<size_t> discrete_point(
+            std::clamp<size_t>(point.x, 0, resolution.width - 1),
+            std::clamp<size_t>(point.y, 0, resolution.height - 1)
+        );
 
-		const size_t x = std::min<size_t>(static_cast<size_t>(point.x) / spatial_size.width, divisor.width);
-		const size_t y = std::min<size_t>(static_cast<size_t>(point.y) / spatial_size.height, divisor.height);
+		const size_t x = discrete_point.x / (resolution.width / divisor.width);
+		const size_t y = discrete_point.y / (resolution.height / divisor.height);
 
 		return index_2d(x, y, divisor.width);
 	}
@@ -136,6 +136,8 @@ namespace lvk
 
 	inline size_t index_2d(size_t x, size_t y, size_t row_length)
 	{
+		LVK_ASSERT(row_length > 0);
+
 		return y * row_length + x;
 	}
 
