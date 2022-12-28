@@ -52,6 +52,11 @@ namespace lvk
 	template<typename T>
 	T exp_moving_average(const T average, const T new_sample, const float smoothing_factor);
 
+    template<typename T>
+    size_t spatial_index(const cv::Point_<T> point, const cv::Size resolution, const cv::Size divisor);
+
+    size_t index_2d(size_t x, size_t y, size_t row_length);
+
 }
 
 #include "Math.tpp"
