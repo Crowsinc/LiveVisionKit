@@ -73,11 +73,11 @@ namespace lvk
 
 		void extract_features(std::vector<cv::Point2f>& feature_points) const;
 
-		FeatureBlock& fetch_feature_block(const cv::Point& point);
+		FeatureBlock& fetch_feature_block(const cv::Point2f& point);
 
-		DetectBlock& fetch_detect_block(const cv::Point& point);
+		DetectBlock& fetch_detect_block(const cv::Point2f& point);
 
-		bool within_bounds(const cv::Point& point) const;
+		bool within_bounds(const cv::Point2f& point) const;
 
 	private:
 

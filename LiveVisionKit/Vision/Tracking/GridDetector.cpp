@@ -193,11 +193,6 @@ namespace lvk
 			// Silently ignore points which are out of bounds
 			if(within_bounds(point))
 			{
-
-				if(point.x < 0)
-					std::cout << "ERROROROROOR - " << std::setprecision(2) << point.x << " == " << (int)point.x <<
-					std::endl;
-
 				auto& [feature, active] = fetch_feature_block(point);
 				if (!feature.has_value())
 				{
@@ -263,7 +258,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	GridDetector::FeatureBlock& GridDetector::fetch_feature_block(const cv::Point& point)
+	GridDetector::FeatureBlock& GridDetector::fetch_feature_block(const cv::Point2f& point)
 	{
 		LVK_ASSERT(within_bounds(point));
 		return m_FeatureGrid[spatial_index(point, m_Resolution, m_FeatureGridSize)];
@@ -271,7 +266,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	GridDetector::DetectBlock& GridDetector::fetch_detect_block(const cv::Point& point)
+	GridDetector::DetectBlock& GridDetector::fetch_detect_block(const cv::Point2f& point)
 	{
 		LVK_ASSERT(within_bounds(point));
 		return m_DetectGrid[spatial_index(point, m_Resolution, m_DetectGridSize)];
@@ -279,10 +274,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool GridDetector::within_bounds(const cv::Point& point) const
+	bool GridDetector::within_bounds(const cv::Point2f& point) const
 	{
-		return between(point.x, 0, m_Resolution.width - 1)
-			&& between(point.y, 0, m_Resolution.height - 1);
+		return between<float>(point.x, 0.0f, static_cast<float>(m_Resolution.width) - 1.0f)
+			&& between<float>(point.y, 0.0f, static_cast<float>(m_Resolution.height) - 1.0f);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
