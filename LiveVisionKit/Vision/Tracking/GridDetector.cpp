@@ -25,7 +25,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr int GLOBAL_FAST_FEATURE_TARGET = 3000;
 	constexpr int DEFAULT_FAST_THRESHOLD = 70;
 	constexpr int MAX_FAST_THRESHOLD = 250;
 	constexpr int MIN_FAST_THRESHOLD = 10;
@@ -35,41 +34,45 @@ namespace lvk
 	
 	GridDetector::GridDetector(
 		const cv::Size& resolution,
-		const cv::Size& detect_grid_size,
-		const cv::Size& feature_grid_size,
-		const float detection_load
+		const cv::Size& feature_grid,
+		const cv::Size& detection_zones,
+		const float detection_threshold,
+		const size_t pixels_per_feature
 	)
 		: m_Resolution(resolution),
-		  m_DetectGridSize(detect_grid_size),
+		  m_DetectGridSize(detection_zones),
 		  m_DetectBlockSize(
-			  resolution.width / detect_grid_size.width,
-			  resolution.height / detect_grid_size.height
+			  resolution.width / detection_zones.width,
+			  resolution.height / detection_zones.height
 		  ),
-		  m_FeatureGridSize(feature_grid_size),
+		  m_FeatureGridSize(feature_grid),
 		  m_FeatureBlockSize(
-			  resolution.width / feature_grid_size.width,
-			  resolution.height / feature_grid_size.height
+			  resolution.width / feature_grid.width,
+			  resolution.height / feature_grid.height
 		  ),
-	      m_DetectionLoad(detection_load),
-		  m_FASTFeatureTarget(GLOBAL_FAST_FEATURE_TARGET / m_DetectGridSize.area()),
-		  m_FeaturesPerDetectBlock(m_FeatureGridSize.area() / m_DetectGridSize.area())
+		  m_FASTFeatureTarget(
+			  (resolution.area() / pixels_per_feature) / m_DetectGridSize.area()
+		  ),
+		  m_MinimumFeatureLoad(static_cast<size_t>(
+			  detection_threshold *
+			  (static_cast<float>(m_FeatureGridSize.area()) / static_cast<float>(m_DetectGridSize.area()))
+		  ))
 	{
 		LVK_ASSERT(resolution.width > 0);
 		LVK_ASSERT(resolution.height > 0);
-		LVK_ASSERT(between(detection_load, 0.0f, 1.0f));
+		LVK_ASSERT(between(detection_threshold, 0.0f, 1.0f));
+
+		// Grids must be smaller or equal to resolution
+		LVK_ASSERT(feature_grid.width <= resolution.width);
+		LVK_ASSERT(feature_grid.height <= resolution.height);
+		LVK_ASSERT(detection_zones.width <= resolution.width);
+		LVK_ASSERT(detection_zones.height <= resolution.height);
 
 		// Grids must evenly divide the resolution
-		LVK_ASSERT(resolution.height % detect_grid_size.height == 0);
-		LVK_ASSERT(resolution.width % detect_grid_size.width  == 0);
-		LVK_ASSERT(resolution.height % feature_grid_size.height == 0);
-		LVK_ASSERT(resolution.width % feature_grid_size.width == 0);
-		
-		// Detect grid must be smaller or equal to feature grid
-		// Feature grid must be smaller or equal to resolution
-		LVK_ASSERT(between(detect_grid_size.width, 1, feature_grid_size.width));
-		LVK_ASSERT(between(detect_grid_size.height, 1, feature_grid_size.height));
-		LVK_ASSERT(between(feature_grid_size.width, detect_grid_size.width, resolution.width));
-		LVK_ASSERT(between(feature_grid_size.height, detect_grid_size.height, resolution.height));
+		LVK_ASSERT(resolution.height % detection_zones.height == 0);
+		LVK_ASSERT(resolution.width % detection_zones.width  == 0);
+		LVK_ASSERT(resolution.height % feature_grid.height == 0);
+		LVK_ASSERT(resolution.width % feature_grid.width == 0);
 
 		m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
 		m_FeaturePoints.reserve(m_FeatureGridSize.area());
@@ -121,10 +124,7 @@ namespace lvk
 		// Detect new features over the detect grid and process into the feature grid
 		for(auto& [bounds, fast_threshold, propagations] : m_DetectGrid)
 		{
-			const float grid_load = static_cast<float>(propagations)
-				                  / static_cast<float>(m_FeaturesPerDetectBlock);
-
-			if(grid_load < m_DetectionLoad)
+			if(propagations <= m_MinimumFeatureLoad)
 			{
 				m_FASTFeatureBuffer.clear();
 
@@ -288,6 +288,20 @@ namespace lvk
 	size_t GridDetector::feature_capacity() const
 	{
 		return m_FeatureGridSize.area();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Size GridDetector::local_feature_extent() const
+	{
+		return m_FeatureBlockSize;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Size GridDetector::local_detection_extent() const
+	{
+		return m_DetectBlockSize;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

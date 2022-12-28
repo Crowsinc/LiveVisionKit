@@ -29,9 +29,10 @@ namespace lvk
 
 		GridDetector(
 			const cv::Size& resolution,
-			const cv::Size& detect_grid_size,
-			const cv::Size& feature_grid_size,
-            const float detection_load
+			const cv::Size& feature_grid,
+			const cv::Size& detection_zones,
+            const float detection_threshold,
+            const size_t pixels_per_feature = 75
 		);
 
 		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
@@ -44,9 +45,13 @@ namespace lvk
 
 		size_t feature_capacity() const;
 
-		double distribution_quality() const;
+        cv::Size local_feature_extent() const;
+
+        cv::Size local_detection_extent() const;
 
 		cv::Point2f distribution_centroid() const;
+
+		double distribution_quality() const;
 
         double distribution(const cv::Point2f& location) const;
 
@@ -85,9 +90,7 @@ namespace lvk
 		const cv::Size m_DetectGridSize, m_DetectBlockSize;
 		const cv::Size m_FeatureGridSize, m_FeatureBlockSize;
 
-		const float m_DetectionLoad;
-		const size_t m_FASTFeatureTarget;
-		const size_t m_FeaturesPerDetectBlock;
+		const size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
 		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
 
 		std::vector<DetectBlock> m_DetectGrid;
@@ -95,7 +98,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_FeaturePoints;
 
         static constexpr size_t m_DistributionMapScale = 5;
-        std::array<double, m_DistributionMapScale * m_DistributionMapScale> m_DistributionMap;
+        std::array<double, m_DistributionMapScale * m_DistributionMapScale> m_DistributionMap{};
         const cv::Size m_DistributionMapResolution = cv::Size(m_DistributionMapScale, m_DistributionMapScale);
         double m_GlobalDistributionQuality = 0.0;
 	};
