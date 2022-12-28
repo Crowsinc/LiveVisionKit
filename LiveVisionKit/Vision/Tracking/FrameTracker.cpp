@@ -26,8 +26,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr float METRIC_SMOOTHING_FACTOR = 0.05f;
-	constexpr float GOOD_DISTRIBUTION_QUALITY = 0.4f;
+	constexpr double METRIC_SMOOTHING_FACTOR = 0.05;
+	constexpr double GOOD_DISTRIBUTION_QUALITY = 0.6;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -186,10 +186,11 @@ namespace lvk
 			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
 			m_GridDetector.propagate(m_MatchedPoints);
 
-			update_metrics(
-				static_cast<float>(m_MatchedPoints.size()) / static_cast<float>(m_TrackedPoints.size()),
-				m_GridDetector.distribution_quality()
-			);
+            m_SceneStability = exp_moving_average(
+                m_SceneStability,
+                static_cast<double>(m_MatchedPoints.size()) / static_cast<double>(m_TrackedPoints.size()),
+                METRIC_SMOOTHING_FACTOR
+            );
 
 			return Homography::FromMatrix(motion);
 		}
@@ -200,7 +201,7 @@ namespace lvk
 
 	Homography FrameTracker::abort_tracking()
 	{
-		update_metrics(0, m_GridDetector.distribution_quality());
+        m_SceneStability = exp_moving_average(m_SceneStability, 0.0, METRIC_SMOOTHING_FACTOR);
 
 		m_GridDetector.reset();
 		return Homography::Identity();
@@ -234,7 +235,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	MotionModel FrameTracker::choose_optimal_model() const
+	MotionModel FrameTracker::choose_optimal_model()
 	{
 		// A good Homography should always be better than a good affine 
 		// transform. But if the tracking points are not well distributed,
@@ -244,34 +245,19 @@ namespace lvk
 		// is a fair representation of the frame. Otherwise we use the affine
 		// transform, which always fully represents the frame. 
 
-		// TODO: Use a more rigorous approach to selecting the optimal model.
-		const auto aspect_ratio = m_GridDetector.resolution().aspectRatio();
-		const bool good_distribution = m_DistributionQuality.x >= GOOD_DISTRIBUTION_QUALITY
-								    && m_DistributionQuality.y / aspect_ratio >= GOOD_DISTRIBUTION_QUALITY;
+        m_DistributionQuality = exp_moving_average(
+            m_DistributionQuality, m_GridDetector.distribution_quality(), METRIC_SMOOTHING_FACTOR
+        );
 
-		return good_distribution ? MotionModel::HOMOGRAPHY : MotionModel::AFFINE;
+        if(m_DistributionQuality >= GOOD_DISTRIBUTION_QUALITY)
+            return MotionModel::HOMOGRAPHY;
+
+        return MotionModel::AFFINE;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameTracker::update_metrics(const float inlier_ratio, const cv::Point2f distribution_quality)
-	{
-		LVK_ASSERT(between(inlier_ratio, 0.0f, 1.0f));
-		LVK_ASSERT(between(distribution_quality.x, 0.0f, 1.0f));
-		LVK_ASSERT(between(distribution_quality.y, 0.0f, 1.0f));
-
-		m_DistributionQuality = exp_moving_average(
-            m_DistributionQuality, distribution_quality, METRIC_SMOOTHING_FACTOR
-        );
-
-		m_SceneStability = exp_moving_average(
-            m_SceneStability, inlier_ratio, METRIC_SMOOTHING_FACTOR
-        );
-	}
-	
-//---------------------------------------------------------------------------------------------------------------------
-
-	float FrameTracker::stability() const
+	double FrameTracker::stability() const
 	{
 		return m_SceneStability;
 	}

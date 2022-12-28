@@ -38,7 +38,7 @@ namespace lvk
 		explicit FrameTracker(
 			const MotionModel model = MotionModel::DYNAMIC,
 			const float estimation_threshold = 0.05,
-			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,1), cv::Size(32,18), 0.3)
+			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(32,18), cv::Size(2,1), 0.3)
 		);
 
 		Homography track(const cv::UMat& next_frame);
@@ -49,7 +49,7 @@ namespace lvk
 
 		MotionModel model() const;
 
-		float stability() const;
+		double stability() const;
 
 		const std::vector<cv::Point2f>& tracking_points() const;
 
@@ -61,9 +61,7 @@ namespace lvk
 
 		void prepare_state();
 		
-		MotionModel choose_optimal_model() const;
-
-		void update_metrics(const float inlier_ratio, const cv::Point2f distribution_error);
+		MotionModel choose_optimal_model();
 
 	private:
 
@@ -76,8 +74,8 @@ namespace lvk
 		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_SceneStability = 0.0f;
-		cv::Point2f m_DistributionQuality;
+		double m_SceneStability = 0.0;
+        double m_DistributionQuality = 0.0;
 
 		MotionModel m_MotionModel;
 		cv::UsacParams m_USACParams;
