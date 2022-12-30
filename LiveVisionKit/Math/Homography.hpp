@@ -86,7 +86,7 @@ namespace lvk
 
 		void warp(const cv::UMat& src, cv::UMat& dst) const;
 
-		cv::Mat as_matrix() const;
+        const cv::Mat& data() const;
 
 		bool is_affine() const;
 
@@ -111,7 +111,6 @@ namespace lvk
 		void operator*=(const double scaling);
 
 		void operator/=(const double scaling);
-
 
 	private:
         explicit Homography(cv::Mat& data);

@@ -328,14 +328,16 @@ namespace lvk
 
 	void Homography::operator*=(const Homography& other)
 	{
-		cv::multiply(m_Matrix, other.m_Matrix, m_Matrix);
+        // This is matrix multiplication
+        cv::gemm(m_Matrix, other.m_Matrix, 1, cv::Mat(), 0, m_Matrix, 0);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void Homography::operator*=(const cv::Mat& other)
     {
-        cv::multiply(m_Matrix, other, m_Matrix);
+        // This is matrix multiplication
+        cv::gemm(m_Matrix, other, 1, cv::Mat(), 0, m_Matrix, 0);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -374,9 +376,9 @@ namespace lvk
 
 	Homography operator*(const Homography& left, const Homography& right)
 	{
-        Homography h(left);
-        h *= right;
-        return h;
+        // This is matrix multiplication
+        cv::Mat result = left.data() * right.data();
+        return Homography::WrapMatrix(result);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
