@@ -192,7 +192,8 @@ namespace lvk
                 METRIC_SMOOTHING_FACTOR
             );
 
-			return Homography::FromMatrix(motion);
+			return (motion_model == MotionModel::AFFINE) ? Homography::FromAffineMatrix(motion)
+                                                         : Homography::WrapMatrix(motion);
 		}
 		else return abort_tracking();
 	}

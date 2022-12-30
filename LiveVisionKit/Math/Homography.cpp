@@ -24,27 +24,96 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    std::optional<Homography> Homography::Estimate(
+        const std::vector<cv::Point2f>& tracked_points,
+        const std::vector<cv::Point2f>& matched_points,
+        std::vector<uint8_t>& inlier_status,
+        Homography::EstimationParams sampling_method,
+        bool force_rigid_affine
+    )
+    {
+        cv::Mat estimate;
+        if(force_rigid_affine)
+        {
+            estimate = cv::estimateAffinePartial2D(
+                tracked_points,
+                matched_points,
+                inlier_status,
+                sampling_method.method,
+                sampling_method.error_threshold,
+                sampling_method.max_iterations,
+                sampling_method.confidence,
+                sampling_method.refine_iterations
+            );
+        }
+        else
+        {
+            estimate = cv::findHomography(
+                tracked_points,
+                matched_points,
+                sampling_method.method,
+                sampling_method.error_threshold,
+                inlier_status,
+                static_cast<int>(sampling_method.max_iterations),
+                sampling_method.confidence
+            );
+        }
+
+        if(estimate.empty())
+            return std::nullopt;
+
+        return force_rigid_affine ? Homography::FromAffineMatrix(estimate)
+                                  : Homography::WrapMatrix(estimate);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::optional<Homography> Homography::Estimate(
+        const std::vector<cv::Point2f>& tracked_points,
+        const std::vector<cv::Point2f>& matched_points,
+        std::vector<uint8_t>& inlier_status,
+        cv::UsacParams sampling_method
+    )
+    {
+        cv::Mat estimate = cv::findHomography(
+            tracked_points,
+            matched_points,
+            inlier_status,
+            sampling_method
+        );
+
+        if(estimate.empty())
+            return std::nullopt;
+
+        return Homography::WrapMatrix(estimate);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	Homography Homography::Identity()
 	{
 		// NOTE: A default-initialised homography is identity
-		return {};
+		return Homography();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Homography Homography::Zero()
 	{
-		return Homography::FromMatrix(cv::Mat::zeros(3, 3, CV_64FC1));
+        cv::Mat data = cv::Mat::zeros(3, 3, CV_64FC1);
+		return WrapMatrix(data);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography Homography::FromMatrix(const cv::Mat& matrix)
+	Homography Homography::WrapMatrix(cv::Mat& matrix)
 	{
-		if(matrix.cols == 3 && matrix.rows == 2)
-			return FromAffineMatrix(matrix);
-		else
-			return Homography(matrix);
+        LVK_ASSERT(matrix.cols == 3);
+        LVK_ASSERT(matrix.rows == 3);
+        LVK_ASSERT(matrix.type() == CV_64FC1);
+
+        // Use private matrix 'move' constructor
+        return Homography(matrix);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -55,13 +124,13 @@ namespace lvk
 		LVK_ASSERT(affine.rows == 2);
 		LVK_ASSERT(affine.type() == CV_64FC1);
 
-		// Copy affine data over
-		Homography h = Homography::Identity();
+		// Copy affine data over to the internal 3x3 matrix
+		Homography perspective;
 		for(int r = 0; r < 2; r++)
 			for(int c = 0; c < 3; c++)
-				h.m_Matrix.at<double>(r, c) = affine.at<double>(r, c);
+                perspective.m_Matrix.at<double>(r, c) = affine.at<double>(r, c);
 
-		return h;
+		return perspective;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -79,6 +148,17 @@ namespace lvk
 		LVK_ASSERT(matrix.rows == 3);
 		LVK_ASSERT(matrix.type() == CV_64FC1);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // This is a private matrix 'move' constructor.
+    Homography::Homography(cv::Mat& data)
+        : m_Matrix(data)
+    {
+        LVK_ASSERT(data.cols == 3);
+        LVK_ASSERT(data.rows == 3);
+        LVK_ASSERT(data.type() == CV_64FC1);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -105,12 +185,26 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    cv::Point2d Homography::operator*(const cv::Point2d& point) const
+    {
+        return transform(point);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	cv::Point2f Homography::transform(const cv::Point2f& point) const
 	{
 		std::vector<cv::Point2f> out, in = {point};
 		cv::perspectiveTransform(in, out, m_Matrix);
 		return out[0];
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Point2f Homography::operator*(const cv::Point2f& point) const
+    {
+        return transform(point);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -126,6 +220,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    std::vector<cv::Point2d> Homography::operator*(const std::vector<cv::Point2d>& points) const
+    {
+        return transform(points);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	std::vector<cv::Point2f> Homography::transform(const std::vector<cv::Point2f>& points) const
 	{
 		std::vector<cv::Point2f> out;
@@ -135,6 +236,13 @@ namespace lvk
 
 		return out;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::vector<cv::Point2f> Homography::operator*(const std::vector<cv::Point2f>& points) const
+    {
+        return transform(points);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -162,7 +270,15 @@ namespace lvk
 			&& m_Matrix.at<double>(2, 1) == 0
 			&& m_Matrix.at<double>(2, 2) == 1;
 	}
-	
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Homography& Homography::operator=(const cv::Mat& other)
+    {
+        m_Matrix = other.clone();
+        return *this;
+    }
+
 //---------------------------------------------------------------------------------------------------------------------
 
     Homography& Homography::operator=(const Homography& other)
@@ -189,6 +305,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void Homography::operator+=(const cv::Mat& other)
+    {
+        cv::add(m_Matrix, other, m_Matrix);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void Homography::operator-=(const Homography& other)
 	{
 		cv::subtract(m_Matrix, other.m_Matrix, m_Matrix);
@@ -196,10 +319,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void Homography::operator-=(const cv::Mat& other)
+    {
+        cv::subtract(m_Matrix, other, m_Matrix);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void Homography::operator*=(const Homography& other)
 	{
 		cv::multiply(m_Matrix, other.m_Matrix, m_Matrix);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Homography::operator*=(const cv::Mat& other)
+    {
+        cv::multiply(m_Matrix, other, m_Matrix);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
