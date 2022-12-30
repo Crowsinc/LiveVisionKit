@@ -256,9 +256,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Mat Homography::as_matrix() const
+	const cv::Mat& Homography::data() const
 	{
-		return m_Matrix.clone();
+		return m_Matrix;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -358,36 +358,33 @@ namespace lvk
 
 	Homography operator+(const Homography& left, const Homography& right)
 	{
-		Homography h(left);
-		h += right;
-		return h;
+        cv::Mat result = left.data() + right.data();
+		return Homography::WrapMatrix(result);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Homography operator-(const Homography& left, const Homography& right)
 	{
-		Homography h(left);
-		h -= right;
-		return h;
+        cv::Mat result = left.data() - right.data();
+        return Homography::WrapMatrix(result);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Homography operator*(const Homography& left, const Homography& right)
 	{
-		Homography h(left);
-		h *= right;
-		return h;
+        Homography h(left);
+        h *= right;
+        return h;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	Homography operator*(const Homography& homography, const double scaling)
 	{
-		Homography h(homography);
-		h *= scaling;
-		return h;
+		cv::Mat result = homography.data() * scaling;
+		return Homography::WrapMatrix(result);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -396,9 +393,8 @@ namespace lvk
 	{
 		LVK_ASSERT(scaling != 0.0);
 
-		Homography h(homography);
-		h /= scaling;
-		return h;
+        cv::Mat result = homography.data() / scaling;
+        return Homography::WrapMatrix(result);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
