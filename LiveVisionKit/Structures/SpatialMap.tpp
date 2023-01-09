@@ -173,6 +173,45 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline void SpatialMap<T>::fill(const T& value)
+    {
+        // Fill all empty slots with the given value
+        for(size_t index = 0; index < m_Map.size(); index++)
+        {
+            size_t& data_link = m_Map[index];
+            if(is_data_link_empty(data_link))
+            {
+                const spatial_key key = map_index_to_key(index, m_MapResolution);
+
+                data_link = m_Data.size();
+                m_Data.emplace_back(key, value);
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    template<typename... Args>
+    inline void SpatialMap<T>::fill(Args... args)
+    {
+        // Emplace all empty slots using the given arguments
+        for(size_t index = 0; index < m_Map.size(); index++)
+        {
+            size_t& data_link = m_Map[index];
+            if(is_data_link_empty(data_link))
+            {
+                const spatial_key key = map_index_to_key(index, m_MapResolution);
+
+                data_link = m_Data.size();
+                m_Data.emplace_back(key, T{args...});
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline void SpatialMap<T>::remove(const spatial_key key)
     {
         LVK_ASSERT(contains(key));
@@ -409,9 +448,8 @@ namespace lvk
         double excess = 0.0;
         for(const auto& [key, data] : m_Data)
         {
-            const size_t index = resolve_spatial_key(
-                simplify_key(key, sector_size),
-                distribution_resolution
+            const size_t index = map_key_to_index(
+                simplify_key(key, sector_size), distribution_resolution
             );
 
             if(++sector_buckets[index] > ideal_distribution)
@@ -488,13 +526,28 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline size_t SpatialMap<T>::resolve_spatial_key(
+    inline size_t SpatialMap<T>::map_key_to_index(
         const spatial_key key,
         const cv::Size resolution
     )
     {
         return index_2d(key.x, key.y, resolution.width);
     }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline SpatialMap<T>::spatial_key SpatialMap<T>::map_index_to_key(
+        const size_t index,
+        const cv::Size resolution
+    )
+    {
+        return spatial_key(
+            index % static_cast<size_t>(resolution.width),
+            index / static_cast<size_t>(resolution.width)
+        );
+    }
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -509,7 +562,7 @@ namespace lvk
     template<typename T>
     inline size_t& SpatialMap<T>::fetch_data_link(const spatial_key key)
     {
-        return  m_Map[resolve_spatial_key(key, m_MapResolution)];
+        return  m_Map[map_key_to_index(key, m_MapResolution)];
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -517,7 +570,7 @@ namespace lvk
     template<typename T>
     inline size_t SpatialMap<T>::fetch_data_link(const spatial_key key) const
     {
-        return  m_Map[resolve_spatial_key(key, m_MapResolution)];
+        return  m_Map[map_key_to_index(key, m_MapResolution)];
     }
 
 //---------------------------------------------------------------------------------------------------------------------

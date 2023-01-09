@@ -65,6 +65,12 @@ namespace lvk
         bool try_emplace(const cv::Point_<P>& position, Args... args);
 
 
+        void fill(const T& value);
+
+        template<typename... Args>
+        void fill(Args... args);
+
+
         void remove(const spatial_key key);
 
         bool try_remove(const spatial_key key);
@@ -129,8 +135,13 @@ namespace lvk
             const cv::Size_<float>& key_size
         );
 
-        static size_t resolve_spatial_key(
+        static size_t map_key_to_index(
             const spatial_key key,
+            const cv::Size resolution
+        );
+
+        static spatial_key map_index_to_key(
+            const size_t index,
             const cv::Size resolution
         );
 
