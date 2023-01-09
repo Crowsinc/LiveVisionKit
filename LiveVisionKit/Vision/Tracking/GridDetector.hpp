@@ -18,7 +18,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-#include <optional>
+#include "Structures/SpatialMap.hpp"
 
 namespace lvk
 {
@@ -53,11 +53,9 @@ namespace lvk
 
 		double distribution_quality() const;
 
-        double distribution(const cv::Point2f& location) const;
-
 	private:
 
-		struct DetectBlock
+		struct DetectZone
 		{
             cv::Rect2f bounds;
             int fast_threshold = 0;
@@ -66,41 +64,23 @@ namespace lvk
 
 		struct FeatureBlock
 		{
-			std::optional<cv::KeyPoint> feature;
+			cv::KeyPoint feature;
 			bool propagated = false;
 		};
 
 		void construct_grids();
 
-        void calculate_distribution_map();
-
-        void process_features(std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
+        void process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
 
 		void extract_features(std::vector<cv::Point2f>& feature_points) const;
 
-		FeatureBlock& fetch_feature_block(const cv::Point2f& point);
-
-		DetectBlock& fetch_detect_block(const cv::Point2f& point);
-
-		bool within_bounds(const cv::Point2f& point) const;
-
 	private:
 
-		const cv::Size m_Resolution;
-		const cv::Size m_DetectGridSize, m_DetectBlockSize;
-		const cv::Size m_FeatureGridSize, m_FeatureBlockSize;
+        SpatialMap<FeatureBlock> m_FeatureGrid;
+        SpatialMap<DetectZone> m_DetectionZones;
 
 		const size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
 		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
-
-		std::vector<DetectBlock> m_DetectGrid;
-		std::vector<FeatureBlock> m_FeatureGrid;
-		std::vector<cv::Point2f> m_FeaturePoints;
-
-        static constexpr size_t m_DistributionMapScale = 5;
-        std::array<double, m_DistributionMapScale * m_DistributionMapScale> m_DistributionMap{};
-        const cv::Size m_DistributionMapResolution = cv::Size(m_DistributionMapScale, m_DistributionMapScale);
-        double m_GlobalDistributionQuality = 0.0;
 	};
 
 }

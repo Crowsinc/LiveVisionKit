@@ -39,23 +39,14 @@ namespace lvk
 		const float detection_threshold,
 		const size_t pixels_per_feature
 	)
-		: m_Resolution(resolution),
-		  m_DetectGridSize(detection_zones),
-		  m_DetectBlockSize(
-			  resolution.width / detection_zones.width,
-			  resolution.height / detection_zones.height
-		  ),
-		  m_FeatureGridSize(feature_grid),
-		  m_FeatureBlockSize(
-			  resolution.width / feature_grid.width,
-			  resolution.height / feature_grid.height
-		  ),
+		: m_FeatureGrid(feature_grid, cv::Rect(cv::Point(0,0), resolution)),
+          m_DetectionZones(detection_zones, cv::Rect(cv::Point(0,0), resolution)),
 		  m_FASTFeatureTarget(
-			  (resolution.area() / pixels_per_feature) / m_DetectGridSize.area()
+			  (resolution.area() / pixels_per_feature) / detection_zones.area()
 		  ),
 		  m_MinimumFeatureLoad(static_cast<size_t>(
 			  detection_threshold *
-			  (static_cast<float>(m_FeatureGridSize.area()) / static_cast<float>(m_DetectGridSize.area()))
+			  (static_cast<float>(feature_grid.area()) / static_cast<float>(detection_zones.area()))
 		  ))
 	{
 		LVK_ASSERT(resolution.width > 0);
@@ -75,8 +66,6 @@ namespace lvk
 		LVK_ASSERT(resolution.width % feature_grid.width == 0);
 
 		m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
-		m_FeaturePoints.reserve(m_FeatureGridSize.area());
-
 		construct_grids();
 		reset();
 	}
@@ -85,32 +74,25 @@ namespace lvk
 
 	void GridDetector::construct_grids()
 	{
-		// Construct detection grid
-		m_DetectGrid.clear();
-		for(uint32_t r = 0; r < m_DetectGridSize.height; r++)
+		// Construct detection zones
+        m_DetectionZones.clear();
+		for(size_t r = 0; r < m_DetectionZones.rows(); r++)
 		{
-			for(uint32_t c = 0; c < m_DetectGridSize.width; c++)
+			for(size_t c = 0; c < m_DetectionZones.cols(); c++)
 			{
-				auto& block = m_DetectGrid.emplace_back();
-				block.bounds = cv::Rect2f(
+                DetectZone zone;
+                zone.bounds = cv::Rect2f(
 					cv::Point2f(
-                        static_cast<float>(c * m_DetectBlockSize.width),
-                        static_cast<float>(r * m_DetectBlockSize.height)
+                        static_cast<float>(c) * m_DetectionZones.key_size().width,
+                        static_cast<float>(r) * m_DetectionZones.key_size().height
                     ),
-					m_DetectBlockSize
+					m_DetectionZones.key_size()
 				);
-				block.fast_threshold = DEFAULT_FAST_THRESHOLD;
-				block.propagations = 0;
-			}
-		}
+				zone.fast_threshold = DEFAULT_FAST_THRESHOLD;
+				zone.propagations = 0;
 
-		// Construct feature grid
-		m_FeatureGrid.clear();
-		for(int i = 0; i < m_FeatureGridSize.area(); i++)
-		{
-			auto& block = m_FeatureGrid.emplace_back();
-			block.feature = std::nullopt;
-			block.propagated = true;
+                m_DetectionZones.place_at({c, r}, zone);
+			}
 		}
 	}
 
@@ -122,8 +104,10 @@ namespace lvk
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
 		// Detect new features over the detect grid and process into the feature grid
-		for(auto& [bounds, fast_threshold, propagations] : m_DetectGrid)
+		for(auto& [coord, zone] : m_DetectionZones)
 		{
+            auto& [bounds, fast_threshold, propagations] = zone;
+
 			if(propagations <= m_MinimumFeatureLoad)
 			{
 				m_FASTFeatureBuffer.clear();
@@ -145,16 +129,12 @@ namespace lvk
 			}
 		}
 
-		m_FeaturePoints.clear();
-		extract_features(m_FeaturePoints);
-        calculate_distribution_map();
-
-		points = m_FeaturePoints;
+		extract_features(points);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void GridDetector::process_features(std::vector<cv::KeyPoint>& features, const cv::Point2f& offset)
+	void GridDetector::process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset)
 	{
 		// Process features into the feature grid, keeping only the best for each block.
 		for(cv::KeyPoint feature : features)
@@ -162,8 +142,8 @@ namespace lvk
 			feature.pt.x += offset.x;
 			feature.pt.y += offset.y;
 
-			auto& [block_feature, propagated] = fetch_feature_block(feature.pt);
-			if(!propagated && (!block_feature.has_value() || block_feature->response < feature.response))
+			auto& [block_feature, propagated] = m_FeatureGrid[feature.pt];
+			if(!propagated && block_feature.response < feature.response)
 				block_feature = feature;
 		}
 	}
@@ -172,9 +152,8 @@ namespace lvk
 
 	void GridDetector::extract_features(std::vector<cv::Point2f>& feature_points) const
 	{
-		for(const auto& [feature, propagated] : m_FeatureGrid)
-			if(feature.has_value())
-				feature_points.push_back(feature->pt);
+		for(const auto& [coord, block] : m_FeatureGrid)
+            feature_points.push_back(block.feature.pt);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -183,158 +162,76 @@ namespace lvk
 	{
 		reset();
 
-		// Propagate the given points onto the feature grid, 
+		// Propagate the given points onto the feature grid,
 		for(const auto& point : points)
 		{
 			// Silently ignore points which are out of bounds
-			if(within_bounds(point))
+			if(m_FeatureGrid.within_bounds(point))
 			{
-				auto& [feature, active] = fetch_feature_block(point);
-				if (!feature.has_value())
-				{
-					feature = cv::KeyPoint(point, 1);
-					active = true;
+                // Ignore point if one has already been propagated to the same point.
+                if(m_FeatureGrid.contains(m_FeatureGrid.key_of(point)))
+                    continue;
+
+				auto& [feature, active] = m_FeatureGrid[point];
+                feature = cv::KeyPoint(point, 1);
+                active = true;
 					
-					m_FeaturePoints.push_back(point);
-					fetch_detect_block(point).propagations++;
-				}
+                m_DetectionZones[point].propagations++;
 			}
 		}
-
-		calculate_distribution_map();
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void GridDetector::calculate_distribution_map()
-    {
-        // Reset distribution map
-        for(auto& sector : m_DistributionMap)
-            sector = 0.0;
-
-        // Fill the distribution map as a count of each sector's number of points,
-        // normalized with respect to the ideal number of points per sector.
-
-        const double normalized_sample_score = static_cast<double>(m_DistributionMap.size())
-                                             / static_cast<double>(m_FeaturePoints.size());
-
-        for(const auto& point : m_FeaturePoints)
-        {
-            const size_t index = spatial_index(point, m_Resolution, m_DistributionMapResolution);
-            m_DistributionMap[index] += normalized_sample_score;
-        }
-
-        // Calculate global distribution quality by determining the total error from
-        // the ideal normalized distribution of 1, then converting to a percentage
-        // of the total worst case error. The quality is then the inverse.
-        m_GlobalDistributionQuality = 0.0;
-        for(const auto& distribution : m_DistributionMap)
-            m_GlobalDistributionQuality += std::abs(1.0 - distribution);
-
-        // Given n sectors, the worst case is when all points are in one sector. At which point
-        // we have 'n - 1' empty sectors with a distance of 1.0. And one sector with a distance
-        // of 'n - 1' as it contains a maximal distribution of 'n'.
-        m_GlobalDistributionQuality /= 2.0 * static_cast<double>(m_DistributionMap.size() - 1);
-        m_GlobalDistributionQuality = 1.0 - m_GlobalDistributionQuality;
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void GridDetector::reset()
 	{
-		for (auto& detect_block : m_DetectGrid)
-			detect_block.propagations = 0;
+		for (auto& [coord, zone] : m_DetectionZones)
+			zone.propagations = 0;
 
-		for (auto& [feature, propagated] : m_FeatureGrid)
-		{
-			feature.reset();
-			propagated = false;
-		}
-
-		m_FeaturePoints.clear();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	GridDetector::FeatureBlock& GridDetector::fetch_feature_block(const cv::Point2f& point)
-	{
-		LVK_ASSERT(within_bounds(point));
-		return m_FeatureGrid[spatial_index(point, m_Resolution, m_FeatureGridSize)];
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	GridDetector::DetectBlock& GridDetector::fetch_detect_block(const cv::Point2f& point)
-	{
-		LVK_ASSERT(within_bounds(point));
-		return m_DetectGrid[spatial_index(point, m_Resolution, m_DetectGridSize)];
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool GridDetector::within_bounds(const cv::Point2f& point) const
-	{
-		return between<float>(point.x, 0.0f, static_cast<float>(m_Resolution.width) - 1.0f)
-			&& between<float>(point.y, 0.0f, static_cast<float>(m_Resolution.height) - 1.0f);
+        m_FeatureGrid.clear();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::Size GridDetector::resolution() const
 	{
-		return m_Resolution;
+		return m_FeatureGrid.input_region().size();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	size_t GridDetector::feature_capacity() const
 	{
-		return m_FeatureGridSize.area();
+		return m_FeatureGrid.capacity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::Size GridDetector::local_feature_extent() const
 	{
-		return m_FeatureBlockSize;
+		return cv::Size(m_FeatureGrid.key_size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::Size GridDetector::local_detection_extent() const
 	{
-		return m_DetectBlockSize;
+		return cv::Size(m_DetectionZones.key_size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::Point2f GridDetector::distribution_centroid() const
 	{
-		if(m_FeaturePoints.empty())
-			return {0,0};
-
-		cv::Point2f centroid(0, 0);
-		for(const auto& point : m_FeaturePoints)
-			centroid += point;
-		
-		centroid /= static_cast<float>(m_FeaturePoints.size());
-		
-		return centroid;
+		return m_FeatureGrid.distribution_centroid<float>();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	double GridDetector::distribution_quality() const
 	{
-		return m_GlobalDistributionQuality;
+		return m_FeatureGrid.distribution_quality();
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    double GridDetector::distribution(const cv::Point2f& location) const
-    {
-        return m_DistributionMap[spatial_index(location, m_Resolution, m_DistributionMapResolution)];
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
