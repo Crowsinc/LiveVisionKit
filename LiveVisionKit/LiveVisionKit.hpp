@@ -27,6 +27,7 @@
 #include "Math/BoundingQuad.hpp"
 
 #include "Structures/SlidingBuffer.hpp"
+#include "Structures/SpatialMap.hpp"
 
 #include "Utility/Algorithm.hpp"
 #include "Utility/Drawing.hpp"
