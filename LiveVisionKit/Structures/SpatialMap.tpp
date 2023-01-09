@@ -45,7 +45,7 @@ namespace lvk
     template<typename T>
     inline void SpatialMap<T>::rescale(const cv::Size resolution)
     {
-        rescale(resolution, resolution);
+        rescale(resolution, cv::Rect(cv::Point(0,0),resolution));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
