@@ -28,44 +28,31 @@ namespace lvk
 
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const cv::Size resolution)
+        : m_KeySize(1,1)
     {
-        rescale(resolution);
+        resize(resolution);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline SpatialMap<T>::SpatialMap(const cv::Size resolution, const cv::Rect input_region)
+    inline SpatialMap<T>::SpatialMap(const cv::Size resolution, const cv::Rect& input_region)
     {
-        rescale(resolution, input_region);
+        resize(resolution);
+        rescale(input_region);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::rescale(const cv::Size resolution)
-    {
-        rescale(resolution, cv::Rect(cv::Point(0,0),resolution));
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline void SpatialMap<T>::rescale(const cv::Size resolution, const cv::Rect input_region)
+    inline void SpatialMap<T>::resize(const cv::Size resolution)
     {
         LVK_ASSERT(resolution.width >= 1);
         LVK_ASSERT(resolution.height >= 1);
-        LVK_ASSERT(input_region.width >= resolution.width);
-        LVK_ASSERT(input_region.height >= resolution.height);
 
-        if(resolution != m_MapResolution || input_region != m_InputRegion)
+        if(resolution != m_MapResolution)
         {
-            m_InputRegion = input_region;
             m_MapResolution = resolution;
-
-            // Spatial size of each key within the input region.
-            m_KeySize.width = static_cast<float>(m_InputRegion.width) / static_cast<float>(m_MapResolution.width);
-            m_KeySize.height = static_cast<float>(m_InputRegion.height) / static_cast<float>(m_MapResolution.height);
 
             m_Map.clear();
             m_Map.resize(m_MapResolution.area(), m_EmptySymbol);
@@ -76,6 +63,21 @@ namespace lvk
                 if(is_key_valid(key))
                     place_at(key, item);
         }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline void SpatialMap<T>::rescale(const cv::Rect& input_region)
+    {
+        LVK_ASSERT(input_region.width >= m_MapResolution.width);
+        LVK_ASSERT(input_region.height >= m_MapResolution.height);
+
+        m_InputRegion = input_region;
+
+        // Spatial size of each key within the input region.
+        m_KeySize.width = static_cast<float>(m_InputRegion.width) / static_cast<float>(m_MapResolution.width);
+        m_KeySize.height = static_cast<float>(m_InputRegion.height) / static_cast<float>(m_MapResolution.height);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

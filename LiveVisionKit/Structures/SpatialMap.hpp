@@ -38,11 +38,12 @@ namespace lvk
 
         explicit SpatialMap(const cv::Size resolution);
 
-        SpatialMap(const cv::Size resolution, const cv::Rect input_region);
+        SpatialMap(const cv::Size resolution, const cv::Rect& input_region);
 
-        void rescale(const cv::Size resolution);
 
-        void rescale(const cv::Size resolution, const cv::Rect input_region);
+        void resize(const cv::Size resolution);
+
+        void rescale(const cv::Rect& input_region);
 
 
         T& place_at(const spatial_key key, const T& item);
