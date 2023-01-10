@@ -40,6 +40,10 @@ namespace lvk
 
         SpatialMap(const cv::Size resolution, const cv::Rect& input_region);
 
+        SpatialMap(const SpatialMap&& other) noexcept;
+
+        SpatialMap(const SpatialMap& other);
+
 
         void resize(const cv::Size resolution);
 

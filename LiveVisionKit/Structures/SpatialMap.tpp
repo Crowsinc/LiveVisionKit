@@ -45,6 +45,28 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline SpatialMap<T>::SpatialMap(const SpatialMap<T>&& other) noexcept
+        : m_InputRegion(other.m_InputRegion),
+          m_MapResolution(other.m_MapResolution),
+          m_KeySize(other.m_KeySize),
+          m_Map(std::move(other.m_Map)),
+          m_Data(std::move(other.m_Data))
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline SpatialMap<T>::SpatialMap(const SpatialMap<T>& other)
+        : m_InputRegion(other.m_InputRegion),
+          m_MapResolution(other.m_MapResolution),
+          m_KeySize(other.m_KeySize),
+          m_Map(other.m_Map),
+          m_Data(other.m_Data)
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline void SpatialMap<T>::resize(const cv::Size resolution)
     {
         LVK_ASSERT(resolution.width >= 1);
@@ -58,10 +80,13 @@ namespace lvk
             m_Map.resize(m_MapResolution.area(), m_EmptySymbol);
 
             // Re-insert all the elements such that they keep the same key.
-            std::vector<std::pair<spatial_key, T>> old_data = std::move(m_Data);
-            for(auto& [key, item] : old_data)
-                if(is_key_valid(key))
-                    place_at(key, item);
+            if(!m_Data.empty())
+            {
+                std::vector<std::pair<spatial_key, T>> old_data = std::move(m_Data);
+                for(auto& [key, item] : old_data)
+                    if(is_key_valid(key))
+                        place_at(key, item);
+            }
         }
     }
 
