@@ -391,6 +391,14 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline bool SpatialMap<T>::is_full() const
+    {
+        return m_Data.size() == capacity();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline size_t SpatialMap<T>::size() const
     {
         return m_Data.size();

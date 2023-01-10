@@ -112,6 +112,8 @@ namespace lvk
 
         bool is_empty() const;
 
+        bool is_full() const;
+
         size_t size() const;
 
         size_t rows() const;
