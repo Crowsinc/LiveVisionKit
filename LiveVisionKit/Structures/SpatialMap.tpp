@@ -82,7 +82,7 @@ namespace lvk
             // Re-insert all the elements such that they keep the same key.
             if(!m_Data.empty())
             {
-                std::vector<std::pair<spatial_key, T>> old_data = std::move(m_Data);
+                std::vector<std::pair<SpatialKey, T>> old_data = std::move(m_Data);
                 for(auto& [key, item] : old_data)
                     if(is_key_valid(key))
                         place_at(key, item);
@@ -108,7 +108,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SpatialMap<T>::place_at(const spatial_key key, const T& item)
+    inline T& SpatialMap<T>::place_at(const SpatialKey key, const T& item)
     {
         LVK_ASSERT(is_key_valid(key));
 
@@ -128,7 +128,7 @@ namespace lvk
 
     template<typename T>
     template<typename... Args>
-    inline T& SpatialMap<T>::emplace_at(const spatial_key key, Args... args)
+    inline T& SpatialMap<T>::emplace_at(const SpatialKey key, Args... args)
     {
         LVK_ASSERT(is_key_valid(key));
 
@@ -208,7 +208,7 @@ namespace lvk
             size_t& data_link = m_Map[index];
             if(is_data_link_empty(data_link))
             {
-                const spatial_key key = map_index_to_key(index, m_MapResolution);
+                const SpatialKey key = map_index_to_key(index, m_MapResolution);
 
                 data_link = m_Data.size();
                 m_Data.emplace_back(key, value);
@@ -228,7 +228,7 @@ namespace lvk
             size_t& data_link = m_Map[index];
             if(is_data_link_empty(data_link))
             {
-                const spatial_key key = map_index_to_key(index, m_MapResolution);
+                const SpatialKey key = map_index_to_key(index, m_MapResolution);
 
                 data_link = m_Data.size();
                 m_Data.emplace_back(key, T{args...});
@@ -239,7 +239,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::remove(const spatial_key key)
+    inline void SpatialMap<T>::remove(const SpatialKey key)
     {
         LVK_ASSERT(contains(key));
 
@@ -268,7 +268,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline bool SpatialMap<T>::try_remove(const spatial_key key)
+    inline bool SpatialMap<T>::try_remove(const SpatialKey key)
     {
         if(contains(key))
         {
@@ -281,7 +281,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SpatialMap<T>::at(const spatial_key key)
+    inline T& SpatialMap<T>::at(const SpatialKey key)
     {
         LVK_ASSERT(contains(key));
 
@@ -291,11 +291,33 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SpatialMap<T>::at(const spatial_key key) const
+    inline const T& SpatialMap<T>::at(const SpatialKey key) const
     {
         LVK_ASSERT(contains(key));
 
         return m_Data[fetch_data_link(key)].second;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline T& SpatialMap<T>::at_or(const SpatialKey key, T& value)
+    {
+        LVK_ASSERT(is_key_valid(key));
+
+        const size_t data_link = fetch_data_link(key);
+        return is_data_link_empty(data_link) ? value : m_Data[data_link].second;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline const T& SpatialMap<T>::at_or(const SpatialKey key, const T& value) const
+    {
+        LVK_ASSERT(is_key_valid(key));
+
+        const size_t data_link = fetch_data_link(key);
+        return is_data_link_empty(data_link) ? value : m_Data[data_link].second;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -304,7 +326,7 @@ namespace lvk
     template<typename P>
     inline T& SpatialMap<T>::operator[](const cv::Point_<P>& position)
     {
-        const spatial_key key = key_of(position);
+        const SpatialKey key = key_of(position);
 
         if(!contains(key))
             return emplace_at(key);
@@ -321,14 +343,14 @@ namespace lvk
         // That is, spatial indexing starts counting from zero just like arrays.
         const auto br = m_InputRegion.br();
         return between<int>(static_cast<int>(position.x), m_InputRegion.x, br.x - 1)
-               && between<int>(static_cast<int>(position.y), m_InputRegion.y, br.y - 1);
+            && between<int>(static_cast<int>(position.y), m_InputRegion.y, br.y - 1);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
     template<typename P>
-    inline SpatialMap<T>::spatial_key SpatialMap<T>::key_of(const cv::Point_<P>& position) const
+    inline SpatialKey SpatialMap<T>::key_of(const cv::Point_<P>& position) const
     {
         LVK_ASSERT(within_bounds(position));
 
@@ -341,7 +363,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline bool SpatialMap<T>::contains(const spatial_key key) const
+    inline bool SpatialMap<T>::contains(const SpatialKey key) const
     {
         LVK_ASSERT(is_key_valid(key));
 
@@ -547,12 +569,12 @@ namespace lvk
 
     template<typename T>
     template<typename P>
-    inline SpatialMap<T>::spatial_key SpatialMap<T>::simplify_key(
+    inline SpatialKey SpatialMap<T>::simplify_key(
         const cv::Point_<P>& point,
         const cv::Size_<float>& key_size
     )
     {
-        return spatial_key(
+        return SpatialKey(
             static_cast<size_t>(static_cast<float>(point.x) / key_size.width),
             static_cast<size_t>(static_cast<float>(point.y) / key_size.height)
         );
@@ -562,7 +584,7 @@ namespace lvk
 
     template<typename T>
     inline size_t SpatialMap<T>::map_key_to_index(
-        const spatial_key key,
+        const SpatialKey key,
         const cv::Size resolution
     )
     {
@@ -572,12 +594,12 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline SpatialMap<T>::spatial_key SpatialMap<T>::map_index_to_key(
+    inline SpatialKey SpatialMap<T>::map_index_to_key(
         const size_t index,
         const cv::Size resolution
     )
     {
-        return spatial_key(
+        return SpatialKey(
             index % static_cast<size_t>(resolution.width),
             index / static_cast<size_t>(resolution.width)
         );
@@ -587,7 +609,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline bool SpatialMap<T>::is_key_valid(const spatial_key key) const
+    inline bool SpatialMap<T>::is_key_valid(const SpatialKey key) const
     {
         return key.x < m_MapResolution.width && key.y < m_MapResolution.height;
     }
@@ -595,7 +617,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline size_t& SpatialMap<T>::fetch_data_link(const spatial_key key)
+    inline size_t& SpatialMap<T>::fetch_data_link(const SpatialKey key)
     {
         return  m_Map[map_key_to_index(key, m_MapResolution)];
     }
@@ -603,7 +625,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline size_t SpatialMap<T>::fetch_data_link(const spatial_key key) const
+    inline size_t SpatialMap<T>::fetch_data_link(const SpatialKey key) const
     {
         return  m_Map[map_key_to_index(key, m_MapResolution)];
     }

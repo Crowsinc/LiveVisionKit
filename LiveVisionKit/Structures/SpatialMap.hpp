@@ -27,13 +27,14 @@ namespace lvk
     // * key = discrete point on the map resolution
     // A position becomes a key once an item has been placed.
 
+    using SpatialKey = cv::Point_<size_t>;
+
     template<typename T>
     class SpatialMap
     {
     public:
-        using spatial_key = cv::Point_<size_t>;
-        using iterator = std::vector<std::pair<spatial_key, T>>::iterator;
-        using const_iterator = std::vector<std::pair<spatial_key, T>>::const_iterator;
+        using iterator = std::vector<std::pair<SpatialKey, T>>::iterator;
+        using const_iterator = std::vector<std::pair<SpatialKey, T>>::const_iterator;
     public:
 
         explicit SpatialMap(const cv::Size resolution);
@@ -50,10 +51,10 @@ namespace lvk
         void rescale(const cv::Rect& input_region);
 
 
-        T& place_at(const spatial_key key, const T& item);
+        T& place_at(const SpatialKey key, const T& item);
 
         template<typename ...Args>
-        T& emplace_at(const spatial_key key, Args... args);
+        T& emplace_at(const SpatialKey key, Args... args);
 
 
         template<typename P>
@@ -76,26 +77,30 @@ namespace lvk
         void fill(Args... args);
 
 
-        void remove(const spatial_key key);
+        void remove(const SpatialKey key);
 
-        bool try_remove(const spatial_key key);
+        bool try_remove(const SpatialKey key);
 
 
-        T& at(const spatial_key key);
+        T& at(const SpatialKey key);
 
-        const T& at(const spatial_key key) const;
+        const T& at(const SpatialKey key) const;
+
+        T& at_or(const SpatialKey key, T& value);
+
+        const T& at_or(const SpatialKey key, const T& value) const;
 
         template<typename P>
         T& operator[](const cv::Point_<P>& position);
 
 
         template<typename P>
-        spatial_key key_of(const cv::Point_<P>& position) const;
+        SpatialKey key_of(const cv::Point_<P>& position) const;
 
         template<typename P>
         bool within_bounds(const cv::Point_<P>& position) const;
 
-        bool contains(const spatial_key key) const;
+        bool contains(const SpatialKey key) const;
 
         template<typename P = float>
         cv::Point_<P> distribution_centroid() const;
@@ -137,26 +142,26 @@ namespace lvk
     private:
 
         template<typename P>
-        static spatial_key simplify_key(
+        static SpatialKey simplify_key(
             const cv::Point_<P>& point,
             const cv::Size_<float>& key_size
         );
 
         static size_t map_key_to_index(
-            const spatial_key key,
+            const SpatialKey key,
             const cv::Size resolution
         );
 
-        static spatial_key map_index_to_key(
+        static SpatialKey map_index_to_key(
             const size_t index,
             const cv::Size resolution
         );
 
-        bool is_key_valid(const spatial_key key) const;
+        bool is_key_valid(const SpatialKey key) const;
 
-        size_t& fetch_data_link(const spatial_key key);
+        size_t& fetch_data_link(const SpatialKey key);
 
-        size_t fetch_data_link(const spatial_key key) const;
+        size_t fetch_data_link(const SpatialKey key) const;
 
         bool is_data_link_empty(const size_t link) const;
 
@@ -170,7 +175,7 @@ namespace lvk
         cv::Size_<float> m_KeySize;
 
         std::vector<size_t> m_Map;
-        std::vector<std::pair<spatial_key, T>> m_Data;
+        std::vector<std::pair<SpatialKey, T>> m_Data;
     };
 
 
