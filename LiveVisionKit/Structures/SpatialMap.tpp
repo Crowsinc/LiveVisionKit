@@ -373,17 +373,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const cv::Size_<float>& SpatialMap<T>::key_size() const
+    inline const cv::Rect& SpatialMap<T>::input_region() const
     {
-        return m_KeySize;
+        return m_InputRegion;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const cv::Rect& SpatialMap<T>::input_region() const
+    inline const cv::Size2f& SpatialMap<T>::key_size() const
     {
-        return m_InputRegion;
+        return m_KeySize;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -493,7 +493,7 @@ namespace lvk
         const cv::Size distribution_resolution(sectors, sectors);
         std::array<size_t, sectors * sectors> sector_buckets{};
 
-        const cv::Size_<float> sector_size(
+        const cv::Size2f sector_size(
             static_cast<float>(m_MapResolution.width) / static_cast<float>(sectors),
             static_cast<float>(m_MapResolution.height) / static_cast<float>(sectors)
         );
@@ -571,7 +571,7 @@ namespace lvk
     template<typename P>
     inline SpatialKey SpatialMap<T>::simplify_key(
         const cv::Point_<P>& point,
-        const cv::Size_<float>& key_size
+        const cv::Size2f& key_size
     )
     {
         return SpatialKey(

@@ -107,9 +107,9 @@ namespace lvk
 
         double distribution_quality() const;
 
-        const cv::Size_<float>& key_size() const;
-
         const cv::Rect& input_region() const;
+
+        const cv::Size2f& key_size() const;
 
         const cv::Size& resolution() const;
 
@@ -144,7 +144,7 @@ namespace lvk
         template<typename P>
         static SpatialKey simplify_key(
             const cv::Point_<P>& point,
-            const cv::Size_<float>& key_size
+            const cv::Size2f& key_size
         );
 
         static size_t map_key_to_index(
@@ -170,9 +170,9 @@ namespace lvk
     private:
         constexpr static size_t m_EmptySymbol = std::numeric_limits<size_t>::max();
 
+        cv::Size2f m_KeySize;
         cv::Rect m_InputRegion;
         cv::Size m_MapResolution;
-        cv::Size_<float> m_KeySize;
 
         std::vector<size_t> m_Map;
         std::vector<std::pair<SpatialKey, T>> m_Data;
