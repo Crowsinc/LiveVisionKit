@@ -46,6 +46,11 @@ namespace lvk
         SpatialMap(const SpatialMap& other);
 
 
+        SpatialMap& operator=(SpatialMap&& other) noexcept;
+
+        SpatialMap& operator=(const SpatialMap& other);
+
+
         void resize(const cv::Size resolution);
 
         void rescale(const cv::Rect& input_region);
@@ -177,7 +182,6 @@ namespace lvk
         std::vector<size_t> m_Map;
         std::vector<std::pair<SpatialKey, T>> m_Data;
     };
-
 
     template<typename T>
     using SpatialList = SpatialMap<std::vector<T>>;

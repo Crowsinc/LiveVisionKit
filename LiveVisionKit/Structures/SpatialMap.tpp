@@ -67,6 +67,32 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    SpatialMap<T>& SpatialMap<T>::operator=(SpatialMap&& other) noexcept
+    {
+        m_Data = std::move(other.m_Data);
+        m_Map = std::move(other.m_Map);
+
+        m_KeySize = other.m_KeySize;
+        m_InputRegion = other.m_InputRegion;
+        m_MapResolution = other.m_MapResolution;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    SpatialMap<T>& SpatialMap<T>::operator=(const SpatialMap& other)
+    {
+        m_Map = other.m_Map;
+        m_Data = other.m_Data;
+
+        m_KeySize = other.m_KeySize;
+        m_InputRegion = other.m_InputRegion;
+        m_MapResolution = other.m_MapResolution;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline void SpatialMap<T>::resize(const cv::Size resolution)
     {
         LVK_ASSERT(resolution.width >= 1);
