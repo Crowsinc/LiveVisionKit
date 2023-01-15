@@ -75,6 +75,8 @@ namespace lvk
         m_KeySize = other.m_KeySize;
         m_InputRegion = other.m_InputRegion;
         m_MapResolution = other.m_MapResolution;
+
+        return *this;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -88,6 +90,8 @@ namespace lvk
         m_KeySize = other.m_KeySize;
         m_InputRegion = other.m_InputRegion;
         m_MapResolution = other.m_MapResolution;
+
+        return *this;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
