@@ -28,7 +28,8 @@ namespace lvk
 
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const cv::Size resolution)
-        : m_KeySize(1,1)
+        : m_KeySize(1,1),
+          m_InputRegion(cv::Point(0,0), resolution)
     {
         resize(resolution);
     }
