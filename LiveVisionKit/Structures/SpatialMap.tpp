@@ -18,12 +18,18 @@
 #include "SpatialMap.hpp"
 
 #include "Diagnostics/Directives.hpp"
+#include "Utility/Algorithm.hpp"
 #include "Math/Math.hpp"
 
 #include <array>
 
 namespace lvk
 {
+//---------------------------------------------------------------------------------------------------------------------
+
+    // Max capacity to reserve in the data buffer when resizing the map.
+    constexpr size_t MAX_DATA_RESERVE = 512;
+
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
@@ -109,15 +115,22 @@ namespace lvk
 
             m_Map.clear();
             m_Map.resize(m_MapResolution.area(), m_EmptySymbol);
+            m_Data.reserve(std::min(m_Map.size(), MAX_DATA_RESERVE));
 
-            // Re-insert all the elements such that they keep the same key.
-            if(!m_Data.empty())
+            // Re-map all the elements which still fit in the new resolution.
+            for(size_t i = 0; i < m_Data.size(); i++)
             {
-                std::vector<std::pair<SpatialKey, T>> old_data = std::move(m_Data);
-                for(auto& [key, item] : old_data)
-                    if(is_key_valid(key))
-                        place_at(key, item);
+                // If the key is no longer valid erase the item,
+                // otherwise set its data link in the new map.
+                const auto& key = m_Data[i].first;
+                if(!is_key_valid(key))
+                {
+                    fast_erase(m_Data, i);
+                    if(i > 0) i--;
+                }
+                else fetch_data_link(key) = i;
             }
+
         }
     }
 
