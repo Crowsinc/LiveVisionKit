@@ -371,7 +371,7 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial) const
+	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
@@ -401,17 +401,18 @@ namespace lvk
 		}
 
 		// Perform the convolution
-		for(size_t i = 0; i < elems; i++)
-			initial = initial + this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
+        T result = this->at(buffer_offset) * kernel.at(kernel_offset);
+		for(size_t i = 1; i < elems; i++)
+            result = result + this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
 
-		return initial;
+		return result;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	template<typename K>
-	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
+	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
@@ -419,7 +420,7 @@ namespace lvk
 
 		SlidingBuffer<T> buffer(capacity());
 		for (size_t i = 0; i < size(); i++)
-			buffer.push(convolve_at(kernel, i, initial));
+			buffer.push(convolve_at(kernel, i));
 
 		return buffer;
 	}
