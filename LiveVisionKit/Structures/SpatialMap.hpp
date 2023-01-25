@@ -51,9 +51,28 @@ namespace lvk
         SpatialMap& operator=(const SpatialMap& other);
 
 
-        void resize(const cv::Size resolution);
+        void rescale(const cv::Size resolution);
 
-        void rescale(const cv::Rect& input_region);
+        const cv::Size& resolution() const;
+
+        size_t capacity() const;
+
+        size_t rows() const;
+
+        size_t cols() const;
+
+        size_t size() const;
+
+        bool is_full() const;
+
+        bool is_empty() const;
+
+
+        void align(const cv::Rect& input_region);
+
+        const cv::Rect& alignment() const;
+
+        const cv::Size2f& key_size() const;
 
 
         T& place_at(const SpatialKey key, const T& item);
@@ -86,6 +105,8 @@ namespace lvk
 
         bool try_remove(const SpatialKey key);
 
+        void clear();
+
 
         T& at(const SpatialKey key);
 
@@ -107,30 +128,12 @@ namespace lvk
 
         bool contains(const SpatialKey key) const;
 
+
         template<typename P = float>
         cv::Point_<P> distribution_centroid() const;
 
         double distribution_quality() const;
 
-        const cv::Rect& input_region() const;
-
-        const cv::Size2f& key_size() const;
-
-        const cv::Size& resolution() const;
-
-        size_t capacity() const;
-
-        bool is_empty() const;
-
-        bool is_full() const;
-
-        size_t size() const;
-
-        size_t rows() const;
-
-        size_t cols() const;
-
-        void clear();
 
         iterator begin();
 

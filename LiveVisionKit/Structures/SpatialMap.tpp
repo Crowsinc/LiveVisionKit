@@ -28,7 +28,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     // Max capacity to reserve in the data buffer when resizing the map.
-    constexpr size_t MAX_DATA_RESERVE = 512;
+    inline constexpr size_t MAX_DATA_RESERVE = 512;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ namespace lvk
         : m_KeySize(1,1),
           m_InputRegion(cv::Point(0,0), resolution)
     {
-        resize(resolution);
+        rescale(resolution);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -45,8 +45,8 @@ namespace lvk
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const cv::Size resolution, const cv::Rect& input_region)
     {
-        resize(resolution);
-        rescale(input_region);
+        rescale(resolution);
+        align(input_region);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::resize(const cv::Size resolution)
+    inline void SpatialMap<T>::rescale(const cv::Size resolution)
     {
         LVK_ASSERT(resolution.width >= 1);
         LVK_ASSERT(resolution.height >= 1);
@@ -137,7 +137,63 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::rescale(const cv::Rect& input_region)
+    inline const cv::Size& SpatialMap<T>::resolution() const
+    {
+        return m_MapResolution;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline size_t SpatialMap<T>::capacity() const
+    {
+        return m_Map.size();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    size_t SpatialMap<T>::rows() const
+    {
+        return static_cast<size_t>(m_MapResolution.height);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    size_t SpatialMap<T>::cols() const
+    {
+        return static_cast<size_t>(m_MapResolution.width);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline size_t SpatialMap<T>::size() const
+    {
+        return m_Data.size();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline bool SpatialMap<T>::is_full() const
+    {
+        return m_Data.size() == capacity();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline bool SpatialMap<T>::is_empty() const
+    {
+        return m_Data.empty();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline void SpatialMap<T>::align(const cv::Rect& input_region)
     {
         LVK_ASSERT(input_region.width >= m_MapResolution.width);
         LVK_ASSERT(input_region.height >= m_MapResolution.height);
@@ -147,6 +203,22 @@ namespace lvk
         // Spatial size of each key within the input region.
         m_KeySize.width = static_cast<float>(m_InputRegion.width) / static_cast<float>(m_MapResolution.width);
         m_KeySize.height = static_cast<float>(m_InputRegion.height) / static_cast<float>(m_MapResolution.height);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline const cv::Rect& SpatialMap<T>::alignment() const
+    {
+        return m_InputRegion;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline const cv::Size2f& SpatialMap<T>::key_size() const
+    {
+        return m_KeySize;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -325,6 +397,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline void SpatialMap<T>::clear()
+    {
+        m_Data.clear();
+
+        for(auto& pointer : m_Map)
+            pointer = m_EmptySymbol;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline T& SpatialMap<T>::at(const SpatialKey key)
     {
         LVK_ASSERT(contains(key));
@@ -412,89 +495,6 @@ namespace lvk
         LVK_ASSERT(is_key_valid(key));
 
         return !is_data_link_empty(fetch_data_link(key));
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline const cv::Rect& SpatialMap<T>::input_region() const
-    {
-        return m_InputRegion;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline const cv::Size2f& SpatialMap<T>::key_size() const
-    {
-        return m_KeySize;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline const cv::Size& SpatialMap<T>::resolution() const
-    {
-        return m_MapResolution;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline size_t SpatialMap<T>::capacity() const
-    {
-        return m_Map.size();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline bool SpatialMap<T>::is_empty() const
-    {
-        return m_Data.empty();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline bool SpatialMap<T>::is_full() const
-    {
-        return m_Data.size() == capacity();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline size_t SpatialMap<T>::size() const
-    {
-        return m_Data.size();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    size_t SpatialMap<T>::rows() const
-    {
-        return static_cast<size_t>(m_MapResolution.height);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    size_t SpatialMap<T>::cols() const
-    {
-        return static_cast<size_t>(m_MapResolution.width);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline void SpatialMap<T>::clear()
-    {
-        m_Data.clear();
-
-        for(auto& pointer : m_Map)
-            pointer = m_EmptySymbol;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

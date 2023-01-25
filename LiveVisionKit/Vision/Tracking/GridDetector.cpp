@@ -195,7 +195,7 @@ namespace lvk
 
 	cv::Size GridDetector::resolution() const
 	{
-		return m_FeatureGrid.input_region().size();
+		return m_FeatureGrid.alignment().size();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
