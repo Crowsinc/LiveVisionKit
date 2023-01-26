@@ -643,12 +643,8 @@ namespace lvk
         const cv::Size resolution
     )
     {
-        return SpatialKey(
-            index % static_cast<size_t>(resolution.width),
-            index / static_cast<size_t>(resolution.width)
-        );
+        return inv_index_2d(index, resolution.width);
     }
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
