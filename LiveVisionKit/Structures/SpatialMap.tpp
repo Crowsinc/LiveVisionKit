@@ -237,7 +237,12 @@ namespace lvk
             data_link = m_Data.size();
             return m_Data.emplace_back(key, item).second;
         }
-        else return m_Data.emplace(m_Data.begin() + data_link, key, item)->second;
+        else
+        {
+            auto& stored_data = m_Data[data_link].second;
+            stored_data = item;
+            return stored_data;
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -260,7 +265,12 @@ namespace lvk
             data_link = m_Data.size();
             return m_Data.emplace_back(key, T{args...}).second;
         }
-        else return m_Data.emplace(m_Data.begin() + data_link, key, T{args...})->second;
+        else
+        {
+            auto& stored_data = m_Data[data_link].second;
+            stored_data = T{args...};
+            return stored_data;
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
