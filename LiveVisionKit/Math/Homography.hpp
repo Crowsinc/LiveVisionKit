@@ -18,13 +18,18 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <optional>
 
 namespace lvk
 {
 
+    class MotionField;
+
 	class Homography
 	{
 	public:
+
+        // TODO: rework estimation
 
         struct EstimationParams
         {
@@ -68,27 +73,39 @@ namespace lvk
 
         Homography(const Homography& other);
 
-		cv::Point2d transform(const cv::Point2d& point) const;
 
-        cv::Point2d operator*(const cv::Point2d& point) const;
+        void set_zero();
+
+        void set_identity();
+
+
+		cv::Point2d transform(const cv::Point2d& point) const;
 
 		cv::Point2f transform(const cv::Point2f& point) const;
 
+        cv::Point2d operator*(const cv::Point2d& point) const;
+
         cv::Point2f operator*(const cv::Point2f& point) const;
 
-		std::vector<cv::Point2d> transform(const std::vector<cv::Point2d>& points) const;
+
+		void transform(const std::vector<cv::Point2d>& points, std::vector<cv::Point2d>& dst) const;
+
+		void transform(const std::vector<cv::Point2f>& points, std::vector<cv::Point2f>& dst) const;
 
         std::vector<cv::Point2d> operator*(const std::vector<cv::Point2d>& points) const;
 
-		std::vector<cv::Point2f> transform(const std::vector<cv::Point2f>& points) const;
-
         std::vector<cv::Point2f> operator*(const std::vector<cv::Point2f>& points) const;
+
 
 		void warp(const cv::UMat& src, cv::UMat& dst) const;
 
+
         const cv::Mat& data() const;
 
+        Homography invert() const;
+
 		bool is_affine() const;
+
 
         Homography& operator=(const cv::Mat& other);
 
@@ -96,7 +113,8 @@ namespace lvk
 
         Homography& operator=(Homography&& other) noexcept;
 
-		void operator+=(const Homography& other);
+
+        void operator+=(const Homography& other);
 
         void operator+=(const cv::Mat& other);
 
@@ -122,13 +140,15 @@ namespace lvk
 
 	Homography operator-(const Homography& left, const Homography& right);
 
+
 	Homography operator*(const Homography& left, const Homography& right);
 
 	Homography operator*(const Homography& homography, const double scaling);
 
-	Homography operator/(const Homography& homography, const double scaling);
-
 	Homography operator*(const double scaling, const Homography& homography);
+
+
+	Homography operator/(const Homography& homography, const double scaling);
 
 	Homography operator/(const double scaling, const Homography& homography);
 

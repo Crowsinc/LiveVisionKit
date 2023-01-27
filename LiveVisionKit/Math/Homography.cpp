@@ -75,6 +75,12 @@ namespace lvk
         cv::UsacParams sampling_method
     )
     {
+        LVK_ASSERT(tracked_points.size() == matched_points.size());
+
+        // We need at least 4 point correspondences to estimate
+        if(tracked_points.size() < 4)
+            return std::nullopt;
+
         cv::Mat estimate = cv::findHomography(
             tracked_points,
             matched_points,
@@ -176,12 +182,38 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void Homography::set_zero()
+    {
+        m_Matrix.setTo(cv::Scalar::all(0.0));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Homography::set_identity()
+    {
+        set_zero();
+        m_Matrix.at<double>(0,0) = 1.0;
+        m_Matrix.at<double>(1,1) = 1.0;
+        m_Matrix.at<double>(2,2) = 1.0;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	cv::Point2d Homography::transform(const cv::Point2d& point) const
 	{
 		std::vector<cv::Point2d> out, in = {point};
 		cv::perspectiveTransform(in, out, m_Matrix);
 		return out[0];
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Point2f Homography::transform(const cv::Point2f& point) const
+    {
+        std::vector<cv::Point2f> out, in = {point};
+        cv::perspectiveTransform(in, out, m_Matrix);
+        return out[0];
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -192,15 +224,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f Homography::transform(const cv::Point2f& point) const
-	{
-		std::vector<cv::Point2f> out, in = {point};
-		cv::perspectiveTransform(in, out, m_Matrix);
-		return out[0];
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
     cv::Point2f Homography::operator*(const cv::Point2f& point) const
     {
         return transform(point);
@@ -208,40 +231,40 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	std::vector<cv::Point2d> Homography::transform(const std::vector<cv::Point2d>& points) const
+	void Homography::transform(const std::vector<cv::Point2d>& points, std::vector<cv::Point2d>& dst) const
 	{
-		std::vector<cv::Point2d> out;
-		out.reserve(points.size());
-
-		cv::perspectiveTransform(points, out, m_Matrix);
-
-		return out;
+        cv::perspectiveTransform(points, dst, m_Matrix);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Homography::transform(const std::vector<cv::Point2f>& points, std::vector<cv::Point2f>& dst) const
+    {
+        cv::perspectiveTransform(points, dst, m_Matrix);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     std::vector<cv::Point2d> Homography::operator*(const std::vector<cv::Point2d>& points) const
     {
-        return transform(points);
+        std::vector<cv::Point2d> transformed_points;
+        transformed_points.reserve(points.size());
+
+        transform(points, transformed_points);
+
+        return transformed_points;
     }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	std::vector<cv::Point2f> Homography::transform(const std::vector<cv::Point2f>& points) const
-	{
-		std::vector<cv::Point2f> out;
-		out.reserve(points.size());
-
-		cv::perspectiveTransform(points, out, m_Matrix);
-
-		return out;
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     std::vector<cv::Point2f> Homography::operator*(const std::vector<cv::Point2f>& points) const
     {
-        return transform(points);
+        std::vector<cv::Point2f> transformed_points;
+        transformed_points.reserve(points.size());
+
+        transform(points, transformed_points);
+
+        return transformed_points;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -260,6 +283,14 @@ namespace lvk
 	{
 		return m_Matrix;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Homography Homography::invert() const
+    {
+        cv::Mat result = m_Matrix.inv();
+        return Homography(result);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -291,7 +322,7 @@ namespace lvk
 
     Homography& Homography::operator=(Homography&& other) noexcept
 	{
-		m_Matrix = other.m_Matrix;
+		m_Matrix = std::move(other.m_Matrix);
 		other.m_Matrix.release();
         return *this;
     }
