@@ -365,6 +365,67 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline void SpatialMap<T>::set_to(const T& value)
+    {
+        // Fill all slots with the given value in a contiguous
+        // manner for potential cache hit efficiency boosts later.
+
+        // Avoid running destructors by re-assigning any existing elements.
+        size_t index = 0;
+        for(; index < m_Data.size(); index++)
+        {
+            m_Map[index] = index;
+
+            auto& stored_data = m_Data[index];
+            stored_data.first = map_index_to_key(index, m_MapResolution);
+            stored_data.second = value;
+        }
+
+        for(; index < m_Map.size(); index++)
+        {
+            m_Map[index] = index;
+
+            m_Data.emplace_back(
+                map_index_to_key(index, m_MapResolution),
+                value
+            );
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    template<typename... Args>
+    inline void SpatialMap<T>::set_to(Args... args)
+    {
+        // Fill all slots with the given value in a contiguous
+        // manner for potential cache hit efficiency boosts later.
+
+        // Avoid running destructors by re-assigning any existing elements.
+        size_t index = 0;
+        for(; index < m_Data.size(); index++)
+        {
+            m_Map[index] = index;
+
+            auto& stored_data = m_Data[index];
+            stored_data.first = map_index_to_key(index, m_MapResolution);
+            stored_data.second = T{args...};
+        }
+
+        for(; index < m_Map.size(); index++)
+        {
+            m_Map[index] = index;
+
+            m_Data.emplace_back(
+                map_index_to_key(index, m_MapResolution),
+                T{args...}
+            );
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline void SpatialMap<T>::remove(const SpatialKey key)
     {
         LVK_ASSERT(contains(key));
