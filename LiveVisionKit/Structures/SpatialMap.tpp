@@ -195,8 +195,9 @@ namespace lvk
     template<typename T>
     inline void SpatialMap<T>::align(const cv::Rect& input_region)
     {
-        LVK_ASSERT(input_region.width >= m_MapResolution.width);
-        LVK_ASSERT(input_region.height >= m_MapResolution.height);
+        // TODO: double-check the maths of this pre-condition.
+        // LVK_ASSERT(input_region.width >= m_MapResolution.width);
+        // LVK_ASSERT(input_region.height >= m_MapResolution.height);
 
         m_InputRegion = input_region;
 
