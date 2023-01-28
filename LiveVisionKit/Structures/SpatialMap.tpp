@@ -472,8 +472,7 @@ namespace lvk
     {
         m_Data.clear();
 
-        for(auto& pointer : m_Map)
-            pointer = m_EmptySymbol;
+        std::fill(m_Map.begin(), m_Map.end(), m_EmptySymbol);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
