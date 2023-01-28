@@ -326,45 +326,6 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::fill(const T& value)
-    {
-        // Fill all empty slots with the given value
-        for(size_t index = 0; index < m_Map.size(); index++)
-        {
-            size_t& data_link = m_Map[index];
-            if(is_data_link_empty(data_link))
-            {
-                const SpatialKey key = map_index_to_key(index, m_MapResolution);
-
-                data_link = m_Data.size();
-                m_Data.emplace_back(key, value);
-            }
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    template<typename... Args>
-    inline void SpatialMap<T>::fill(Args... args)
-    {
-        // Emplace all empty slots using the given arguments
-        for(size_t index = 0; index < m_Map.size(); index++)
-        {
-            size_t& data_link = m_Map[index];
-            if(is_data_link_empty(data_link))
-            {
-                const SpatialKey key = map_index_to_key(index, m_MapResolution);
-
-                data_link = m_Data.size();
-                m_Data.emplace_back(key, T{args...});
-            }
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
     inline void SpatialMap<T>::set_to(const T& value)
     {
         // Fill all slots with the given value in a contiguous
@@ -420,6 +381,45 @@ namespace lvk
                 map_index_to_key(index, m_MapResolution),
                 T{args...}
             );
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline void SpatialMap<T>::fill_out(const T& value)
+    {
+        // Fill all empty slots with the given value
+        for(size_t index = 0; index < m_Map.size(); index++)
+        {
+            size_t& data_link = m_Map[index];
+            if(is_data_link_empty(data_link))
+            {
+                const SpatialKey key = map_index_to_key(index, m_MapResolution);
+
+                data_link = m_Data.size();
+                m_Data.emplace_back(key, value);
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    template<typename... Args>
+    inline void SpatialMap<T>::fill_out(Args... args)
+    {
+        // Emplace all empty slots using the given arguments
+        for(size_t index = 0; index < m_Map.size(); index++)
+        {
+            size_t& data_link = m_Map[index];
+            if(is_data_link_empty(data_link))
+            {
+                const SpatialKey key = map_index_to_key(index, m_MapResolution);
+
+                data_link = m_Data.size();
+                m_Data.emplace_back(key, T{args...});
+            }
         }
     }
 

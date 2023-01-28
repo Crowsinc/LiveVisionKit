@@ -95,17 +95,19 @@ namespace lvk
         bool try_emplace(const cv::Point_<P>& position, Args... args);
 
 
-        // Fills all empty slots to the value
-        void fill(const T& value);
-
-        template<typename... Args>
-        void fill(Args... args);
-
         // Sets all slots to the value
         void set_to(const T& value);
 
         template<typename... Args>
         void set_to(Args... args);
+
+
+        // Fills all empty slots to the value
+        void fill_out(const T& value);
+
+        template<typename... Args>
+        void fill_out(Args... args);
+
 
 
         void remove(const SpatialKey key);
