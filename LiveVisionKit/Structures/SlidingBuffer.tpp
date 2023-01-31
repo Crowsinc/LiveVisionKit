@@ -403,7 +403,7 @@ namespace lvk
 		// Perform the convolution
         T result = this->at(buffer_offset) * kernel.at(kernel_offset);
 		for(size_t i = 1; i < elems; i++)
-            result = result + this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
+            result += this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
 
 		return result;
 	}
@@ -463,7 +463,7 @@ namespace lvk
         for(size_t i = start + 1; i < start + count; i++)
         {
             diff = at(i) - avg;
-            var = var + diff * diff;
+            var += diff * diff;
         }
 
         return var / count;
@@ -489,8 +489,11 @@ namespace lvk
         // Kick start calculation with first element to avoid
         // requirement of a default initialisation of T.
         T min = at(start);
-        for(size_t i = start + 1; i < start + count; i++)
-            min = std::min(min, at(i));
+        for (size_t i = start + 1; i < start + count; i++)
+        {
+            auto& value = at(i);
+            if(value < min) min = value;
+        }
 
         return min;
     }
@@ -516,7 +519,10 @@ namespace lvk
         // requirement of a default initialisation of T.
         T max = at(start);
         for (size_t i = start + 1; i < start + count; i++)
-            max = std::max(max, at(i));
+        {
+            auto& value = at(i);
+            if(value > max) max = value;
+        }
 
         return max;
     }
@@ -542,7 +548,7 @@ namespace lvk
         // requirement of a default initialisation of T.
         T sum = at(start);
         for(size_t i = start + 1; i < start + count; i++)
-            sum = sum + at(i);
+            sum += at(i);
 
         return sum;
     }

@@ -43,25 +43,21 @@ namespace lvk
 		LVK_ASSERT(!input.is_empty());
 
 		m_FrameQueue.advance().copy(input);
-
-		auto& frame_vector = m_Trajectory.advance();
-		frame_vector.velocity = frame_velocity;
-		frame_vector.displacement = m_Trajectory.previous().displacement + frame_velocity;
+		m_Trajectory.advance() = m_Trajectory.newest() + frame_velocity;
 
 		if (ready())
 		{
 			auto& output_frame = m_FrameQueue.oldest();
-			const auto& [displacement, velocity] = m_Trajectory.centre();
 
-			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{ 0,0,0,0 }
+			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{0,0,0,0}
 			: crop(output_frame.size(), m_Settings.correction_margin);
 
-			const auto trajectory_correction = m_Trajectory.convolve_at(
-				m_SmoothingFilter,
-				m_Trajectory.centre_index()
-			).displacement - displacement;
+            // Calculate the velocity to go from the previous frame's path to the smooth path.
+			auto stabilizing_velocity = m_Trajectory.convolve_at(
+                m_SmoothingFilter,
+                m_Trajectory.centre_index()
+            ) - m_Trajectory.centre(-1);
 
-			auto stabilizing_velocity = velocity + trajectory_correction;
 			if (!m_FocusArea.empty())
 				stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_FocusArea);
 
@@ -212,48 +208,6 @@ namespace lvk
 		}
 
 		return reduced_velocity;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector::FrameVector(Homography frame_displacement, Homography frame_velocity)
-		: displacement(std::move(frame_displacement)),
-		  velocity(std::move(frame_velocity))
-	{}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector FrameVector::operator+(const Homography& frame_velocity) const
-	{
-		return FrameVector(this->displacement + velocity, this->velocity);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector FrameVector::operator+(const FrameVector& other) const
-	{
-		return FrameVector(this->displacement + other.displacement, this->velocity + other.velocity);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector FrameVector::operator-(const FrameVector& other) const
-	{
-		return FrameVector(this->displacement - other.displacement, this->velocity - other.velocity);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector FrameVector::operator*(const double scaling) const
-	{
-		return FrameVector(this->displacement * scaling, this->velocity * scaling);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	FrameVector FrameVector::operator/(const double scaling) const
-	{
-		return FrameVector(this->displacement / scaling, this->velocity / scaling);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -27,8 +27,6 @@
 namespace lvk
 {
 
-	struct FrameVector;
-	
 	struct PathStabilizerSettings
 	{
 		size_t smoothing_frames = 10;
@@ -69,33 +67,12 @@ namespace lvk
 
 	private:
 		SlidingBuffer<Frame> m_FrameQueue;
-		SlidingBuffer<FrameVector> m_Trajectory;
+		SlidingBuffer<Homography> m_Trajectory;
 		SlidingBuffer<double> m_SmoothingFilter;
 
 		Frame m_NullFrame;
 		cv::Rect m_FocusArea{0,0,0,0};
 		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-	};
-
-	struct FrameVector
-	{
-		Homography displacement;
-		Homography velocity;
-
-		explicit FrameVector(
-			Homography frame_displacement = Homography::Zero(),
-			Homography frame_velocity = Homography::Zero()
-		);
-
-		FrameVector operator+(const Homography& frame_velocity) const;
-
-		FrameVector operator+(const FrameVector& other) const;
-
-		FrameVector operator-(const FrameVector& other) const;
-
-		FrameVector operator*(const double scaling) const;
-
-		FrameVector operator/(const double scaling) const;
 	};
 
 }
