@@ -104,7 +104,12 @@ namespace lvk
 
         Homography invert() const;
 
+        bool is_identity() const;
+
 		bool is_affine() const;
+
+        bool is_zero() const;
+
 
 
         Homography& operator=(const cv::Mat& other);

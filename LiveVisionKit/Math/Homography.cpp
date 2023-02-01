@@ -176,9 +176,7 @@ namespace lvk
 
 	Homography::Homography(Homography&& other) noexcept
 		: m_Matrix(std::move(other.m_Matrix))
-	{
-		other.m_Matrix.release();
-	}
+	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -294,13 +292,29 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    bool Homography::is_identity() const
+    {
+        return m_Matrix.at<cv::Vec3d>(0,0) == cv::Vec3d(1.0, 0.0, 0.0)
+            && m_Matrix.at<cv::Vec3d>(1,0) == cv::Vec3d(0.0, 1.0, 0.0)
+            && m_Matrix.at<cv::Vec3d>(2,0) == cv::Vec3d(0.0, 0.0, 1.0);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	bool Homography::is_affine() const
 	{
 		// We consider the homography affine if the bottom row is unchanged from identity
-		return m_Matrix.at<double>(2, 0) == 0
-			&& m_Matrix.at<double>(2, 1) == 0
-			&& m_Matrix.at<double>(2, 2) == 1;
+		return m_Matrix.at<cv::Vec3d>(2, 0) == cv::Vec3d(0.0, 0.0, 1.0);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    bool Homography::is_zero() const
+    {
+        return m_Matrix.at<cv::Vec3d>(0,0) == cv::Vec3d(0.0, 0.0, 0.0)
+            && m_Matrix.at<cv::Vec3d>(1,0) == cv::Vec3d(0.0, 0.0, 0.0)
+            && m_Matrix.at<cv::Vec3d>(2,0) == cv::Vec3d(0.0, 0.0, 0.0);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -323,7 +337,6 @@ namespace lvk
     Homography& Homography::operator=(Homography&& other) noexcept
 	{
 		m_Matrix = std::move(other.m_Matrix);
-		other.m_Matrix.release();
         return *this;
     }
 
