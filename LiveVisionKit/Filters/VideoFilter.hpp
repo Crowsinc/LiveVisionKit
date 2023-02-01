@@ -36,7 +36,7 @@ namespace lvk
 
 		virtual ~VideoFilter() = default;
 
-        // NOTE: standard colour format is YUV. 
+        // NOTE: standard colour format is YUV.
         void process(
             const Frame& input,
             Frame& output,
