@@ -3,7 +3,7 @@
 project(lvk-core LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(${PROJECT_NAME} Structures/SpatialMap.hpp Structures/SpatialMap.tpp)
+add_library(${PROJECT_NAME} Structures/SpatialMap.hpp Structures/SpatialMap.tpp Vision/Tracking/WarpField.cpp Vision/Tracking/WarpField.hpp)
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${LVK_DEBUG_POSTFIX})
 set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "LiveVisionKit")
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
