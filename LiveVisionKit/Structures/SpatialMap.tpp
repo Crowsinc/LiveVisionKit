@@ -540,8 +540,8 @@ namespace lvk
         // NOTE: The bottom and right edges of the region are exclusive.
         // That is, spatial indexing starts counting from zero just like arrays.
         const auto br = m_InputRegion.br();
-        return between<int>(static_cast<int>(position.x), m_InputRegion.x, br.x - 1)
-            && between<int>(static_cast<int>(position.y), m_InputRegion.y, br.y - 1);
+        return between<float>(position.x, m_InputRegion.x, br.x - 1)
+            && between<float>(position.y, m_InputRegion.y, br.y - 1);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
