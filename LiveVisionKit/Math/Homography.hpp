@@ -23,8 +23,6 @@
 namespace lvk
 {
 
-    class MotionField;
-
 	class Homography
 	{
 	public:
