@@ -17,38 +17,111 @@
 
 #include "WarpField.hpp"
 
+#include <algorithm>
+#include <numeric>
+#include <array>
+
 #include "Diagnostics/Directives.hpp"
+
+#include "Utility/Timing/Stopwatch.hpp"
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<WarpField> WarpField::Estimate(
+    WarpField WarpField::Estimate(
         const cv::Size& field_size,
         const cv::Rect& field_region,
-        const std::vector<cv::Point2f>& tracked_points,
-        const std::vector<cv::Point2f>& matched_points,
-        std::vector<uint8_t>& inlier_status,
-        bool map_inverse
+        const std::vector<cv::Point2f>& origin_points,
+        const std::vector<cv::Point2f>& warped_points,
+        const std::optional<SpatialMap<Homography>>& motion_hints
     )
     {
-        const auto global_motion = Homography::Estimate(
-            tracked_points,
-            matched_points,
-            inlier_status,
-            Homography::EstimationParams{},
-            false
-        );
+        LVK_ASSERT(field_size.width >= MinimumSize.width);
+        LVK_ASSERT(field_size.height >= MinimumSize.height);
+        LVK_ASSERT(origin_points.size() == warped_points.size());
+        LVK_ASSERT(!motion_hints.has_value() || motion_hints->is_full());
 
-        if(global_motion.has_value())
+        // This estimation algorithm is inspired by the MeshFlow algorithm.
+        // The concept remains the same, but its been striped and optimized
+        // for speed. The original article is cited below:
+        //
+        // S. Liu, P. Tan, L. Yuan, J. Sun, and B. Zeng,
+        // “MeshFlow: Minimum latency online video stabilization,"
+        // Computer Vision – ECCV 2016, pp. 800–815, 2016.
+        //
+
+        // If global motion hints have been provided for estimation, we need to
+        // invert all the motions, as warping is resolved from the destination.
+        std::optional<SpatialMap<Homography>> warp_motion_hints;
+        if(motion_hints.has_value())
         {
-            return WarpField(
-                *global_motion,
-                field_size,
-                field_region.size()
-            );
+            warp_motion_hints.emplace(motion_hints->resolution(), field_region);
+            for(const auto& [key, motion] : (*motion_hints))
+                warp_motion_hints->emplace_at(key, motion.invert());
         }
-        return std::nullopt;
+
+        // TODO: Document the fitting algorithm here.
+
+        using Partition = std::pair<cv::Point2f, float>;
+        SpatialMap<Partition> motion_accumulator(field_size, field_region);
+
+        // Align the accumulator so the cells are centered on the field warp vectors.
+        const cv::Size2f field_cell_size = motion_accumulator.key_size();
+        motion_accumulator.align(cv::Rect(
+            field_region.x - static_cast<int>(field_cell_size.width) / 2,
+            field_region.y - static_cast<int>(field_cell_size.height) / 2,
+            field_region.width + static_cast<int>(field_cell_size.width),
+            field_region.height + static_cast<int>(field_cell_size.height)
+        ));
+
+        // Accumulate all the warping motions in the motion accumulator.
+        for(size_t i = 0; i < origin_points.size(); i++)
+        {
+            const cv::Point2f& origin_point = origin_points[i];
+            const cv::Point2f& warped_point = warped_points[i];
+
+            if(!motion_accumulator.within_bounds(warped_point))
+                continue;
+
+            const auto warp_motion = origin_point - warped_point;
+            auto& [sum, count] = motion_accumulator[warped_point];
+            sum += warp_motion;
+            count += 1.0f;
+        }
+
+        // Consolidate motions
+        thread_local cv::Mat raw_motion_field(field_size, CV_32FC2);
+        raw_motion_field.create(field_size, CV_32FC2);
+
+        raw_motion_field.forEach<cv::Point2f>([&](cv::Point2f& warp_motion, const int position[]){
+            const int x = position[1], y = position[0];
+
+            if(const SpatialKey key(x, y); motion_accumulator.contains(key))
+            {
+                const auto& [sum, count] = motion_accumulator.at(key);
+                warp_motion.x = sum.x / count;
+                warp_motion.y = sum.y / count;
+            }
+            else if(warp_motion_hints.has_value())
+            {
+                const cv::Point2f field_vertex(
+                    static_cast<float>(x) * field_cell_size.width,
+                    static_cast<float>(y) * field_cell_size.height
+                );
+
+                const auto& warp_homography = (*warp_motion_hints)[field_vertex];
+                warp_motion = (warp_homography * field_vertex) - field_vertex;
+            }
+            else warp_motion = {0, 0};
+        });
+
+        // Spatial filtering
+        cv::Mat motion_field(field_size, CV_32FC2);
+        cv::medianBlur(raw_motion_field, motion_field, 5);
+        cv::stackBlur(motion_field, motion_field, cv::Size(3,3));
+
+        return WarpField(std::move(motion_field));
     }
 
 //---------------------------------------------------------------------------------------------------------------------

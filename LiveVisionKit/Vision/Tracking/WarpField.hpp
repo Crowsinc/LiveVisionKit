@@ -17,9 +17,11 @@
 
 #pragma once
 
+#include <optional>
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
+#include "Structures/SpatialMap.hpp"
 
 namespace lvk
 {
@@ -30,13 +32,13 @@ namespace lvk
 
         inline static const cv::Size MinimumSize = {2,2};
 
-        static std::optional<WarpField> Estimate(
-            const cv::Size& field_size,
+        // TODO: should this be static, should there be a instance function?
+        static WarpField Estimate(
+            const cv::Size& warp_motion,
             const cv::Rect& field_region,
-            const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points,
-            std::vector<uint8_t>& inlier_status,
-            bool map_inverse = false
+            const std::vector<cv::Point2f>& origin_points,
+            const std::vector<cv::Point2f>& warped_points,
+            const std::optional<SpatialMap<Homography>>& motion_hints = std::nullopt
         );
 
 
@@ -81,8 +83,6 @@ namespace lvk
 
 
         void warp(const cv::UMat& src, cv::UMat& dst) const;
-
-        // TODO: add a constrain function here.
 
 
         WarpField& operator=(WarpField&& other) noexcept;
