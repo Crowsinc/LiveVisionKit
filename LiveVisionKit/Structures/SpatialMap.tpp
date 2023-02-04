@@ -561,6 +561,18 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    template<typename P>
+    inline std::optional<SpatialKey> SpatialMap<T>::try_key_of(const cv::Point_<P>& position) const
+    {
+        if(within_bounds(position))
+            return key_of(position);
+        else
+            return std::nullopt;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline bool SpatialMap<T>::contains(const SpatialKey key) const
     {
         LVK_ASSERT(is_key_valid(key));

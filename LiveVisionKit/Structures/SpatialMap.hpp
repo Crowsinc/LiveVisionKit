@@ -18,6 +18,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <optional>
 #include <vector>
 
 namespace lvk
@@ -131,6 +132,9 @@ namespace lvk
 
         template<typename P>
         SpatialKey key_of(const cv::Point_<P>& position) const;
+
+        template<typename P>
+        std::optional<SpatialKey> try_key_of(const cv::Point_<P>& position) const;
 
         template<typename P>
         bool within_bounds(const cv::Point_<P>& position) const;
