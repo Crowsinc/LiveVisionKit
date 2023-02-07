@@ -141,17 +141,19 @@ namespace lvk
             warp_motion = motion_accumulator.at(SpatialKey(position[1], position[0]));
         });
 
-        cv::Mat filtered_motion_field(field_size, CV_32FC2);
-        cv::stackBlur(
-            raw_motion_field,
-            filtered_motion_field,
-            cv::Size(
-                round_even(field_size.width) - 1,
-                round_even(field_size.height) - 1
-            )
-        );
-
-        return WarpField(std::move(filtered_motion_field));
+        if(field_size.width >= 3 && field_size.height >= 3)
+        {
+            cv::Mat filtered_motion_field(field_size, CV_32FC2);
+            cv::stackBlur(
+                raw_motion_field,
+                filtered_motion_field,
+                cv::Size(
+                    round_even(field_size.width) - 1,
+                    round_even(field_size.height) - 1
+                )
+            );
+            return WarpField(std::move(filtered_motion_field));
+        } else return WarpField(std::move(raw_motion_field));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
