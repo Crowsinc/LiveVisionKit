@@ -17,13 +17,11 @@
 
 #include "WarpField.hpp"
 
-#include <algorithm>
-#include <numeric>
 #include <array>
+#include <numeric>
 
 #include "Diagnostics/Directives.hpp"
-
-#include "Utility/Timing/Stopwatch.hpp"
+#include "Utility/Drawing.hpp"
 
 namespace lvk
 {
@@ -31,97 +29,129 @@ namespace lvk
 
     WarpField WarpField::Estimate(
         const cv::Size& field_size,
-        const cv::Rect& field_region,
+        const cv::Rect2f& field_region,
         const std::vector<cv::Point2f>& origin_points,
         const std::vector<cv::Point2f>& warped_points,
-        const std::optional<SpatialMap<Homography>>& motion_hints
+        const std::optional<Homography>& motion_hint
     )
     {
         LVK_ASSERT(field_size.width >= MinimumSize.width);
         LVK_ASSERT(field_size.height >= MinimumSize.height);
         LVK_ASSERT(origin_points.size() == warped_points.size());
-        LVK_ASSERT(!motion_hints.has_value() || motion_hints->is_full());
 
         // This estimation algorithm is inspired by the MeshFlow algorithm.
-        // The concept remains the same, but its been striped and optimized
-        // for speed. The original article is cited below:
+        // The original article is cited below:
         //
         // S. Liu, P. Tan, L. Yuan, J. Sun, and B. Zeng,
         // “MeshFlow: Minimum latency online video stabilization,"
         // Computer Vision – ECCV 2016, pp. 800–815, 2016.
         //
 
-        // If global motion hints have been provided for estimation, we need to
-        // invert all the motions, as warping is resolved from the destination.
-        std::optional<SpatialMap<Homography>> warp_motion_hints;
-        if(motion_hints.has_value())
-        {
-            warp_motion_hints.emplace(motion_hints->resolution(), field_region);
-            for(const auto& [key, motion] : (*motion_hints))
-                warp_motion_hints->emplace_at(key, motion.invert());
-        }
+        // TODO: optimize and document the entire algorithm
 
-        // TODO: Document the fitting algorithm here.
-
-        using Partition = std::pair<cv::Point2f, float>;
-        SpatialMap<Partition> motion_accumulator(field_size, field_region);
-
-        // Align the accumulator so the cells are centered on the field warp vectors.
-        const cv::Size2f field_cell_size = motion_accumulator.key_size();
-        motion_accumulator.align(cv::Rect(
-            field_region.x - static_cast<int>(field_cell_size.width) / 2,
-            field_region.y - static_cast<int>(field_cell_size.height) / 2,
-            field_region.width + static_cast<int>(field_cell_size.width),
-            field_region.height + static_cast<int>(field_cell_size.height)
+        SpatialMap<cv::Point2f> motion_accumulator(cv::Size(2,2), cv::Rect2f(
+                field_region.x - (field_region.width / 2),
+                field_region.y - (field_region.height / 2),
+                2 * field_region.height,
+                2 * field_region.width
         ));
 
-        // Accumulate all the warping motions in the motion accumulator.
-        for(size_t i = 0; i < origin_points.size(); i++)
+        if(motion_hint.has_value())
         {
-            const cv::Point2f& origin_point = origin_points[i];
-            const cv::Point2f& warped_point = warped_points[i];
+            const auto warp_transform = motion_hint->invert();
 
-            if(!motion_accumulator.within_bounds(warped_point))
-                continue;
+            const cv::Point2f top_left = field_region.tl();
+            motion_accumulator.place_at({0,0}, (warp_transform * top_left) - top_left);
 
-            const auto warp_motion = origin_point - warped_point;
-            auto& [sum, count] = motion_accumulator[warped_point];
-            sum += warp_motion;
-            count += 1.0f;
-        }
+            const cv::Point2f top_right(field_region.x + field_region.width, field_region.y);
+            motion_accumulator.place_at({1,0}, (warp_transform * top_right) - top_right);
 
-        // Consolidate motions
-        thread_local cv::Mat raw_motion_field(field_size, CV_32FC2);
-        raw_motion_field.create(field_size, CV_32FC2);
+            const cv::Point2f bot_left(field_region.x, field_region.y + field_region.height);
+            motion_accumulator.place_at({0,1}, (warp_transform * bot_left) - bot_left);
 
-        raw_motion_field.forEach<cv::Point2f>([&](cv::Point2f& warp_motion, const int position[]){
-            const int x = position[1], y = position[0];
+            const cv::Point2f bot_right = field_region.br();
+            motion_accumulator.place_at({1,1}, (warp_transform * bot_right) - bot_right);
+        } else motion_accumulator.set_to(0.0f, 0.0f);
 
-            if(const SpatialKey key(x, y); motion_accumulator.contains(key))
+
+        while(motion_accumulator.resolution() != field_size)
+        {
+            SpatialMap<cv::Point2f> submotion_accumulator(
+                cv::Size(
+                    std::min<int>(2 * motion_accumulator.resolution().width, field_size.width),
+                    std::min<int>(2 * motion_accumulator.resolution().height, field_size.height)
+                )
+            );
+
+            const cv::Size2f aligned_cell_size(
+                field_region.width / static_cast<float>(submotion_accumulator.cols() - 1),
+                field_region.height / static_cast<float>(submotion_accumulator.rows() - 1)
+            );
+
+            submotion_accumulator.align(cv::Rect2f(
+                field_region.x - 0.5f * aligned_cell_size.width,
+                field_region.y - 0.5f * aligned_cell_size.height,
+                static_cast<float>(submotion_accumulator.cols()) * aligned_cell_size.width,
+                static_cast<float>(submotion_accumulator.rows()) * aligned_cell_size.height
+            ));
+
+            const cv::Size2f accumulator_scaling(
+                static_cast<float>(submotion_accumulator.cols()) / static_cast<float>(motion_accumulator.cols()),
+                static_cast<float>(submotion_accumulator.rows()) / static_cast<float>(motion_accumulator.rows())
+            );
+
+            // TODO: optimize this logic
+            // Fill in accumulator with medians of upper accumulator
+            const size_t dx = (submotion_accumulator.cols() > motion_accumulator.cols()) ? 1 : 0;
+            const size_t dy = (submotion_accumulator.rows() > motion_accumulator.rows()) ? 1 : 0;
+            for(const auto& [key, motion_estimate] : motion_accumulator)
             {
-                const auto& [sum, count] = motion_accumulator.at(key);
-                warp_motion.x = sum.x / count;
-                warp_motion.y = sum.y / count;
-            }
-            else if(warp_motion_hints.has_value())
-            {
-                const cv::Point2f field_vertex(
-                    static_cast<float>(x) * field_cell_size.width,
-                    static_cast<float>(y) * field_cell_size.height
+                const SpatialKey scaled_key(
+                    static_cast<size_t>(static_cast<float>(key.x) * accumulator_scaling.width),
+                    static_cast<size_t>(static_cast<float>(key.y) * accumulator_scaling.height)
                 );
 
-                const auto& warp_homography = (*warp_motion_hints)[field_vertex];
-                warp_motion = (warp_homography * field_vertex) - field_vertex;
+                submotion_accumulator.place_at(scaled_key, motion_estimate);
+                submotion_accumulator.place_at({scaled_key.x + dx, scaled_key.y}, motion_estimate);
+                submotion_accumulator.place_at({scaled_key.x, scaled_key.y + dy}, motion_estimate);
+                submotion_accumulator.place_at({scaled_key.x + dx, scaled_key.y + dy}, motion_estimate);
             }
-            else warp_motion = {0, 0};
+
+            for(size_t i = 0; i < origin_points.size(); i++)
+            {
+                const cv::Point2f& origin_point = origin_points[i];
+                const cv::Point2f& warped_point = warped_points[i];
+                auto warp_motion = origin_point - warped_point;
+
+                if(const auto key = submotion_accumulator.try_key_of(warped_point); key.has_value())
+                {
+                    auto& motion_estimate = submotion_accumulator.at(*key);
+
+                    constexpr float epa = 0.5f; // TODO: set properly
+                    motion_estimate.x += epa * static_cast<float>(sign(warp_motion.x - motion_estimate.x));
+                    motion_estimate.y += epa * static_cast<float>(sign(warp_motion.y - motion_estimate.y));
+                }
+            }
+
+            motion_accumulator = std::move(submotion_accumulator);
+        }
+
+        cv::Mat raw_motion_field(field_size, CV_32FC2);
+        raw_motion_field.forEach<cv::Point2f>([&](cv::Point2f& warp_motion, const int position[]){
+            warp_motion = motion_accumulator.at(SpatialKey(position[1], position[0]));
         });
 
-        // Spatial filtering
-        cv::Mat motion_field(field_size, CV_32FC2);
-        cv::medianBlur(raw_motion_field, motion_field, 5);
-        cv::stackBlur(motion_field, motion_field, cv::Size(3,3));
+        cv::Mat filtered_motion_field(field_size, CV_32FC2);
+        cv::stackBlur(
+            raw_motion_field,
+            filtered_motion_field,
+            cv::Size(
+                round_even(field_size.width) - 1,
+                round_even(field_size.height) - 1
+            )
+        );
 
-        return WarpField(std::move(motion_field));
+        return WarpField(std::move(filtered_motion_field));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -331,6 +361,40 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::draw(cv::UMat& dst, const float motion_scaling) const
+    {
+        const cv::Size2f frame_scaling(
+            static_cast<float>(dst.cols) / static_cast<float>(m_VelocityField.cols - 1),
+            static_cast<float>(dst.rows) / static_cast<float>(m_VelocityField.rows - 1)
+        );
+
+        cv::Mat draw_buffer(dst.size(), CV_8UC3);
+        draw_buffer.setTo(cv::Scalar(0, 0, 0));
+
+        // Draw all the motion vectors
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& velocity, const int position[]){
+            const cv::Point2f origin(
+                static_cast<float>(position[1]) * frame_scaling.width,
+                static_cast<float>(position[0]) * frame_scaling.height
+            );
+
+            // TODO: proper velocity colouring
+            cv::line(
+                draw_buffer,
+                origin,
+                origin + motion_scaling * velocity,
+                10.0f * motion_scaling * cv::Scalar(velocity.x * velocity.y, velocity.x, velocity.y),
+                3
+            );
+        });
+
+        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        draw_buffer.copyTo(staging_buffer);
+        cv::add(dst, staging_buffer, dst);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void WarpField::warp(const cv::UMat& src, cv::UMat& dst) const
     {
         thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -360,7 +424,8 @@ namespace lvk
                 dst,
                 cv::getPerspectiveTransform(destination.data(), source.data()),
                 src.size(),
-                cv::WARP_INVERSE_MAP
+                cv::WARP_INVERSE_MAP,
+                cv::BORDER_REFLECT
             );
             return;
         }
@@ -372,7 +437,7 @@ namespace lvk
         m_VelocityField.copyTo(staging_buffer);
         cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
         cv::add(warp_map, view_identity_field(src.size()), warp_map);
-        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR);
+        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_REFLECT);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -475,7 +540,10 @@ namespace lvk
 
     void WarpField::operator*=(const cv::Vec2f& scaling)
     {
-        m_VelocityField *= scaling;
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& velocity, const int position[]){
+            velocity.x *= scaling[0];
+            velocity.y *= scaling[1];
+        });
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -484,7 +552,10 @@ namespace lvk
     {
         LVK_ASSERT(scaling[0] != 0.0f && scaling[1] != 0.0f);
 
-        m_VelocityField /= scaling;
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& velocity, const int position[]){
+            velocity.x /= scaling[0];
+            velocity.y /= scaling[1];
+        });
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -526,7 +597,11 @@ namespace lvk
 
     WarpField operator*(const WarpField& field, const cv::Vec2f& scaling)
     {
-        cv::Mat result = field.data() * scaling;
+        cv::Mat result = field.data();
+        result.forEach<cv::Point2f>([&](cv::Point2f& velocity, const int position[]){
+            velocity.x *= scaling[0];
+            velocity.y *= scaling[1];
+        });
         return WarpField(std::move(result));
     }
 
@@ -560,7 +635,11 @@ namespace lvk
     {
         LVK_ASSERT(scaling[0] != 0.0f && scaling[1] != 0.0f);
 
-        cv::Mat result = field.data() / scaling;
+        cv::Mat result = field.data();
+        result.forEach<cv::Point2f>([&](cv::Point2f& velocity, const int position[]){
+            velocity.x /= scaling[0];
+            velocity.y /= scaling[1];
+        });
         return WarpField(std::move(result));
     }
 

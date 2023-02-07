@@ -32,15 +32,14 @@ namespace lvk
 
         inline static const cv::Size MinimumSize = {2,2};
 
-        // TODO: should this be static, should there be a instance function?
+        // TODO: should this be static only?
         static WarpField Estimate(
             const cv::Size& warp_motion,
-            const cv::Rect& field_region,
+            const cv::Rect2f& field_region,
             const std::vector<cv::Point2f>& origin_points,
             const std::vector<cv::Point2f>& warped_points,
-            const std::optional<SpatialMap<Homography>>& motion_hints = std::nullopt
+            const std::optional<Homography>& motion_hint
         );
-
 
         explicit WarpField(const cv::Size& size);
 
@@ -81,6 +80,8 @@ namespace lvk
 
         cv::Point2f trace(const cv::Point2f& position) const;
 
+
+        void draw(cv::UMat& dst, const float motion_scaling) const;
 
         void warp(const cv::UMat& src, cv::UMat& dst) const;
 
