@@ -21,6 +21,15 @@
 #include "VideoIOConfiguration.hpp"
 #include "VideoProcessor.hpp"
 
+#ifdef WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <uistd.h>
+#endif
+
+
 std::function<void()> signal_handler;
 
 int main(int argc, char* argv[])
@@ -54,6 +63,14 @@ int main(int argc, char* argv[])
         std::cerr << cv::format("LiveVisionKit failed condition: %s\n", assertion.c_str());
         std::abort();
     };
+
+    // Set process priority
+#ifdef WIN32
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+#else
+    nice(-40);
+#endif
+
 
     // Run the video processor
     if(auto error = processor.run(); error.has_value())
