@@ -18,22 +18,31 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+
 #include "Structures/SpatialMap.hpp"
+#include "Utility/Properties/Configurable.hpp"
 
 namespace lvk
 {
 
-	class GridDetector
+    struct GridDetectorSettings
+    {
+        cv::Size input_resolution = {640, 360};
+        cv::Size feature_grid_shape = {32, 18};
+
+        cv::Size detection_zones = {2, 1};
+        float detection_threshold = 0.3f;
+        float detection_density = 0.01f;
+    };
+
+
+	class GridDetector final : public Configurable<GridDetectorSettings>
 	{
 	public:
 
-		GridDetector(
-			const cv::Size& resolution,
-			const cv::Size& feature_grid,
-			const cv::Size& detection_zones,
-            const float detection_threshold,
-            const size_t pixels_per_feature = 75
-		);
+		explicit GridDetector(const GridDetectorSettings& settings = {});
+
+        void configure(const GridDetectorSettings& settings) override;
 
 		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
 
@@ -41,17 +50,17 @@ namespace lvk
 
 		void reset();
 
-		cv::Size resolution() const;
-
 		size_t feature_capacity() const;
 
-        cv::Size local_feature_extent() const;
+        cv::Size local_feature_size() const;
 
-        cv::Size local_detection_extent() const;
+        cv::Size detection_zone_size() const;
+
+		double distribution_quality() const;
 
 		cv::Point2f distribution_centroid() const;
 
-		double distribution_quality() const;
+        const cv::Size& input_resolution() const;
 
 	private:
 
@@ -68,18 +77,17 @@ namespace lvk
 			bool propagated = false;
 		};
 
-		void construct_grids();
+		void construct_detection_zones();
 
         void process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
 
 		void extract_features(std::vector<cv::Point2f>& feature_points) const;
 
 	private:
-
         SpatialMap<FeatureBlock> m_FeatureGrid;
         SpatialMap<DetectZone> m_DetectionZones;
 
-		const size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
+		size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
 		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
 	};
 
