@@ -140,10 +140,6 @@ namespace clt
             }
         }
 
-        // If its a device capture or there is no output, then we must run with the output display
-        if(!output_target.has_value() || input_source.index() == 2)
-            render_output = true;
-
         return std::nullopt;
     }
 
@@ -277,7 +273,7 @@ namespace clt
             "-f",
             "Adds a filter used for processing. Filters are processed left to right and can be modified by "
             "supplying configuration options after the filter specification. See the filter listing below and"
-            " -h <filter> for more information.",
+            " -H <filter> for more information.",
             [this](ArgQueue& arguments)
             {
                 // Pop '-f' from the arguments queue
@@ -287,7 +283,7 @@ namespace clt
                 if(auto filter = m_FilterParser.try_parse(arguments); filter == nullptr)
                 {
                     m_ParserError = cv::format(
-                        "Unknown filter \'%s\', use -h to see available options", filter_name.c_str()
+                        "Unknown filter \'%s\', use -H to see available options", filter_name.c_str()
                     );
                     return false;
                 }
