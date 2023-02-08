@@ -51,7 +51,6 @@ namespace lvk
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
             path_settings.correction_margin = settings.crop_proportion;
             path_settings.smoothing_frames = settings.smoothing_frames;
-            path_settings.crop_to_margins = settings.crop_output;
         });
 
         m_Settings = settings;
@@ -107,6 +106,9 @@ namespace lvk
             m_Stabilizer.stabilize(debug_frame, frame_motion, output ); // TODO: suppress(frame_motion));
         }
         else m_Stabilizer.stabilize(input, frame_motion, output); // TODO: suppress(frame_motion));
+
+        if(m_Settings.crop_output)
+            output.data = output.data(m_Stabilizer.stable_region());
 
         if(debug) cv::ocl::finish();
         timer.stop();

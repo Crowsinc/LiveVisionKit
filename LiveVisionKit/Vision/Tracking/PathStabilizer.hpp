@@ -34,7 +34,6 @@ namespace lvk
 		size_t smoothing_frames = 10;
 		float correction_margin = 0.1f;
 		bool adaptive_margins = true; // TODO: implement
-		bool crop_to_margins = false;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>

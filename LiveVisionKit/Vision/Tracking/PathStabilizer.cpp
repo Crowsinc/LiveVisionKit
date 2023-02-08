@@ -64,10 +64,6 @@ namespace lvk
 		{
 			auto& output_frame = m_FrameQueue.oldest();
 
-            // TODO: re-implement with WarpFields!
-//            m_Margins = !m_Settings.adaptive_margins ? cv::Rect{0, 0, 0, 0}
-//                                                     : crop(output_frame.size(), m_Settings.correction_margin);
-
             // Calculate the velocity to go from the previous frame's path to the smooth path.
 			auto stabilizing_velocity = m_Trajectory.convolve_at(
                 m_SmoothingFilter,
@@ -75,16 +71,13 @@ namespace lvk
             ) - m_Trajectory.centre(-1);
 
             // TODO: re-implement with WarpFields!
-//			if(!m_Margins.empty())
-//				stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_Margins);
+            m_Margins = crop(output_frame.size(), m_Settings.correction_margin);
+//			stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_Margins);
 
 			stabilizing_velocity.warp(output_frame.data, m_WarpFrame);
 
-			// NOTE: we create a new Frame everytime we copy the input to the frame queue
-			// so it is safe to directly move the output frame to the output for the user. 
-			// Also note that this does mean that the oldest frame will become empty. 
-			output_frame.copy(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
-			output = std::move(output_frame);
+            output.copy(m_WarpFrame);
+            output.timestamp = output_frame.timestamp;
 
             return std::move(stabilizing_velocity);
 		}
