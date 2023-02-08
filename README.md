@@ -32,5 +32,7 @@ LiveVisionKit is currently focused on providing purpose-built tools for remote I
 Help expand the usability of LiveVisionKit in non-English speaking countries by contributing to language translations on [Crowdin](https://crowdin.com/project/livevisionkit) - simply make a free account and start translating to your native language! Updated translations will be released alongside new versions of LiveVisionKit. 
 
 ### Development
+**Build Instructions:** https://github.com/Crowsinc/LiveVisionKit/wiki/Build-Guide
+
 Coming soon...
 
