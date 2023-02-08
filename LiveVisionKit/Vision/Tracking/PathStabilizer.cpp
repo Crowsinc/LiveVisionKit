@@ -34,23 +34,39 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void PathStabilizer::stabilize(
-		const Frame& input,
-		Frame& output,
-		const Homography& frame_velocity
-	)
+    void PathStabilizer::configure(const PathStabilizerSettings& settings)
+    {
+        LVK_ASSERT(settings.smoothing_frames >= 2);
+        LVK_ASSERT(settings.smoothing_frames % 2 == 0);
+        LVK_ASSERT(between_strict(settings.correction_margin, 0.0f, 1.0f));
+        LVK_ASSERT(settings.adaptive_margins == true && "THIS IS UNIMPLEMENTED!"); // TODO: implement & remove
+
+        m_Settings = settings;
+        resize_buffers();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::optional<WarpField> PathStabilizer::stabilize(const Frame& frame, const WarpField& motion, Frame& output)
 	{
-		LVK_ASSERT(!input.is_empty());
+		LVK_ASSERT(!frame.is_empty());
 
-		m_FrameQueue.advance().copy(input);
-		m_Trajectory.advance() = m_Trajectory.newest() + frame_velocity;
+        // If the given motion has a different resolution, we need
+        // to resize the trajectory to match the new field size.
+        if(motion.size() != m_Trajectory.newest().size())
+            resize_fields(motion.size());
 
-		if (ready())
+        // Push the incoming frame and associated motion to the queues
+		m_FrameQueue.advance().copy(frame);
+		m_Trajectory.push(m_Trajectory.newest() + motion);
+
+		if(ready())
 		{
 			auto& output_frame = m_FrameQueue.oldest();
 
-			m_FocusArea = !m_Settings.lock_focus ? cv::Rect{0,0,0,0}
-			: crop(output_frame.size(), m_Settings.correction_margin);
+            // TODO: re-implement with WarpFields!
+//            m_Margins = !m_Settings.adaptive_margins ? cv::Rect{0, 0, 0, 0}
+//                                                     : crop(output_frame.size(), m_Settings.correction_margin);
 
             // Calculate the velocity to go from the previous frame's path to the smooth path.
 			auto stabilizing_velocity = m_Trajectory.convolve_at(
@@ -58,8 +74,9 @@ namespace lvk
                 m_Trajectory.centre_index()
             ) - m_Trajectory.centre(-1);
 
-			if (!m_FocusArea.empty())
-				stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_FocusArea);
+            // TODO: re-implement with WarpFields!
+//			if(!m_Margins.empty())
+//				stabilizing_velocity = clamp_velocity(stabilizing_velocity, output_frame.size(), m_Margins);
 
 			stabilizing_velocity.warp(output_frame.data, m_WarpFrame);
 
@@ -68,22 +85,53 @@ namespace lvk
 			// Also note that this does mean that the oldest frame will become empty. 
 			output_frame.copy(m_Settings.crop_to_margins ? m_WarpFrame(stable_region()) : m_WarpFrame);
 			output = std::move(output_frame);
+
+            return std::move(stabilizing_velocity);
 		}
-		else output = std::move(m_NullFrame);
+
+        output = std::move(m_NullFrame);
+        return std::nullopt;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void PathStabilizer::configure(const PathStabilizerSettings& settings)
-	{
-		LVK_ASSERT(settings.smoothing_frames >= 2);
-		LVK_ASSERT(settings.smoothing_frames % 2 == 0);
-		LVK_ASSERT(between_strict(settings.correction_margin, 0.0f, 1.0f));
-		LVK_ASSERT(settings.lock_focus == true && "THIS IS UNIMPLEMENTED!"); // TODO: implement & remove
+    // TODO: re-implement to work with WarpFields!
+    Homography PathStabilizer::clamp_velocity(
+        const Homography& velocity,
+        const cv::Size& frame_size,
+        const cv::Rect& focus_area
+    )
+    {
+        // Clamp the velocity so that it respects the correction limits and ensures that
+        // the warped frame encloses stable/crop area with no gaps. This is performed by
+        // iteratively reducing the velocity by lerping it back to identity in small steps.
 
-		m_Settings = settings;
-		resize_buffers();
-	}
+        constexpr double max_t = 1.0;
+        constexpr double max_iterations = 50;
+
+        constexpr double step = max_t / max_iterations;
+        const auto identity = Homography::Identity();
+
+        double t = step;
+        Homography reduced_velocity = velocity;
+        BoundingQuad frame_bounds(frame_size, reduced_velocity);
+
+        while (t <= max_t && !frame_bounds.encloses(focus_area))
+        {
+            reduced_velocity = lerp(velocity, identity, t);
+            frame_bounds.transform(reduced_velocity);
+            t += step;
+        }
+
+        return reduced_velocity;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    bool PathStabilizer::ready() const
+    {
+        return m_FrameQueue.is_full() && m_Trajectory.is_full();
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -94,23 +142,25 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool PathStabilizer::ready() const
-	{
-		return m_FrameQueue.is_full() && m_Trajectory.is_full();
+	size_t PathStabilizer::frame_delay() const
+    {
+        // NOTE: capacity can never be zero, per the pre-conditions
+        return m_FrameQueue.capacity() - 1;
 	}
-	
+
 //---------------------------------------------------------------------------------------------------------------------
 
-	uint32_t PathStabilizer::frame_delay() const
-	{
-		return m_FrameQueue.capacity() - 1;
-	}
+    WarpField PathStabilizer::displacement() const
+    {
+        // NOTE: the trajectory will never be empty.
+        return m_Trajectory.newest();
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	const cv::Rect& PathStabilizer::stable_region() const
 	{
-		return m_FocusArea;
+		return m_Margins;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -121,9 +171,8 @@ namespace lvk
 		m_Trajectory.clear();
 
 		// Fill the trajectory to bring the buffers into the initial synchronized state.
-		m_Trajectory.advance(Homography::Identity());
 		while(m_Trajectory.size() < m_FrameQueue.capacity() - 3)
-			m_Trajectory.advance(m_Trajectory.newest() + Homography::Identity());
+			m_Trajectory.advance(WarpField::MinimumSize);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -141,7 +190,7 @@ namespace lvk
 		const size_t queue_size = m_Settings.smoothing_frames + 2;
 		const size_t window_size = 2 * m_Settings.smoothing_frames + 1;
 
-		if (window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
+		if(window_size != m_Trajectory.capacity() || queue_size != m_FrameQueue.capacity())
 		{
 			// NOTE: this is equivalent to the change in smoothing frame count. 
 			const auto time_shift = static_cast<int64_t>(queue_size)
@@ -162,53 +211,31 @@ namespace lvk
 				reset_buffers();
 
 
+            // Reset the smoothing filter to match the new window size
+            m_SmoothingFilter.resize(window_size);
+            m_SmoothingFilter.clear();
+
             // NOTE: A low pass Gaussian filter is used because it has both decent time domain
             // and frequency domain performance. Unlike an average or windowed sinc filter.
             // As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
 			const auto gaussian_kernel = cv::getGaussianKernel(
                 static_cast<int>(window_size),
-                static_cast<double>(window_size) / 6.0
+                static_cast<double>(window_size) / 6.0,
+                CV_32F
             );
 
-            m_SmoothingFilter.resize(window_size);
-            m_SmoothingFilter.clear();
-
-			for (int i = 0; i < window_size; i++)
-				m_SmoothingFilter.push(gaussian_kernel.at<double>(i));
+			for(int i = 0; i < window_size; i++)
+				m_SmoothingFilter.push(gaussian_kernel.at<float>(i));
 		}
 	}
-	
+
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography PathStabilizer::clamp_velocity(
-		const Homography& velocity,
-		const cv::Size& frame_size,
-		const cv::Rect& focus_area
-	)
-	{
-		// Clamp the velocity so that it respects the correction limits and ensures that 
-		// the warped frame encloses stable/crop area with no gaps. This is performed by 
-		// iteratively reducing the velocity by lerping it back to identity in small steps.
-
-		constexpr double max_t = 1.0;
-		constexpr double max_iterations = 50;
-
-		constexpr double step = max_t / max_iterations;
-		const auto identity = Homography::Identity();
-
-		double t = step;
-		Homography reduced_velocity = velocity;
-		BoundingQuad frame_bounds(frame_size, reduced_velocity);
-
-		while (t <= max_t && !frame_bounds.encloses(focus_area))
-		{
-			reduced_velocity = lerp(velocity, identity, t);
-			frame_bounds.transform(reduced_velocity);
-			t += step;
-		}
-
-		return reduced_velocity;
-	}
+    void PathStabilizer::resize_fields(const cv::Size& size)
+    {
+        for(size_t i = 0; i < m_Trajectory.size(); i++)
+            m_Trajectory[i].resize(size);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

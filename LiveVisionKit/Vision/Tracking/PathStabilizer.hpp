@@ -17,10 +17,12 @@
 
 #pragma once
 
+#include <optional>
 #include <opencv2/opencv.hpp>
 
+#include "WarpField.hpp"
 #include "Math/Homography.hpp"
-#include "Filters/VideoFilter.hpp"
+#include "Filters/VideoFrame.hpp"
 #include "Structures/SlidingBuffer.hpp"
 #include "Utility/Properties/Configurable.hpp"
 
@@ -31,8 +33,8 @@ namespace lvk
 	{
 		size_t smoothing_frames = 10;
 		float correction_margin = 0.1f;
+		bool adaptive_margins = true; // TODO: implement
 		bool crop_to_margins = false;
-		bool lock_focus = true; // TODO: implement (unlocked crop region)
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>
@@ -40,16 +42,18 @@ namespace lvk
 	public:
 
 		explicit PathStabilizer(const PathStabilizerSettings& settings = {});
-		
-		void stabilize(const Frame& input, Frame& output, const Homography& frame_velocity);
 
 		void configure(const PathStabilizerSettings& settings) override;
 
-		void restart();
+        std::optional<WarpField> stabilize(const Frame& frame, const WarpField& motion, Frame& output);
 
 		bool ready() const;
 
-		uint32_t frame_delay() const;
+		void restart();
+
+		size_t frame_delay() const;
+
+        WarpField displacement() const;
 
 		const cv::Rect& stable_region() const;
 
@@ -59,6 +63,9 @@ namespace lvk
 
 		void resize_buffers();
 
+        void resize_fields(const cv::Size& size);
+
+        // TODO: re-implement for WarpFields.
 		static Homography clamp_velocity(
 			const Homography& velocity,
 			const cv::Size& frame_size,
@@ -67,11 +74,11 @@ namespace lvk
 
 	private:
 		SlidingBuffer<Frame> m_FrameQueue;
-		SlidingBuffer<Homography> m_Trajectory;
-		SlidingBuffer<double> m_SmoothingFilter;
+		SlidingBuffer<WarpField> m_Trajectory;
+		SlidingBuffer<float> m_SmoothingFilter;
 
 		Frame m_NullFrame;
-		cv::Rect m_FocusArea{0,0,0,0};
+		cv::Rect m_Margins{0, 0, 0, 0};
 		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
