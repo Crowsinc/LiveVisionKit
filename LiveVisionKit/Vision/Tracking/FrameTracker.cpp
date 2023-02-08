@@ -17,9 +17,11 @@
 
 #include "FrameTracker.hpp"
 
+#include "WarpField.hpp"
 #include "Math/Math.hpp"
 #include "Utility/Algorithm.hpp"
 #include "Diagnostics/Directives.hpp"
+
 
 namespace lvk
 {
@@ -31,25 +33,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameTracker::FrameTracker(const MotionModel model, const float estimation_threshold, const GridDetector& detector)
-		: m_GridDetector(detector),
-		  m_TrackingResolution(detector.resolution()),
-		  m_MinMatchThreshold(static_cast<uint32_t>(
-              estimation_threshold * static_cast<float>(detector.feature_capacity())
-          )),
-		  m_MotionModel(model),
-		  m_PrevFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_NextFrame(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
-		  m_FirstFrame(true)
+	FrameTracker::FrameTracker(const FrameTrackerSettings& settings)
 	{
-		LVK_ASSERT(between(estimation_threshold, 0.0f, 1.0f));
-
-		m_TrackedPoints.reserve(m_GridDetector.feature_capacity());
-		m_MatchedPoints.reserve(m_GridDetector.feature_capacity());
-		m_ScaledTrackedPoints.reserve(m_GridDetector.feature_capacity());
-		m_ScaledMatchedPoints.reserve(m_GridDetector.feature_capacity());
-		m_InlierStatus.reserve(m_GridDetector.feature_capacity());
-		m_MatchStatus.reserve(m_GridDetector.feature_capacity());
+        this->configure(settings);
 
 		// Light sharpening kernel
 		m_FilterKernel = cv::Mat({3, 3}, {
@@ -62,7 +48,7 @@ namespace lvk
 		m_USACParams.sampler = cv::SAMPLING_UNIFORM;
 		m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
 		m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
-		m_USACParams.maxIterations = 250;
+		m_USACParams.maxIterations = 100;
 		m_USACParams.confidence = 0.99;
 		m_USACParams.loIterations = 10;
 		m_USACParams.loSampleSize = 20;
@@ -73,51 +59,61 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void FrameTracker::configure(const FrameTrackerSettings& settings)
+    {
+        LVK_ASSERT(settings.minimum_tracking_points >= 4);
+
+        m_TrackedPoints.reserve(settings.detector.feature_capacity());
+        m_MatchedPoints.reserve(settings.detector.feature_capacity());
+        m_InlierStatus.reserve(settings.detector.feature_capacity());
+        m_MatchStatus.reserve(settings.detector.feature_capacity());
+
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void FrameTracker::restart()
 	{
 		m_FirstFrame = true;
-		m_GridDetector.reset();
+		m_Settings.detector.reset();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f FrameTracker::import_next(const cv::UMat& frame)
-	{
-		LVK_ASSERT(frame.type() == CV_8UC1);
-
-		cv::resize(frame, m_NextFrame, m_TrackingResolution, 0, 0, cv::INTER_AREA);
-		cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
-
-		return {
-            static_cast<float>(frame.cols) / static_cast<float>(m_TrackingResolution.width),
-            static_cast<float>(frame.rows) / static_cast<float>(m_TrackingResolution.height)
-        };
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	Homography FrameTracker::track(const cv::UMat& next_frame)
+    std::optional<WarpField> FrameTracker::track(const cv::UMat& next_frame)
 	{
 		LVK_ASSERT(!next_frame.empty());
 		LVK_ASSERT(next_frame.type() == CV_8UC1);
 
-		prepare_state();
+        // Reset the state to track the next frame
+        m_TrackedPoints.clear();
+        m_MatchedPoints.clear();
 
-		// Import the frame into the tracker
-		std::swap(m_PrevFrame, m_NextFrame);
-		const auto scaling = import_next(next_frame);
+        // Mark the last tracked frame as the previous frame.
+        std::swap(m_PrevFrame, m_NextFrame);
 
-		if(m_FirstFrame)
-		{
-			m_FirstFrame = false;
-			return abort_tracking();
-		}
+        // Import the next frame for tracking by scaling it to the tracking resolution.
+        // We also enhance its sharpness to counteract the loss in quality from scaling.
+        cv::resize(next_frame, m_NextFrame, tracking_resolution(), 0, 0, cv::INTER_AREA);
+        cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
 
-		// Detect tracking points
-		m_GridDetector.detect(m_PrevFrame, m_TrackedPoints);
+        if(m_FirstFrame)
+        {
+            m_FirstFrame = false;
+            return std::nullopt;
+        }
 
-		if (m_TrackedPoints.size() < m_MinMatchThreshold)
-			return abort_tracking();
+        // Detect tracking points in the previous frames. Note that this also
+        // returns all the points that were propagated from the previous frame.
+        m_Settings.detector.detect(m_PrevFrame, m_TrackedPoints);
+        if(m_TrackedPoints.size() < m_Settings.minimum_tracking_points)
+            return std::nullopt;
+
+        m_DistributionQuality = exp_moving_average(
+            m_DistributionQuality, m_Settings.detector.distribution_quality(), METRIC_SMOOTHING_FACTOR
+        );
+
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -130,144 +126,101 @@ namespace lvk
 			cv::Size(7, 7)
 		);
 
+        // TODO: filter by tracking error as well, only for very large errors tho
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
+        if(m_MatchedPoints.size() < m_Settings.minimum_tracking_points)
+            return std::nullopt;
 
-		if (m_MatchedPoints.size() < m_MinMatchThreshold)
-			return abort_tracking();
 
-		// Re-scale all the points to original frame size otherwise the motion will be downscaled
-		for(size_t i = 0; i < m_TrackedPoints.size(); i++)
-		{
-			auto& scaled_tracked_point = m_ScaledTrackedPoints.emplace_back(m_TrackedPoints[i]);
-			scaled_tracked_point.x *= scaling.x;
-			scaled_tracked_point.y *= scaling.y;
-
-			auto& scaled_matched_point = m_ScaledMatchedPoints.emplace_back(m_MatchedPoints[i]);
-			scaled_matched_point.x *= scaling.x;
-			scaled_matched_point.y *= scaling.y;
-		}
-
-		// Estimate motion between frames
-		MotionModel motion_model = m_MotionModel;
-		if (motion_model == MotionModel::DYNAMIC)
-			motion_model = choose_optimal_model();
-
-		cv::Mat motion;
-		switch(motion_model)
-		{
-			case MotionModel::AFFINE:
-				//TODO: switch to USAC when partial is supported
-				motion = cv::estimateAffinePartial2D(
-					m_ScaledTrackedPoints,
-					m_ScaledMatchedPoints,
-					m_InlierStatus,
-					cv::RANSAC
-				);
-				break;
-			case MotionModel::HOMOGRAPHY:
-				motion = cv::findHomography(
-					m_ScaledTrackedPoints,
-					m_ScaledMatchedPoints,
-					m_InlierStatus,
-					m_USACParams
-				);
-				break;
-		}
-
-		if (!motion.empty())
-		{
-			// NOTE: We only propagate inlier points to  the GridDetector to 
-			// help ensure consistency between subsequent motion estimations.
-			// Additionally, the GridDetector doesn't detect new points if the 
-			// propagated points meet the detection load. This means that outliers
-			// are naturally removed from the tracking point set until we have lost
-			// too many inliers, and the GridDetector has to detect new points. 
-
-			fast_filter(m_MatchedPoints, m_ScaledMatchedPoints, m_InlierStatus);
-			m_GridDetector.propagate(m_MatchedPoints);
-
-            m_SceneStability = exp_moving_average(
-                m_SceneStability,
-                static_cast<double>(m_MatchedPoints.size()) / static_cast<double>(m_TrackedPoints.size()),
-                METRIC_SMOOTHING_FACTOR
+        // NOTE: We must have at least 4 points here.
+        std::optional<Homography> motion;
+        if(m_DistributionQuality < GOOD_DISTRIBUTION_QUALITY)
+        {
+            // Use an affine transform if we have bad tracker distribution.
+            // This is required to avoid possible distortions from non-global motion.
+            motion = Homography::Estimate(
+                m_TrackedPoints,
+                m_MatchedPoints,
+                m_InlierStatus,
+                {},
+                true
             );
+        }
+        else
+        {
+            motion = Homography::Estimate(
+                m_TrackedPoints,
+                m_MatchedPoints,
+                m_InlierStatus,
+                m_USACParams
+            );
+        }
 
-			return (motion_model == MotionModel::AFFINE) ? Homography::FromAffineMatrix(motion)
-                                                         : Homography::WrapMatrix(motion);
-		}
-		else return abort_tracking();
-	}
+        // NOTE: We only propagate inlier points to  the GridDetector to
+        // help ensure consistency between subsequent motion estimations.
+        // Additionally, the GridDetector doesn't detect new points if the
+        // propagated points meet the detection load. This means that outliers
+        // are naturally removed from the tracking point set until we have lost
+        // too many inliers, and the GridDetector has to detect new points.
 
-//---------------------------------------------------------------------------------------------------------------------
+        const size_t total_tracking_points = m_TrackedPoints.size();
+        fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
+        m_Settings.detector.propagate(m_MatchedPoints);
 
-	Homography FrameTracker::abort_tracking()
-	{
-        m_SceneStability = exp_moving_average(m_SceneStability, 0.0, METRIC_SMOOTHING_FACTOR);
-
-		m_GridDetector.reset();
-		return Homography::Identity();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FrameTracker::prepare_state()
-	{
-		m_ScaledTrackedPoints.clear();
-		m_ScaledMatchedPoints.clear();
-		m_TrackedPoints.clear();
-		m_MatchedPoints.clear();
-		m_InlierStatus.clear();
-		m_MatchStatus.clear();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FrameTracker::set_model(const MotionModel& model)
-	{
-		m_MotionModel = model;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	MotionModel FrameTracker::model() const
-	{
-		return m_MotionModel;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	MotionModel FrameTracker::choose_optimal_model()
-	{
-		// A good Homography should always be better than a good affine 
-		// transform. But if the tracking points are not well distributed,
-		// then it's possible that the Homography focuses too much on a 
-		// specific area, leading to distortions elsewhere. Hence, we will
-		// only consider using a Homography if the tracking point distribution
-		// is a fair representation of the frame. Otherwise we use the affine
-		// transform, which always fully represents the frame. 
-
-        m_DistributionQuality = exp_moving_average(
-            m_DistributionQuality, m_GridDetector.distribution_quality(), METRIC_SMOOTHING_FACTOR
+        m_FrameStability = exp_moving_average(
+            m_FrameStability,
+            static_cast<double>(m_MatchedPoints.size()) / static_cast<double>(total_tracking_points),
+            METRIC_SMOOTHING_FACTOR
         );
 
-        if(m_DistributionQuality >= GOOD_DISTRIBUTION_QUALITY)
-            return MotionModel::HOMOGRAPHY;
+        // We must scale the motion to match the original frame size.
+        const cv::Vec2f frame_scaling(
+            static_cast<float>(next_frame.cols) / static_cast<float>(tracking_resolution().width),
+            static_cast<float>(next_frame.rows) / static_cast<float>(tracking_resolution().height)
+        );
 
-        return MotionModel::AFFINE;
+        return WarpField::Estimate(
+            m_Settings.motion_resolution,
+            cv::Rect({0,0}, tracking_resolution()),
+            m_TrackedPoints,
+            m_MatchedPoints,
+            motion
+        ) * frame_scaling;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	double FrameTracker::stability() const
+	double FrameTracker::frame_stability() const
 	{
-		return m_SceneStability;
+		return m_FrameStability;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    double FrameTracker::tracking_quality() const
+    {
+        return m_DistributionQuality;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const cv::Size& FrameTracker::motion_resolution() const
+    {
+        return m_Settings.motion_resolution;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    const cv::Size& FrameTracker::tracking_resolution() const
+    {
+        return m_Settings.detector.input_resolution();
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	const std::vector<cv::Point2f>& FrameTracker::tracking_points() const
 	{
-		return m_ScaledMatchedPoints;
+		return m_MatchedPoints;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
