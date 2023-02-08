@@ -23,13 +23,14 @@ namespace lvk::draw
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void plot_markers(
+	inline void plot_markers(
 		cv::UMat& dst,
-		const std::vector<cv::Point_<T>>& markers,
 		const cv::Scalar& color,
-		const cv::MarkerTypes type,
-		const int size,
-		const int thickness
+		const std::vector<cv::Point_<T>>& markers,
+        const cv::Size2f& position_scaling,
+		const cv::MarkerTypes marker_type,
+		const int marker_size,
+		const int marker_thickness
 	)
 	{
 		thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
@@ -42,7 +43,14 @@ namespace lvk::draw
 		draw_mask.setTo(cv::Scalar(0));
 
 		for(const auto& point : markers)
-			cv::drawMarker(draw_mask, point, color, type, size, thickness);
+        {
+            cv::Point_<T> scaled_point(
+                point.x * position_scaling.width,
+                point.y * position_scaling.height
+            );
+
+			cv::drawMarker(draw_mask, scaled_point, color, marker_type, marker_size, marker_thickness);
+        }
 
 		draw_mask.copyTo(gpu_draw_mask);
 		dst.setTo(color, gpu_draw_mask);
@@ -51,7 +59,7 @@ namespace lvk::draw
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void text(
+	inline void text(
 		cv::UMat& dst,
 		const std::string& text,
 		const cv::Point_<T>& position,

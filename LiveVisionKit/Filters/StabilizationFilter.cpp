@@ -90,11 +90,18 @@ namespace lvk
             Frame debug_frame = input.clone();
             if(m_Settings.stabilize_output)
             {
+                const auto& tracking_resolution = m_FrameTracker.tracking_resolution();
+                const cv::Size2f point_scaling(
+                    static_cast<float>(debug_frame.width()) / static_cast<float>(tracking_resolution.width),
+                    static_cast<float>(debug_frame.height()) / static_cast<float>(tracking_resolution.height)
+                );
+
                 // Draw tracking markers onto frame
                 draw::plot_markers(
                     debug_frame.data,
-                    m_FrameTracker.tracking_points(),
                     lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
+                    m_FrameTracker.tracking_points(),
+                    point_scaling,
                     cv::MarkerTypes::MARKER_CROSS,
                     8,
                     2
