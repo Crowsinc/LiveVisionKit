@@ -35,6 +35,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
+    {
+        LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
+        LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
+        LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
+        LVK_ASSERT(settings.suppression_smoothing_rate > 0);
+
+        // Reset the tracking when disabling the stabilization otherwise we will have
+        // a discontinuity in the tracking once we start up again with a brand new scene.
+        if(m_Settings.stabilize_output && !settings.stabilize_output)
+            reset_context();
+
+        m_FrameTracker.configure(settings.tracking_settings);
+        m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
+            path_settings.correction_margin = settings.crop_proportion;
+            path_settings.smoothing_frames = settings.smoothing_frames;
+            path_settings.crop_to_margins = settings.crop_output;
+        });
+
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void StabilizationFilter::filter(
         const Frame& input,
         Frame& output,
@@ -48,11 +72,13 @@ namespace lvk
         timer.start();
 
         // Track the frame
-        Homography frame_motion = Homography::Identity();
+        // TODO: make optimized path for when the stabilization is turned off.
+        WarpField frame_motion(m_Settings.tracking_settings.motion_resolution);
 		if(m_Settings.stabilize_output)
         {
             cv::extractChannel(input.data, m_TrackingFrame, 0);
-            frame_motion = m_FrameTracker.track(m_TrackingFrame);
+            if(auto motion = m_FrameTracker.track(m_TrackingFrame); motion.has_value())
+                frame_motion = std::move(*motion);
         }
 
         // Stabilize the input
@@ -78,38 +104,14 @@ namespace lvk
             cv::ocl::finish();
             timer.start();
 
-            m_Stabilizer.stabilize(debug_frame, output, suppress(frame_motion));
+            m_Stabilizer.stabilize(debug_frame, frame_motion, output ); // TODO: suppress(frame_motion));
         }
-        else m_Stabilizer.stabilize(input, output, suppress(frame_motion));
+        else m_Stabilizer.stabilize(input, frame_motion, output); // TODO: suppress(frame_motion));
 
         if(debug) cv::ocl::finish();
         timer.stop();
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
-	{
-		LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
-		LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
-		LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
-		LVK_ASSERT(settings.suppression_smoothing_rate > 0);
-
-		// Reset the tracking when disabling the stabilization otherwise we will have 
-		// a discontinuity in the tracking once we start up again with a brand new scene. 
-		if(m_Settings.stabilize_output && !settings.stabilize_output)
-            reset_context();
-
-		m_Settings = settings;
-
-		m_FrameTracker.set_model(settings.motion_model);
-		m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
-			path_settings.correction_margin = settings.crop_proportion;
-		    path_settings.smoothing_frames = settings.smoothing_frames;
-			path_settings.crop_to_margins = settings.crop_output;
-		});
-	}
-	
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool StabilizationFilter::ready() const
@@ -150,7 +152,7 @@ namespace lvk
 
 	float StabilizationFilter::stability() const
 	{
-		return m_FrameTracker.stability();
+		return m_FrameTracker.frame_stability();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -163,7 +165,7 @@ namespace lvk
 			return motion;
 		}
 		
-		const float scene_stability = m_FrameTracker.stability();
+		const float scene_stability = m_FrameTracker.frame_stability();
 		const float suppression_threshold = m_Settings.suppression_threshold;
 		const float saturation_threshold = m_Settings.suppression_saturation_limit;
 

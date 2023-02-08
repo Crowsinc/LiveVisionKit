@@ -25,8 +25,6 @@
 namespace lvk
 {
 
-	// TODO: FrameTracker settings are hidden, perhaps make it configurable?
-
 	struct StabilizationFilterSettings
 	{
 		size_t smoothing_frames = 10;
@@ -40,7 +38,8 @@ namespace lvk
 		float suppression_saturation_limit = 0.7f;
 		float suppression_smoothing_rate = 0.05f;
 
-		MotionModel motion_model = MotionModel::DYNAMIC;
+        // TODO: organize better
+        FrameTrackerSettings tracking_settings = {.motion_resolution = {200,200}};
 	};
 
 
@@ -49,7 +48,6 @@ namespace lvk
 	public:
 
 		explicit StabilizationFilter(const StabilizationFilterSettings& settings = {});
-
 
 		void configure(const StabilizationFilterSettings& settings) override;
 
