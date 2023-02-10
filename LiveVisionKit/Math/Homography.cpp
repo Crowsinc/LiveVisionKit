@@ -28,51 +28,8 @@ namespace lvk
         const std::vector<cv::Point2f>& tracked_points,
         const std::vector<cv::Point2f>& matched_points,
         std::vector<uint8_t>& inlier_status,
-        Homography::EstimationParams sampling_method,
-        bool force_rigid_affine
-    )
-    {
-        cv::Mat estimate;
-        if(force_rigid_affine)
-        {
-            estimate = cv::estimateAffinePartial2D(
-                tracked_points,
-                matched_points,
-                inlier_status,
-                sampling_method.method,
-                sampling_method.error_threshold,
-                sampling_method.max_iterations,
-                sampling_method.confidence,
-                sampling_method.refine_iterations
-            );
-        }
-        else
-        {
-            estimate = cv::findHomography(
-                tracked_points,
-                matched_points,
-                sampling_method.method,
-                sampling_method.error_threshold,
-                inlier_status,
-                static_cast<int>(sampling_method.max_iterations),
-                sampling_method.confidence
-            );
-        }
-
-        if(estimate.empty())
-            return std::nullopt;
-
-        return force_rigid_affine ? Homography::FromAffineMatrix(estimate)
-                                  : Homography::WrapMatrix(estimate);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    std::optional<Homography> Homography::Estimate(
-        const std::vector<cv::Point2f>& tracked_points,
-        const std::vector<cv::Point2f>& matched_points,
-        std::vector<uint8_t>& inlier_status,
-        cv::UsacParams sampling_method
+        cv::UsacParams sampling_method,
+        bool force_affine
     )
     {
         LVK_ASSERT(tracked_points.size() == matched_points.size());
@@ -81,17 +38,29 @@ namespace lvk
         if(tracked_points.size() < 4)
             return std::nullopt;
 
-        cv::Mat estimate = cv::findHomography(
-            tracked_points,
-            matched_points,
-            inlier_status,
-            sampling_method
-        );
+        cv::Mat estimate;
+        if(force_affine)
+        {
+            estimate = cv::estimateAffine2D(
+                tracked_points,
+                matched_points,
+                inlier_status,
+                sampling_method
+            );
 
-        if(estimate.empty())
-            return std::nullopt;
+            return FromAffineMatrix(estimate);
+        }
+        else
+        {
+            estimate = cv::findHomography(
+                tracked_points,
+                matched_points,
+                inlier_status,
+                sampling_method
+            );
 
-        return Homography::WrapMatrix(estimate);
+            return WrapMatrix(estimate);
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------

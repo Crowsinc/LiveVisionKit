@@ -27,32 +27,13 @@ namespace lvk
 	{
 	public:
 
-        // TODO: rework estimation
-
-        struct EstimationParams
-        {
-            int method = cv::RANSAC;
-            double confidence = 0.99;
-            double error_threshold = 4;
-            size_t max_iterations = 2000;
-            size_t refine_iterations = 10;
-        };
-
         static std::optional<Homography> Estimate(
             const std::vector<cv::Point2f>& tracked_points,
             const std::vector<cv::Point2f>& matched_points,
             std::vector<uint8_t>& inlier_status,
-            EstimationParams sampling_method,
-            bool force_rigid_affine = false
+            cv::UsacParams sampling_method,
+            bool force_affine = false
         );
-
-        static std::optional<Homography> Estimate(
-            const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points,
-            std::vector<uint8_t>& inlier_status,
-            cv::UsacParams sampling_method
-        );
-
 
 		static Homography Zero();
 
