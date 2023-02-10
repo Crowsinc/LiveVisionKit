@@ -272,18 +272,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField WarpField::smoothen(const int size) const
-    {
-        LVK_ASSERT(size % 2 == 1);
-        LVK_ASSERT(size >= 3);
-
-        cv::Mat smooth_field;
-        cv::stackBlur(m_VelocityField, smooth_field, cv::Size(size, size));
-        return WarpField(std::move(smooth_field));
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     // Sample the warping velocity of the field at the given position.
     cv::Point2f WarpField::sample(const cv::Point2f& position) const
     {
@@ -365,6 +353,7 @@ namespace lvk
 
     void WarpField::draw(cv::UMat& dst, const float motion_scaling) const
     {
+
         const cv::Size2f frame_scaling(
             static_cast<float>(dst.cols) / static_cast<float>(m_VelocityField.cols - 1),
             static_cast<float>(dst.rows) / static_cast<float>(m_VelocityField.rows - 1)
@@ -397,12 +386,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::warp(const cv::UMat& src, cv::UMat& dst) const
+    void WarpField::warp(const cv::UMat& src, cv::UMat& dst, const bool smoothing) const
     {
-        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-        thread_local cv::UMat warp_map(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-        // If we have a minimum size field, we can handle this as a Homography
+        // If we have a minimum size field, we can handle this as a Homography.
         if(m_VelocityField.cols == 2 && m_VelocityField.rows == 2)
         {
             const auto width = static_cast<float>(src.cols);
@@ -427,7 +413,7 @@ namespace lvk
                 cv::getPerspectiveTransform(destination.data(), source.data()),
                 src.size(),
                 cv::WARP_INVERSE_MAP,
-                cv::BORDER_REFLECT
+                cv::BORDER_CONSTANT
             );
             return;
         }
@@ -435,11 +421,24 @@ namespace lvk
         // Upload the velocity field to the staging buffer and resize it to
         // match the source input. We then need to add the velocities onto
         // an identity field in order to create the final warp locations.
+        // If the smoothing option is set, perform a 3x3 Gaussian on the
+        // velocity field to ensure that the field is spatially continous.
+
+        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        thread_local cv::UMat warp_map(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
         m_VelocityField.copyTo(staging_buffer);
-        cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+        if(smoothing)
+        {
+            thread_local cv::UMat smooth_field(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+            cv::boxFilter(staging_buffer, smooth_field, -1, cv::Size(3, 3));
+            cv::resize(smooth_field, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+        }
+        else cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+
         cv::add(warp_map, view_identity_field(src.size()), warp_map);
-        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_REFLECT);
+        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

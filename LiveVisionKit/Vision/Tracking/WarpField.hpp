@@ -75,8 +75,6 @@ namespace lvk
 
         void translate_by(const cv::Vec2f& amount);
 
-        WarpField smoothen(const int size) const;
-
 
         cv::Point2f sample(const cv::Point2f& position) const;
 
@@ -85,7 +83,7 @@ namespace lvk
 
         void draw(cv::UMat& dst, const float motion_scaling) const;
 
-        void warp(const cv::UMat& src, cv::UMat& dst) const;
+        void warp(const cv::UMat& src, cv::UMat& dst, const bool smoothing = true) const;
 
 
         WarpField& operator=(WarpField&& other) noexcept;
