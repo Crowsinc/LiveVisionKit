@@ -41,11 +41,19 @@ namespace lvk
         cv::Mat estimate;
         if(force_affine)
         {
-            estimate = cv::estimateAffine2D(
+            // NOTE: we don't actually use the USAC based affine
+            // estimator because it introduces too much skew.
+            // Instead, we use the rigid transform estimator
+            // and propagate any relevant usac params to it.
+            estimate = cv::estimateAffinePartial2D(
                 tracked_points,
                 matched_points,
                 inlier_status,
-                sampling_method
+                (sampling_method.score == cv::SCORE_METHOD_LMEDS) ? cv::LMEDS : cv::RANSAC,
+                sampling_method.threshold,
+                sampling_method.maxIterations,
+                sampling_method.confidence,
+                sampling_method.loIterations
             );
 
             return FromAffineMatrix(estimate);
