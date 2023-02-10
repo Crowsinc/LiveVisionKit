@@ -152,28 +152,17 @@ namespace lvk
 
 
         // NOTE: We must have at least 4 points here.
+        // NOTE: We force estimation of a affine homography if we do
+        // not have good tracking point distribution, in order to avoid
+        // creating global distortion based on dominant local motion.
         std::optional<Homography> motion;
-        if(m_DistributionQuality < GOOD_DISTRIBUTION_QUALITY)
-        {
-            // Use an affine transform if we have bad tracker distribution.
-            // This is required to avoid distortions from non-global motion.
-            motion = Homography::Estimate(
-                m_TrackedPoints,
-                m_MatchedPoints,
-                m_InlierStatus,
-                m_USACParams,
-                true
-            );
-        }
-        else
-        {
-            motion = Homography::Estimate(
-                m_TrackedPoints,
-                m_MatchedPoints,
-                m_InlierStatus,
-                m_USACParams
-            );
-        }
+        motion = Homography::Estimate(
+            m_TrackedPoints,
+            m_MatchedPoints,
+            m_InlierStatus,
+            m_USACParams,
+            m_DistributionQuality < GOOD_DISTRIBUTION_QUALITY
+        );
 
         // NOTE: We only propagate inlier points to  the GridDetector to
         // help ensure consistency between subsequent motion estimations.
