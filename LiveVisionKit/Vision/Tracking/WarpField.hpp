@@ -75,6 +75,8 @@ namespace lvk
 
         void translate_by(const cv::Vec2f& amount);
 
+        WarpField smoothen(const int size) const;
+
 
         cv::Point2f sample(const cv::Point2f& position) const;
 

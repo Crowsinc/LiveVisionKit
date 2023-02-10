@@ -136,24 +136,12 @@ namespace lvk
             motion_accumulator = std::move(submotion_accumulator);
         }
 
-        cv::Mat raw_motion_field(field_size, CV_32FC2);
-        raw_motion_field.forEach<cv::Point2f>([&](cv::Point2f& warp_motion, const int position[]){
+        cv::Mat warp_velocity_field(field_size, CV_32FC2);
+        warp_velocity_field.forEach<cv::Point2f>([&](cv::Point2f& warp_motion, const int position[]){
             warp_motion = motion_accumulator.at(SpatialKey(position[1], position[0]));
         });
 
-        if(field_size.width >= 3 && field_size.height >= 3)
-        {
-            cv::Mat filtered_motion_field(field_size, CV_32FC2);
-            cv::stackBlur(
-                raw_motion_field,
-                filtered_motion_field,
-                cv::Size(
-                    round_even(field_size.width) - 1,
-                    round_even(field_size.height) - 1
-                )
-            );
-            return WarpField(std::move(filtered_motion_field));
-        } else return WarpField(std::move(raw_motion_field));
+        return WarpField(std::move(warp_velocity_field));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -280,6 +268,18 @@ namespace lvk
             source_point.x += amount[0];
             source_point.y += amount[1];
         });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    WarpField WarpField::smoothen(const int size) const
+    {
+        LVK_ASSERT(size % 2 == 1);
+        LVK_ASSERT(size >= 3);
+
+        cv::Mat smooth_field;
+        cv::stackBlur(m_VelocityField, smooth_field, cv::Size(size, size));
+        return WarpField(std::move(smooth_field));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
