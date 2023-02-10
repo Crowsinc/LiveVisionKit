@@ -44,15 +44,6 @@ namespace lvk
 			0.0f, -0.5f,  0.0f
 		});
 
-		// Use MAGSAC for its threshold robustness.
-		m_USACParams.sampler = cv::SAMPLING_UNIFORM;
-		m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
-		m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
-		m_USACParams.maxIterations = 100;
-		m_USACParams.confidence = 0.99;
-		m_USACParams.loIterations = 10;
-		m_USACParams.loSampleSize = 20;
-		m_USACParams.threshold = 4;
 
 		restart();
 	}
@@ -67,6 +58,34 @@ namespace lvk
         m_MatchedPoints.reserve(settings.detector.feature_capacity());
         m_InlierStatus.reserve(settings.detector.feature_capacity());
         m_MatchStatus.reserve(settings.detector.feature_capacity());
+
+        // If we are tracking motion with a resolution of 2x2 (Homography)
+        // then tighten up the homography estimation parameters for global
+        // motion. Otherwise, loosen them up to allow local motion through.
+        if(settings.motion_resolution == WarpField::MinimumSize)
+        {
+            // For accurate Homography estimation
+            m_USACParams.sampler = cv::SAMPLING_UNIFORM;
+            m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
+            m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
+            m_USACParams.maxIterations = 100;
+            m_USACParams.confidence = 0.99;
+            m_USACParams.loIterations = 10;
+            m_USACParams.loSampleSize = 20;
+            m_USACParams.threshold = 4;
+        }
+        else
+        {
+            // For major outlier rejection
+            m_USACParams.sampler = cv::SAMPLING_UNIFORM;
+            m_USACParams.score = cv::SCORE_METHOD_MSAC;
+            m_USACParams.loMethod = cv::LOCAL_OPTIM_INNER_LO;
+            m_USACParams.maxIterations = 100;
+            m_USACParams.confidence = 0.99;
+            m_USACParams.loIterations = 10;
+            m_USACParams.loSampleSize = 20;
+            m_USACParams.threshold = 20;
+        }
 
         m_Settings = settings;
     }
@@ -137,12 +156,12 @@ namespace lvk
         if(m_DistributionQuality < GOOD_DISTRIBUTION_QUALITY)
         {
             // Use an affine transform if we have bad tracker distribution.
-            // This is required to avoid possible distortions from non-global motion.
+            // This is required to avoid distortions from non-global motion.
             motion = Homography::Estimate(
                 m_TrackedPoints,
                 m_MatchedPoints,
                 m_InlierStatus,
-                {},
+                m_USACParams,
                 true
             );
         }
