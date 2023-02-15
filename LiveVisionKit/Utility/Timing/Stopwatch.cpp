@@ -15,8 +15,9 @@
 // 	  **********************************************************************
 
 #include "Stopwatch.hpp"
-
 #include "Diagnostics/Directives.hpp"
+
+#include <optional>
 
 namespace lvk
 {
