@@ -32,8 +32,11 @@ namespace lvk
 	struct PathStabilizerSettings
 	{
 		size_t smoothing_frames = 10;
-		float correction_margin = 0.1f;
+        float correction_margin = 0.1f;
 		bool adaptive_margins = true; // TODO: implement
+
+        float path_drift_rate = 0.25f;
+        float path_drift_limit = 0.5f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>
@@ -64,21 +67,12 @@ namespace lvk
 
         void resize_fields(const cv::Size& size);
 
-        // TODO: re-implement for WarpFields.
-		static Homography clamp_velocity(
-			const Homography& velocity,
-			const cv::Size& frame_size,
-			const cv::Rect& focus_area
-		);
-
 	private:
-		SlidingBuffer<Frame> m_FrameQueue;
-		SlidingBuffer<WarpField> m_Trajectory;
-		SlidingBuffer<float> m_SmoothingFilter;
+        cv::Rect m_Margins{0,0,0,0};
 
-		Frame m_NullFrame;
-		cv::Rect m_Margins{0, 0, 0, 0};
-		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        Frame m_NullFrame;
+		SlidingBuffer<Frame> m_FrameQueue;
+		SlidingBuffer<WarpField> m_Path, m_Trace;
 	};
 
 }
