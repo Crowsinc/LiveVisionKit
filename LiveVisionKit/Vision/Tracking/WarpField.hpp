@@ -18,6 +18,7 @@
 #pragma once
 
 #include <optional>
+#include <functional>
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
@@ -89,6 +90,8 @@ namespace lvk
         void merge_with(const WarpField& other, const float weight = 1.0f);
 
         void merge_with(const WarpField& other, const float weight_1, const float weight_2, const float offset = 0.0f);
+
+        void modify(const std::function<void(cv::Point2f&, cv::Point)>& operation);
 
 
         void draw(cv::UMat& dst, const float motion_scaling) const;

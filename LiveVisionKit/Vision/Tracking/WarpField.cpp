@@ -358,11 +358,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    // TODO: does this actually have any use?
     void WarpField::simplify(const size_t iterations, const float step)
     {
         LVK_ASSERT(between_strict(step, 0.0f, 1.0f));
-
-        constexpr float g = 0.8f; // TODO: make named parameter
         for(size_t i = 0; i < iterations; i++)
         {
             cv::Size2f max_magnitude(0.0f, 0.0f);
@@ -407,6 +406,15 @@ namespace lvk
     void WarpField::merge_with(const WarpField& other, const float weight_1, const float weight_2, const float offset)
     {
         cv::addWeighted(m_VelocityField, weight_1, other.m_VelocityField, weight_2, offset, m_VelocityField);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::modify(const std::function<void(cv::Point2f&, cv::Point)>& operation)
+    {
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& v, const int position[]){
+            operation(v, {position[1], position[0]});
+        });
     }
 
 //---------------------------------------------------------------------------------------------------------------------
