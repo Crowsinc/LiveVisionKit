@@ -39,7 +39,7 @@ namespace lvk
 		float suppression_smoothing_rate = 0.05f;
 
         // TODO: organize better
-        FrameTrackerSettings tracking_settings = {.motion_resolution = {200,200}};
+        FrameTrackerSettings tracking_settings = {.motion_resolution = {8,8}};
 	};
 
 
