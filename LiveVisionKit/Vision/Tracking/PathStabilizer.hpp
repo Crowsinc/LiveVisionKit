@@ -33,7 +33,6 @@ namespace lvk
 	{
 		size_t smoothing_frames = 10;
         float correction_margin = 0.1f;
-		bool adaptive_margins = true; // TODO: implement
 
         float path_drift_rate = 0.25f;
         float path_drift_limit = 0.5f;
@@ -69,6 +68,7 @@ namespace lvk
 
 	private:
         cv::Rect m_Margins{0,0,0,0};
+        float m_MarginWeight = 1.0f;
 
         Frame m_NullFrame;
 		SlidingBuffer<Frame> m_FrameQueue;

@@ -35,7 +35,6 @@ namespace lvk
         LVK_ASSERT(settings.smoothing_frames >= 2);
         LVK_ASSERT(settings.smoothing_frames % 2 == 0);
         LVK_ASSERT(between_strict(settings.correction_margin, 0.0f, 1.0f));
-        LVK_ASSERT(settings.adaptive_margins == true && "THIS IS UNIMPLEMENTED!"); // TODO: implement & remove
         LVK_ASSERT(between(settings.path_drift_limit, 0.0f, 1.0f));
         LVK_ASSERT(settings.path_drift_rate > 0.0f);
 
