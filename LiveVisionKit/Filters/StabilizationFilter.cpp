@@ -114,7 +114,7 @@ namespace lvk
         }
         else m_Stabilizer.stabilize(input, frame_motion, output); // TODO: suppress(frame_motion));
 
-        if(m_Settings.crop_output)
+        if(m_Settings.crop_output && !output.is_empty())
             output.data = output.data(m_Stabilizer.stable_region());
 
         if(debug) cv::ocl::finish();
