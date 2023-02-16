@@ -63,22 +63,32 @@ namespace lvk
         int rows() const;
 
 
+        cv::Mat& data();
+
         const cv::Mat& data() const;
+
+        cv::Point2f trace(const cv::Point2f& position) const;
+
+        cv::Point2f sample(const cv::Point2f& position) const;
 
 
         void set_identity();
 
         void set_to(const Homography& warp, const cv::Size2f& scale);
 
+        void translate_by(const cv::Vec2f& amount);
 
         // TODO: add more linear and non-linear transformation operations.
 
-        void translate_by(const cv::Vec2f& amount);
+        void clamp(const cv::Size2f& magnitude);
 
+        void clamp(const cv::Size2f& min, const cv::Size2f& max);
 
-        cv::Point2f sample(const cv::Point2f& position) const;
+        void simplify(const size_t iterations, const float step = 0.8f);
 
-        cv::Point2f trace(const cv::Point2f& position) const;
+        void merge_with(const WarpField& other, const float weight = 1.0f);
+
+        void merge_with(const WarpField& other, const float weight_1, const float weight_2, const float offset = 0.0f);
 
 
         void draw(cv::UMat& dst, const float motion_scaling) const;
@@ -117,7 +127,6 @@ namespace lvk
 
     WarpField operator-(const WarpField& left, const WarpField& right);
 
-
     WarpField operator*(const WarpField& field, const float scaling);
 
     WarpField operator*(const float scaling, const WarpField& field);
@@ -125,7 +134,6 @@ namespace lvk
     WarpField operator*(const WarpField& field, const cv::Vec2f& scaling);
 
     WarpField operator*(const cv::Vec2f& scaling, const WarpField& field);
-
 
     WarpField operator/(const WarpField& field, const float scaling);
 

@@ -229,45 +229,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const cv::Mat& WarpField::data() const
+    cv::Mat& WarpField::data()
     {
         return m_VelocityField;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_identity()
+    const cv::Mat& WarpField::data() const
     {
-        m_VelocityField.setTo(cv::Vec2f::all(0.0f));
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::set_to(const Homography& warp, const cv::Size2f& scale)
-    {
-        const cv::Size2f point_scaling(
-            scale.width / static_cast<float>(m_VelocityField.cols - 1),
-            scale.height / static_cast<float>(m_VelocityField.rows - 1)
-        );
-
-        const auto inverse_warp = warp.invert();
-        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& source_point, const int position[]){
-            const cv::Point2f sample_point(
-                static_cast<float>(position[1]) * point_scaling.width,
-                static_cast<float>(position[0]) * point_scaling.height
-            );
-            source_point = (inverse_warp * sample_point) - sample_point;
-        });
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::translate_by(const cv::Vec2f& amount)
-    {
-        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& source_point, const int position[]){
-            source_point.x += amount[0];
-            source_point.y += amount[1];
-        });
+        return m_VelocityField;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -336,9 +307,9 @@ namespace lvk
         const float inv_y_unit = 1.0f - y_unit;
 
         return m_VelocityField.at<cv::Point2f>(top_left) * inv_x_unit * inv_y_unit
-             + m_VelocityField.at<cv::Point2f>(top_right) * x_unit * inv_y_unit
-             + m_VelocityField.at<cv::Point2f>(bot_left) * inv_x_unit * y_unit
-             + m_VelocityField.at<cv::Point2f>(bot_right) * x_unit * y_unit;
+               + m_VelocityField.at<cv::Point2f>(top_right) * x_unit * inv_y_unit
+               + m_VelocityField.at<cv::Point2f>(bot_left) * inv_x_unit * y_unit
+               + m_VelocityField.at<cv::Point2f>(bot_right) * x_unit * y_unit;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -347,6 +318,95 @@ namespace lvk
     cv::Point2f WarpField::trace(const cv::Point2f& position) const
     {
         return sample(position) + position;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::set_identity()
+    {
+        m_VelocityField.setTo(cv::Vec2f::all(0.0f));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::set_to(const Homography& warp, const cv::Size2f& scale)
+    {
+        const cv::Size2f point_scaling(
+            scale.width / static_cast<float>(m_VelocityField.cols - 1),
+            scale.height / static_cast<float>(m_VelocityField.rows - 1)
+        );
+
+        const auto inverse_warp = warp.invert();
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& source_point, const int position[]){
+            const cv::Point2f sample_point(
+                static_cast<float>(position[1]) * point_scaling.width,
+                static_cast<float>(position[0]) * point_scaling.height
+            );
+            source_point = (inverse_warp * sample_point) - sample_point;
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::translate_by(const cv::Vec2f& amount)
+    {
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& warp_velocity, const int position[]){
+            warp_velocity.x += amount[0];
+            warp_velocity.y += amount[1];
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::simplify(const size_t iterations, const float step)
+    {
+        LVK_ASSERT(between_strict(step, 0.0f, 1.0f));
+
+        constexpr float g = 0.8f; // TODO: make named parameter
+        for(size_t i = 0; i < iterations; i++)
+        {
+            cv::Size2f max_magnitude(0.0f, 0.0f);
+            m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& warp, const int position[]){
+                max_magnitude.width = std::max(max_magnitude.width, std::abs(warp.x));
+                max_magnitude.height = std::max(max_magnitude.height, std::abs(warp.y));
+            });
+
+            clamp(max_magnitude * step);
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::clamp(const cv::Size2f& magnitude)
+    {
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& warp_velocity, const int position[]){
+            warp_velocity.x = std::clamp(warp_velocity.x, -magnitude.width, magnitude.width);
+            warp_velocity.y = std::clamp(warp_velocity.y, -magnitude.height, magnitude.height);
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::clamp(const cv::Size2f& min, const cv::Size2f& max)
+    {
+        m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& warp_velocity, const int position[]){
+            warp_velocity.x = std::clamp(warp_velocity.x, min.width, max.width);
+            warp_velocity.y = std::clamp(warp_velocity.y, min.height, max.height);
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::merge_with(const WarpField& other, const float weight)
+    {
+        cv::scaleAdd(other.m_VelocityField, weight, m_VelocityField, m_VelocityField);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::merge_with(const WarpField& other, const float weight_1, const float weight_2, const float offset)
+    {
+        cv::addWeighted(m_VelocityField, weight_1, other.m_VelocityField, weight_2, offset, m_VelocityField);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
