@@ -3,7 +3,7 @@
 project(lvk-core LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(${PROJECT_NAME} Structures/SpatialMap.hpp Structures/SpatialMap.tpp Vision/Tracking/WarpField.cpp Vision/Tracking/WarpField.hpp)
+add_library(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX ${LVK_DEBUG_POSTFIX})
 set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "LiveVisionKit")
 set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
@@ -95,6 +95,8 @@ target_sources(
         Math/Logic.tpp
         Math/Math.hpp
         Math/Math.tpp
+        Math/VirtualGrid.hpp
+        Math/VirtualGrid.cpp
 )
 
 # STRUCTURE SOURCES
@@ -103,6 +105,8 @@ target_sources(
     PRIVATE
         Structures/SlidingBuffer.hpp
         Structures/SlidingBuffer.tpp
+        Structures/SpatialMap.hpp
+        Structures/SpatialMap.tpp
 )
 
 # UTILITY SOURCES
@@ -137,4 +141,6 @@ target_sources(
         Vision/Tracking/GridDetector.hpp
         Vision/Tracking/PathStabilizer.cpp
         Vision/Tracking/PathStabilizer.hpp
+        Vision/Tracking/WarpField.hpp
+        Vision/Tracking/WarpField.cpp
 )
