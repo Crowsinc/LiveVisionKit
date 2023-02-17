@@ -31,7 +31,6 @@ namespace lvk
 
         VirtualGrid(const cv::Size& size, const cv::Rect2f& alignment);
 
-
         VirtualGrid(const VirtualGrid& grid);
 
 
