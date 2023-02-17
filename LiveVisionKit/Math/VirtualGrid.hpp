@@ -39,6 +39,11 @@ namespace lvk
 
         const cv::Size& size() const;
 
+        int cols() const;
+
+        int rows() const;
+
+
         void align(const cv::Rect2f& region);
 
         const cv::Rect2f& alignment() const;
