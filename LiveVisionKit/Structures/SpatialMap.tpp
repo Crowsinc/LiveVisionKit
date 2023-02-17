@@ -33,9 +33,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline SpatialMap<T>::SpatialMap(const cv::Size resolution)
-        : m_KeySize(1,1),
-          m_InputRegion(cv::Point(0,0), resolution)
+    inline SpatialMap<T>::SpatialMap(const cv::Size& resolution)
+        : m_VirtualGrid(resolution)
     {
         rescale(resolution);
     }
@@ -43,7 +42,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline SpatialMap<T>::SpatialMap(const cv::Size resolution, const cv::Rect& input_region)
+    inline SpatialMap<T>::SpatialMap(const cv::Size& resolution, const cv::Rect& input_region)
     {
         rescale(resolution);
         align(input_region);
@@ -53,22 +52,18 @@ namespace lvk
 
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const SpatialMap<T>&& other) noexcept
-        : m_InputRegion(other.m_InputRegion),
-          m_MapResolution(other.m_MapResolution),
-          m_KeySize(other.m_KeySize),
-          m_Map(std::move(other.m_Map)),
-          m_Data(std::move(other.m_Data))
+        : m_Map(std::move(other.m_Map)),
+          m_Data(std::move(other.m_Data)),
+          m_VirtualGrid(other.m_VirtualGrid)
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const SpatialMap<T>& other)
-        : m_InputRegion(other.m_InputRegion),
-          m_MapResolution(other.m_MapResolution),
-          m_KeySize(other.m_KeySize),
-          m_Map(other.m_Map),
-          m_Data(other.m_Data)
+        : m_Map(other.m_Map),
+          m_Data(other.m_Data),
+          m_VirtualGrid(other.m_VirtualGrid)
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -76,12 +71,9 @@ namespace lvk
     template<typename T>
     SpatialMap<T>& SpatialMap<T>::operator=(SpatialMap&& other) noexcept
     {
-        m_Data = std::move(other.m_Data);
         m_Map = std::move(other.m_Map);
-
-        m_KeySize = other.m_KeySize;
-        m_InputRegion = other.m_InputRegion;
-        m_MapResolution = other.m_MapResolution;
+        m_Data = std::move(other.m_Data);
+        m_VirtualGrid = other.m_VirtualGrid;
 
         return *this;
     }
@@ -93,10 +85,7 @@ namespace lvk
     {
         m_Map = other.m_Map;
         m_Data = other.m_Data;
-
-        m_KeySize = other.m_KeySize;
-        m_InputRegion = other.m_InputRegion;
-        m_MapResolution = other.m_MapResolution;
+        m_VirtualGrid = other.m_VirtualGrid;
 
         return *this;
     }
@@ -104,17 +93,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::rescale(const cv::Size resolution)
+    inline void SpatialMap<T>::rescale(const cv::Size& resolution)
     {
         LVK_ASSERT(resolution.width >= 1);
         LVK_ASSERT(resolution.height >= 1);
 
-        if(resolution != m_MapResolution)
+        if(resolution != m_VirtualGrid.size() || m_Map.empty())
         {
-            m_MapResolution = resolution;
+            m_VirtualGrid.resize(resolution);
 
             m_Map.clear();
-            m_Map.resize(m_MapResolution.area(), m_EmptySymbol);
+            m_Map.resize(resolution.area(), m_EmptySymbol);
             m_Data.reserve(std::min(m_Map.size(), MAX_DATA_RESERVE));
 
             // Re-map all the elements which still fit in the new resolution.
@@ -123,7 +112,7 @@ namespace lvk
                 // If the key is no longer valid erase the item,
                 // otherwise set its data link in the new map.
                 const auto& key = m_Data[i].first;
-                if(!is_key_valid(key))
+                if(!m_VirtualGrid.test_key(key))
                 {
                     fast_erase(m_Data, i);
                     if(i > 0) i--;
@@ -139,7 +128,7 @@ namespace lvk
     template<typename T>
     inline const cv::Size& SpatialMap<T>::resolution() const
     {
-        return m_MapResolution;
+        return m_VirtualGrid.size();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -153,25 +142,25 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    size_t SpatialMap<T>::rows() const
-    {
-        return static_cast<size_t>(m_MapResolution.height);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    size_t SpatialMap<T>::cols() const
-    {
-        return static_cast<size_t>(m_MapResolution.width);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
     inline size_t SpatialMap<T>::size() const
     {
         return m_Data.size();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    int SpatialMap<T>::rows() const
+    {
+        return m_VirtualGrid.rows();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    int SpatialMap<T>::cols() const
+    {
+        return m_VirtualGrid.cols();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -193,25 +182,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::align(const cv::Rect& input_region)
+    inline void SpatialMap<T>::align(const cv::Rect2f& input_region)
     {
-        // TODO: double-check the maths of this pre-condition.
-        // LVK_ASSERT(input_region.width >= m_MapResolution.width);
-        // LVK_ASSERT(input_region.height >= m_MapResolution.height);
-
-        m_InputRegion = input_region;
-
-        // Spatial size of each key within the input region.
-        m_KeySize.width = static_cast<float>(m_InputRegion.width) / static_cast<float>(m_MapResolution.width);
-        m_KeySize.height = static_cast<float>(m_InputRegion.height) / static_cast<float>(m_MapResolution.height);
+        m_VirtualGrid.align(input_region);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const cv::Rect& SpatialMap<T>::alignment() const
+    inline const cv::Rect2f& SpatialMap<T>::alignment() const
     {
-        return m_InputRegion;
+        return m_VirtualGrid.alignment();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -219,15 +200,15 @@ namespace lvk
     template<typename T>
     inline const cv::Size2f& SpatialMap<T>::key_size() const
     {
-        return m_KeySize;
+        return m_VirtualGrid.key_size();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SpatialMap<T>::place_at(const SpatialKey key, const T& item)
+    inline T& SpatialMap<T>::place_at(const SpatialKey& key, const T& item)
     {
-        LVK_ASSERT(is_key_valid(key));
+        LVK_ASSERT(m_VirtualGrid.test_key(key));
 
         // If the key is empty, generate a new pointer,
         // otherwise we just replace the existing item.
@@ -250,9 +231,9 @@ namespace lvk
 
     template<typename T>
     template<typename... Args>
-    inline T& SpatialMap<T>::emplace_at(const SpatialKey key, Args... args)
+    inline T& SpatialMap<T>::emplace_at(const SpatialKey& key, Args... args)
     {
-        LVK_ASSERT(is_key_valid(key));
+        LVK_ASSERT(m_VirtualGrid.test_key(key));
 
         // If the key is empty, generate a new pointer,
         // otherwise we just replace the existing item.
@@ -339,7 +320,7 @@ namespace lvk
             m_Map[index] = index;
 
             auto& stored_data = m_Data[index];
-            stored_data.first = map_index_to_key(index, m_MapResolution);
+            stored_data.first = m_VirtualGrid.index_to_key(index);
             stored_data.second = value;
         }
 
@@ -348,7 +329,7 @@ namespace lvk
             m_Map[index] = index;
 
             m_Data.emplace_back(
-                map_index_to_key(index, m_MapResolution),
+                m_VirtualGrid.index_to_key(index),
                 value
             );
         }
@@ -370,7 +351,7 @@ namespace lvk
             m_Map[index] = index;
 
             auto& stored_data = m_Data[index];
-            stored_data.first = map_index_to_key(index, m_MapResolution);
+            stored_data.first = m_VirtualGrid.index_to_key(index);
             stored_data.second = T{args...};
         }
 
@@ -379,7 +360,7 @@ namespace lvk
             m_Map[index] = index;
 
             m_Data.emplace_back(
-                map_index_to_key(index, m_MapResolution),
+                m_VirtualGrid.index_to_key(index),
                 T{args...}
             );
         }
@@ -396,7 +377,7 @@ namespace lvk
             size_t& data_link = m_Map[index];
             if(is_data_link_empty(data_link))
             {
-                const SpatialKey key = map_index_to_key(index, m_MapResolution);
+                const SpatialKey key = m_VirtualGrid.index_to_key(index);
 
                 data_link = m_Data.size();
                 m_Data.emplace_back(key, value);
@@ -416,7 +397,7 @@ namespace lvk
             size_t& data_link = m_Map[index];
             if(is_data_link_empty(data_link))
             {
-                const SpatialKey key = map_index_to_key(index, m_MapResolution);
+                const SpatialKey key = m_VirtualGrid.index_to_key(index);
 
                 data_link = m_Data.size();
                 m_Data.emplace_back(key, T{args...});
@@ -427,7 +408,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline void SpatialMap<T>::remove(const SpatialKey key)
+    inline void SpatialMap<T>::remove(const SpatialKey& key)
     {
         LVK_ASSERT(contains(key));
 
@@ -456,7 +437,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline bool SpatialMap<T>::try_remove(const SpatialKey key)
+    inline bool SpatialMap<T>::try_remove(const SpatialKey& key)
     {
         if(contains(key))
         {
@@ -479,7 +460,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SpatialMap<T>::at(const SpatialKey key)
+    inline T& SpatialMap<T>::at(const SpatialKey& key)
     {
         LVK_ASSERT(contains(key));
 
@@ -489,7 +470,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SpatialMap<T>::at(const SpatialKey key) const
+    inline const T& SpatialMap<T>::at(const SpatialKey& key) const
     {
         LVK_ASSERT(contains(key));
 
@@ -499,9 +480,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SpatialMap<T>::at_or(const SpatialKey key, T& value)
+    inline T& SpatialMap<T>::at_or(const SpatialKey& key, T& value)
     {
-        LVK_ASSERT(is_key_valid(key));
+        LVK_ASSERT(m_VirtualGrid.test_key(key));
 
         const size_t data_link = fetch_data_link(key);
         return is_data_link_empty(data_link) ? value : m_Data[data_link].second;
@@ -510,9 +491,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SpatialMap<T>::at_or(const SpatialKey key, const T& value) const
+    inline const T& SpatialMap<T>::at_or(const SpatialKey& key, const T& value) const
     {
-        LVK_ASSERT(is_key_valid(key));
+        LVK_ASSERT(m_VirtualGrid.test_key(key));
 
         const size_t data_link = fetch_data_link(key);
         return is_data_link_empty(data_link) ? value : m_Data[data_link].second;
@@ -539,9 +520,7 @@ namespace lvk
     {
         // NOTE: The bottom and right edges of the region are exclusive.
         // That is, spatial indexing starts counting from zero just like arrays.
-        const auto br = m_InputRegion.br();
-        return between<float>(position.x, m_InputRegion.x, br.x - 1)
-            && between<float>(position.y, m_InputRegion.y, br.y - 1);
+        return m_VirtualGrid.test_point(position);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -552,10 +531,7 @@ namespace lvk
     {
         LVK_ASSERT(within_bounds(position));
 
-        return simplify_key(
-            position - cv::Point_<P>(m_InputRegion.x, m_InputRegion.y),
-            m_KeySize
-        );
+        return m_VirtualGrid.key_of(position);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -573,9 +549,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline bool SpatialMap<T>::contains(const SpatialKey key) const
+    inline bool SpatialMap<T>::contains(const SpatialKey& key) const
     {
-        LVK_ASSERT(is_key_valid(key));
+        LVK_ASSERT(m_VirtualGrid.test_key(key));
 
         return !is_data_link_empty(fetch_data_link(key));
     }
@@ -612,18 +588,13 @@ namespace lvk
         // its inverse. If the map resolution is less than or equal to 4x4, then this technique will
         // not be meaningful so we instead approximate it by taking the map load.
 
-        constexpr size_t sectors = 4;
+        constexpr int sectors = 4;
 
-        if(m_MapResolution.width <= sectors || m_MapResolution.height <= sectors)
+        if(cols() <= sectors || rows() <= sectors)
             return static_cast<double>(m_Data.size()) / static_cast<double>(m_Map.size());
 
-        const cv::Size distribution_resolution(sectors, sectors);
+        const VirtualGrid sector_grid(cv::Size(sectors,  sectors), cv::Rect(0, 0, cols(), rows()));
         std::array<size_t, sectors * sectors> sector_buckets{};
-
-        const cv::Size2f sector_size(
-            static_cast<float>(m_MapResolution.width) / static_cast<float>(sectors),
-            static_cast<float>(m_MapResolution.height) / static_cast<float>(sectors)
-        );
 
         const auto ideal_distribution = static_cast<size_t>(
             static_cast<double>(m_Data.size()) / static_cast<double>(sector_buckets.size())
@@ -632,10 +603,7 @@ namespace lvk
         double excess = 0.0;
         for(const auto& [key, data] : m_Data)
         {
-            const size_t index = map_key_to_index(
-                simplify_key(key, sector_size), distribution_resolution
-            );
-
+            const size_t index = sector_grid.key_to_index(sector_grid.key_of(key));
             if(++sector_buckets[index] > ideal_distribution)
                 excess += 1.0;
         }
@@ -695,62 +663,17 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    template<typename P>
-    inline SpatialKey SpatialMap<T>::simplify_key(
-        const cv::Point_<P>& point,
-        const cv::Size2f& key_size
-    )
+    inline size_t& SpatialMap<T>::fetch_data_link(const SpatialKey& key)
     {
-        return SpatialKey(
-            static_cast<size_t>(static_cast<float>(point.x) / key_size.width),
-            static_cast<size_t>(static_cast<float>(point.y) / key_size.height)
-        );
+        return  m_Map[m_VirtualGrid.key_to_index(key)];
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline size_t SpatialMap<T>::map_key_to_index(
-        const SpatialKey key,
-        const cv::Size resolution
-    )
+    inline size_t SpatialMap<T>::fetch_data_link(const SpatialKey& key) const
     {
-        return index_2d(key.x, key.y, resolution.width);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline SpatialKey SpatialMap<T>::map_index_to_key(
-        const size_t index,
-        const cv::Size resolution
-    )
-    {
-        return inv_index_2d(index, resolution.width);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline bool SpatialMap<T>::is_key_valid(const SpatialKey key) const
-    {
-        return key.x < m_MapResolution.width && key.y < m_MapResolution.height;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline size_t& SpatialMap<T>::fetch_data_link(const SpatialKey key)
-    {
-        return  m_Map[map_key_to_index(key, m_MapResolution)];
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline size_t SpatialMap<T>::fetch_data_link(const SpatialKey key) const
-    {
-        return  m_Map[map_key_to_index(key, m_MapResolution)];
+        return  m_Map[m_VirtualGrid.key_to_index(key)];
     }
 
 //---------------------------------------------------------------------------------------------------------------------

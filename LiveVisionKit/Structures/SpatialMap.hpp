@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "Math/VirtualGrid.hpp"
+
 #include <opencv2/opencv.hpp>
 #include <optional>
 #include <vector>
@@ -28,8 +30,6 @@ namespace lvk
     // * key = discrete point on the map resolution
     // A position becomes a key once an item has been placed.
 
-    using SpatialKey = cv::Point_<size_t>;
-
     template<typename T>
     class SpatialMap
     {
@@ -38,9 +38,9 @@ namespace lvk
         using const_iterator = std::vector<std::pair<SpatialKey, T>>::const_iterator;
     public:
 
-        explicit SpatialMap(const cv::Size resolution);
+        explicit SpatialMap(const cv::Size& resolution);
 
-        SpatialMap(const cv::Size resolution, const cv::Rect& input_region);
+        SpatialMap(const cv::Size& resolution, const cv::Rect& input_region);
 
         SpatialMap(const SpatialMap&& other) noexcept;
 
@@ -52,34 +52,34 @@ namespace lvk
         SpatialMap& operator=(const SpatialMap& other);
 
 
-        void rescale(const cv::Size resolution);
+        void rescale(const cv::Size& resolution);
 
         const cv::Size& resolution() const;
 
         size_t capacity() const;
 
-        size_t rows() const;
-
-        size_t cols() const;
-
         size_t size() const;
+
+        int rows() const;
+
+        int cols() const;
 
         bool is_full() const;
 
         bool is_empty() const;
 
 
-        void align(const cv::Rect& input_region);
+        void align(const cv::Rect2f& input_region);
 
-        const cv::Rect& alignment() const;
+        const cv::Rect2f& alignment() const;
 
         const cv::Size2f& key_size() const;
 
 
-        T& place_at(const SpatialKey key, const T& item);
+        T& place_at(const SpatialKey& key, const T& item);
 
         template<typename ...Args>
-        T& emplace_at(const SpatialKey key, Args... args);
+        T& emplace_at(const SpatialKey& key, Args... args);
 
 
         template<typename P>
@@ -111,20 +111,20 @@ namespace lvk
 
 
 
-        void remove(const SpatialKey key);
+        void remove(const SpatialKey& key);
 
-        bool try_remove(const SpatialKey key);
+        bool try_remove(const SpatialKey& key);
 
         void clear();
 
 
-        T& at(const SpatialKey key);
+        T& at(const SpatialKey& key);
 
-        const T& at(const SpatialKey key) const;
+        const T& at(const SpatialKey& key) const;
 
-        T& at_or(const SpatialKey key, T& value);
+        T& at_or(const SpatialKey& key, T& value);
 
-        const T& at_or(const SpatialKey key, const T& value) const;
+        const T& at_or(const SpatialKey& key, const T& value) const;
 
         template<typename P>
         T& operator[](const cv::Point_<P>& position);
@@ -139,7 +139,7 @@ namespace lvk
         template<typename P>
         bool within_bounds(const cv::Point_<P>& position) const;
 
-        bool contains(const SpatialKey key) const;
+        bool contains(const SpatialKey& key) const;
 
 
         template<typename P = float>
@@ -162,27 +162,9 @@ namespace lvk
 
     private:
 
-        template<typename P>
-        static SpatialKey simplify_key(
-            const cv::Point_<P>& point,
-            const cv::Size2f& key_size
-        );
+        size_t& fetch_data_link(const SpatialKey& key);
 
-        static size_t map_key_to_index(
-            const SpatialKey key,
-            const cv::Size resolution
-        );
-
-        static SpatialKey map_index_to_key(
-            const size_t index,
-            const cv::Size resolution
-        );
-
-        bool is_key_valid(const SpatialKey key) const;
-
-        size_t& fetch_data_link(const SpatialKey key);
-
-        size_t fetch_data_link(const SpatialKey key) const;
+        size_t fetch_data_link(const SpatialKey& key) const;
 
         bool is_data_link_empty(const size_t link) const;
 
@@ -191,10 +173,7 @@ namespace lvk
     private:
         constexpr static size_t m_EmptySymbol = std::numeric_limits<size_t>::max();
 
-        cv::Size2f m_KeySize;
-        cv::Rect m_InputRegion;
-        cv::Size m_MapResolution;
-
+        VirtualGrid m_VirtualGrid;
         std::vector<size_t> m_Map;
         std::vector<std::pair<SpatialKey, T>> m_Data;
     };
