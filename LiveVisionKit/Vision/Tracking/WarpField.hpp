@@ -33,22 +33,12 @@ namespace lvk
 
         inline static const cv::Size MinimumSize = {2,2};
 
-        // TODO: should this be static only?
-        static WarpField Estimate(
-            const cv::Size& warp_motion,
-            const cv::Rect2f& field_region,
-            const std::vector<cv::Point2f>& origin_points,
-            const std::vector<cv::Point2f>& warped_points,
-            const std::optional<Homography>& motion_hint
-        );
 
         explicit WarpField(const cv::Size& size);
 
-        explicit WarpField(cv::Mat&& velocity_field);
+        explicit WarpField(cv::Mat&& warp_motions);
 
-        explicit WarpField(const cv::Mat& velocity_field);
-
-        WarpField(const Homography& warp, const cv::Size& size, const cv::Size2f& scale);
+        explicit WarpField(const cv::Mat& warp_motions);
 
         WarpField(WarpField&& other) noexcept;
 
@@ -77,9 +67,17 @@ namespace lvk
 
         void set_to(const Homography& warp, const cv::Size2f& scale);
 
-        void translate_by(const cv::Vec2f& amount);
+        void fit_to(
+            const cv::Rect2f& described_region,
+            const std::vector<cv::Point2f>& origin_points,
+            const std::vector<cv::Point2f>& warped_points,
+            const std::optional<Homography>& motion_hint
+        );
+
 
         // TODO: add more linear and non-linear transformation operations.
+
+        void translate_by(const cv::Vec2f& amount);
 
         void clamp(const cv::Size2f& magnitude);
 
@@ -121,6 +119,13 @@ namespace lvk
     private:
 
         static const cv::UMat view_identity_field(const cv::Size& resolution);
+
+        static void resolve_motions(
+            cv::Mat& motion_field,
+            const cv::Rect2f& alignment,
+            const std::vector<cv::Point2f>& origin_points,
+            const std::vector<cv::Point2f>& warped_points
+        );
 
     private:
         cv::Mat m_VelocityField;
