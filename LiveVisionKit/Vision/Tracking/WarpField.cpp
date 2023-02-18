@@ -254,20 +254,14 @@ namespace lvk
             motions.at<cv::Point2f>(1, 1) = (warp_transform * br) - br;
         }
 
-
         cv::Rect2f alignment(region_offset - cv::Point2f(region_size / 2.0f), region_size * 2.0f);
         resolve_motions(motions, alignment, origin_points, warped_points);
 
-        // TODO: document use of primes
-        constexpr std::array<int, 13> submotion_sizes = {
-            3, 7, 13, 19, 29, 37, 53, 71, 97, 137, 163, 181, std::numeric_limits<int>::max()
-        };
-
-        for(const auto& submotion_size : submotion_sizes)
+        while(motions.size() != m_VelocityField.size())
         {
             cv::Mat submotions(
-                std::min(submotion_size, m_VelocityField.rows),
-                std::min(submotion_size, m_VelocityField.cols),
+                std::min(motions.rows * 2, m_VelocityField.rows),
+                std::min(motions.cols * 2, m_VelocityField.cols),
                 CV_32FC2
             );
 
@@ -285,14 +279,9 @@ namespace lvk
             cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
             resolve_motions(submotions, submotion_alignment, origin_points, warped_points);
             motions = std::move(submotions);
-
-            // NOTE: this condition will always occur
-            if(motions.size() == size())
-            {
-                m_VelocityField = std::move(motions);
-                return;
-            }
         }
+
+        m_VelocityField = std::move(motions);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
