@@ -254,8 +254,9 @@ namespace lvk
             motions.at<cv::Point2f>(1, 1) = (warp_transform * br) - br;
         }
 
+        float accumulation_weight = 0.8f;
         cv::Rect2f alignment(region_offset - cv::Point2f(region_size / 2.0f), region_size * 2.0f);
-        resolve_motions(motions, alignment, origin_points, warped_points);
+        accumulate_motions(motions, accumulation_weight, alignment, origin_points, warped_points);
 
         while(motions.size() != m_VelocityField.size())
         {
@@ -276,8 +277,10 @@ namespace lvk
                 static_cast<float>(submotions.rows) * alignment.y
             );
 
+            accumulation_weight /= 2;
             cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
-            resolve_motions(submotions, submotion_alignment, origin_points, warped_points);
+            accumulate_motions(submotions, accumulation_weight, submotion_alignment, origin_points, warped_points);
+
             motions = std::move(submotions);
         }
 
@@ -286,13 +289,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::resolve_motions(
+    void WarpField::accumulate_motions(
         cv::Mat& motion_field,
+        const float motion_weight,
         const cv::Rect2f& alignment,
         const std::vector<cv::Point2f>& origin_points,
         const std::vector<cv::Point2f>& warped_points
     )
     {
+        LVK_ASSERT(motion_weight > 0);
+
         VirtualGrid partitions(motion_field.size(), alignment);
         for(size_t i = 0; i < origin_points.size(); i++)
         {
@@ -306,9 +312,8 @@ namespace lvk
                     static_cast<int>(key->y), static_cast<int>(key->x)
                 );
 
-                constexpr float weight = 0.5f; // TODO: set properly
-                motion_estimate.x += weight * static_cast<float>(sign(warp_motion.x - motion_estimate.x));
-                motion_estimate.y += weight * static_cast<float>(sign(warp_motion.y - motion_estimate.y));
+                motion_estimate.x += motion_weight * static_cast<float>(sign(warp_motion.x - motion_estimate.x));
+                motion_estimate.y += motion_weight * static_cast<float>(sign(warp_motion.y - motion_estimate.y));
             }
         }
     }

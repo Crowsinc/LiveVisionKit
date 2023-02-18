@@ -120,8 +120,9 @@ namespace lvk
 
         static const cv::UMat view_identity_field(const cv::Size& resolution);
 
-        static void resolve_motions(
+        static void accumulate_motions(
             cv::Mat& motion_field,
+            const float motion_weight,
             const cv::Rect2f& alignment,
             const std::vector<cv::Point2f>& origin_points,
             const std::vector<cv::Point2f>& warped_points
