@@ -28,6 +28,8 @@ namespace lvk
     struct CompositeFilterSettings
     {
         std::vector<std::shared_ptr<lvk::VideoFilter>> filter_chain;
+        bool save_outputs = false;
+
         // TODO: add pipelineing option
     };
 
@@ -65,7 +67,7 @@ namespace lvk
     private:
 
         void filter(
-            const Frame& input,
+            Frame&& input,
             Frame& output,
             Stopwatch& timer,
             const bool debug

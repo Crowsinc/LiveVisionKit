@@ -44,6 +44,12 @@ namespace lvk
         );
 
         void process(
+            Frame&& input,
+            Frame& output,
+            bool debug = false
+        );
+
+        void process(
             cv::VideoCapture& input_stream,
             const std::function<bool(VideoFilter&, Frame&)>& callback,
             const bool debug = false
@@ -69,7 +75,7 @@ namespace lvk
     protected:
 
         virtual void filter(
-            const Frame& input,
+            Frame&& input,
             Frame& output,
             Stopwatch& timer,
             const bool debug

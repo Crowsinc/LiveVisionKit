@@ -44,8 +44,21 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void CompositeFilter::configure(const CompositeFilterSettings& settings)
+    {
+        m_Settings = settings;
+
+        m_FilterOutputs.resize(settings.filter_chain.size());
+        m_FilterRunState.resize(settings.filter_chain.size(), true);
+
+        // Reset all filters to their enabled states
+        enable_all_filters();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void CompositeFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
@@ -56,50 +69,37 @@ namespace lvk
         if(debug) cv::ocl::finish();
         timer.start();
 
-        auto& filter_chain = m_Settings.filter_chain;
-
-        // If there are no filters, then this is simply an identity filter
-        if(filter_chain.empty())
-            VideoFilter::process(input, output, debug);
-
-        const Frame* prev_filter_output = &input;
-        for(size_t i = 0; i < filter_chain.size(); i++)
+        Frame& prev_filter_output = input;
+        for(size_t i = 0; i < m_Settings.filter_chain.size(); i++)
         {
-            if(bool filter_enabled = m_FilterRunState[i]; filter_enabled)
+            if(is_filter_enabled(i))
             {
-                const Frame& filter_input = *prev_filter_output;
+                Frame& filter_input = prev_filter_output;
                 Frame& filter_output = m_FilterOutputs[i];
 
-                filter_chain[i]->process(
-                    filter_input,
+                // Exit the chain if a filter input is empty
+                if(filter_input.is_empty())
+                    break;
+
+                m_Settings.filter_chain[i]->process(
+                    std::move(filter_input),
                     filter_output,
                     debug
                 );
-                prev_filter_output = &filter_output;
 
-                // Exit the chain if one filter output nothing
-                if(filter_output.is_empty())
-                    break;
+                // If we are saving all outputs, then we cannot move the output
+                // into the input of the next filter, so we must create a clone.
+                if(m_Settings.save_outputs)
+                    prev_filter_output = filter_output.clone();
+                else
+                    prev_filter_output = std::move(filter_output);
             }
         }
 
-        output.copy(*prev_filter_output);
+        output = std::move(prev_filter_output);
 
         if(debug) cv::ocl::finish();
         timer.stop();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void CompositeFilter::configure(const CompositeFilterSettings& settings)
-    {
-        m_Settings = settings;
-
-        m_FilterOutputs.resize(settings.filter_chain.size());
-        m_FilterRunState.resize(settings.filter_chain.size(), true);
-
-        // Reset all filters to their enabled states
-        enable_all_filters();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

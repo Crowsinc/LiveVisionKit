@@ -44,7 +44,7 @@ namespace lvk
 
         // NOTE: Supports in-place operation.
         void filter(
-            const Frame& input,
+            Frame&& input,
             Frame& output,
             Stopwatch& timer,
             const bool debug

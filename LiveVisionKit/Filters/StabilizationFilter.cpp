@@ -58,8 +58,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    // TODO: re-write properly using the move operator.
 	void StabilizationFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
