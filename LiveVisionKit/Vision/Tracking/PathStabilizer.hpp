@@ -46,6 +46,8 @@ namespace lvk
 
 		void configure(const PathStabilizerSettings& settings) override;
 
+        std::optional<WarpField> stabilize(Frame&& frame, const WarpField& motion, Frame& output);
+
         std::optional<WarpField> stabilize(const Frame& frame, const WarpField& motion, Frame& output);
 
 		bool ready() const;

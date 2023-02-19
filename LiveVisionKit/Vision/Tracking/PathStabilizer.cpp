@@ -44,7 +44,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<WarpField> PathStabilizer::stabilize(const Frame& frame, const WarpField& motion, Frame& output)
+    std::optional<WarpField> PathStabilizer::stabilize(Frame&& frame, const WarpField& motion, Frame& output)
 	{
 		LVK_ASSERT(!frame.is_empty() && (m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size()));
 
@@ -57,7 +57,7 @@ namespace lvk
         const cv::Size2f correction_limit(m_Margins.tl());
 
         // Push the incoming frame and associated motion to the queues
-		m_FrameQueue.advance().copy(frame);
+		m_FrameQueue.advance() = std::move(frame);
 		m_Path.push(m_Path.newest() + motion);
 
         // TODO: document and rename
@@ -88,6 +88,13 @@ namespace lvk
         output = std::move(m_NullFrame);
         return std::nullopt;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::optional<WarpField> PathStabilizer::stabilize(const Frame& frame, const WarpField& motion, Frame& output)
+    {
+        return stabilize(Frame(frame), motion, output);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
