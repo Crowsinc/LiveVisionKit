@@ -17,6 +17,8 @@
 #include "Stopwatch.hpp"
 
 #include "Diagnostics/Directives.hpp"
+
+#include <opencv2/core/ocl.hpp>
 #include <thread>
 
 namespace lvk
@@ -103,6 +105,14 @@ namespace lvk
         }
 
         return elapsed_time;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Stopwatch& Stopwatch::sync_gpu(const bool trigger)
+    {
+        if(trigger) cv::ocl::finish();
+        return *this;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
