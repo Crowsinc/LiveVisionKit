@@ -34,7 +34,7 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
     };
 
-	class FrameTracker final : Configurable<FrameTrackerSettings>
+	class FrameTracker final : public Configurable<FrameTrackerSettings>
 	{
 	public:
 
