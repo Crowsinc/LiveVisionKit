@@ -48,6 +48,8 @@ namespace lvk
             reset_context();
 
         m_FrameTracker.configure(settings.tracking_settings);
+        m_NullMotion.resize(settings.tracking_settings.motion_resolution);
+
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
             path_settings.correction_margin = settings.crop_proportion;
             path_settings.smoothing_frames = settings.smoothing_frames;
@@ -58,7 +60,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    // TODO: re-write properly using the move operator.
 	void StabilizationFilter::filter(
         Frame&& input,
         Frame& output,
@@ -71,56 +72,56 @@ namespace lvk
         if(debug) cv::ocl::finish();
         timer.start();
 
-        // Track the frame
-        // TODO: make optimized path for when the stabilization is turned off.
-        WarpField frame_motion(m_Settings.tracking_settings.motion_resolution);
-		if(m_Settings.stabilize_output)
+        // Exit early if stabilization is turned off
+        if(!m_Settings.stabilize_output)
         {
-            cv::extractChannel(input.data, m_TrackingFrame, 0);
-            if(auto motion = m_FrameTracker.track(m_TrackingFrame); motion.has_value())
-                frame_motion = std::move(*motion);
+            m_Stabilizer.stabilize(std::move(input), m_NullMotion, output);
+            return;
         }
 
-        // Stabilize the input
+        // Track and stabilize the frame
+        cv::extractChannel(input.data, m_TrackingFrame, 0);
+        const auto motion = m_FrameTracker.track(m_TrackingFrame);
+
         if(debug)
         {
-            // Ensure we do not time any debug rendering
+            // If we're in debug, draw the motion trackers,
+            // ensuring we do not time the debug rendering.
             cv::ocl::finish();
             timer.pause();
 
-            Frame debug_frame = input.clone();
-            if(m_Settings.stabilize_output)
-            {
-                const auto& tracking_resolution = m_FrameTracker.tracking_resolution();
-                const cv::Size2f point_scaling(
-                    static_cast<float>(debug_frame.width()) / static_cast<float>(tracking_resolution.width),
-                    static_cast<float>(debug_frame.height()) / static_cast<float>(tracking_resolution.height)
-                );
+            draw_trackers(input.data);
 
-                // Draw tracking markers onto frame
-                draw::plot_markers(
-                    debug_frame.data,
-                    lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
-                    m_FrameTracker.tracking_points(),
-                    point_scaling,
-                    cv::MarkerTypes::MARKER_CROSS,
-                    8,
-                    2
-                );
-            }
             cv::ocl::finish();
             timer.start();
-
-            m_Stabilizer.stabilize(debug_frame, frame_motion, output ); // TODO: suppress(frame_motion));
         }
-        else m_Stabilizer.stabilize(input, frame_motion, output); // TODO: suppress(frame_motion));
 
-        if(m_Settings.crop_output && !output.is_empty())
-            output.data = output.data(m_Stabilizer.stable_region());
+        m_Stabilizer.stabilize(std::move(input), motion.value_or(m_NullMotion), output); // TODO: auto suppression
 
         if(debug) cv::ocl::finish();
         timer.stop();
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void StabilizationFilter::draw_trackers(cv::UMat& frame)
+    {
+        const cv::Size2f point_scaling(
+            static_cast<float>(frame.cols) / static_cast<float>(m_FrameTracker.tracking_resolution().width),
+            static_cast<float>(frame.rows) / static_cast<float>(m_FrameTracker.tracking_resolution().height)
+        );
+
+        // Draw tracking markers onto frame
+        draw::plot_markers(
+            frame,
+            lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
+            m_FrameTracker.tracking_points(),
+            point_scaling,
+            cv::MarkerTypes::MARKER_CROSS,
+            8,
+            2
+        );
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

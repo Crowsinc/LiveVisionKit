@@ -74,12 +74,15 @@ namespace lvk
 
 		Homography suppress(Homography& motion);
 
+        void draw_trackers(cv::UMat& frame);
+
 	private:
 		float m_SuppressionFactor = 0.0f;
 
 		FrameTracker m_FrameTracker;
 		PathStabilizer m_Stabilizer;
 
+        WarpField m_NullMotion{WarpField::MinimumSize};
 		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
