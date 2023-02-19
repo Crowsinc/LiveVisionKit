@@ -40,7 +40,7 @@ namespace lvk
         const bool debug
     )
     {
-        filter(Frame(input), output, m_FrameTimer, debug);
+        process(Frame(input), output, debug);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -51,7 +51,9 @@ namespace lvk
         const bool debug
     )
     {
+        m_FrameTimer.sync_gpu(debug).start();
         filter(std::move(input), output, m_FrameTimer, debug);
+        m_FrameTimer.sync_gpu(debug).stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

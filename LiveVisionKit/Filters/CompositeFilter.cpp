@@ -17,8 +17,6 @@
 
 #include "CompositeFilter.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
 namespace lvk
 {
 
@@ -66,9 +64,6 @@ namespace lvk
     {
         LVK_ASSERT(!input.is_empty());
 
-        if(debug) cv::ocl::finish();
-        timer.start();
-
         Frame& prev_filter_output = input;
         for(size_t i = 0; i < m_Settings.filter_chain.size(); i++)
         {
@@ -97,9 +92,6 @@ namespace lvk
         }
 
         output = std::move(prev_filter_output);
-
-        if(debug) cv::ocl::finish();
-        timer.stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

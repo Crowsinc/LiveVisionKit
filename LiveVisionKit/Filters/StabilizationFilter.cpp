@@ -20,8 +20,6 @@
 #include "Math/Math.hpp"
 #include "Utility/Drawing.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
 namespace lvk
 {
 
@@ -69,9 +67,6 @@ namespace lvk
 	{
         LVK_ASSERT(!input.is_empty());
 
-        if(debug) cv::ocl::finish();
-        timer.start();
-
         // Exit early if stabilization is turned off
         if(!m_Settings.stabilize_output)
         {
@@ -87,19 +82,12 @@ namespace lvk
         {
             // If we're in debug, draw the motion trackers,
             // ensuring we do not time the debug rendering.
-            cv::ocl::finish();
-            timer.pause();
-
+            timer.sync_gpu(debug).pause();
             draw_trackers(input.data);
-
-            cv::ocl::finish();
-            timer.start();
+            timer.sync_gpu(debug).start();
         }
 
         m_Stabilizer.stabilize(std::move(input), motion.value_or(m_NullMotion), output); // TODO: auto suppression
-
-        if(debug) cv::ocl::finish();
-        timer.stop();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

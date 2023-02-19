@@ -17,8 +17,6 @@
 
 #include "ConversionFilter.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
 namespace lvk
 {
 
@@ -54,9 +52,6 @@ namespace lvk
     {
         LVK_ASSERT(!input.is_empty());
 
-        if(debug) cv::ocl::finish();
-        timer.start();
-
         cv::cvtColor(
             input.data,
             input.data,
@@ -65,11 +60,6 @@ namespace lvk
         );
 
         output = std::move(input);
-
-        // If in debug mode, wait for all processing to finish before stopping the timer.
-        // This leads to more accurate timing, but can lead to performance drops.
-        if(debug) cv::ocl::finish();
-        timer.stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------

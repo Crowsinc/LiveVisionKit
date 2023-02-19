@@ -19,9 +19,6 @@
 
 #include "Utility/Drawing.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
-
 namespace lvk
 {
 
@@ -56,9 +53,6 @@ namespace lvk
     )
 	{
         LVK_ASSERT(!input.is_empty());
-
-        if(debug) cv::ocl::finish();
-        timer.start();
 
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -122,9 +116,6 @@ namespace lvk
 		);
 
         output = std::move(input);
-
-        if(debug) cv::ocl::finish();
-        timer.stop();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
