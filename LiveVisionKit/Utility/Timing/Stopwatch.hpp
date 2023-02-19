@@ -38,6 +38,8 @@ namespace lvk
 
         Time wait_until(const Time& required_time);
 
+        Stopwatch& sync_gpu(const bool trigger = true);
+
 		bool is_running() const;
 
         bool is_paused() const;
