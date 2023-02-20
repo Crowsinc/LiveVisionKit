@@ -68,26 +68,27 @@ namespace lvk
         LVK_ASSERT(!input.is_empty());
 
         // Exit early if stabilization is turned off
-        if(!m_Settings.stabilize_output)
+        if(m_Settings.stabilize_output)
         {
-            m_Stabilizer.stabilize(std::move(input), m_NullMotion, output);
-            return;
+            // Track and stabilize the frame
+            cv::extractChannel(input.data, m_TrackingFrame, 0);
+            const auto motion = m_FrameTracker.track(m_TrackingFrame);
+
+            if(debug)
+            {
+                // If we're in debug, draw the motion trackers,
+                // ensuring we do not time the debug rendering.
+                timer.sync_gpu(debug).pause();
+                draw_trackers(input.data);
+                timer.sync_gpu(debug).start();
+            }
+
+            m_Stabilizer.stabilize(std::move(input), motion.value_or(m_NullMotion), output); // TODO: auto suppression
         }
+        else m_Stabilizer.stabilize(std::move(input), m_NullMotion, output);
 
-        // Track and stabilize the frame
-        cv::extractChannel(input.data, m_TrackingFrame, 0);
-        const auto motion = m_FrameTracker.track(m_TrackingFrame);
-
-        if(debug)
-        {
-            // If we're in debug, draw the motion trackers,
-            // ensuring we do not time the debug rendering.
-            timer.sync_gpu(debug).pause();
-            draw_trackers(input.data);
-            timer.sync_gpu(debug).start();
-        }
-
-        m_Stabilizer.stabilize(std::move(input), motion.value_or(m_NullMotion), output); // TODO: auto suppression
+        if(m_Settings.crop_output && !output.is_empty())
+            output.data = output.data(m_Stabilizer.stable_region());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
