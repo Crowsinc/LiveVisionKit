@@ -33,6 +33,7 @@ namespace lvk
 
         inline static const cv::Size MinimumSize = {2,2};
 
+        // TODO: add fit and set constructors, clean up function ordering
 
         explicit WarpField(const cv::Size& size);
 
@@ -58,9 +59,12 @@ namespace lvk
 
         const cv::Mat& data() const;
 
-        cv::Point2f trace(const cv::Point2f& position) const;
+
+        cv::Point2f sample(const cv::Point& position) const;
 
         cv::Point2f sample(const cv::Point2f& position) const;
+
+        cv::Point2f trace(const cv::Point2f& position) const;
 
 
         void set_identity();
@@ -82,8 +86,6 @@ namespace lvk
         void clamp(const cv::Size2f& magnitude);
 
         void clamp(const cv::Size2f& min, const cv::Size2f& max);
-
-        void simplify(const size_t iterations, const float step = 0.8f);
 
         void merge_with(const WarpField& other, const float weight = 1.0f);
 

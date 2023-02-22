@@ -18,6 +18,8 @@
 #include "PathStabilizer.hpp"
 #include "Math/Math.hpp"
 
+#include "Diagnostics/Logging/CSVLogger.hpp"
+
 namespace lvk
 {
 
@@ -44,64 +46,68 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<WarpField> PathStabilizer::stabilize(Frame&& frame, const WarpField& motion, Frame& output)
-	{
-		LVK_ASSERT(!frame.is_empty() && (m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size()));
-
-        // If the given motion has a different resolution, we need
-        // to resize the trajectory to match the new field size.
-        if(motion.size() != m_Path.newest().size())
-            resize_fields(motion.size());
-
-        m_Margins = crop(frame.size(), m_Settings.correction_margin);
-        const cv::Size2f correction_limit(m_Margins.tl());
-
-        // Push the incoming frame and associated motion to the queues
-		m_FrameQueue.advance() = std::move(frame);
-		m_Path.push(m_Path.newest() + motion);
-
-        // TODO: document and rename
-        auto step = m_Path.newest() - m_Trace.newest();
-        step.modify([&](cv::Point2f& diff, cv::Point position){
-            if(std::abs(diff.x) < m_Settings.path_drift_limit * correction_limit.width)
-                diff.x = m_Settings.path_drift_rate * static_cast<float>(sign(diff.x));
-
-            if(std::abs(diff.y) < m_Settings.path_drift_limit * correction_limit.height)
-                diff.y = m_Settings.path_drift_rate * static_cast<float>(sign(diff.y));
-        });
-        m_Trace.push(m_Trace.newest() + step);
-
-		if(ready())
-		{
-			const auto& shaky_frame = m_FrameQueue.oldest();
-            const auto& shaky_path = m_Path.oldest();
-
-            auto path_correction = m_Trace.average() - shaky_path;
-            path_correction.clamp(correction_limit);
-
-            path_correction.warp(shaky_frame.data, output.data);
-            output.timestamp = shaky_frame.timestamp;
-
-            return std::move(path_correction);
-		}
-
-        output = std::move(m_NullFrame);
-        return std::nullopt;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    std::optional<WarpField> PathStabilizer::stabilize(const Frame& frame, const WarpField& motion, Frame& output)
-    {
-        return stabilize(Frame(frame), motion, output);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     bool PathStabilizer::ready() const
     {
         return m_FrameQueue.is_full() && m_Trace.is_full();
     }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame PathStabilizer::next(const Frame& frame, const WarpField& motion)
+    {
+        return next(std::move(frame.clone()), motion);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame PathStabilizer::next(Frame&& frame, const WarpField& motion)
+	{
+        LVK_ASSERT(m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size());
+		LVK_ASSERT(!frame.is_empty());
+
+        m_Margins = crop(frame.size(), m_Settings.correction_margin);
+        const cv::Size2f correction_limit(m_Margins.tl());
+
+        if(motion.size() != m_Trace.newest().size())
+            rescale_buffers(motion.size());
+
+        WarpField next_position = m_Path.newest() + motion;
+        WarpField next_trace = m_Trace.newest();
+
+        // Trace the next position to obtain a constant velocity path
+        next_trace.modify([&](cv::Point2f& trace, const cv::Point& position){
+            const auto step = next_position.sample(position) - trace;
+
+            if(std::abs(step.x) < m_Settings.path_drift_limit * correction_limit.width)
+                trace.x += m_Settings.path_drift_rate * static_cast<float>(sign(step.x));
+            else trace.x += step.x;
+
+            if(std::abs(step.y) < m_Settings.path_drift_limit * correction_limit.height)
+                trace.y += m_Settings.path_drift_rate * static_cast<float>(sign(step.y));
+            else trace.y += step.y;
+        });
+
+        // Update all the queues with the new data.
+		m_FrameQueue.advance() = std::move(frame);
+        m_Path.push(std::move(next_position));
+        m_Trace.push(std::move(next_trace));
+
+		if(ready())
+		{
+            auto path_correction = m_Trace.average() - m_Path.oldest();
+            path_correction.clamp(correction_limit);
+
+            // NOTE: we perform a swap between the resulting warp frame
+            // and the original frame data to ensure zero de-allocations.
+            auto& next_frame = m_FrameQueue.oldest();
+            path_correction.warp(next_frame.data, m_WarpFrame);
+            std::swap(m_WarpFrame, next_frame.data);
+
+            return std::move(next_frame);
+		}
+
+        return {};
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -120,7 +126,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathStabilizer::displacement() const
+    WarpField PathStabilizer::raw_position() const
+    {
+        // NOTE: the path will never be empty.
+        return m_Path.newest();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    WarpField PathStabilizer::stable_position() const
     {
         // NOTE: the trace will never be empty.
         return m_Trace.newest();
@@ -138,15 +152,14 @@ namespace lvk
 	void PathStabilizer::reset_buffers()
 	{
 		m_FrameQueue.clear();
-		m_Path.clear();
         m_Trace.clear();
+		m_Path.clear();
 
-		// Fill the trajectory to bring the buffers into the initial synchronized state.
-		while(m_Path.size() < m_FrameQueue.capacity() - 3)
-        {
-			m_Path.advance(WarpField::MinimumSize);
-            m_Trace.advance(WarpField::MinimumSize);
-        }
+        // Pre-fill the path and trace trajectories to avoid having to deal
+        // with synchronization and empty SlidingBuffer edge cases later on.
+
+        while(!m_Trace.is_full()) m_Trace.advance(WarpField::MinimumSize);
+        while(!m_Path.is_full()) m_Path.advance(WarpField::MinimumSize);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -195,13 +208,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathStabilizer::resize_fields(const cv::Size& size)
+    void PathStabilizer::rescale_buffers(const cv::Size& size)
     {
         for(size_t i = 0; i < m_Path.size(); i++)
-        {
             m_Path[i].resize(size);
+
+        for(size_t i = 0; i < m_Trace.size(); i++)
             m_Trace[i].resize(size);
-        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------

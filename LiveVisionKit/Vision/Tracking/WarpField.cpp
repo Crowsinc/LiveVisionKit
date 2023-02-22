@@ -71,6 +71,9 @@ namespace lvk
         LVK_ASSERT(new_size.height >= MinimumSize.height);
         LVK_ASSERT(new_size.width >= MinimumSize.width);
 
+        if(m_VelocityField.size() == new_size)
+            return;
+
         cv::Mat result;
         cv::resize(m_VelocityField, result, new_size, 0, 0, cv::INTER_LINEAR);
         m_VelocityField = std::move(result);
@@ -109,6 +112,16 @@ namespace lvk
     const cv::Mat& WarpField::data() const
     {
         return m_VelocityField;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Point2f WarpField::sample(const cv::Point& position) const
+    {
+        LVK_ASSERT(position.x >= 0 && position.x < cols());
+        LVK_ASSERT(position.y >= 0 && position.y < rows());
+
+        return m_VelocityField.at<cv::Point2f>(position);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -326,24 +339,6 @@ namespace lvk
             warp_velocity.x += amount[0];
             warp_velocity.y += amount[1];
         });
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    // TODO: does this actually have any use?
-    void WarpField::simplify(const size_t iterations, const float step)
-    {
-        LVK_ASSERT(between_strict(step, 0.0f, 1.0f));
-        for(size_t i = 0; i < iterations; i++)
-        {
-            cv::Size2f max_magnitude(0.0f, 0.0f);
-            m_VelocityField.forEach<cv::Point2f>([&](cv::Point2f& warp, const int position[]){
-                max_magnitude.width = std::max(max_magnitude.width, std::abs(warp.x));
-                max_magnitude.height = std::max(max_magnitude.height, std::abs(warp.y));
-            });
-
-            clamp(max_magnitude * step);
-        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
