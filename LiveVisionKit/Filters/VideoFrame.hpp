@@ -30,9 +30,11 @@ namespace lvk
 
         static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
 
-        explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
+        Frame();
 
-        explicit Frame(const uint64_t timestamp = 0);
+        explicit Frame(const uint64_t timestamp);
+
+        explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
 
         Frame(
             const cv::Size& size,
