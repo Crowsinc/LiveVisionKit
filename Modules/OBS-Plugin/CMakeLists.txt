@@ -94,7 +94,7 @@ endif()
 
 message(STATUS "${MI}Auto-Install Plugin: " ${OBS_PLUGIN_AUTO_INSTALL})
 message(STATUS "${MI}Install Paths:" )
-message(STATUS "${MI}${MI} (DEBUG) ${CMAKE_INSTALL_PREFIX}${PLUGIN_DEBUG_RELEASE_ROOT_DIR}")
+message(STATUS "${MI}${MI} (DEBUG) ${CMAKE_INSTALL_PREFIX}/${PLUGIN_DEBUG_RELEASE_ROOT_DIR}")
 foreach(INSTALL_DIR ${PLUGIN_RELEASE_INSTALL_DIRS})
     message(STATUS "${MI}${MI} (RELEASE) ${INSTALL_DIR}")
 endforeach()
