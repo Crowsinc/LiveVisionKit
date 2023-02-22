@@ -69,6 +69,8 @@ namespace lvk
 
         Frame clone() const;
 
+        void release();
+
         uint32_t width() const;
 
         uint32_t height() const;

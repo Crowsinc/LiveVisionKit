@@ -78,8 +78,7 @@ namespace lvk
         : data(std::move(frame.data)),
           timestamp(frame.timestamp)
     {
-        frame.data.release();
-        frame.timestamp = 0;
+        frame.release();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -89,8 +88,7 @@ namespace lvk
         data = frame.data;
         timestamp = frame.timestamp;
 
-        frame.data.release();
-        frame.timestamp = 0;
+        frame.release();
 
         return *this;
     }
@@ -156,6 +154,14 @@ namespace lvk
     Frame Frame::clone() const
     {
         return Frame(data, timestamp);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Frame::release()
+    {
+        data.release();
+        timestamp = 0;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
