@@ -96,7 +96,7 @@ namespace lvk
         void modify(const std::function<void(cv::Point2f&, cv::Point)>& operation);
 
 
-        void draw(cv::UMat& dst, const float motion_scaling) const;
+        void draw(cv::UMat& dst, const cv::Scalar& color = draw::YUV_MAGENTA, const float scaling = 1.0f) const;
 
         void warp(const cv::UMat& src, cv::UMat& dst, const bool smoothing = true) const;
 

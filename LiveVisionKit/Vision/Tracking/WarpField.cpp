@@ -393,7 +393,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::draw(cv::UMat& dst, const float motion_scaling) const
+    void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const float scaling) const
     {
 
         const cv::Size2f frame_scaling(
@@ -415,8 +415,8 @@ namespace lvk
             cv::line(
                 draw_buffer,
                 origin,
-                origin + motion_scaling * velocity,
-                10.0f * motion_scaling * cv::Scalar(velocity.x * velocity.y, velocity.x, velocity.y),
+                origin + scaling * velocity,
+                color,
                 3
             );
         });
@@ -573,7 +573,7 @@ namespace lvk
 
     void WarpField::operator/=(const float scaling)
     {
-        LVK_ASSERT(scaling == 0.0f);
+        LVK_ASSERT(scaling != 0.0f);
 
         m_VelocityField /= scaling;
     }
