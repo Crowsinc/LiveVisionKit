@@ -69,6 +69,8 @@ namespace lvk
 
         void set_identity();
 
+        void set_to(const cv::Point2f& motion);
+
         void set_to(const Homography& warp, const cv::Size2f& scale);
 
         void fit_to(

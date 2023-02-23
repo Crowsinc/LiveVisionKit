@@ -212,6 +212,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::set_to(const cv::Point2f& motion)
+    {
+        m_VelocityField.setTo(cv::Scalar(-motion.x, -motion.y));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void WarpField::set_to(const Homography& warp, const cv::Size2f& scale)
     {
         const cv::Size2f point_scaling(
