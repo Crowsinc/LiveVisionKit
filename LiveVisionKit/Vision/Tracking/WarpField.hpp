@@ -22,6 +22,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
+#include "Utility/Drawing.hpp"
 #include "Structures/SpatialMap.hpp"
 
 namespace lvk
