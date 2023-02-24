@@ -69,9 +69,13 @@ namespace lvk
         void rescale_buffers(const cv::Size& size);
 
 	private:
-        cv::Rect m_Margins{0,0,0,0};
 		SlidingBuffer<Frame> m_FrameQueue;
         SlidingBuffer<WarpField> m_Path, m_Trace;
+
+        SlidingBuffer<float> m_SmoothingFilter;
+        WarpField m_SmoothTrace{WarpField::MinimumSize};
+
+        cv::Rect m_Margins{0,0,0,0};
         cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 

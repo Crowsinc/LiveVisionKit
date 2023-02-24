@@ -94,7 +94,13 @@ namespace lvk
 
 		if(ready())
 		{
-            auto path_correction = m_Trace.average() - m_Path.oldest();
+            m_SmoothTrace.set_identity();
+            for(size_t i = 0; i < m_SmoothingFilter.size(); i++)
+            {
+                m_SmoothTrace.merge_with(m_Trace[i], m_SmoothingFilter[i]);
+            }
+
+            auto path_correction = m_SmoothTrace - m_Path.oldest();
             path_correction.clamp(correction_limit);
 
             // NOTE: we perform a swap between the resulting warp frame
@@ -203,6 +209,20 @@ namespace lvk
                 if(m_FrameQueue.is_empty() || m_Path.is_empty())
                     reset_buffers();
             }
+
+            // NOTE: A low pass Gaussian filter is used because it has both decent time domain
+            // and frequency domain performance. Unlike an average or windowed sinc filter.
+            // As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
+            const auto kernel = cv::getGaussianKernel(
+                static_cast<int>(new_window_size),
+                static_cast<float>(new_window_size) / 6.0f,
+                CV_32F
+            );
+
+            m_SmoothingFilter.clear();
+            m_SmoothingFilter.resize(new_window_size);
+            for(int i = 0; i < m_SmoothingFilter.capacity(); i++)
+                m_SmoothingFilter.push(kernel.at<float>(i));
 		}
 	}
 
@@ -210,6 +230,8 @@ namespace lvk
 
     void PathStabilizer::rescale_buffers(const cv::Size& size)
     {
+        m_SmoothTrace.resize(size);
+
         for(size_t i = 0; i < m_Path.size(); i++)
             m_Path[i].resize(size);
 
