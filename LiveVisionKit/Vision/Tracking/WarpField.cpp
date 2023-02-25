@@ -564,6 +564,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::operator*=(const WarpField& other)
+    {
+        this->modify([&](cv::Point2f& v, const cv::Point coord){
+            const auto multiplier = other.sample(coord);
+            v.x *= multiplier.x;
+            v.y *= multiplier.y;
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void WarpField::operator*=(const float scaling)
     {
         m_VelocityField *= scaling;
@@ -618,6 +629,15 @@ namespace lvk
 
         cv::Mat result = left.data() - right.data();
         return WarpField(std::move(result));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    WarpField operator*(const WarpField& left, const WarpField& right)
+    {
+        WarpField result(left);
+        result *= right;
+        return result;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

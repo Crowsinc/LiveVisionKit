@@ -111,6 +111,8 @@ namespace lvk
 
         void operator-=(const WarpField& other);
 
+        void operator*=(const WarpField& other);
+
 
         void operator*=(const float scaling);
 
@@ -141,9 +143,13 @@ namespace lvk
 
     WarpField operator-(const WarpField& left, const WarpField& right);
 
+
+    WarpField operator*(const WarpField& left, const WarpField& right);
+
     WarpField operator*(const WarpField& field, const float scaling);
 
     WarpField operator*(const float scaling, const WarpField& field);
+
 
     WarpField operator*(const WarpField& field, const cv::Vec2f& scaling);
 
