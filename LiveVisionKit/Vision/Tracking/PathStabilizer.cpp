@@ -37,8 +37,6 @@ namespace lvk
         LVK_ASSERT(settings.smoothing_frames >= 2);
         LVK_ASSERT(settings.smoothing_frames % 2 == 0);
         LVK_ASSERT(between_strict(settings.correction_margin, 0.0f, 1.0f));
-        LVK_ASSERT(between(settings.path_drift_limit, 0.0f, 1.0f));
-        LVK_ASSERT(settings.path_drift_rate > 0.0f);
 
         m_Settings = settings;
         resize_buffers();
@@ -78,15 +76,6 @@ namespace lvk
             {
                 m_SmoothTrace.merge_with(m_Trace[i], m_SmoothingFilter[i]);
             }
-
-            INIT_CSV(csv, "path.csv");
-
-            cv::Point coord(0, 0);
-            _csv << m_Trace.centre().sample(coord).x;
-            _csv << m_Trace.centre().sample(coord).y;
-            _csv << m_SmoothTrace.sample(coord).x;
-            _csv << m_SmoothTrace.sample(coord).y;
-            _csv << CSVLogger::Next;
 
             auto& next_frame = m_FrameQueue.oldest();
 
