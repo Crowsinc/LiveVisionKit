@@ -65,32 +65,11 @@ namespace lvk
         LVK_ASSERT(m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size());
 		LVK_ASSERT(!frame.is_empty());
 
-        m_Margins = crop(frame.size(), m_Settings.correction_margin);
-        const cv::Size2f correction_limit(m_Margins.tl());
-
         if(motion.size() != m_Trace.newest().size())
             rescale_buffers(motion.size());
 
-        WarpField next_position = m_Path.newest() + motion;
-        WarpField next_trace = m_Trace.newest();
-
-        // Trace the next position to obtain a constant velocity path
-        next_trace.modify([&](cv::Point2f& trace, const cv::Point& position){
-            const auto step = next_position.sample(position) - trace;
-
-            if(std::abs(step.x) < m_Settings.path_drift_limit * correction_limit.width)
-                trace.x += m_Settings.path_drift_rate * static_cast<float>(sign(step.x));
-            else trace.x += step.x;
-
-            if(std::abs(step.y) < m_Settings.path_drift_limit * correction_limit.height)
-                trace.y += m_Settings.path_drift_rate * static_cast<float>(sign(step.y));
-            else trace.y += step.y;
-        });
-
-        // Update all the queues with the new data.
-		m_FrameQueue.advance() = std::move(frame);
-        m_Path.push(std::move(next_position));
-        m_Trace.push(std::move(next_trace));
+		m_FrameQueue.push(std::move(frame));
+        m_Trace.push(m_Trace.newest() + motion);
 
 		if(ready())
 		{
@@ -100,12 +79,23 @@ namespace lvk
                 m_SmoothTrace.merge_with(m_Trace[i], m_SmoothingFilter[i]);
             }
 
-            auto path_correction = m_SmoothTrace - m_Path.oldest();
-            path_correction.clamp(correction_limit);
+            INIT_CSV(csv, "path.csv");
+
+            cv::Point coord(0, 0);
+            _csv << m_Trace.centre().sample(coord).x;
+            _csv << m_Trace.centre().sample(coord).y;
+            _csv << m_SmoothTrace.sample(coord).x;
+            _csv << m_SmoothTrace.sample(coord).y;
+            _csv << CSVLogger::Next;
+
+            auto& next_frame = m_FrameQueue.oldest();
+
+            m_Margins = crop(next_frame.size(), m_Settings.correction_margin);
+            auto path_correction = m_SmoothTrace - m_Trace.centre(-1);
+            path_correction.clamp({m_Margins.tl()});
 
             // NOTE: we perform a swap between the resulting warp frame
             // and the original frame data to ensure zero de-allocations.
-            auto& next_frame = m_FrameQueue.oldest();
             path_correction.warp(next_frame.data, m_WarpFrame);
             std::swap(m_WarpFrame, next_frame.data);
 
@@ -132,18 +122,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathStabilizer::raw_position() const
+    WarpField PathStabilizer::position() const
     {
         // NOTE: the path will never be empty.
-        return m_Path.newest();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField PathStabilizer::stable_position() const
-    {
-        // NOTE: the trace will never be empty.
-        return m_Trace.newest();
+        return m_Trace.centre();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -159,13 +141,9 @@ namespace lvk
 	{
 		m_FrameQueue.clear();
         m_Trace.clear();
-		m_Path.clear();
 
-        // Pre-fill the path and trace trajectories to avoid having to deal
-        // with synchronization and empty SlidingBuffer edge cases later on.
-
+        // Pre-fill the trace to avoid having to deal with edge cases.
         while(!m_Trace.is_full()) m_Trace.advance(WarpField::MinimumSize);
-        while(!m_Path.is_full()) m_Path.advance(WarpField::MinimumSize);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -196,7 +174,6 @@ namespace lvk
             // frame in time. The frames correspnding to such data need to be skipped as they
             // are now in the past.
 
-            m_Path.resize(new_queue_size);
             m_Trace.resize(new_window_size);
             m_FrameQueue.resize(new_queue_size);
 
@@ -204,15 +181,13 @@ namespace lvk
             {
                 const auto time_shift = new_queue_size - old_queue_size;
 
-                m_Path.skip(time_shift);
                 m_FrameQueue.skip(time_shift);
-                if(m_FrameQueue.is_empty() || m_Path.is_empty())
+                if(m_FrameQueue.is_empty())
                     reset_buffers();
             }
 
             // NOTE: A low pass Gaussian filter is used because it has both decent time domain
             // and frequency domain performance. Unlike an average or windowed sinc filter.
-            // As a rule of thumb, sigma is chosen to fit 99.7% of the distribution in the window.
             const auto kernel = cv::getGaussianKernel(
                 static_cast<int>(new_window_size),
                 static_cast<float>(new_window_size) / 6.0f,
@@ -222,7 +197,9 @@ namespace lvk
             m_SmoothingFilter.clear();
             m_SmoothingFilter.resize(new_window_size);
             for(int i = 0; i < m_SmoothingFilter.capacity(); i++)
+            {
                 m_SmoothingFilter.push(kernel.at<float>(i));
+            }
 		}
 	}
 
@@ -231,10 +208,6 @@ namespace lvk
     void PathStabilizer::rescale_buffers(const cv::Size& size)
     {
         m_SmoothTrace.resize(size);
-
-        for(size_t i = 0; i < m_Path.size(); i++)
-            m_Path[i].resize(size);
-
         for(size_t i = 0; i < m_Trace.size(); i++)
             m_Trace[i].resize(size);
     }

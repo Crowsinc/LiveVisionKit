@@ -31,9 +31,6 @@ namespace lvk
 	{
 		size_t smoothing_frames = 10;
         float correction_margin = 0.1f;
-
-        float path_drift_rate = 0.4f;
-        float path_drift_limit = 0.8f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>
@@ -54,9 +51,7 @@ namespace lvk
 
 		size_t frame_delay() const;
 
-        WarpField raw_position() const;
-
-        WarpField stable_position() const;
+        WarpField position() const;
 
 		const cv::Rect& stable_region() const;
 
@@ -69,13 +64,12 @@ namespace lvk
         void rescale_buffers(const cv::Size& size);
 
 	private:
-		SlidingBuffer<Frame> m_FrameQueue;
-        SlidingBuffer<WarpField> m_Path, m_Trace;
-
+        SlidingBuffer<WarpField> m_Trace;
         SlidingBuffer<float> m_SmoothingFilter;
         WarpField m_SmoothTrace{WarpField::MinimumSize};
 
         cv::Rect m_Margins{0,0,0,0};
+		SlidingBuffer<Frame> m_FrameQueue;
         cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
