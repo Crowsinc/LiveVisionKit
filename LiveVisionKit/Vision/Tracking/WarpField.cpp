@@ -102,11 +102,8 @@ namespace lvk
         LVK_ASSERT(size.height >= MinimumSize.height);
         LVK_ASSERT(size.width >= MinimumSize.width);
 
-        fit_to(
-            described_region,
-            origin_points,
-            warped_points,
-            motion_hint
+        fit_points(
+            described_region, origin_points, warped_points, motion_hint
         );
     }
 
@@ -285,7 +282,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::fit_to(
+    void WarpField::fit_points(
         const cv::Rect2f& described_region,
         const std::vector<cv::Point2f>& origin_points,
         const std::vector<cv::Point2f>& warped_points,

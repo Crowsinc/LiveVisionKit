@@ -89,7 +89,7 @@ namespace lvk
 
         void set_to(const Homography& motion, const cv::Size2f& scale);
 
-        void fit_to(
+        void fit_points(
             const cv::Rect2f& described_region,
             const std::vector<cv::Point2f>& origin_points,
             const std::vector<cv::Point2f>& warped_points,

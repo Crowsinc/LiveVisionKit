@@ -183,21 +183,19 @@ namespace lvk
         WarpField motion_field(m_Settings.motion_resolution);
         if(m_Settings.motion_resolution != WarpField::MinimumSize)
         {
-            motion_field.fit_to(
-                cv::Rect({0,0}, tracking_resolution()),
-                m_TrackedPoints,
-                m_MatchedPoints,
-                motion
-            );
+            const cv::Rect region({0,0}, tracking_resolution());
+            motion_field.fit_points(region, m_TrackedPoints, m_MatchedPoints, motion);
         }
         else motion_field.set_to(*motion, tracking_resolution());
 
         // We must scale the motion to match the original frame size.
-        const cv::Vec2f frame_scaling(
-            static_cast<float>(next_frame.cols) / static_cast<float>(tracking_resolution().width),
-            static_cast<float>(next_frame.rows) / static_cast<float>(tracking_resolution().height)
-        );
-        motion_field *= frame_scaling;
+        const cv::Size2f frame_scale = next_frame.size();
+        const cv::Size2f tracking_scale = tracking_resolution();
+
+        motion_field *= cv::Vec2f{
+            frame_scale.width / tracking_scale.width,
+            frame_scale.height / tracking_scale.height
+        };
 
         return std::move(motion_field);
 	}
