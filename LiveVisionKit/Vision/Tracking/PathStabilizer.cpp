@@ -74,7 +74,7 @@ namespace lvk
             m_SmoothTrace.set_identity();
             for(size_t i = 0; i < m_SmoothingFilter.size(); i++)
             {
-                m_SmoothTrace.merge_with(m_Trace[i], m_SmoothingFilter[i]);
+                m_SmoothTrace.blend(m_Trace[i], m_SmoothingFilter[i]);
             }
 
             auto& next_frame = m_FrameQueue.oldest();
