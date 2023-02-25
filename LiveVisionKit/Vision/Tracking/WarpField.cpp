@@ -102,9 +102,7 @@ namespace lvk
         LVK_ASSERT(size.height >= MinimumSize.height);
         LVK_ASSERT(size.width >= MinimumSize.width);
 
-        fit_points(
-            described_region, origin_points, warped_points, motion_hint
-        );
+        fit_points(described_region, origin_points, warped_points, motion_hint);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -337,8 +335,8 @@ namespace lvk
             const cv::Rect2f submotion_alignment(
                 region_offset.x - (submotion_cell_size.width * 0.5f),
                 region_offset.y - (submotion_cell_size.height * 0.5f),
-                static_cast<float>(submotions.cols) * alignment.x,
-                static_cast<float>(submotions.rows) * alignment.y
+                static_cast<float>(submotions.cols) * submotion_cell_size.width,
+                static_cast<float>(submotions.rows) * submotion_cell_size.height
             );
 
             accumulation_weight /= 2;
