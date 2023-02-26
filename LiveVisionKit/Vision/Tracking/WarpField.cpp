@@ -295,11 +295,11 @@ namespace lvk
         // S. Liu, P. Tan, L. Yuan, J. Sun, and B. Zeng,
         // “MeshFlow: Minimum latency online video stabilization,"
         // Computer Vision – ECCV 2016, pp. 800–815, 2016.
+        // TODO: optimize and document the entire algorithm
 
         const auto region_offset = described_region.tl();
         const auto region_size = described_region.size();
 
-        // TODO: optimize and document the entire algorithm
         cv::Mat motions(2, 2, CV_32FC2);
         if(motion_hint.has_value())
         {
@@ -315,11 +315,21 @@ namespace lvk
             motions.at<cv::Point2f>(1, 0) = (warp_transform * bl) - bl;
             motions.at<cv::Point2f>(1, 1) = (warp_transform * br) - br;
         }
+        else
+        {
+            accumulate_motions(
+                motions,
+                1.0f,
+                cv::Rect2f(
+                    region_offset - cv::Point2f(region_size / 2.0f),
+                    region_size * 2.0f
+                ),
+                origin_points,
+                warped_points
+            );
+        }
 
-        float accumulation_weight = 0.8f;
-        cv::Rect2f alignment(region_offset - cv::Point2f(region_size / 2.0f), region_size * 2.0f);
-        accumulate_motions(motions, accumulation_weight, alignment, origin_points, warped_points);
-
+        float motion_weight = 0.5f;
         while(motions.size() != m_WarpOffsets.size())
         {
             cv::Mat submotions(
@@ -339,9 +349,9 @@ namespace lvk
                 static_cast<float>(submotions.rows) * submotion_cell_size.height
             );
 
-            accumulation_weight /= 2;
+            motion_weight /= 2.0f;
             cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
-            accumulate_motions(submotions, accumulation_weight, submotion_alignment, origin_points, warped_points);
+            accumulate_motions(submotions, motion_weight, submotion_alignment, origin_points, warped_points);
 
             motions = std::move(submotions);
         }
@@ -514,12 +524,14 @@ namespace lvk
         if(smoothing)
         {
             thread_local cv::UMat smooth_field(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+            cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
 
             // TODO: rework smoothing
-            cv::medianBlur(staging_buffer, smooth_field, 5);
-            cv::blur(smooth_field, staging_buffer, cv::Size(3, 3));
+            cv::GaussianBlur(warp_map, smooth_field, {5,5}, 0.5f);
+            cv::GaussianBlur(smooth_field, warp_map, {3,3}, 0.5f);
         }
-        cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+        else cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+
         cv::add(warp_map, view_identity_field(src.size()), warp_map);
         cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
     }
