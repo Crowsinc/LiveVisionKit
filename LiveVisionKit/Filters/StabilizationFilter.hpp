@@ -25,8 +25,6 @@
 namespace lvk
 {
 
-	// TODO: FrameTracker settings are hidden, perhaps make it configurable?
-
 	struct StabilizationFilterSettings
 	{
 		size_t smoothing_frames = 10;
@@ -40,7 +38,14 @@ namespace lvk
 		float suppression_saturation_limit = 0.7f;
 		float suppression_smoothing_rate = 0.05f;
 
-		MotionModel motion_model = MotionModel::DYNAMIC;
+        // TODO: organize better
+        FrameTrackerSettings tracking_settings = {
+            .detector{GridDetectorSettings{
+                .feature_grid_shape = {128, 72},
+                .detection_zones = {4, 4}
+            }},
+            .motion_resolution = {8, 8}
+        };
 	};
 
 
@@ -49,7 +54,6 @@ namespace lvk
 	public:
 
 		explicit StabilizationFilter(const StabilizationFilterSettings& settings = {});
-
 
 		void configure(const StabilizationFilterSettings& settings) override;
 
@@ -68,7 +72,7 @@ namespace lvk
 	private:
 
         void filter(
-            const Frame& input,
+            Frame&& input,
             Frame& output,
             Stopwatch& timer,
             const bool debug
@@ -76,12 +80,15 @@ namespace lvk
 
 		Homography suppress(Homography& motion);
 
+        void draw_trackers(cv::UMat& frame);
+
 	private:
 		float m_SuppressionFactor = 0.0f;
 
 		FrameTracker m_FrameTracker;
 		PathStabilizer m_Stabilizer;
 
+        WarpField m_NullMotion{WarpField::MinimumSize};
 		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 

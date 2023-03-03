@@ -40,7 +40,20 @@ namespace lvk
         const bool debug
     )
     {
-        filter(input, output, m_FrameTimer, debug);
+        process(Frame(input), output, debug);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::process(
+        Frame&& input,
+        Frame& output,
+        const bool debug
+    )
+    {
+        m_FrameTimer.sync_gpu(debug).start();
+        filter(std::move(input), output, m_FrameTimer, debug);
+        m_FrameTimer.sync_gpu(debug).stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -119,7 +132,7 @@ namespace lvk
                 }
 
                 // Process the frame
-                process(input_frame, filtered_frame, debug);
+                process(std::move(input_frame), filtered_frame, debug);
                 if(filtered_frame.is_empty())
                     continue;
 
@@ -204,7 +217,7 @@ namespace lvk
         bool debug
     )
     {
-        filter(input, m_FrameBuffer, m_FrameTimer, debug);
+        process(input, m_FrameBuffer, debug);
         cv::imshow(alias(), m_FrameBuffer.data);
     }
 
@@ -257,14 +270,14 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     void VideoFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
     )
     {
         // Default filter is simply an identity operation
-        output.copy(input);
+        output = std::move(input);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -20,8 +20,6 @@
 #include "Math/Math.hpp"
 #include "Utility/Drawing.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
 namespace lvk
 {
 
@@ -35,8 +33,33 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
+    {
+        LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
+        LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
+        LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
+        LVK_ASSERT(settings.suppression_smoothing_rate > 0);
+
+        // Reset the tracking when disabling the stabilization otherwise we will have
+        // a discontinuity in the tracking once we start up again with a brand new scene.
+        if(m_Settings.stabilize_output && !settings.stabilize_output)
+            reset_context();
+
+        m_FrameTracker.configure(settings.tracking_settings);
+        m_NullMotion.resize(settings.tracking_settings.motion_resolution);
+
+        m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
+            path_settings.correction_margin = settings.crop_proportion;
+            path_settings.smoothing_frames = settings.smoothing_frames;
+        });
+
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void StabilizationFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
@@ -44,72 +67,51 @@ namespace lvk
 	{
         LVK_ASSERT(!input.is_empty());
 
-        if(debug) cv::ocl::finish();
-        timer.start();
-
-        // Track the frame
-        Homography frame_motion = Homography::Identity();
-		if(m_Settings.stabilize_output)
+        // Exit early if stabilization is turned off
+        std::optional<WarpField> motion;
+        if(m_Settings.stabilize_output)
         {
+            // Track and stabilize the frame
             cv::extractChannel(input.data, m_TrackingFrame, 0);
-            frame_motion = m_FrameTracker.track(m_TrackingFrame);
-        }
+            motion = std::move(m_FrameTracker.track(m_TrackingFrame));
 
-        // Stabilize the input
-        if(debug)
-        {
-            // Ensure we do not time any debug rendering
-            cv::ocl::finish();
-            timer.pause();
-
-            Frame debug_frame = input.clone();
-            if(m_Settings.stabilize_output)
+            if(debug)
             {
-                // Draw tracking markers onto frame
-                draw::plot_markers(
-                    debug_frame.data,
-                    m_FrameTracker.tracking_points(),
-                    lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
-                    cv::MarkerTypes::MARKER_CROSS,
-                    8,
-                    2
-                );
+                // If we're in debug, draw the motion trackers,
+                // ensuring we do not time the debug rendering.
+                timer.sync_gpu(debug).pause();
+                draw_trackers(input.data);
+                timer.sync_gpu(debug).start();
             }
-            cv::ocl::finish();
-            timer.start();
-
-            m_Stabilizer.stabilize(debug_frame, output, suppress(frame_motion));
         }
-        else m_Stabilizer.stabilize(input, output, suppress(frame_motion));
 
-        if(debug) cv::ocl::finish();
-        timer.stop();
+        output = std::move(m_Stabilizer.next(std::move(input), motion.value_or(m_NullMotion)));
+
+        if(m_Settings.crop_output && !output.is_empty())
+            output.data = output.data(m_Stabilizer.stable_region());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
-	{
-		LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
-		LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
-		LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
-		LVK_ASSERT(settings.suppression_smoothing_rate > 0);
+    void StabilizationFilter::draw_trackers(cv::UMat& frame)
+    {
+        const cv::Size2f point_scaling(
+            static_cast<float>(frame.cols) / static_cast<float>(m_FrameTracker.tracking_resolution().width),
+            static_cast<float>(frame.rows) / static_cast<float>(m_FrameTracker.tracking_resolution().height)
+        );
 
-		// Reset the tracking when disabling the stabilization otherwise we will have 
-		// a discontinuity in the tracking once we start up again with a brand new scene. 
-		if(m_Settings.stabilize_output && !settings.stabilize_output)
-            reset_context();
+        // Draw tracking markers onto frame
+        draw::plot_markers(
+            frame,
+            lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
+            m_FrameTracker.tracking_points(),
+            point_scaling,
+            cv::MarkerTypes::MARKER_CROSS,
+            8,
+            2
+        );
+    }
 
-		m_Settings = settings;
-
-		m_FrameTracker.set_model(settings.motion_model);
-		m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
-			path_settings.correction_margin = settings.crop_proportion;
-		    path_settings.smoothing_frames = settings.smoothing_frames;
-			path_settings.crop_to_margins = settings.crop_output;
-		});
-	}
-	
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool StabilizationFilter::ready() const
@@ -150,7 +152,7 @@ namespace lvk
 
 	float StabilizationFilter::stability() const
 	{
-		return m_FrameTracker.stability();
+		return m_FrameTracker.frame_stability();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -163,7 +165,7 @@ namespace lvk
 			return motion;
 		}
 		
-		const float scene_stability = m_FrameTracker.stability();
+		const float scene_stability = m_FrameTracker.frame_stability();
 		const float suppression_threshold = m_Settings.suppression_threshold;
 		const float saturation_threshold = m_Settings.suppression_saturation_limit;
 

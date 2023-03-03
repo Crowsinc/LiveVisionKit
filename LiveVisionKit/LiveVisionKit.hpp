@@ -27,6 +27,7 @@
 #include "Math/BoundingQuad.hpp"
 
 #include "Structures/SlidingBuffer.hpp"
+#include "Structures/SpatialMap.hpp"
 
 #include "Utility/Algorithm.hpp"
 #include "Utility/Drawing.hpp"
@@ -38,6 +39,7 @@
 #include "Utility/Timing/Stopwatch.hpp"
 #include "Utility/Timing/TickTimer.hpp"
 
+#include "Vision/Tracking/WarpField.hpp"
 #include "Vision/Tracking/FrameTracker.hpp"
 #include "Vision/Tracking/GridDetector.hpp"
 #include "Vision/Camera/CameraCalibrator.hpp"

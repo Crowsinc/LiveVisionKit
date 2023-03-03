@@ -18,21 +18,31 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-#include <optional>
+
+#include "Structures/SpatialMap.hpp"
+#include "Utility/Properties/Configurable.hpp"
 
 namespace lvk
 {
 
-	class GridDetector
+    struct GridDetectorSettings
+    {
+        cv::Size input_resolution = {640, 360};
+        cv::Size feature_grid_shape = {32, 18};
+
+        cv::Size detection_zones = {2, 1};
+        float detection_threshold = 0.3f;
+        float detection_density = 0.01f;
+    };
+
+
+	class GridDetector final : public Configurable<GridDetectorSettings>
 	{
 	public:
 
-		GridDetector(
-			const cv::Size& resolution,
-			const cv::Size& detect_grid_size,
-			const cv::Size& feature_grid_size,
-			const float detection_load
-		);
+		explicit GridDetector(const GridDetectorSettings& settings = {});
+
+        void configure(const GridDetectorSettings& settings) override;
 
 		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
 
@@ -40,17 +50,21 @@ namespace lvk
 
 		void reset();
 
-		cv::Size resolution() const;
-
 		size_t feature_capacity() const;
 
-		cv::Point2f distribution_quality() const;
+        cv::Size local_feature_size() const;
+
+        cv::Size detection_zone_size() const;
+
+		double distribution_quality() const;
 
 		cv::Point2f distribution_centroid() const;
 
+        const cv::Size& input_resolution() const;
+
 	private:
 
-		struct DetectBlock
+		struct DetectZone
 		{
             cv::Rect2f bounds;
             int fast_threshold = 0;
@@ -59,36 +73,22 @@ namespace lvk
 
 		struct FeatureBlock
 		{
-			std::optional<cv::KeyPoint> feature;
+			cv::KeyPoint feature;
 			bool propagated = false;
 		};
 
-		void construct_grids();
+		void construct_detection_zones();
 
-		void process_features(std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
+        void process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
 
 		void extract_features(std::vector<cv::Point2f>& feature_points) const;
 
-		FeatureBlock& fetch_feature_block(const cv::Point& point);
-
-		DetectBlock& fetch_detect_block(const cv::Point& point);
-
-		bool within_bounds(const cv::Point& point) const;
-
 	private:
+        SpatialMap<FeatureBlock> m_FeatureGrid;
+        SpatialMap<DetectZone> m_DetectionZones;
 
-		const cv::Size m_Resolution;
-		const cv::Size m_DetectGridSize, m_DetectBlockSize;
-		const cv::Size m_FeatureGridSize, m_FeatureBlockSize;
-
-		const float m_DetectionLoad;
-		const size_t m_FASTFeatureTarget;
-		const size_t m_FeaturesPerDetectBlock;
+		size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
 		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
-
-		std::vector<DetectBlock> m_DetectGrid;
-		std::vector<FeatureBlock> m_FeatureGrid;
-		std::vector<cv::Point2f> m_FeaturePoints;
 	};
 
 }

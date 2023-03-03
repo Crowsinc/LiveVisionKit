@@ -17,8 +17,6 @@
 
 #include "ConversionFilter.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
 namespace lvk
 {
 
@@ -38,8 +36,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void ConversionFilter::configure(const ConversionFilterSettings& settings)
+    {
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void ConversionFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
@@ -47,30 +52,14 @@ namespace lvk
     {
         LVK_ASSERT(!input.is_empty());
 
-        if(debug) cv::ocl::finish();
-        timer.start();
-
-        output.timestamp = input.timestamp;
-
         cv::cvtColor(
             input.data,
-            output.data,
+            input.data,
             m_Settings.conversion_code,
             static_cast<int>(m_Settings.output_channels.value_or(0))
         );
 
-        // If in debug mode, wait for all processing to finish before stopping the timer.
-        // This leads to more accurate timing, but can lead to performance drops.
-        if(debug) cv::ocl::finish();
-        timer.stop();
-    }
-
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void ConversionFilter::configure(const ConversionFilterSettings& settings)
-    {
-        m_Settings = settings;
+        output = std::move(input);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

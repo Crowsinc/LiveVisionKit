@@ -19,22 +19,18 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Math/Homography.hpp"
-#include "Filters/VideoFilter.hpp"
+#include "WarpField.hpp"
+#include "Filters/VideoFrame.hpp"
 #include "Structures/SlidingBuffer.hpp"
 #include "Utility/Properties/Configurable.hpp"
 
 namespace lvk
 {
 
-	struct FrameVector;
-	
 	struct PathStabilizerSettings
 	{
 		size_t smoothing_frames = 10;
-		float correction_margin = 0.1f;
-		bool crop_to_margins = false;
-		bool lock_focus = true; // TODO: implement (unlocked crop region)
+        float correction_margin = 0.1f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>
@@ -42,16 +38,20 @@ namespace lvk
 	public:
 
 		explicit PathStabilizer(const PathStabilizerSettings& settings = {});
-		
-		void stabilize(const Frame& input, Frame& output, const Homography& frame_velocity);
 
 		void configure(const PathStabilizerSettings& settings) override;
 
-		void restart();
-
 		bool ready() const;
 
-		uint32_t frame_delay() const;
+        Frame next(const Frame& frame, const WarpField& motion);
+
+        Frame next(Frame&& frame, const WarpField& motion);
+
+		void restart();
+
+		size_t frame_delay() const;
+
+        WarpField position() const;
 
 		const cv::Rect& stable_region() const;
 
@@ -61,41 +61,16 @@ namespace lvk
 
 		void resize_buffers();
 
-		static Homography clamp_velocity(
-			const Homography& velocity,
-			const cv::Size& frame_size,
-			const cv::Rect& focus_area
-		);
+        void rescale_buffers(const cv::Size& size);
 
 	private:
+        SlidingBuffer<WarpField> m_Trace;
+        SlidingBuffer<float> m_SmoothingFilter;
+        WarpField m_SmoothTrace{WarpField::MinimumSize};
+
+        cv::Rect m_Margins{0,0,0,0};
 		SlidingBuffer<Frame> m_FrameQueue;
-		SlidingBuffer<FrameVector> m_Trajectory;
-		SlidingBuffer<double> m_SmoothingFilter;
-
-		Frame m_NullFrame;
-		cv::Rect m_FocusArea{0,0,0,0};
-		cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-	};
-
-	struct FrameVector
-	{
-		Homography displacement;
-		Homography velocity;
-
-		explicit FrameVector(
-			Homography frame_displacement = Homography::Zero(),
-			Homography frame_velocity = Homography::Zero()
-		);
-
-		FrameVector operator+(const Homography& frame_velocity) const;
-
-		FrameVector operator+(const FrameVector& other) const;
-
-		FrameVector operator-(const FrameVector& other) const;
-
-		FrameVector operator*(const double scaling) const;
-
-		FrameVector operator/(const double scaling) const;
+        cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

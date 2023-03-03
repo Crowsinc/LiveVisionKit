@@ -26,11 +26,14 @@ namespace lvk
         cv::UMat data;
         uint64_t timestamp;
 
+    public:
+
         static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
 
-        explicit Frame(const uint64_t timestamp = 0);
+        Frame();
 
-        // NOTE: copies the frame, use Wrap() to reference
+        explicit Frame(const uint64_t timestamp);
+
         explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
 
         Frame(
@@ -67,6 +70,8 @@ namespace lvk
         void copy(const Frame& src);
 
         Frame clone() const;
+
+        void release();
 
         uint32_t width() const;
 

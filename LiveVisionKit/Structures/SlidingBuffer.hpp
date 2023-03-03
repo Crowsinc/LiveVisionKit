@@ -82,10 +82,10 @@ namespace lvk
 		size_t centre_index() const;
 
 		template<typename K>
-		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel, T initial = T()) const;
+		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel) const;
 
 		template<typename K>
-		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial = T()) const;
+		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const;
 
         T average(const size_t start, const size_t count) const;
 

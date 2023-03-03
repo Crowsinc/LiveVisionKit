@@ -19,72 +19,56 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "WarpField.hpp"
 #include "GridDetector.hpp"
 #include "Math/Homography.hpp"
+#include "Utility/Properties/Configurable.hpp"
 
 namespace lvk
 {
-	enum class MotionModel
-	{
-		AFFINE,
-		HOMOGRAPHY,
-		DYNAMIC
-	};
 
-	class FrameTracker
+    struct FrameTrackerSettings
+    {
+        GridDetector detector = GridDetector();
+        size_t minimum_tracking_points = 40;
+        cv::Size motion_resolution = {2, 2};
+    };
+
+	class FrameTracker final : public Configurable<FrameTrackerSettings>
 	{
 	public:
 
-		explicit FrameTracker(
-			const MotionModel model = MotionModel::DYNAMIC,
-			const float estimation_threshold = 0.05,
-			const GridDetector& detector = GridDetector(cv::Size(640,360), cv::Size(2,1), cv::Size(32,18), 0.3)
-		);
+		explicit FrameTracker(const FrameTrackerSettings& settings = {});
 
-		Homography track(const cv::UMat& next_frame);
+        void configure(const FrameTrackerSettings& settings) override;
+
+		std::optional<WarpField> track(const cv::UMat& next_frame);
 
 		void restart();
 
-		void set_model(const MotionModel& model);
+		double frame_stability() const;
 
-		MotionModel model() const;
+        double tracking_quality() const;
 
-		float stability() const;
+        const cv::Size& motion_resolution() const;
+
+        const cv::Size& tracking_resolution() const;
 
 		const std::vector<cv::Point2f>& tracking_points() const;
 
 	private:
-
-		cv::Point2f import_next(const cv::UMat& frame);
-
-		Homography abort_tracking();
-
-		void prepare_state();
-		
-		MotionModel choose_optimal_model() const;
-
-		void update_metrics(const float inlier_ratio, const cv::Point2f distribution_error);
-
-	private:
-
-		GridDetector m_GridDetector;
-
-		const cv::Size m_TrackingResolution;
-		const uint32_t m_MinMatchThreshold;
-
-		std::vector<cv::Point2f> m_TrackedPoints, m_ScaledTrackedPoints;
-		std::vector<cv::Point2f> m_MatchedPoints, m_ScaledMatchedPoints;
+		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_SceneStability = 0.0f;
-		cv::Point2f m_DistributionQuality;
+		double m_FrameStability = 0.0;
+        double m_DistributionQuality = 0.0;
 
-		MotionModel m_MotionModel;
 		cv::UsacParams m_USACParams;
-
-		cv::UMat m_PrevFrame, m_NextFrame;
 		cv::Mat m_FilterKernel;
-		bool m_FirstFrame;
+
+		bool m_FirstFrame = true;
+		cv::UMat m_PrevFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        cv::UMat m_NextFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

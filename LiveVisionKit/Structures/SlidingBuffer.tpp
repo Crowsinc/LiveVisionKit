@@ -371,7 +371,7 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index, T initial) const
+	T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
@@ -401,17 +401,18 @@ namespace lvk
 		}
 
 		// Perform the convolution
-		for(size_t i = 0; i < elems; i++)
-			initial = initial + this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
+        T result = this->at(buffer_offset) * kernel.at(kernel_offset);
+		for(size_t i = 1; i < elems; i++)
+            result += this->at(i + buffer_offset) * kernel.at(i + kernel_offset);
 
-		return initial;
+		return result;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
 	template<typename K>
-	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel, T initial) const
+	SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
@@ -419,7 +420,7 @@ namespace lvk
 
 		SlidingBuffer<T> buffer(capacity());
 		for (size_t i = 0; i < size(); i++)
-			buffer.push(convolve_at(kernel, i, initial));
+			buffer.push(convolve_at(kernel, i));
 
 		return buffer;
 	}
@@ -462,7 +463,7 @@ namespace lvk
         for(size_t i = start + 1; i < start + count; i++)
         {
             diff = at(i) - avg;
-            var = var + diff * diff;
+            var += diff * diff;
         }
 
         return var / count;
@@ -488,8 +489,11 @@ namespace lvk
         // Kick start calculation with first element to avoid
         // requirement of a default initialisation of T.
         T min = at(start);
-        for(size_t i = start + 1; i < start + count; i++)
-            min = std::min(min, at(i));
+        for (size_t i = start + 1; i < start + count; i++)
+        {
+            auto& value = at(i);
+            if(value < min) min = value;
+        }
 
         return min;
     }
@@ -515,7 +519,10 @@ namespace lvk
         // requirement of a default initialisation of T.
         T max = at(start);
         for (size_t i = start + 1; i < start + count; i++)
-            max = std::max(max, at(i));
+        {
+            auto& value = at(i);
+            if(value > max) max = value;
+        }
 
         return max;
     }
@@ -541,7 +548,7 @@ namespace lvk
         // requirement of a default initialisation of T.
         T sum = at(start);
         for(size_t i = start + 1; i < start + count; i++)
-            sum = sum + at(i);
+            sum += at(i);
 
         return sum;
     }

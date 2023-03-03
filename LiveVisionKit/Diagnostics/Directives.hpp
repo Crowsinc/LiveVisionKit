@@ -19,7 +19,10 @@
 
 #include <string>
 #include <cstring>
+#include <fstream>
 #include <functional>
+
+// UTILITY
 
 // taken from https://stackoverflow.com/a/8488201
 #ifdef _WIN32
@@ -27,6 +30,9 @@
 #else 
 #define LVK_FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
+
+
+// ASSERTS
 
 namespace lvk::global
 {
@@ -51,3 +57,17 @@ namespace lvk::global
 #endif
 
 
+// LOGGING
+
+// NOTE: Resulting CSVLogger will be named '_var'
+#define INIT_CSV(var, path)                                                                                            \
+    static std::ofstream log_file_##var;                                                                               \
+    static bool log_init_##var = false;                                                                                \
+    if(!log_init_##var)                                                                                                \
+    {                                                                                                                  \
+        log_file_##var.open(path);                                                                                     \
+        log_init_##var = true;                                                                                         \
+                                                                                                                       \
+        LVK_ASSERT(log_file_##var.good())                                                                              \
+    }                                                                                                                  \
+    static lvk::CSVLogger _##var(log_file_##var)

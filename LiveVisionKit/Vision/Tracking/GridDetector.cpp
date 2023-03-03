@@ -25,7 +25,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr int GLOBAL_FAST_FEATURE_TARGET = 3000;
 	constexpr int DEFAULT_FAST_THRESHOLD = 70;
 	constexpr int MAX_FAST_THRESHOLD = 250;
 	constexpr int MIN_FAST_THRESHOLD = 10;
@@ -33,85 +32,87 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 	
-	GridDetector::GridDetector(
-		const cv::Size& resolution,
-		const cv::Size& detect_grid_size,
-		const cv::Size& feature_grid_size,
-		const float detection_load
-	)
-		: m_Resolution(resolution),
-		  m_DetectGridSize(detect_grid_size),
-		  m_DetectBlockSize(
-			  resolution.width / detect_grid_size.width,
-			  resolution.height / detect_grid_size.height
-		  ),
-		  m_FeatureGridSize(feature_grid_size),
-		  m_FeatureBlockSize(
-			  resolution.width / feature_grid_size.width,
-			  resolution.height / feature_grid_size.height
-		  ),
-	      m_DetectionLoad(detection_load),
-		  m_FASTFeatureTarget(GLOBAL_FAST_FEATURE_TARGET / m_DetectGridSize.area()),
-		  m_FeaturesPerDetectBlock(m_FeatureGridSize.area() / m_DetectGridSize.area())
+	GridDetector::GridDetector(const GridDetectorSettings& settings)
+        : m_FeatureGrid(settings.feature_grid_shape),
+          m_DetectionZones(settings.detection_zones),
+          m_MinimumFeatureLoad(0),  // Set by configure()
+          m_FASTFeatureTarget(0)    // Set by configure()
 	{
-		LVK_ASSERT(resolution.width > 0);
-		LVK_ASSERT(resolution.height > 0);
-		LVK_ASSERT(between(detection_load, 0.0f, 1.0f));
-
-		// Grids must evenly divide the resolution
-		LVK_ASSERT(resolution.height % detect_grid_size.height == 0);
-		LVK_ASSERT(resolution.width % detect_grid_size.width  == 0);
-		LVK_ASSERT(resolution.height % feature_grid_size.height == 0);
-		LVK_ASSERT(resolution.width % feature_grid_size.width == 0);
-		
-		// Feature grid must evenly divide the detect grid
-		LVK_ASSERT(m_DetectBlockSize.width % m_FeatureBlockSize.width == 0);
-		LVK_ASSERT(m_DetectBlockSize.height % m_FeatureBlockSize.height == 0);
-		
-		// Detect grid must be smaller or equal to feature grid
-		// Feature grid must be smaller or equal to resolution
-		LVK_ASSERT(between(detect_grid_size.width, 1, feature_grid_size.width));
-		LVK_ASSERT(between(detect_grid_size.height, 1, feature_grid_size.height));
-		LVK_ASSERT(between(feature_grid_size.width, detect_grid_size.width, resolution.width));
-		LVK_ASSERT(between(feature_grid_size.height, detect_grid_size.height, resolution.height));
-
-		m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
-		m_FeaturePoints.reserve(m_FeatureGridSize.area());
-
-		construct_grids();
-		reset();
+        this->configure(settings);
+        construct_detection_zones();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void GridDetector::construct_grids()
-	{
-		// Construct detection grid
-		m_DetectGrid.clear();
-		for(uint32_t r = 0; r < m_DetectGridSize.height; r++)
-		{
-			for(uint32_t c = 0; c < m_DetectGridSize.width; c++)
-			{
-				auto& block = m_DetectGrid.emplace_back();
-				block.bounds = cv::Rect2f(
-					cv::Point2f(
-                        static_cast<float>(c * m_DetectBlockSize.width),
-                        static_cast<float>(r * m_DetectBlockSize.height)
-                    ),
-					m_DetectBlockSize
-				);
-				block.fast_threshold = DEFAULT_FAST_THRESHOLD;
-				block.propagations = 0;
-			}
-		}
+    void GridDetector::configure(const GridDetectorSettings& settings)
+    {
+        LVK_ASSERT(settings.input_resolution.width > 0);
+        LVK_ASSERT(settings.input_resolution.height > 0);
+        LVK_ASSERT(between(settings.detection_threshold, 0.0f, 1.0f));
 
-		// Construct feature grid
-		m_FeatureGrid.clear();
-		for(int i = 0; i < m_FeatureGridSize.area(); i++)
+        // Grids must be smaller or equal to resolution
+        LVK_ASSERT(settings.feature_grid_shape.width <= settings.input_resolution.width);
+        LVK_ASSERT(settings.feature_grid_shape.height <= settings.input_resolution.height);
+        LVK_ASSERT(settings.detection_zones.width <= settings.input_resolution.width);
+        LVK_ASSERT(settings.detection_zones.height <= settings.input_resolution.height);
+
+        // Grids must evenly divide the resolution
+        LVK_ASSERT(settings.input_resolution.height % settings.detection_zones.height == 0);
+        LVK_ASSERT(settings.input_resolution.width % settings.detection_zones.width == 0);
+        LVK_ASSERT(settings.input_resolution.height % settings.feature_grid_shape.height == 0);
+        LVK_ASSERT(settings.input_resolution.width % settings.feature_grid_shape.width == 0);
+
+        if(m_Settings.feature_grid_shape != settings.feature_grid_shape)
+        {
+            reset();
+            m_FeatureGrid.rescale(settings.feature_grid_shape);
+        }
+
+        if(m_Settings.detection_zones != settings.detection_zones)
+        {
+            m_DetectionZones.clear();
+            m_DetectionZones.rescale(settings.detection_zones);
+            construct_detection_zones();
+        }
+
+        const cv::Rect input_region({0,0}, settings.input_resolution);
+        m_DetectionZones.align(input_region);
+        m_FeatureGrid.align(input_region);
+
+        const auto input_area = static_cast<float>(settings.input_resolution.area());
+        const auto detect_zones = static_cast<float>(settings.detection_zones.area());
+        const auto feature_blocks = static_cast<float>(settings.feature_grid_shape.area());
+
+        m_MinimumFeatureLoad = static_cast<size_t>((settings.detection_threshold * feature_blocks) / detect_zones);
+        m_FASTFeatureTarget = static_cast<size_t>((input_area * settings.detection_density) / detect_zones);
+        m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
+
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void GridDetector::construct_detection_zones()
+	{
+        const cv::Size2f detection_zone_size = m_DetectionZones.key_size();
+
+        m_DetectionZones.clear();
+		for(size_t r = 0; r < m_DetectionZones.rows(); r++)
 		{
-			auto& block = m_FeatureGrid.emplace_back();
-			block.feature = std::nullopt;
-			block.propagated = true;
+			for(size_t c = 0; c < m_DetectionZones.cols(); c++)
+			{
+                DetectZone zone;
+                zone.bounds = cv::Rect2f(
+                    static_cast<float>(c) * detection_zone_size.width,
+                    static_cast<float>(r) * detection_zone_size.height,
+                    detection_zone_size.width,
+                    detection_zone_size.height
+				);
+				zone.fast_threshold = DEFAULT_FAST_THRESHOLD;
+				zone.propagations = 0;
+
+                m_DetectionZones.place_at({c, r}, zone);
+			}
 		}
 	}
 
@@ -119,15 +120,15 @@ namespace lvk
 
 	void GridDetector::detect(cv::UMat& frame, std::vector<cv::Point2f>& points)
 	{
-		LVK_ASSERT(frame.size() == resolution());
+		LVK_ASSERT(frame.size() == input_resolution());
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
 		// Detect new features over the detect grid and process into the feature grid
-		for(auto& [bounds, fast_threshold, propagations] : m_DetectGrid)
+		for(auto& [coord, detection_zone] : m_DetectionZones)
 		{
-			const float grid_load = static_cast<float>(propagations) / static_cast<float>(m_FeaturesPerDetectBlock);
+            auto& [bounds, fast_threshold, propagations] = detection_zone;
 
-			if(grid_load < m_DetectionLoad)
+			if(propagations <= m_MinimumFeatureLoad)
 			{
 				m_FASTFeatureBuffer.clear();
 
@@ -148,24 +149,23 @@ namespace lvk
 			}
 		}
 
-		m_FeaturePoints.clear();
-		extract_features(m_FeaturePoints);
-
-		points = m_FeaturePoints;
+		extract_features(points);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void GridDetector::process_features(std::vector<cv::KeyPoint>& features, const cv::Point2f& offset)
+	void GridDetector::process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset)
 	{
 		// Process features into the feature grid, keeping only the best for each block.
 		for(cv::KeyPoint feature : features)
 		{
+            LVK_ASSERT(m_FeatureGrid.within_bounds(feature.pt));
+
 			feature.pt.x += offset.x;
 			feature.pt.y += offset.y;
 
-			auto& [block_feature, propagated] = fetch_feature_block(feature.pt);
-			if(!propagated && (!block_feature.has_value() || block_feature->response < feature.response))
+			auto& [block_feature, propagated] = m_FeatureGrid[feature.pt];
+			if(!propagated && block_feature.response < feature.response)
 				block_feature = feature;
 		}
 	}
@@ -174,10 +174,9 @@ namespace lvk
 
 	void GridDetector::extract_features(std::vector<cv::Point2f>& feature_points) const
 	{
-		for(const auto& [feature, propagated] : m_FeatureGrid)
-			if(feature.has_value())
-				feature_points.push_back(feature->pt);
-	}
+		for(const auto& [coord, block] : m_FeatureGrid)
+            feature_points.push_back(block.feature.pt);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -185,21 +184,18 @@ namespace lvk
 	{
 		reset();
 
-		// Propagate the given points onto the feature grid, 
+		// Propagate the given points onto the feature grid,
 		for(const auto& point : points)
 		{
 			// Silently ignore points which are out of bounds
-			if (within_bounds(point))
+			if(const auto& key = m_FeatureGrid.try_key_of(point); key.has_value())
 			{
-				auto& [feature, active] = fetch_feature_block(point);
-				if (!feature.has_value())
-				{
-					feature = cv::KeyPoint(point, 1);
-					active = true;
-					
-					m_FeaturePoints.push_back(point);
-					fetch_detect_block(point).propagations++;
-				}
+                // Ignore point if one has already been propagated to the same point.
+                if(m_FeatureGrid.contains(*key))
+                    continue;
+
+				m_FeatureGrid.emplace_at(*key, cv::KeyPoint(point, 1), true);
+                m_DetectionZones[point].propagations++;
 			}
 		}
 	}
@@ -208,102 +204,54 @@ namespace lvk
 
 	void GridDetector::reset()
 	{
-		for (auto& detect_block : m_DetectGrid)
-			detect_block.propagations = 0;
+		for(auto& [coord, zone] : m_DetectionZones)
+			zone.propagations = 0;
 
-		for (auto& [feature, propagated] : m_FeatureGrid)
-		{
-			feature.reset();
-			propagated = false;
-		}
-
-		m_FeaturePoints.clear();
+        m_FeatureGrid.clear();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	GridDetector::FeatureBlock& GridDetector::fetch_feature_block(const cv::Point& point)
+    size_t GridDetector::feature_capacity() const
+    {
+        return m_FeatureGrid.capacity();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	cv::Size GridDetector::local_feature_size() const
 	{
-		LVK_ASSERT(within_bounds(point));
-
-		const size_t block_x = point.x / m_FeatureBlockSize.width;
-		const size_t block_y = point.y / m_FeatureBlockSize.height;
-
-		return m_FeatureGrid[block_y * m_FeatureGridSize.width + block_x];
+		return cv::Size(m_FeatureGrid.key_size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	GridDetector::DetectBlock& GridDetector::fetch_detect_block(const cv::Point& point)
+	cv::Size GridDetector::detection_zone_size() const
 	{
-		LVK_ASSERT(within_bounds(point));
-
-		const size_t block_x = point.x / m_DetectBlockSize.width;
-		const size_t block_y = point.y / m_DetectBlockSize.height;
-
-		return m_DetectGrid[block_y * m_DetectGridSize.width + block_x];
+		return cv::Size(m_DetectionZones.key_size());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool GridDetector::within_bounds(const cv::Point& point) const
-	{
-		return between(point.x, 0, m_Resolution.width - 1)
-			&& between(point.y, 0, m_Resolution.height - 1);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	cv::Size GridDetector::resolution() const
-	{
-		return m_Resolution;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	size_t GridDetector::feature_capacity() const
-	{
-		return m_FeatureGridSize.area();
-	}
+    double GridDetector::distribution_quality() const
+    {
+        return m_FeatureGrid.distribution_quality();
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	cv::Point2f GridDetector::distribution_centroid() const
 	{
-		if(m_FeaturePoints.empty())
-			return {0,0};
-
-		cv::Point2f centroid(0, 0);
-		for(const auto& point : m_FeaturePoints)
-			centroid += point;
-		
-		centroid /= static_cast<float>(m_FeaturePoints.size());
-		
-		return centroid;
+		return m_FeatureGrid.distribution_centroid<float>();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Point2f GridDetector::distribution_quality() const 
-	{
-		// In terms of the GridDetector, a good distribution of points is 
-		// one in which the points evenly and fairly describe the frame.
-		// We can define an an ideally distributed set of tracking points 
-		// as being perfectly symmetrical across all of the frame's lines
-		// of symmetry. Therefore we can measure the distribution quality 
-		// by how close the centroid is from the centre of the frame.
-
-		const auto centroid = distribution_centroid();
-
-		// Present independent vertical and horizontal qualities. 
-		return {
-            1.0f - 2 * std::abs((centroid.x / static_cast<float>(m_Resolution.width)) - 0.5f),
-            1.0f - 2 * std::abs((centroid.y / static_cast<float>(m_Resolution.height)) - 0.5f)
-        };
-	}
+    const cv::Size& GridDetector::input_resolution() const
+    {
+        return m_Settings.input_resolution;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 }
-
-

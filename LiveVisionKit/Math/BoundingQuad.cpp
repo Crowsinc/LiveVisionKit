@@ -39,7 +39,7 @@ namespace lvk
 
 	void BoundingQuad::transform(const Homography& homography)
 	{
-		m_Vertices = homography.transform(m_LocalVertices);
+		homography.transform(m_LocalVertices, m_Vertices);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

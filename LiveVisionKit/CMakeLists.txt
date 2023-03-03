@@ -95,6 +95,8 @@ target_sources(
         Math/Logic.tpp
         Math/Math.hpp
         Math/Math.tpp
+        Math/VirtualGrid.hpp
+        Math/VirtualGrid.cpp
 )
 
 # STRUCTURE SOURCES
@@ -103,6 +105,8 @@ target_sources(
     PRIVATE
         Structures/SlidingBuffer.hpp
         Structures/SlidingBuffer.tpp
+        Structures/SpatialMap.hpp
+        Structures/SpatialMap.tpp
 )
 
 # UTILITY SOURCES
@@ -137,4 +141,6 @@ target_sources(
         Vision/Tracking/GridDetector.hpp
         Vision/Tracking/PathStabilizer.cpp
         Vision/Tracking/PathStabilizer.hpp
+        Vision/Tracking/WarpField.hpp
+        Vision/Tracking/WarpField.cpp
 )

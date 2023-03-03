@@ -31,6 +31,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    Frame::Frame()
+        : Frame(0)
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
     Frame::Frame(const uint64_t timestamp)
         : data(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
           timestamp(timestamp)
@@ -78,8 +84,7 @@ namespace lvk
         : data(std::move(frame.data)),
           timestamp(frame.timestamp)
     {
-        frame.data.release();
-        frame.timestamp = 0;
+        frame.release();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -89,8 +94,7 @@ namespace lvk
         data = frame.data;
         timestamp = frame.timestamp;
 
-        frame.data.release();
-        frame.timestamp = 0;
+        frame.release();
 
         return *this;
     }
@@ -156,6 +160,14 @@ namespace lvk
     Frame Frame::clone() const
     {
         return Frame(data, timestamp);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void Frame::release()
+    {
+        data.release();
+        timestamp = 0;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

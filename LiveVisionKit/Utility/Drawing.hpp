@@ -31,15 +31,16 @@ namespace lvk::draw
 	const cv::Scalar BGR_BLUE(255, 0, 0);
 	const cv::Scalar BGR_RED(0, 0, 255);
 
-	template<typename T>
-	void plot_markers(
-		cv::UMat& dst,
-		const std::vector<cv::Point_<T>>& markers,
-		const cv::Scalar& color,
-		const cv::MarkerTypes type = cv::MarkerTypes::MARKER_CROSS,
-		const int size = 10,
-		const int thickness = 2
-	);
+    template<typename T>
+    void plot_markers(
+        cv::UMat& dst,
+        const cv::Scalar& color,
+        const std::vector<cv::Point_<T>>& markers,
+        const cv::Size2f& position_scaling = {1, 1},
+        const cv::MarkerTypes marker_type = cv::MarkerTypes::MARKER_CROSS,
+        const int marker_size = 10,
+        const int marker_thickness = 2
+    );
 
 	template<typename T>
 	void text(

@@ -19,9 +19,6 @@
 
 #include "Utility/Drawing.hpp"
 
-#include <opencv2/core/ocl.hpp>
-
-
 namespace lvk
 {
 
@@ -35,17 +32,27 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void lvk::DeblockingFilter::configure(const DeblockingFilterSettings& settings)
+    {
+        LVK_ASSERT(settings.block_size > 0);
+        LVK_ASSERT(settings.filter_size >= 3);
+        LVK_ASSERT(settings.filter_size % 2 == 1);
+        LVK_ASSERT(settings.detection_levels > 0);
+        LVK_ASSERT(settings.filter_scaling > 1.0f);
+
+        m_Settings = settings;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void DeblockingFilter::filter(
-        const Frame& input,
+        Frame&& input,
         Frame& output,
         Stopwatch& timer,
         const bool debug
     )
 	{
         LVK_ASSERT(!input.is_empty());
-
-        if(debug) cv::ocl::finish();
-        timer.start();
 
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -59,29 +66,23 @@ namespace lvk
 		// of threshold less strict for the user; multiple thresholds are used, each
 		// with their own weighting that increases as details become stronger.
 
-		// Ensure that the output exists
-		output.default_to(input.size(), input.type());
-        output.timestamp = input.timestamp;
-
 		const int macroblock_size = static_cast<int>(m_Settings.block_size);
 		const cv::Size macroblock_extent = input.size() / macroblock_size;
 		const cv::Rect macroblock_region({0,0}, macroblock_extent * macroblock_size);
 
 		// Resolutions such as 1920x1080 may not be evenly divisible by macroblocks.
 		// We ignore areas containing partial blocks by applying the filter on only
-		// the region of the frame which consists of only full macroblocks. 
-		cv::UMat input_region = input.data(macroblock_region);
-		cv::UMat output_region = output.data(macroblock_region);
-
+		// the region of the frame which consists of only full macroblocks.
+		cv::UMat filter_region = input.data(macroblock_region);
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
-		cv::resize(input_region, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
+		cv::resize(filter_region, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
 		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, static_cast<int>(m_Settings.filter_size));
 		cv::resize(m_DeblockBuffer, m_SmoothFrame, macroblock_region.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Generate reference frame
-		cv::extractChannel(input_region, m_DetectionFrame, 0);
+		cv::extractChannel(filter_region, m_DetectionFrame, 0);
 		cv::resize(m_DetectionFrame, m_BlockGrid, macroblock_extent, 0, 0, cv::INTER_AREA);
 		cv::resize(m_BlockGrid, m_ReferenceFrame, m_DetectionFrame.size(), 0, 0, cv::INTER_NEAREST);
 		cv::absdiff(m_DetectionFrame, m_ReferenceFrame, m_DetectionFrame);
@@ -98,7 +99,7 @@ namespace lvk
 			m_FloatBuffer.setTo(cv::Scalar((l + 1.0) * level_step), m_BlockMask);
 		}
 
-		cv::resize(m_FloatBuffer, m_KeepBlendMap, input_region.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_FloatBuffer, m_KeepBlendMap, filter_region.size(), 0, 0, cv::INTER_LINEAR);
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Set smoothing frame to magenta so that we can see all the detection levels.
@@ -107,56 +108,14 @@ namespace lvk
 
 		// Adaptively blend original and smooth frames
 		cv::blendLinear(
-			input_region,
-			m_SmoothFrame,
-			m_KeepBlendMap,
-			m_DeblockBlendMap,
-			output_region
+            filter_region,
+            m_SmoothFrame,
+            m_KeepBlendMap,
+            m_DeblockBlendMap,
+            filter_region
 		);
 
-
-        // TODO: test if this faster than just copying the input over to the output.
-        // If the output and input regions do not match the input frame size
-        // due to the frames not evenly dividing the macroblock, then we need
-        // to copy over the vertical or horizontal slices that weren't filtered.
-        if(input_region.cols < input.data.cols)
-        {
-            const cv::Rect vertical_slice(
-                cv::Point(input_region.cols, 0),
-                cv::Size(
-                    input.data.cols - input_region.cols,
-                    input_region.rows
-                )
-            );
-            input.data(vertical_slice).copyTo(output.data(vertical_slice));
-        }
-        if(input_region.rows < input.data.rows)
-        {
-            const cv::Rect horizontal_slice(
-                cv::Point(0, input_region.rows),
-                cv::Size(
-                    input.data.cols,
-                    input.data.rows - input_region.rows
-                )
-            );
-            input.data(horizontal_slice).copyTo(output.data(horizontal_slice));
-        }
-
-        if(debug) cv::ocl::finish();
-        timer.stop();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void lvk::DeblockingFilter::configure(const DeblockingFilterSettings& settings)
-	{
-		LVK_ASSERT(settings.block_size > 0);
-		LVK_ASSERT(settings.filter_size >= 3);
-		LVK_ASSERT(settings.filter_size % 2 == 1);
-		LVK_ASSERT(settings.detection_levels > 0);
-		LVK_ASSERT(settings.filter_scaling > 1.0f);
-
-		m_Settings = settings;
+        output = std::move(input);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

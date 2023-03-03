@@ -18,6 +18,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <optional>
 
 namespace lvk
 {
@@ -26,51 +27,96 @@ namespace lvk
 	{
 	public:
 
+        static std::optional<Homography> Estimate(
+            const std::vector<cv::Point2f>& tracked_points,
+            const std::vector<cv::Point2f>& matched_points,
+            std::vector<uint8_t>& inlier_status,
+            cv::UsacParams sampling_method,
+            bool force_affine = false
+        );
+
 		static Homography Zero();
 
 		static Homography Identity();
 
-		static Homography FromMatrix(const cv::Mat& matrix);
+        static Homography WrapMatrix(cv::Mat& matrix);
 
-		static Homography FromAffineMatrix(const cv::Mat& affine);
+        static Homography FromAffineMatrix(const cv::Mat& affine);
+
 
 		Homography();
 
 		explicit Homography(const cv::Mat& matrix);
 
+        Homography(Homography&& other) noexcept;
+
         Homography(const Homography& other);
 
-        Homography(Homography&& other) noexcept;
+
+        void set_zero();
+
+        void set_identity();
+
 
 		cv::Point2d transform(const cv::Point2d& point) const;
 
 		cv::Point2f transform(const cv::Point2f& point) const;
 
-		std::vector<cv::Point2d> transform(const std::vector<cv::Point2d>& points) const;
-		
-		std::vector<cv::Point2f> transform(const std::vector<cv::Point2f>& points) const;
+        cv::Point2d operator*(const cv::Point2d& point) const;
+
+        cv::Point2f operator*(const cv::Point2f& point) const;
+
+
+		void transform(const std::vector<cv::Point2d>& points, std::vector<cv::Point2d>& dst) const;
+
+		void transform(const std::vector<cv::Point2f>& points, std::vector<cv::Point2f>& dst) const;
+
+        std::vector<cv::Point2d> operator*(const std::vector<cv::Point2d>& points) const;
+
+        std::vector<cv::Point2f> operator*(const std::vector<cv::Point2f>& points) const;
+
 
 		void warp(const cv::UMat& src, cv::UMat& dst) const;
 
+
+        const cv::Mat& data() const;
+
+        Homography invert() const;
+
+        bool is_identity() const;
+
 		bool is_affine() const;
 
-		cv::Mat as_matrix() const;
+        bool is_zero() const;
+
+
+
+        Homography& operator=(const cv::Mat& other);
 
         Homography& operator=(const Homography& other);
 
         Homography& operator=(Homography&& other) noexcept;
 
-		void operator+=(const Homography& other);
 
-		void operator-=(const Homography& other);
+        void operator+=(const Homography& other);
 
-		void operator*=(const Homography& other);
+        void operator+=(const cv::Mat& other);
+
+        void operator-=(const Homography& other);
+
+        void operator-=(const cv::Mat& other);
+
+        void operator*=(const Homography& other);
+
+        void operator*=(const cv::Mat& other);
 
 		void operator*=(const double scaling);
 
 		void operator/=(const double scaling);
 
 	private:
+        explicit Homography(cv::Mat& data);
+
 		cv::Mat m_Matrix;
 	};
 
@@ -78,13 +124,15 @@ namespace lvk
 
 	Homography operator-(const Homography& left, const Homography& right);
 
+
 	Homography operator*(const Homography& left, const Homography& right);
 
 	Homography operator*(const Homography& homography, const double scaling);
 
-	Homography operator/(const Homography& homography, const double scaling);
-
 	Homography operator*(const double scaling, const Homography& homography);
+
+
+	Homography operator/(const Homography& homography, const double scaling);
 
 	Homography operator/(const double scaling, const Homography& homography);
 

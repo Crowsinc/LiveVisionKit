@@ -36,8 +36,15 @@ namespace lvk
 
 		virtual ~VideoFilter() = default;
 
+        // NOTE: standard colour format is YUV.
         void process(
             const Frame& input,
+            Frame& output,
+            bool debug = false
+        );
+
+        void process(
+            Frame&& input,
             Frame& output,
             bool debug = false
         );
@@ -68,7 +75,7 @@ namespace lvk
     protected:
 
         virtual void filter(
-            const Frame& input,
+            Frame&& input,
             Frame& output,
             Stopwatch& timer,
             const bool debug
