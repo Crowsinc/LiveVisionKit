@@ -43,6 +43,7 @@ namespace lvk
 
     template<typename T>
     inline SpatialMap<T>::SpatialMap(const cv::Size& resolution, const cv::Rect& input_region)
+        : m_VirtualGrid(resolution)
     {
         rescale(resolution);
         align(input_region);
