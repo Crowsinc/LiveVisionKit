@@ -246,6 +246,128 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::warp(const cv::UMat& src, cv::UMat& dst) const
+    {
+        // If we have a minimum size field, we can handle this as a Homography.
+        if(m_WarpOffsets.cols == 2 && m_WarpOffsets.rows == 2)
+        {
+            const auto width = static_cast<float>(src.cols);
+            const auto height = static_cast<float>(src.rows);
+
+            const std::array<cv::Point2f, 4> destination = {
+                cv::Point2f(0, 0),
+                cv::Point2f(width, 0),
+                cv::Point2f(0, height),
+                cv::Point2f(width, height)
+            };
+            const std::array<cv::Point2f, 4> source = {
+                destination[0] + m_WarpOffsets.at<cv::Point2f>(0, 0),
+                destination[1] + m_WarpOffsets.at<cv::Point2f>(0, 1),
+                destination[2] + m_WarpOffsets.at<cv::Point2f>(1, 0),
+                destination[3] + m_WarpOffsets.at<cv::Point2f>(1, 1)
+            };
+
+            cv::warpPerspective(
+                src,
+                dst,
+                cv::getPerspectiveTransform(destination.data(), source.data()),
+                src.size(),
+                cv::WARP_INVERSE_MAP,
+                cv::BORDER_CONSTANT
+            );
+            return;
+        }
+
+        // Upload the velocity field to the staging buffer and resize it to
+        // match the source input. We then need to add the velocities onto
+        // an identity field in order to create the final warp locations.
+        // If the smoothing option is set, perform a 3x3 Gaussian on the
+        // velocity field to ensure that the field is spatially continous.
+
+        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        thread_local cv::UMat warp_map(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        m_WarpOffsets.copyTo(staging_buffer);
+        cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
+        cv::add(warp_map, view_identity_field(src.size()), warp_map);
+        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::undistort()
+    {
+        // TODO: document and optimize
+
+        // Linear regression formulae taken from..
+        // https://www.tutorialspoint.com/regression-analysis-and-the-best-fitting-line-using-cplusplus
+
+        // NOTE: for the verticals we treat the y values as x, vice-versa to
+        // keep things consistent and avoid failure case with vertical lines of infinite slope.
+
+        const auto global = cv::mean(m_WarpOffsets);
+        const auto nc = static_cast<float>(cols());
+        const auto nr = static_cast<float>(rows());
+
+        const float row_x_sum = static_cast<float>(nc * (nc - 1)) / 2.0f;
+        const float col_x_sum = static_cast<float>(nr * (nr - 1)) / 2.0f;
+
+        const float row_x2_sum = (nc * (nc + 1) * (2 * nc + 1)) / 6.0f;
+        const float col_x2_sum = (nr * (nr + 1) * (2 * nr + 1)) / 6.0f;
+
+        using LineData = std::tuple<float, float>;
+        std::vector<LineData> col_lines(cols(), {0.0f, 0.0f});
+        std::vector<LineData> row_lines(rows(), {0.0f, 0.0f});
+
+        for(int r = 0; r < rows(); r++)
+        {
+            auto& [row_y_sum, row_xy_sum] = row_lines[r];
+            for(int c = 0; c < cols(); c++)
+            {
+                auto& [col_y_sum, col_xy_sum] = col_lines[c];
+
+                auto [x, y] = m_WarpOffsets.at<cv::Point2f>(r, c);
+                x -= static_cast<float>(global[0]);
+                y -= static_cast<float>(global[1]);
+
+                row_xy_sum += y * static_cast<float>(c);
+                row_y_sum += y;
+
+                col_xy_sum += x * static_cast<float>(r);
+                col_y_sum += x;
+            }
+
+            // Once we reach here, row 'r' will be completed and we calculate coefficients.
+            const float slope = (nc * row_xy_sum - row_x_sum * row_y_sum)/(nc * row_x2_sum - row_x_sum * row_x_sum);
+            const float intercept = (row_y_sum - slope * row_x_sum) / nc;
+
+            // switch the sum variables for calculated coefficient values.
+            row_y_sum = slope, row_xy_sum = intercept;
+        }
+
+        for(auto& [col_y_sum, col_xy_sum] : col_lines)
+        {
+            const float slope = (nr * col_xy_sum - col_x_sum * col_y_sum)/(nr * col_x2_sum - col_x_sum * col_x_sum);
+            const float intercept = (col_y_sum - slope * col_x_sum) / nr;
+
+            // switch the sum variables for calculated coefficient values.
+            col_y_sum = slope, col_xy_sum = intercept;
+        }
+
+        write([&](cv::Point2f& offset, const cv::Point& coord){
+            auto& [row_slope, row_intercept] = row_lines[coord.y];
+            auto& [col_slope, col_intercept] = col_lines[coord.x];
+
+            const auto x = static_cast<float>(coord.x);
+            const auto y = static_cast<float>(coord.y);
+
+            offset.x = y * col_slope + col_intercept + static_cast<float>(global[0]);
+            offset.y = x * row_slope + row_intercept + static_cast<float>(global[1]);
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void WarpField::set_identity()
     {
         m_WarpOffsets.setTo(cv::Vec2f::all(0.0f));
@@ -475,65 +597,6 @@ namespace lvk
 
         draw_buffer.copyTo(staging_buffer);
         cv::add(dst, staging_buffer, dst);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::warp(const cv::UMat& src, cv::UMat& dst, const bool smoothing) const
-    {
-        // If we have a minimum size field, we can handle this as a Homography.
-        if(m_WarpOffsets.cols == 2 && m_WarpOffsets.rows == 2)
-        {
-            const auto width = static_cast<float>(src.cols);
-            const auto height = static_cast<float>(src.rows);
-
-            const std::array<cv::Point2f, 4> destination = {
-                cv::Point2f(0, 0),
-                cv::Point2f(width, 0),
-                cv::Point2f(0, height),
-                cv::Point2f(width, height)
-            };
-            const std::array<cv::Point2f, 4> source = {
-                destination[0] + m_WarpOffsets.at<cv::Point2f>(0, 0),
-                destination[1] + m_WarpOffsets.at<cv::Point2f>(0, 1),
-                destination[2] + m_WarpOffsets.at<cv::Point2f>(1, 0),
-                destination[3] + m_WarpOffsets.at<cv::Point2f>(1, 1)
-            };
-
-            cv::warpPerspective(
-                src,
-                dst,
-                cv::getPerspectiveTransform(destination.data(), source.data()),
-                src.size(),
-                cv::WARP_INVERSE_MAP,
-                cv::BORDER_CONSTANT
-            );
-            return;
-        }
-
-        // Upload the velocity field to the staging buffer and resize it to
-        // match the source input. We then need to add the velocities onto
-        // an identity field in order to create the final warp locations.
-        // If the smoothing option is set, perform a 3x3 Gaussian on the
-        // velocity field to ensure that the field is spatially continous.
-
-        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-        thread_local cv::UMat warp_map(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-        m_WarpOffsets.copyTo(staging_buffer);
-        if(smoothing)
-        {
-            thread_local cv::UMat smooth_field(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-            cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
-
-            // TODO: rework smoothing
-            cv::GaussianBlur(warp_map, smooth_field, {5,5}, 0.5f);
-            cv::GaussianBlur(smooth_field, warp_map, {3,3}, 0.5f);
-        }
-        else cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
-
-        cv::add(warp_map, view_identity_field(src.size()), warp_map);
-        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
