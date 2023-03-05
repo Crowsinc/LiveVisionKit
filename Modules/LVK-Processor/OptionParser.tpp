@@ -95,7 +95,7 @@ namespace clt
 
                 if(parsed_argument.has_value())
                 {
-                    *location = parsed_argument.value();
+                    *location = *parsed_argument;
                     return true;
                 }
                 else
@@ -140,7 +140,7 @@ namespace clt
 
                 if(parsed_argument.has_value())
                 {
-                    callback(parsed_argument.value());
+                    callback(*parsed_argument);
                     return true;
                 }
                 else

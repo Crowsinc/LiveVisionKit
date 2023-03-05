@@ -90,7 +90,7 @@ namespace clt
         // Load data logger
         if(m_Configuration.log_target.has_value())
         {
-            m_DataLogStream.open(m_Configuration.log_target.value());
+            m_DataLogStream.open(*m_Configuration.log_target);
             if(!m_DataLogStream.good())
                 return "Failed to open data logging stream";
 
@@ -218,7 +218,7 @@ namespace clt
                 {
                     // If we are displaying the output at a fixed frequency,
                     // then we need to wait to match the user's timestep here.
-                    m_FrameTimer.tick(m_Configuration.render_period.value());
+                    m_FrameTimer.tick(*m_Configuration.render_period);
                 }
                 else m_FrameTimer.tick();
 
@@ -325,7 +325,7 @@ namespace clt
     {
         LVK_ASSERT(m_DataLogger.has_value());
 
-        lvk::CSVLogger& logger = m_DataLogger.value();
+        lvk::CSVLogger& logger = *m_DataLogger;
 
         // On first log, add all the headers as filter names
         if(!logger.has_started())

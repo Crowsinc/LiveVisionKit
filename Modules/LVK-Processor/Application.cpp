@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     // Parse the command-line configuration
     if(auto error = configuration.from_command_line(argc, argv); error.has_value())
     {
-        std::cerr << error.value() << "\n";
+        std::cerr << *error << "\n";
         return 1;
     }
 
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     // Run the video processor
     if(auto error = processor.run(); error.has_value())
     {
-        std::cerr << error.value() << "\n";
+        std::cerr << *error << "\n";
         return 1;
     }
 

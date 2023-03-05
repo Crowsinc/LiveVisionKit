@@ -87,7 +87,7 @@ namespace lvk
 		{
 			if(auto parameters = CCTool::LoadProfile(profile); parameters.has_value())
 			{
-				m_Parameters = parameters.value();
+				m_Parameters = *parameters;
 				m_Profile = profile;
 
 				// Reset the undistort maps to load in new profiles

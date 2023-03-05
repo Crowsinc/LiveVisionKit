@@ -126,12 +126,12 @@ namespace clt
             {
                 // If the input was a video file, restrict the output to match the file format.
                 // This is not an encoding tool, so we can make things easier on ourselves here.
-                if(input_format.has_value() && input_format.value() != path.extension())
+                if(input_format.has_value() && *input_format != path.extension())
                 {
                     return cv::format(
                         "Mismatched input and output video formats, output was \'%s\', expected \'%s\'",
                         path.extension().string().c_str(),
-                        input_format.value().c_str()
+                        input_format->c_str()
                     );
                 }
 
