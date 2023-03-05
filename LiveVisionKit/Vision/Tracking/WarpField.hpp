@@ -83,6 +83,11 @@ namespace lvk
         cv::Point2f trace(const cv::Point2f& coord) const;
 
 
+        void warp(const cv::UMat& src, cv::UMat& dst) const;
+
+        void undistort();
+
+
         void set_identity();
 
         void set_to(const cv::Point2f& motion);
@@ -112,8 +117,6 @@ namespace lvk
 
 
         void draw(cv::UMat& dst, const cv::Scalar& color = draw::YUV_MAGENTA, const int thickness = 2) const;
-
-        void warp(const cv::UMat& src, cv::UMat& dst, const bool smoothing = true) const;
 
 
         WarpField& operator=(WarpField&& other) noexcept;
