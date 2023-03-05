@@ -474,8 +474,7 @@ namespace lvk
             motion_weight /= 2.0f;
             cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
             accumulate_motions(submotions, motion_weight, submotion_alignment, origin_points, warped_points);
-
-            motions = std::move(submotions);
+            cv::medianBlur(submotions, motions, 3);
         }
 
         m_WarpOffsets = std::move(motions);
