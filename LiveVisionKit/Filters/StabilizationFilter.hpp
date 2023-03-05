@@ -44,7 +44,7 @@ namespace lvk
                 .feature_grid_shape = {128, 72},
                 .detection_zones = {4, 4}
             }},
-            .motion_resolution = {8, 8}
+            .motion_resolution = {48, 48}
         };
 	};
 
