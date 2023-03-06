@@ -92,6 +92,9 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
+        m_DistributionQuality = 0.0f;
+        m_InlierRatio = 0.0f;
+
 		m_FirstFrame = true;
 		m_Settings.detector.reset();
 	}
@@ -126,7 +129,10 @@ namespace lvk
         m_Settings.detector.detect(m_PrevFrame, m_TrackedPoints);
         m_DistributionQuality = m_Settings.detector.distribution_quality();
         if(m_TrackedPoints.size() < m_Settings.minimum_tracking_points)
+        {
+            restart();
             return std::nullopt;
+        }
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -141,7 +147,10 @@ namespace lvk
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
         if(m_MatchedPoints.size() < m_Settings.minimum_tracking_points)
+        {
+            restart();
             return std::nullopt;
+        }
 
 
         // NOTE: We must have at least 4 points here.
