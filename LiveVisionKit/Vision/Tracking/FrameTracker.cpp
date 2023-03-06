@@ -27,7 +27,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr double METRIC_SMOOTHING_FACTOR = 0.05;
 	constexpr double GOOD_DISTRIBUTION_QUALITY = 0.6;
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -125,13 +124,9 @@ namespace lvk
         // Detect tracking points in the previous frames. Note that this also
         // returns all the points that were propagated from the previous frame.
         m_Settings.detector.detect(m_PrevFrame, m_TrackedPoints);
+        m_DistributionQuality = m_Settings.detector.distribution_quality();
         if(m_TrackedPoints.size() < m_Settings.minimum_tracking_points)
             return std::nullopt;
-
-        m_DistributionQuality = exp_moving_average(
-            m_DistributionQuality, m_Settings.detector.distribution_quality(), METRIC_SMOOTHING_FACTOR
-        );
-
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -144,7 +139,6 @@ namespace lvk
 			cv::Size(7, 7)
 		);
 
-        // TODO: filter by tracking error as well, only for very large errors tho
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
         if(m_MatchedPoints.size() < m_Settings.minimum_tracking_points)
             return std::nullopt;
@@ -170,15 +164,11 @@ namespace lvk
         // are naturally removed from the tracking point set until we have lost
         // too many inliers, and the GridDetector has to detect new points.
 
-        const size_t total_tracking_points = m_TrackedPoints.size();
         fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
         m_Settings.detector.propagate(m_MatchedPoints);
 
-        m_InlierRatio = exp_moving_average(
-            m_InlierRatio,
-            static_cast<double>(m_MatchedPoints.size()) / static_cast<double>(total_tracking_points),
-            METRIC_SMOOTHING_FACTOR
-        );
+        m_InlierRatio = static_cast<float>(m_MatchedPoints.size())
+                      / static_cast<float>(m_InlierStatus.size());
 
         WarpField motion_field(m_Settings.motion_resolution);
         if(m_Settings.motion_resolution != WarpField::MinimumSize)
@@ -202,14 +192,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	double FrameTracker::scene_stability() const
+    float FrameTracker::scene_stability() const
 	{
 		return m_InlierRatio;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    double FrameTracker::tracking_quality() const
+    float FrameTracker::tracking_quality() const
     {
         return m_DistributionQuality;
     }

@@ -46,9 +46,11 @@ namespace lvk
 
 		void restart();
 
-		double scene_stability() const;
 
-        double tracking_quality() const;
+        float scene_stability() const;
+
+        float tracking_quality() const;
+
 
         const cv::Size& motion_resolution() const;
 
@@ -60,8 +62,8 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		double m_InlierRatio = 0.0;
-        double m_DistributionQuality = 0.0;
+		float m_InlierRatio = 0.0f;
+        float m_DistributionQuality = 0.0f;
 
 		cv::UsacParams m_USACParams;
 		cv::Mat m_FilterKernel;
