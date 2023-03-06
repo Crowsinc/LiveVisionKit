@@ -152,7 +152,7 @@ namespace lvk
 
 	float StabilizationFilter::stability() const
 	{
-		return m_FrameTracker.frame_stability();
+		return m_FrameTracker.scene_stability();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -165,7 +165,7 @@ namespace lvk
 			return motion;
 		}
 		
-		const float scene_stability = m_FrameTracker.frame_stability();
+		const float scene_stability = m_FrameTracker.scene_stability();
 		const float suppression_threshold = m_Settings.suppression_threshold;
 		const float saturation_threshold = m_Settings.suppression_saturation_limit;
 

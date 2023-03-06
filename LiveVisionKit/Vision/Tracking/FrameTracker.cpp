@@ -174,8 +174,8 @@ namespace lvk
         fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
         m_Settings.detector.propagate(m_MatchedPoints);
 
-        m_FrameStability = exp_moving_average(
-            m_FrameStability,
+        m_InlierRatio = exp_moving_average(
+            m_InlierRatio,
             static_cast<double>(m_MatchedPoints.size()) / static_cast<double>(total_tracking_points),
             METRIC_SMOOTHING_FACTOR
         );
@@ -202,9 +202,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	double FrameTracker::frame_stability() const
+	double FrameTracker::scene_stability() const
 	{
-		return m_FrameStability;
+		return m_InlierRatio;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

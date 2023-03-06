@@ -46,7 +46,7 @@ namespace lvk
 
 		void restart();
 
-		double frame_stability() const;
+		double scene_stability() const;
 
         double tracking_quality() const;
 
@@ -60,7 +60,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		double m_FrameStability = 0.0;
+		double m_InlierRatio = 0.0;
         double m_DistributionQuality = 0.0;
 
 		cv::UsacParams m_USACParams;
