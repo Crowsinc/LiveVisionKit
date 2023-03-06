@@ -50,17 +50,19 @@ namespace lvk
 
 		void reset();
 
-		size_t feature_capacity() const;
+
+        size_t feature_capacity() const;
 
         cv::Size local_feature_size() const;
 
         cv::Size detection_zone_size() const;
 
-		double distribution_quality() const;
+        const cv::Size& input_resolution() const;
+
+
+		float distribution_quality() const;
 
 		cv::Point2f distribution_centroid() const;
-
-        const cv::Size& input_resolution() const;
 
 	private:
 

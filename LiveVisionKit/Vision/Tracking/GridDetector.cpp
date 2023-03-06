@@ -233,7 +233,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    double GridDetector::distribution_quality() const
+    float GridDetector::distribution_quality() const
     {
         return m_FeatureGrid.distribution_quality();
     }

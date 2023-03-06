@@ -578,9 +578,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline double SpatialMap<T>::distribution_quality() const
+    inline float SpatialMap<T>::distribution_quality() const
     {
-        if(is_empty()) return 1.0;
+        if(is_empty()) return 1.0f;
 
         // To determine the distribution quality we will split the map into a grid of 4x4 sectors.
         // We then compare the number of items in each sector against the ideal distribution, where
@@ -592,16 +592,16 @@ namespace lvk
         constexpr int sectors = 4;
 
         if(cols() <= sectors || rows() <= sectors)
-            return static_cast<double>(m_Data.size()) / static_cast<double>(m_Map.size());
+            return static_cast<float>(m_Data.size()) / static_cast<float>(m_Map.size());
 
         const VirtualGrid sector_grid(cv::Size(sectors,  sectors), cv::Rect(0, 0, cols(), rows()));
         std::array<size_t, sectors * sectors> sector_buckets{};
 
         const auto ideal_distribution = static_cast<size_t>(
-            static_cast<double>(m_Data.size()) / static_cast<double>(sector_buckets.size())
+            static_cast<float>(m_Data.size()) / static_cast<float>(sector_buckets.size())
         );
 
-        double excess = 0.0;
+        float excess = 0.0;
         for(const auto& [key, data] : m_Data)
         {
             const size_t index = sector_grid.key_to_index(sector_grid.key_of(key));
@@ -610,7 +610,7 @@ namespace lvk
         }
 
         // The maximum excess occurs when all points are in the same sector
-        return  1.0 - (excess / static_cast<double>(m_Data.size() - ideal_distribution));
+        return  1.0f - (excess / static_cast<float>(m_Data.size() - ideal_distribution));
     }
 
 //---------------------------------------------------------------------------------------------------------------------

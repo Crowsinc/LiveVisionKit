@@ -145,7 +145,7 @@ namespace lvk
         template<typename P = float>
         cv::Point_<P> distribution_centroid() const;
 
-        double distribution_quality() const;
+        float distribution_quality() const;
 
 
         iterator begin();
