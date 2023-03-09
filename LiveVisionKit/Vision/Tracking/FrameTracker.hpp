@@ -30,8 +30,12 @@ namespace lvk
     struct FrameTrackerSettings
     {
         GridDetector detector = GridDetector();
-        size_t minimum_tracking_points = 40;
         cv::Size motion_resolution = {2, 2};
+
+        // Motion Estimation Constraints
+        float stability_threshold = 0.3f;
+        float uniformity_threshold = 0.1f;
+        size_t sample_size_threshold = 40;
     };
 
 	class FrameTracker final : public Configurable<FrameTrackerSettings>
@@ -49,7 +53,7 @@ namespace lvk
 
         float scene_stability() const;
 
-        float tracking_quality() const;
+        float scene_uniformity() const;
 
 
         const cv::Size& motion_resolution() const;
@@ -62,9 +66,7 @@ namespace lvk
 		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
 
-		float m_InlierRatio = 0.0f;
-        float m_DistributionQuality = 0.0f;
-
+		float m_Stability = 0.0f, m_Uniformity = 0.0f;
 		cv::UsacParams m_USACParams;
 		cv::Mat m_FilterKernel;
 

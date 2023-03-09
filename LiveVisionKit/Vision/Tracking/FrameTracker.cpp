@@ -42,7 +42,6 @@ namespace lvk
 			0.0f, -0.5f,  0.0f
 		});
 
-
 		restart();
 	}
 
@@ -50,7 +49,9 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
-        LVK_ASSERT(settings.minimum_tracking_points >= 4);
+        LVK_ASSERT(settings.sample_size_threshold >= 4);
+        LVK_ASSERT(between(settings.stability_threshold, 0.0f, 1.0f));
+        LVK_ASSERT(between(settings.uniformity_threshold, 0.0f, 1.0f));
 
         m_TrackedPoints.reserve(settings.detector.feature_capacity());
         m_MatchedPoints.reserve(settings.detector.feature_capacity());
@@ -92,8 +93,8 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
-        m_DistributionQuality = 0.0f;
-        m_InlierRatio = 0.0f;
+        m_Uniformity = 0.0f;
+        m_Stability = 0.0f;
 
 		m_FirstFrame = true;
 		m_Settings.detector.reset();
@@ -110,7 +111,7 @@ namespace lvk
         m_TrackedPoints.clear();
         m_MatchedPoints.clear();
 
-        // Mark the last tracked frame as the previous frame.
+        // Move the last tracked frame to the previous frame.
         std::swap(m_PrevFrame, m_NextFrame);
 
         // Import the next frame for tracking by scaling it to the tracking resolution.
@@ -118,21 +119,24 @@ namespace lvk
         cv::resize(next_frame, m_NextFrame, tracking_resolution(), 0, 0, cv::INTER_AREA);
         cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
 
+        // We need at least two frames for tracking, so exit early on the first frame.
         if(m_FirstFrame)
         {
             m_FirstFrame = false;
             return std::nullopt;
         }
 
+
         // Detect tracking points in the previous frames. Note that this also
         // returns all the points that were propagated from the previous frame.
         m_Settings.detector.detect(m_PrevFrame, m_TrackedPoints);
-        m_DistributionQuality = m_Settings.detector.distribution_quality();
-        if(m_TrackedPoints.size() < m_Settings.minimum_tracking_points)
+        m_Uniformity = m_Settings.detector.distribution_quality();
+        if(m_TrackedPoints.size() < m_Settings.sample_size_threshold || m_Uniformity < m_Settings.uniformity_threshold)
         {
             restart();
             return std::nullopt;
         }
+
 
 		// Match tracking points
 		cv::calcOpticalFlowPyrLK(
@@ -146,46 +150,49 @@ namespace lvk
 		);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
-        if(m_MatchedPoints.size() < m_Settings.minimum_tracking_points)
+        if(m_MatchedPoints.size() < m_Settings.sample_size_threshold)
         {
             restart();
             return std::nullopt;
         }
 
 
-        // NOTE: We must have at least 4 points here.
-        // NOTE: We force estimation of a affine homography if we do
-        // not have good tracking point distribution, in order to avoid
-        // creating global distortion based on dominant local motion.
+        // NOTE: We force estimation of an affine homography if we have a low
+        // tracking point distribution. This is to avoid perspectivity-based
+        // distortions due to dominant local motions being applied globally.
         std::optional<Homography> motion;
         motion = Homography::Estimate(
             m_TrackedPoints,
             m_MatchedPoints,
             m_InlierStatus,
             m_USACParams,
-            m_DistributionQuality < GOOD_DISTRIBUTION_QUALITY
+            m_Uniformity < GOOD_DISTRIBUTION_QUALITY
         );
 
-        // NOTE: We only propagate inlier points to  the GridDetector to
-        // help ensure consistency between subsequent motion estimations.
-        // Additionally, the GridDetector doesn't detect new points if the
-        // propagated points meet the detection load. This means that outliers
-        // are naturally removed from the tracking point set until we have lost
-        // too many inliers, and the GridDetector has to detect new points.
-
+        // Filter outliers and propagate the inliers back to the detector.
         fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
         m_Settings.detector.propagate(m_MatchedPoints);
 
-        m_InlierRatio = static_cast<float>(m_MatchedPoints.size())
-                      / static_cast<float>(m_InlierStatus.size());
+        // NOTE: Scene stability is measured by the inlier ratio.
+        const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
+        const auto motion_samples = static_cast<float>(m_InlierStatus.size());
+        m_Stability = inlier_motions / motion_samples;
+        if(m_Stability < m_Settings.stability_threshold)
+        {
+            restart();
+            return std::nullopt;
+        }
 
+
+        // Convert the global Homography into a motion field.
         WarpField motion_field(m_Settings.motion_resolution);
         if(m_Settings.motion_resolution != WarpField::MinimumSize)
         {
-            const cv::Rect region({0,0}, tracking_resolution());
+            const cv::Rect2f region({0,0}, tracking_resolution());
             motion_field.fit_points(region, m_TrackedPoints, m_MatchedPoints, motion);
         }
         else motion_field.set_to(*motion, tracking_resolution());
+
 
         // We must scale the motion to match the original frame size.
         const cv::Size2f frame_scale = next_frame.size();
@@ -203,14 +210,14 @@ namespace lvk
 
     float FrameTracker::scene_stability() const
 	{
-		return m_InlierRatio;
+		return m_Stability;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    float FrameTracker::tracking_quality() const
+    float FrameTracker::scene_uniformity() const
     {
-        return m_DistributionQuality;
+        return m_Uniformity;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
