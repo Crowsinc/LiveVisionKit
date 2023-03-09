@@ -40,11 +40,11 @@ namespace lvk
 
         // TODO: organize better
         FrameTrackerSettings tracking_settings = {
-            .detector{GridDetectorSettings{
+            .motion_resolution = {48, 48},
+            .detection_settings = {
                 .feature_grid_shape = {128, 72},
                 .detection_zones = {4, 4}
-            }},
-            .motion_resolution = {48, 48}
+            }
         };
 	};
 

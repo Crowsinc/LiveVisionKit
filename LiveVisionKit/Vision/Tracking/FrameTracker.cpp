@@ -53,10 +53,11 @@ namespace lvk
         LVK_ASSERT(between(settings.stability_threshold, 0.0f, 1.0f));
         LVK_ASSERT(between(settings.uniformity_threshold, 0.0f, 1.0f));
 
-        m_TrackedPoints.reserve(settings.detector.feature_capacity());
-        m_MatchedPoints.reserve(settings.detector.feature_capacity());
-        m_InlierStatus.reserve(settings.detector.feature_capacity());
-        m_MatchStatus.reserve(settings.detector.feature_capacity());
+        m_FeatureDetector.configure(settings.detection_settings);
+        m_TrackedPoints.reserve(m_FeatureDetector.feature_capacity());
+        m_MatchedPoints.reserve(m_FeatureDetector.feature_capacity());
+        m_InlierStatus.reserve(m_FeatureDetector.feature_capacity());
+        m_MatchStatus.reserve(m_FeatureDetector.feature_capacity());
 
         // If we are tracking motion with a resolution of 2x2 (Homography)
         // then tighten up the homography estimation parameters for global
@@ -97,7 +98,7 @@ namespace lvk
         m_Stability = 0.0f;
 
 		m_FirstFrame = true;
-		m_Settings.detector.reset();
+        m_FeatureDetector.reset();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -129,8 +130,8 @@ namespace lvk
 
         // Detect tracking points in the previous frames. Note that this also
         // returns all the points that were propagated from the previous frame.
-        m_Settings.detector.detect(m_PrevFrame, m_TrackedPoints);
-        m_Uniformity = m_Settings.detector.distribution_quality();
+        m_FeatureDetector.detect(m_PrevFrame, m_TrackedPoints);
+        m_Uniformity = m_FeatureDetector.distribution_quality();
         if(m_TrackedPoints.size() < m_Settings.sample_size_threshold || m_Uniformity < m_Settings.uniformity_threshold)
         {
             restart();
@@ -171,7 +172,7 @@ namespace lvk
 
         // Filter outliers and propagate the inliers back to the detector.
         fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
-        m_Settings.detector.propagate(m_MatchedPoints);
+        m_FeatureDetector.propagate(m_MatchedPoints);
 
         // NOTE: Scene stability is measured by the inlier ratio.
         const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
@@ -231,7 +232,7 @@ namespace lvk
 
     const cv::Size& FrameTracker::tracking_resolution() const
     {
-        return m_Settings.detector.input_resolution();
+        return m_Settings.detection_settings.input_resolution;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
