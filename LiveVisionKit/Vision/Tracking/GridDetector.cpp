@@ -62,23 +62,9 @@ namespace lvk
         LVK_ASSERT(settings.input_resolution.height % settings.feature_grid_shape.height == 0);
         LVK_ASSERT(settings.input_resolution.width % settings.feature_grid_shape.width == 0);
 
-        if(m_Settings.feature_grid_shape != settings.feature_grid_shape)
-        {
-            reset();
-            m_FeatureGrid.rescale(settings.feature_grid_shape);
-        }
-
-        if(m_Settings.detection_zones != settings.detection_zones)
-        {
-            m_DetectionZones.clear();
-            m_DetectionZones.rescale(settings.detection_zones);
-            construct_detection_zones();
-        }
+        m_Settings = settings;
 
         const cv::Rect input_region({0,0}, settings.input_resolution);
-        m_DetectionZones.align(input_region);
-        m_FeatureGrid.align(input_region);
-
         const auto input_area = static_cast<float>(settings.input_resolution.area());
         const auto detect_zones = static_cast<float>(settings.detection_zones.area());
         const auto feature_blocks = static_cast<float>(settings.feature_grid_shape.area());
@@ -87,13 +73,22 @@ namespace lvk
         m_FASTFeatureTarget = static_cast<size_t>((input_area * settings.detection_density) / detect_zones);
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
 
-        m_Settings = settings;
+        m_FeatureGrid.clear();
+        m_FeatureGrid.rescale(m_Settings.feature_grid_shape);
+        m_FeatureGrid.align(input_region);
+
+        m_DetectionZones.clear();
+        m_DetectionZones.rescale(m_Settings.detection_zones);
+        m_DetectionZones.align(input_region);
+
+        construct_detection_zones();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void GridDetector::construct_detection_zones()
 	{
+        m_DetectionZones.align({{0,0}, m_Settings.input_resolution});
         const cv::Size2f detection_zone_size = m_DetectionZones.key_size();
 
         m_DetectionZones.clear();
