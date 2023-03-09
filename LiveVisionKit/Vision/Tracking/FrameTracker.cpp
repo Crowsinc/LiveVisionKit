@@ -132,11 +132,10 @@ namespace lvk
         // returns all the points that were propagated from the previous frame.
         m_FeatureDetector.detect(m_PrevFrame, m_TrackedPoints);
         m_Uniformity = m_FeatureDetector.distribution_quality();
-        if(m_TrackedPoints.size() < m_Settings.sample_size_threshold || m_Uniformity < m_Settings.uniformity_threshold)
-        {
-            restart();
-            return std::nullopt;
-        }
+
+        if(m_TrackedPoints.size() < m_Settings.sample_size_threshold
+        || m_Uniformity < m_Settings.uniformity_threshold)
+            return abort_tracking();
 
 
 		// Match tracking points
@@ -152,10 +151,7 @@ namespace lvk
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
         if(m_MatchedPoints.size() < m_Settings.sample_size_threshold)
-        {
-            restart();
-            return std::nullopt;
-        }
+            return abort_tracking();
 
 
         // NOTE: We force estimation of an affine homography if we have a low
@@ -177,12 +173,10 @@ namespace lvk
         // NOTE: Scene stability is measured by the inlier ratio.
         const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
         const auto motion_samples = static_cast<float>(m_InlierStatus.size());
+
         m_Stability = inlier_motions / motion_samples;
         if(m_Stability < m_Settings.stability_threshold)
-        {
-            restart();
-            return std::nullopt;
-        }
+            return abort_tracking();
 
 
         // Convert the global Homography into a motion field.
@@ -206,6 +200,14 @@ namespace lvk
 
         return std::move(motion_field);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    std::nullopt_t FrameTracker::abort_tracking()
+    {
+        restart();
+        return std::nullopt;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
