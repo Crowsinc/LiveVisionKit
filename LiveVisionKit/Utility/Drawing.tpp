@@ -94,4 +94,33 @@ namespace lvk::draw
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
+
+    inline void grid(
+        cv::UMat& dst,
+        const cv::Size& grid,
+        const cv::Scalar& color,
+        const int thickness
+    )
+    {
+        thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        // NOTE: Individually drawing lots of lines on a UMat is very inefficient.
+        // Instead, draw the lines to a mask and apply them in bulk to the UMat.
+
+        thread_local cv::Mat draw_mask;
+        draw_mask.create(dst.size(), CV_8UC1);
+
+        const int cell_width = dst.cols / grid.width;
+        const int cell_height = dst.rows / grid.height;
+
+        draw_mask.forEach<uint8_t>([&](uint8_t& mask, const int coord[]){
+            mask = coord[1] % cell_width < thickness || coord[0] % cell_height < thickness;
+        });
+
+        draw_mask.copyTo(gpu_draw_mask);
+        dst.setTo(color, gpu_draw_mask);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 }

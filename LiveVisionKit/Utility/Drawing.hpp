@@ -61,6 +61,13 @@ namespace lvk::draw
 		const int thickness = 2
 	);
 
+    void grid(
+        cv::UMat& dst,
+        const cv::Size& grid,
+        const cv::Scalar& color,
+        const int thickness = 2
+    );
+
 }
 
 #include "Drawing.tpp"
