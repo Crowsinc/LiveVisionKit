@@ -295,7 +295,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::undistort()
+    void WarpField::undistort(const float tolerance)
     {
         // TODO: document and optimize
 
@@ -305,7 +305,6 @@ namespace lvk
         // NOTE: for the verticals we treat the y values as x, vice-versa to
         // keep things consistent and avoid failure case with vertical lines of infinite slope.
 
-        const auto global = cv::mean(m_WarpOffsets);
         const auto nc = static_cast<float>(cols());
         const auto nr = static_cast<float>(rows());
 
@@ -326,14 +325,10 @@ namespace lvk
             {
                 auto& [col_y_sum, col_xy_sum] = col_lines[c];
 
-                auto [x, y] = m_WarpOffsets.at<cv::Point2f>(r, c);
-                x -= static_cast<float>(global[0]);
-                y -= static_cast<float>(global[1]);
-
+                const auto& [x, y] = m_WarpOffsets.at<cv::Point2f>(r, c);
                 row_xy_sum += y * static_cast<float>(c);
-                row_y_sum += y;
-
                 col_xy_sum += x * static_cast<float>(r);
+                row_y_sum += y;
                 col_y_sum += x;
             }
 
@@ -361,8 +356,11 @@ namespace lvk
             const auto x = static_cast<float>(coord.x);
             const auto y = static_cast<float>(coord.y);
 
-            offset.x = y * col_slope + col_intercept + static_cast<float>(global[0]);
-            offset.y = x * row_slope + row_intercept + static_cast<float>(global[1]);
+            const float rigid_x = y * col_slope + col_intercept;
+            const float rigid_y = x * row_slope + row_intercept;
+
+            offset.x = std::clamp(offset.x, rigid_x - tolerance, rigid_x + tolerance);
+            offset.y = std::clamp(offset.y, rigid_y - tolerance, rigid_y + tolerance);
         });
     }
 

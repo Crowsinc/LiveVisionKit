@@ -85,7 +85,7 @@ namespace lvk
 
         void warp(const cv::UMat& src, cv::UMat& dst) const;
 
-        void undistort();
+        void undistort(const float tolerance = 10.0f);
 
 
         void set_identity();
