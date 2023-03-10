@@ -49,8 +49,8 @@ namespace lvk
         m_NullMotion.resize(settings.tracking_settings.motion_resolution);
 
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
-            path_settings.correction_margin = settings.crop_proportion;
-            path_settings.smoothing_frames = settings.smoothing_frames;
+            path_settings.scene_margins = settings.crop_proportion;
+            path_settings.smoothing_strength = settings.smoothing_strength;
         });
 
         m_Settings = settings;

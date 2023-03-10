@@ -29,8 +29,9 @@ namespace lvk
 
 	struct PathStabilizerSettings
 	{
-		size_t smoothing_frames = 10;
-        float correction_margin = 0.1f;
+        // NOTE: frame delay is proportional to smoothing strength.
+		size_t smoothing_strength = 5;
+        float scene_margins = 0.1f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>

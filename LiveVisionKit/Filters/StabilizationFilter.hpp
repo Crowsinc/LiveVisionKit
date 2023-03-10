@@ -27,7 +27,7 @@ namespace lvk
 
 	struct StabilizationFilterSettings
 	{
-		size_t smoothing_frames = 10;
+		size_t smoothing_strength = 5;
 		bool stabilize_output = true;
 
 		bool crop_output = false;

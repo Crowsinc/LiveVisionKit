@@ -432,15 +432,9 @@ namespace clt
                 );
                 config_parser.add_variable(
                     {".smoothing", ".sf"},
-                    "The amount of camera smoothing to apply to the video, this must be an even number greater than 2. "
+                    "The amount of camera smoothing to apply to the video. "
                     "Some frames will be lost at the end of the video due to the smoothing amount.",
-                    &config.smoothing_frames
-                );
-                config_parser.add_variable(
-                    {".autosuppress", ".as"},
-                    "Specifies that the filter should automatically turn off if it believes the stabilization quality "
-                    "will be low.",
-                    &config.smoothing_frames
+                    &config.smoothing_strength
                 );
             }
         );
