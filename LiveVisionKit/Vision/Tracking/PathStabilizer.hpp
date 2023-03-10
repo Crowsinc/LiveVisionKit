@@ -32,6 +32,9 @@ namespace lvk
         // NOTE: frame delay is proportional to smoothing strength.
 		size_t smoothing_strength = 5;
         float scene_margins = 0.1f;
+
+        bool force_rigid_output = true;
+        float rigidity_tolerance = 10.0f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>

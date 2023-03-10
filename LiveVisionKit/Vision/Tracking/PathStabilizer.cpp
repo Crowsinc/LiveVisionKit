@@ -78,11 +78,14 @@ namespace lvk
             {
                 m_SmoothTrace.blend(m_Trace[i], m_SmoothingFilter[i]);
             }
+
             auto path_correction = m_SmoothTrace - m_Trace.centre(-1);
-
-
-
             path_correction.clamp({m_Margins.tl()});
+
+            if(m_Settings.force_rigid_output)
+            {
+                path_correction.undistort(m_Settings.rigidity_tolerance);
+            }
 
             // NOTE: we perform a swap between the resulting warp frame
             // and the original frame data to ensure zero de-allocations.
