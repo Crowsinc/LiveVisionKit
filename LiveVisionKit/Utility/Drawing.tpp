@@ -110,11 +110,11 @@ namespace lvk::draw
         thread_local cv::Mat draw_mask;
         draw_mask.create(dst.size(), CV_8UC1);
 
-        const int cell_width = dst.cols / grid.width;
-        const int cell_height = dst.rows / grid.height;
+        const auto cell_width = static_cast<float>(dst.cols) / static_cast<float>(grid.width);
+        const auto cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
 
         draw_mask.forEach<uint8_t>([&](uint8_t& mask, const int coord[]){
-            mask = coord[1] % cell_width < thickness || coord[0] % cell_height < thickness;
+            mask = std::fmod(coord[1], cell_width) < thickness || std::fmod(coord[0], cell_height) < thickness;
         });
 
         draw_mask.copyTo(gpu_draw_mask);
