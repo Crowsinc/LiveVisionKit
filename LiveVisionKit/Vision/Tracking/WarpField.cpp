@@ -574,11 +574,13 @@ namespace lvk
             static_cast<float>(dst.rows) / static_cast<float>(m_WarpOffsets.rows - 1)
         );
 
-        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-        cv::Mat draw_buffer(dst.size(), CV_8UC3);
+        thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        cv::Mat draw_mask;
+
+        draw_mask.create(dst.size(), CV_8UC1);
+        draw_mask.setTo(cv::Scalar(0));
 
         // Draw all the motion vectors
-        draw_buffer.setTo(cv::Scalar(0, 0, 0));
         read([&](const cv::Point2f& offset, const cv::Point& coord){
             const cv::Point2f origin(
                 static_cast<float>(coord.x) * frame_scaling.width,
@@ -586,16 +588,16 @@ namespace lvk
             );
 
             cv::line(
-                draw_buffer,
+                draw_mask,
                 origin,
                 origin - offset,
-                color,
+                cv::Scalar(1),
                 thickness
             );
         });
 
-        draw_buffer.copyTo(staging_buffer);
-        cv::add(dst, staging_buffer, dst);
+        draw_mask.copyTo(gpu_draw_mask);
+        dst.setTo(color, gpu_draw_mask);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
