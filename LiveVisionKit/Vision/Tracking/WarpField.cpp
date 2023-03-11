@@ -566,7 +566,7 @@ namespace lvk
     void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
     {
         LVK_ASSERT(thickness > 0);
-        LVK_ASSERT(dst.empty());
+        LVK_ASSERT(!dst.empty());
 
         const cv::Size2f frame_scaling(
             static_cast<float>(dst.cols) / static_cast<float>(m_WarpOffsets.cols - 1),
