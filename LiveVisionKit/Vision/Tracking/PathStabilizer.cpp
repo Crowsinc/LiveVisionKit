@@ -145,14 +145,13 @@ namespace lvk
 	{
 		LVK_ASSERT(m_Settings.smoothing_strength > 0);
 
-
         // TODO: re-write this
 		// NOTE: The path trace uses a full sized window for stabilising the
         // centre element, so the frame queue needs to supply delayed frames
         // up to the centre. Tracking is performed on the newest frame but
         // the tracked velocity has to be associated with the previous frame,
         // so we add another frame to the queue to introduce an offset.
-        const size_t smoothing_radius = 2 * m_Settings.smoothing_strength;
+        const size_t smoothing_radius = m_Settings.smoothing_strength;
 		const size_t new_window_size = 2 * smoothing_radius + 1;
 		const size_t new_queue_size = smoothing_radius + 2;
 

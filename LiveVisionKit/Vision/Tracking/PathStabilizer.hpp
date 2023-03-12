@@ -30,7 +30,7 @@ namespace lvk
 	struct PathStabilizerSettings
 	{
         // NOTE: frame delay is proportional to smoothing strength.
-		size_t smoothing_strength = 5;
+		size_t smoothing_strength = 10;
         float scene_margins = 0.1f;
 
         bool force_rigid_output = true;
