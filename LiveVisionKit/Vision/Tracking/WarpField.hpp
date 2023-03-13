@@ -106,7 +106,10 @@ namespace lvk
         void clamp(const cv::Size2f& min, const cv::Size2f& max);
 
 
-        void blend(const WarpField& field, const float scaling = 1.0f);
+        void combine(const WarpField& field, const float scaling = 1.0f);
+
+
+        void blend(const float field_weight, const WarpField& field);
 
         void blend(const float weight_1, const float weight_2, const WarpField& field);
 

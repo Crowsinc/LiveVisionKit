@@ -531,9 +531,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::blend(const WarpField& field, const float scaling)
+    void WarpField::combine(const WarpField& field, const float scaling)
     {
         cv::scaleAdd(field.m_WarpOffsets, scaling, m_WarpOffsets, m_WarpOffsets);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::blend(const float field_weight, const WarpField& field)
+    {
+        cv::addWeighted(m_WarpOffsets, (1.0f - field_weight), field.m_WarpOffsets, field_weight, 0.0, m_WarpOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
