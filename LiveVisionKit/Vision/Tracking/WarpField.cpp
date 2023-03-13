@@ -545,20 +545,56 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::write(const std::function<void(cv::Point2f&, const cv::Point&)>& operation)
+    void WarpField::write(
+        const std::function<void(cv::Point2f&, const cv::Point&)>& operation,
+        const bool parallel
+    )
     {
-        m_WarpOffsets.forEach<cv::Point2f>([&](cv::Point2f& value, const int coord[]){
-            operation(value, {coord[1], coord[0]});
-        });
+        if(parallel)
+        {
+            // NOTE: this uses a parallel loop internally
+            m_WarpOffsets.forEach<cv::Point2f>([&](cv::Point2f& value, const int coord[]){
+                operation(value, {coord[1], coord[0]});
+            });
+        }
+        else
+        {
+            for(int r = 0; r < m_WarpOffsets.rows; r++)
+            {
+                auto* row_ptr = m_WarpOffsets.ptr<cv::Point2f>(r);
+                for(int c = 0; c < m_WarpOffsets.cols; c++)
+                {
+                    operation(row_ptr[c], {c, r});
+                }
+            }
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::read(const std::function<void(const cv::Point2f&, const cv::Point&)>& operation) const
+    void WarpField::read(
+        const std::function<void(const cv::Point2f&, const cv::Point&)>& operation,
+        const bool parallel
+    ) const
     {
-        m_WarpOffsets.forEach<cv::Point2f>([&](const cv::Point2f& value, const int coord[]){
-            operation(value, {coord[1], coord[0]});
-        });
+        if(parallel)
+        {
+            // NOTE: this uses a parallel loop internally
+            m_WarpOffsets.forEach<cv::Point2f>([&](const cv::Point2f& value, const int coord[]){
+                operation(value, {coord[1], coord[0]});
+            });
+        }
+        else
+        {
+            for(int r = 0; r < m_WarpOffsets.rows; r++)
+            {
+                const auto* row_ptr = m_WarpOffsets.ptr<cv::Point2f>(r);
+                for(int c = 0; c < m_WarpOffsets.cols; c++)
+                {
+                    operation(row_ptr[c], {c, r});
+                }
+            }
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------

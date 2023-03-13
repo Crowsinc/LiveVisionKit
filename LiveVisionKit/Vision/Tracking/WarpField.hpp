@@ -111,9 +111,15 @@ namespace lvk
         void blend(const float weight_1, const float weight_2, const WarpField& field);
 
 
-        void write(const std::function<void(cv::Point2f& offset, const cv::Point& coord)>& operation);
+        void write(
+            const std::function<void(cv::Point2f& offset, const cv::Point& coord)>& operation,
+            const bool parallel = true
+        );
 
-        void read(const std::function<void(const cv::Point2f& offset, const cv::Point& coord)>& operation) const;
+        void read(
+            const std::function<void(const cv::Point2f& offset, const cv::Point& coord)>& operation,
+            const bool parallel = true
+        ) const;
 
 
         void draw(cv::UMat& dst, const cv::Scalar& color = draw::YUV_MAGENTA, const int thickness = 2) const;
