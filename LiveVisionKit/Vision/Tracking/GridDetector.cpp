@@ -38,8 +38,7 @@ namespace lvk
           m_MinimumFeatureLoad(0),  // Set by configure()
           m_FASTFeatureTarget(0)    // Set by configure()
 	{
-        this->configure(settings);
-        construct_detection_zones();
+        configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

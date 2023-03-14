@@ -28,7 +28,7 @@ namespace lvk
 	StabilizationFilter::StabilizationFilter(const StabilizationFilterSettings& settings)
 		: VideoFilter("Stabilization Filter")
 	{
-		this->configure(settings);
+		configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

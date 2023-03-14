@@ -33,7 +33,7 @@ namespace lvk
 
 	FrameTracker::FrameTracker(const FrameTrackerSettings& settings)
 	{
-        this->configure(settings);
+        configure(settings);
 
 		// Light sharpening kernel
 		m_FilterKernel = cv::Mat({3, 3}, {

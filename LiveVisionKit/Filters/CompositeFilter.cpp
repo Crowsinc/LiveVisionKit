@@ -25,7 +25,7 @@ namespace lvk
     CompositeFilter::CompositeFilter(const CompositeFilterSettings& settings)
         : VideoFilter("Composite Filter")
     {
-        this->configure(settings);
+        configure(settings);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -27,7 +27,7 @@ namespace lvk
 
 	PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
 	{
-		this->configure(settings);
+		configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
