@@ -297,6 +297,8 @@ namespace lvk
 
     void WarpField::undistort(const float tolerance)
     {
+        LVK_ASSERT(between(tolerance, 0.0f, 1.0f));
+
         // TODO: document and optimize
 
         // Linear regression formulae taken from..
@@ -359,8 +361,8 @@ namespace lvk
             const float rigid_x = y * col_slope + col_intercept;
             const float rigid_y = x * row_slope + row_intercept;
 
-            offset.x = std::clamp(offset.x, rigid_x - tolerance, rigid_x + tolerance);
-            offset.y = std::clamp(offset.y, rigid_y - tolerance, rigid_y + tolerance);
+            offset.x = tolerance * offset.x + (1.0f - tolerance) * rigid_x;
+            offset.y = tolerance * offset.y + (1.0f - tolerance) * rigid_y;
         });
     }
 

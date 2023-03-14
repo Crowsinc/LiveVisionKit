@@ -33,8 +33,8 @@ namespace lvk
         float drift_coefficient = 1.5f;
         float scene_margins = 0.1f;
 
-        bool force_rigid_output = false;
-        float rigidity_tolerance = 10.0f;
+        bool force_rigid_output = true;
+        float rigidity_tolerance = 0.25f;
 	};
 
 	class PathStabilizer final : public Configurable<PathStabilizerSettings>
