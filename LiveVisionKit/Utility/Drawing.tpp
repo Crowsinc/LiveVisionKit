@@ -22,8 +22,49 @@ namespace lvk::draw
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    void rect(
+        cv::UMat& dst,
+        const cv::Rect_<T>& rect,
+        const cv::Scalar& color,
+        const int thickness
+    )
+    {
+        cv::rectangle(dst, rect, color, thickness);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline void grid(
+        cv::UMat& dst,
+        const cv::Size& grid,
+        const cv::Scalar& color,
+        const int thickness
+    )
+    {
+        thread_local cv::UMat colour_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        // NOTE: Individually drawing lots of lines on a UMat is very inefficient.
+        // Instead, draw the grid lines to a mask and apply them in bulk to the UMat.
+
+        thread_local cv::Mat draw_mask;
+        draw_mask.create(dst.size(), CV_8UC1);
+
+        const auto cell_width = static_cast<float>(dst.cols) / static_cast<float>(grid.width);
+        const auto cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
+
+        draw_mask.forEach<uint8_t>([&](uint8_t& mask, const int coord[]){
+            mask = std::fmod(coord[1], cell_width) < thickness || std::fmod(coord[0], cell_height) < thickness;
+        });
+
+        draw_mask.copyTo(colour_mask);
+        dst.setTo(color, colour_mask);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
-	inline void plot_markers(
+	inline void markers(
 		cv::UMat& dst,
 		const cv::Scalar& color,
 		const std::vector<cv::Point_<T>>& markers,
@@ -33,7 +74,7 @@ namespace lvk::draw
 		const int marker_thickness
 	)
 	{
-		thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+		thread_local cv::UMat colour_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
 
 		// NOTE: Individually drawing lots of points on a UMat is very inefficient.
 		// Instead, draw the points to a mask and apply them in bulk to the UMat.
@@ -52,8 +93,8 @@ namespace lvk::draw
 			cv::drawMarker(draw_mask, scaled_point, color, marker_type, marker_size, marker_thickness);
         }
 
-		draw_mask.copyTo(gpu_draw_mask);
-		dst.setTo(color, gpu_draw_mask);
+		draw_mask.copyTo(colour_mask);
+		dst.setTo(color, colour_mask);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -80,46 +121,6 @@ namespace lvk::draw
 		);
 	}
 
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	void rect(
-		cv::UMat& dst,
-		const cv::Rect_<T>& rect,
-		const cv::Scalar& color,
-		const int thickness
-	)
-	{
-		cv::rectangle(dst, rect, color, thickness);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    inline void grid(
-        cv::UMat& dst,
-        const cv::Size& grid,
-        const cv::Scalar& color,
-        const int thickness
-    )
-    {
-        thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-        // NOTE: Individually drawing lots of lines on a UMat is very inefficient.
-        // Instead, draw the lines to a mask and apply them in bulk to the UMat.
-
-        thread_local cv::Mat draw_mask;
-        draw_mask.create(dst.size(), CV_8UC1);
-
-        const auto cell_width = static_cast<float>(dst.cols) / static_cast<float>(grid.width);
-        const auto cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
-
-        draw_mask.forEach<uint8_t>([&](uint8_t& mask, const int coord[]){
-            mask = std::fmod(coord[1], cell_width) < thickness || std::fmod(coord[0], cell_height) < thickness;
-        });
-
-        draw_mask.copyTo(gpu_draw_mask);
-        dst.setTo(color, gpu_draw_mask);
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
