@@ -29,7 +29,7 @@ namespace lvk
 
 	struct PathStabilizerSettings
 	{
-        float smoothing_coefficient = 0.9f;
+        float smoothing_coefficient = 0.7f;
         float drift_coefficient = 1.5f;
         float scene_margins = 0.1f;
 
@@ -56,10 +56,6 @@ namespace lvk
         WarpField smooth_position() const;
 
         const cv::Rect& stable_region() const;
-
-    private:
-
-        WarpField& trace_smooth_path(const WarpField& next_position, const float drift_error);
 
     private:
         cv::Rect m_Margins{0,0,0,0};
