@@ -64,13 +64,18 @@ namespace lvk
         m_Margins = crop(frame.size(), m_Settings.scene_margins);
         const cv::Point2f corrective_limits(m_Margins.tl());
 
-        // Update the path position
         m_Position += motion;
+
+        // To stabilize the path, we must smooth it and correct the frame onto the smooth path.
+        // This is done by tracing over the path with an adaptive exponential moving average.
+        // Normally, this leads to various distortions and delayed motion, however the influence
+        // of the upcoming position is adjusted adaptively when updating the trace, based on how
+        // must the trace is drifting away from the original path.
 
         const WarpField drift = m_Position - m_Trace;
         const auto drift_limits = m_Settings.drift_coefficient * corrective_limits;
 
-        // Calculate max drift error from original path
+        // Calculate the max drift error from original path, as a percentage of the limits.
         float max_drift_error = 0.0f;
         drift.read([&](const cv::Point2f& drift, const cv::Point& coord){
             max_drift_error = std::max(max_drift_error, std::abs(drift.x) / drift_limits.x);
@@ -78,38 +83,6 @@ namespace lvk
         }, false);
         max_drift_error = std::min(max_drift_error, 1.0f);
 
-
-        // Trace over the original path via an exponential moving average in order
-        // to create a smoothed path with minimal frame delay. To achieve acceptable
-        // results, the influence of the next position sample is adjusted adaptively,
-        // based on the maximum drift error of the trace from the position.
-        m_Trace.blend(regulate_influence(max_drift_error), m_Position);
-
-        // Find the corrective motion to move the frame onto the new path.
-        auto path_correction = m_Trace - m_Position;
-        path_correction.clamp(corrective_limits);
-
-        if(m_Settings.force_rigid_output)
-        {
-            path_correction.undistort(m_Settings.rigidity_tolerance);
-        }
-
-        // NOTE: we perform a swap between the resulting warp frame
-        // and the original frame data to ensure zero de-allocations.
-        path_correction.warp(frame.data, m_WarpFrame);
-        std::swap(m_WarpFrame, frame.data);
-
-        return std::move(frame);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    float PathStabilizer::regulate_influence(const float drift_error) const
-    {
-        LVK_ASSERT(between(drift_error, 0.0f, 1.0f));
-
-        // NOTE: Lower influence results in higher smoothing.
-        //
         // The influence is regulated via an exponential function which balances the amount
         // smoothing or path catch up that is necessary for the trace based on the drift error.
         //
@@ -130,9 +103,28 @@ namespace lvk
         // that is required before the trace starts to catch up to the path again.
         constexpr float catch_up_delay = 15.0f;
 
-        const float min_influence = 1.0f - m_Settings.smoothing_coefficient;
-        return (1.0f - min_influence) * std::exp(catch_up_delay * (drift_error - 1.0f)) + min_influence;
-    }
+        const float smoothing = 1.0f - m_Settings.smoothing_coefficient;
+        const float influence = (1.0f - smoothing) * std::exp(catch_up_delay * (max_drift_error - 1.0f)) + smoothing;
+
+        // Blend the next position onto the trace based on the calculated influence.
+        m_Trace.blend(influence, m_Position);
+
+        // Find the corrective motion to move the frame onto the new path.
+        auto path_correction = m_Trace - m_Position;
+        path_correction.clamp(corrective_limits);
+
+        if(m_Settings.force_rigid_output)
+        {
+            path_correction.undistort(m_Settings.rigidity_tolerance);
+        }
+
+        // NOTE: we perform a swap between the resulting warp frame
+        // and the original frame data to ensure zero de-allocations.
+        path_correction.warp(frame.data, m_WarpFrame);
+        std::swap(m_WarpFrame, frame.data);
+
+        return std::move(frame);
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

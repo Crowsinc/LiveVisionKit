@@ -59,7 +59,7 @@ namespace lvk
 
     private:
 
-        float regulate_influence(const float drift_error) const;
+        WarpField& trace_smooth_path(const WarpField& next_position, const float drift_error);
 
     private:
         cv::Rect m_Margins{0,0,0,0};
