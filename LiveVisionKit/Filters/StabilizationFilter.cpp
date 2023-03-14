@@ -50,7 +50,7 @@ namespace lvk
 
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
             path_settings.scene_margins = settings.crop_proportion;
-            path_settings.smoothing_strength = settings.smoothing_strength;
+            path_settings.smoothing_coefficient = settings.smoothing_strength;
         });
 
         m_Settings = settings;
@@ -114,13 +114,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool StabilizationFilter::ready() const
-	{
-		return m_Stabilizer.ready();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	void StabilizationFilter::restart()
 	{
 		m_Stabilizer.restart();
@@ -132,13 +125,6 @@ namespace lvk
 	void StabilizationFilter::reset_context()
 	{
 		m_FrameTracker.restart();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	uint32_t StabilizationFilter::frame_delay() const
-	{
-		return m_Stabilizer.frame_delay();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -431,9 +431,8 @@ namespace clt
                     &config.crop_output
                 );
                 config_parser.add_variable(
-                    {".smoothing", ".sf"},
-                    "The amount of camera smoothing to apply to the video. "
-                    "Some frames will be lost at the end of the video due to the smoothing amount.",
+                    {".smoothing", ".s"},
+                    "The amount of camera smoothing to apply to the video.",
                     &config.smoothing_strength
                 );
             }

@@ -27,7 +27,7 @@ namespace lvk
 
 	struct StabilizationFilterSettings
 	{
-		size_t smoothing_strength = 5;
+		float smoothing_strength = 0.9;
 		bool stabilize_output = true;
 
 		bool crop_output = false;
@@ -57,15 +57,11 @@ namespace lvk
 
 		void configure(const StabilizationFilterSettings& settings) override;
 
-		bool ready() const;
-
 		void restart();
 
 		void reset_context();
 
 		float stability() const;
-
-		uint32_t frame_delay() const;
 
 		const cv::Rect& crop_region() const;
 

@@ -34,18 +34,11 @@ namespace lvk
 
     void PathStabilizer::configure(const PathStabilizerSettings& settings)
     {
+        LVK_ASSERT(between(settings.smoothing_coefficient, 0.0f, 1.0f));
         LVK_ASSERT(between_strict(settings.scene_margins, 0.0f, 1.0f));
-        LVK_ASSERT(settings.smoothing_strength > 0);
+        LVK_ASSERT(settings.drift_coefficient > 0.0f);
 
         m_Settings = settings;
-        resize_buffers();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    bool PathStabilizer::ready() const
-    {
-        return m_FrameQueue.is_full() && m_Trace.is_full();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -59,66 +52,108 @@ namespace lvk
 
     Frame PathStabilizer::next(Frame&& frame, const WarpField& motion)
 	{
-        LVK_ASSERT(m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size());
-		LVK_ASSERT(!frame.is_empty());
+        LVK_ASSERT(!frame.is_empty());
 
-        if(motion.size() != m_Trace.newest().size())
-            rescale_buffers(motion.size());
+        // We must ensure the motion resolution stays consistent.
+        if(motion.size() != m_Trace.size())
+        {
+            m_Trace.resize(motion.size());
+            m_Position.resize(motion.size());
+        }
 
-		m_FrameQueue.push(std::move(frame));
-        m_Trace.push(m_Trace.newest() + motion);
+        m_Margins = crop(frame.size(), m_Settings.scene_margins);
+        const cv::Point2f corrective_limits(m_Margins.tl());
 
-		if(ready())
-		{
-            auto& next_frame = m_FrameQueue.oldest();
-            m_Margins = crop(next_frame.size(), m_Settings.scene_margins);
+        // Update the path position
+        m_Position += motion;
 
-            m_SmoothTrace.set_identity();
-            for(size_t i = 0; i < m_SmoothingFilter.size(); i++)
-            {
-                m_SmoothTrace.blend(m_Trace[i], m_SmoothingFilter[i]);
-            }
+        const WarpField drift = m_Position - m_Trace;
+        const auto drift_limits = m_Settings.drift_coefficient * corrective_limits;
 
-            auto path_correction = m_SmoothTrace - m_Trace.centre(-1);
-            path_correction.clamp({m_Margins.tl()});
+        // Calculate max drift error from original path
+        float max_drift_error = 0.0f;
+        drift.read([&](const cv::Point2f& drift, const cv::Point& coord){
+            max_drift_error = std::max(max_drift_error, std::abs(drift.x) / drift_limits.x);
+            max_drift_error = std::max(max_drift_error, std::abs(drift.y) / drift_limits.y);
+        }, false);
+        max_drift_error = std::min(max_drift_error, 1.0f);
 
-            if(m_Settings.force_rigid_output)
-            {
-                path_correction.undistort(m_Settings.rigidity_tolerance);
-            }
 
-            // NOTE: we perform a swap between the resulting warp frame
-            // and the original frame data to ensure zero de-allocations.
-            path_correction.warp(next_frame.data, m_WarpFrame);
-            std::swap(m_WarpFrame, next_frame.data);
+        // Trace over the original path via an exponential moving average in order
+        // to create a smoothed path with minimal frame delay. To achieve acceptable
+        // results, the influence of the next position sample is adjusted adaptively,
+        // based on the maximum drift error of the trace from the position.
+        m_Trace.blend(regulate_influence(max_drift_error), m_Position);
 
-            return std::move(next_frame);
-		}
+        // Find the corrective motion to move the frame onto the new path.
+        auto path_correction = m_Trace - m_Position;
+        path_correction.clamp(corrective_limits);
 
-        return {};
+        if(m_Settings.force_rigid_output)
+        {
+            path_correction.undistort(m_Settings.rigidity_tolerance);
+        }
+
+        // NOTE: we perform a swap between the resulting warp frame
+        // and the original frame data to ensure zero de-allocations.
+        path_correction.warp(frame.data, m_WarpFrame);
+        std::swap(m_WarpFrame, frame.data);
+
+        return std::move(frame);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    float PathStabilizer::regulate_influence(const float drift_error) const
+    {
+        LVK_ASSERT(between(drift_error, 0.0f, 1.0f));
+
+        // NOTE: Lower influence results in higher smoothing.
+        //
+        // The influence is regulated via an exponential function which balances the amount
+        // smoothing or path catch up that is necessary for the trace based on the drift error.
+        //
+        // The curve is given by: https://www.desmos.com/calculator/sg34zskyh2
+        //
+        // When the drift error is small, the path velocity is assumed to be minimal, usually
+        // consisting of small high frequency noise such as vibrations. Here, the influence is
+        // reduced to increase the smoothing applied to the trace.
+        //
+        // When the drift error is large, the path velocity is assumed to be large, usually due
+        // to fast camera motions that can't be smoothed without distortions. The influence of
+        // the motion is increased in this case so that the trace catches up to the original path.
+        // This also plays a large role in keeping the trace within the scene margins to avoid
+        // distortions caused by clamping the path correction to respect the user's margins.
+
+        // This controls the boundary between the smoothing and catch up sections of the curve,
+        // with respect to the drift error. Higher values increase the amount of drift error
+        // that is required before the trace starts to catch up to the path again.
+        constexpr float catch_up_delay = 15.0f;
+
+        const float min_influence = 1.0f - m_Settings.smoothing_coefficient;
+        return (1.0f - min_influence) * std::exp(catch_up_delay * (drift_error - 1.0f)) + min_influence;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void PathStabilizer::restart()
 	{
-		reset_buffers();
+		m_Trace.set_identity();
+        m_Position.set_identity();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	size_t PathStabilizer::frame_delay() const
+    WarpField PathStabilizer::raw_position() const
     {
-        // NOTE: capacity can never be zero, per the pre-conditions
-        return m_FrameQueue.capacity() - 1;
-	}
+        return m_Position;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathStabilizer::position() const
+    WarpField PathStabilizer::smooth_position() const
     {
-        // NOTE: the path will never be empty.
-        return m_Trace.centre();
+        return m_Trace;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -127,83 +162,6 @@ namespace lvk
 	{
 		return m_Margins;
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void PathStabilizer::reset_buffers()
-	{
-		m_FrameQueue.clear();
-        m_Trace.clear();
-
-        // Pre-fill the trace to avoid having to deal with edge cases.
-        while(!m_Trace.is_full()) m_Trace.advance(WarpField::MinimumSize);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void PathStabilizer::resize_buffers()
-	{
-		LVK_ASSERT(m_Settings.smoothing_strength > 0);
-
-        // TODO: re-write this
-		// NOTE: The path trace uses a full sized window for stabilising the
-        // centre element, so the frame queue needs to supply delayed frames
-        // up to the centre. Tracking is performed on the newest frame but
-        // the tracked velocity has to be associated with the previous frame,
-        // so we add another frame to the queue to introduce an offset.
-        const size_t smoothing_radius = m_Settings.smoothing_strength;
-		const size_t new_window_size = 2 * smoothing_radius + 1;
-		const size_t new_queue_size = smoothing_radius + 2;
-
-		if(new_window_size != m_Trace.capacity() || new_queue_size != m_FrameQueue.capacity())
-		{
-            const auto old_queue_size = m_FrameQueue.capacity();
-
-            // TODO: re-write this
-			// When shrinking the buffers, they are both trimmed from the front, hence their
-            // relative ordering and synchrony is respected. However, resizing the buffers to
-            // a larger capacity will move the trajectory buffer forwards in time as existing
-            // data is pushed to the left of the new centre point, which represents the current
-            // frame in time. The frames correspnding to such data need to be skipped as they
-            // are now in the past.
-
-            m_Trace.resize(new_window_size);
-            m_FrameQueue.resize(new_queue_size);
-
-            if(new_queue_size > old_queue_size)
-            {
-                const auto time_shift = new_queue_size - old_queue_size;
-
-                m_FrameQueue.skip(time_shift);
-                if(m_FrameQueue.is_empty())
-                    reset_buffers();
-            }
-
-            // NOTE: A low pass Gaussian filter is used because it has both decent time domain
-            // and frequency domain performance. Unlike an average or windowed sinc filter.
-            const auto kernel = cv::getGaussianKernel(
-                static_cast<int>(new_window_size),
-                static_cast<float>(new_window_size) / 6.0f,
-                CV_32F
-            );
-
-            m_SmoothingFilter.clear();
-            m_SmoothingFilter.resize(new_window_size);
-            for(int i = 0; i < m_SmoothingFilter.capacity(); i++)
-            {
-                m_SmoothingFilter.push(kernel.at<float>(i));
-            }
-		}
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void PathStabilizer::rescale_buffers(const cv::Size& size)
-    {
-        m_SmoothTrace.resize(size);
-        for(size_t i = 0; i < m_Trace.size(); i++)
-            m_Trace[i].resize(size);
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
