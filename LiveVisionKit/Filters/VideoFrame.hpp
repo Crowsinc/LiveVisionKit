@@ -28,34 +28,28 @@ namespace lvk
 
     public:
 
-        static Frame Wrap(cv::UMat& frame, const uint64_t timestamp = 0);
 
         Frame();
 
         explicit Frame(const uint64_t timestamp);
 
+        explicit Frame(cv::UMat&& frame, const uint64_t timestamp = 0);
+
         explicit Frame(const cv::UMat& frame, const uint64_t timestamp = 0);
 
-        Frame(
-            const cv::Size& size,
-            const int type,
-            const uint64_t timestamp = 0
-        );
+        Frame(const cv::Size& size, const int type, const uint64_t timestamp = 0);
 
-        Frame(
-            const uint32_t width,
-            const uint32_t height,
-            const int type,
-            const uint64_t timestamp = 0
-        );
-
-        Frame(const Frame& frame);
+        Frame(const uint32_t width, const uint32_t height, const int type, const uint64_t timestamp = 0);
 
         Frame(Frame&& frame) noexcept;
+
+        Frame(const Frame& frame);
 
         virtual ~Frame() = default;
 
         Frame& operator=(Frame&& frame) noexcept;
+
+        Frame& operator=(const Frame& frame) noexcept;
 
         void default_to(const cv::Size& size, const int type);
 

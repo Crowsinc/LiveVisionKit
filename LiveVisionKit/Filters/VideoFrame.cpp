@@ -19,15 +19,6 @@
 
 namespace lvk
 {
-//---------------------------------------------------------------------------------------------------------------------
-
-    Frame Frame::Wrap(cv::UMat& frame, const uint64_t timestamp)
-    {
-        Frame wrapped_frame;
-        wrapped_frame.data = frame;
-        wrapped_frame.timestamp = timestamp;
-        return wrapped_frame;
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -39,6 +30,13 @@ namespace lvk
 
     Frame::Frame(const uint64_t timestamp)
         : data(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY),
+          timestamp(timestamp)
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame::Frame(cv::UMat&& frame, const uint64_t timestamp)
+        : data(std::move(frame)),
           timestamp(timestamp)
     {}
 
@@ -70,14 +68,6 @@ namespace lvk
           timestamp(timestamp)
     {}
 
-    //---------------------------------------------------------------------------------------------------------------------
-
-    Frame::Frame(const Frame& frame)
-        : timestamp(frame.timestamp)
-    {
-        frame.data.copyTo(data);
-    }
-
 //---------------------------------------------------------------------------------------------------------------------
 
     Frame::Frame(Frame&& frame) noexcept
@@ -89,12 +79,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    Frame::Frame(const Frame& frame)
+        : timestamp(frame.timestamp)
+    {
+        frame.data.copyTo(data);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     Frame& Frame::operator=(Frame&& frame) noexcept
     {
-        data = frame.data;
+        data = std::move(frame.data);
         timestamp = frame.timestamp;
 
         frame.release();
+
+        return *this;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Frame& Frame::operator=(const Frame& frame) noexcept
+    {
+        frame.data.copyTo(data);
+        timestamp = frame.timestamp;
 
         return *this;
     }
