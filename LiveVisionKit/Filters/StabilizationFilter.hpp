@@ -65,6 +65,8 @@ namespace lvk
 
 		float stability() const;
 
+        size_t frame_delay() const;
+
 		const cv::Rect& crop_region() const;
 
 	private:

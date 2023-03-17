@@ -138,16 +138,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const cv::Rect& StabilizationFilter::crop_region() const
-	{
-		return m_Stabilizer.stable_region();
-	}
+    float StabilizationFilter::stability() const
+    {
+        return m_FrameTracker.scene_stability();
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float StabilizationFilter::stability() const
+    size_t StabilizationFilter::frame_delay() const
+    {
+        return m_Stabilizer.frame_delay();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	const cv::Rect& StabilizationFilter::crop_region() const
 	{
-		return m_FrameTracker.scene_stability();
+		return m_Stabilizer.stable_region();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

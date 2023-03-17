@@ -172,14 +172,14 @@ namespace lvk
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 			stab_settings.suppression_smoothing_rate = SUPPRESSION_SMOOTHING_STEP / video_fps;
 
-			// Motion Model
-			const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
-			if (new_model == MOTION_MODEL_AFFINE)
-				stab_settings.motion_model = MotionModel::AFFINE;
-			else if (new_model == MOTION_MODEL_HOMOGRAPHY)
-				stab_settings.motion_model = MotionModel::HOMOGRAPHY;
-			else if (new_model == MOTION_MODEL_DYNAMIC)
-				stab_settings.motion_model = MotionModel::DYNAMIC;
+			// TODO: remove Motion Model
+//			const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
+//			if (new_model == MOTION_MODEL_AFFINE)
+//				stab_settings.motion_model = MotionModel::AFFINE;
+//			else if (new_model == MOTION_MODEL_HOMOGRAPHY)
+//				stab_settings.motion_model = MotionModel::HOMOGRAPHY;
+//			else if (new_model == MOTION_MODEL_DYNAMIC)
+//				stab_settings.motion_model = MotionModel::DYNAMIC;
 
 			// Suppression Mode
 			const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);
