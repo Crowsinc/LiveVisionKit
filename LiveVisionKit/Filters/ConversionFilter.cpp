@@ -25,7 +25,7 @@ namespace lvk
     ConversionFilter::ConversionFilter(const ConversionFilterSettings& settings)
         : VideoFilter("Conversion Filter")
     {
-        this->configure(settings);
+        configure(settings);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

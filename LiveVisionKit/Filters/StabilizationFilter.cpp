@@ -28,7 +28,7 @@ namespace lvk
 	StabilizationFilter::StabilizationFilter(const StabilizationFilterSettings& settings)
 		: VideoFilter("Stabilization Filter")
 	{
-		this->configure(settings);
+		configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ namespace lvk
         );
 
         // Draw tracking markers onto frame
-        draw::plot_markers(
+        draw::markers(
             frame,
             lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
             m_FrameTracker.tracking_points(),

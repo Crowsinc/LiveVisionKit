@@ -27,7 +27,7 @@ namespace lvk
 	DeblockingFilter::DeblockingFilter(DeblockingFilterSettings settings)
 		: VideoFilter("Deblocking Filter")
 	{
-        this->configure(settings);
+        configure(settings);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

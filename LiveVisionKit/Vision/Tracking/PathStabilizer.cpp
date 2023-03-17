@@ -31,10 +31,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
-    {
-        this->configure(settings);
-    }
+	PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
+	{
+		configure(settings);
+	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
