@@ -52,7 +52,7 @@ namespace lvk
         SpatialMap& operator=(const SpatialMap& other);
 
 
-        void rescale(const cv::Size& resolution);
+        void reshape(const cv::Size& resolution);
 
         const cv::Size& resolution() const;
 

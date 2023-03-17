@@ -73,11 +73,11 @@ namespace lvk
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
 
         m_FeatureGrid.clear();
-        m_FeatureGrid.rescale(m_Settings.feature_grid_shape);
+        m_FeatureGrid.reshape(m_Settings.feature_grid_shape);
         m_FeatureGrid.align(input_region);
 
         m_DetectionZones.clear();
-        m_DetectionZones.rescale(m_Settings.detection_zones);
+        m_DetectionZones.reshape(m_Settings.detection_zones);
         m_DetectionZones.align(input_region);
 
         construct_detection_zones();
