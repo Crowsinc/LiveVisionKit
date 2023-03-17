@@ -60,8 +60,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool FSREffect::should_skip(
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		const cv::Rect& region
 	) const
 	{
@@ -76,8 +76,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	const char* FSREffect::configure(
-		const cv::Size input_size,
-		const cv::Size output_size,
+		const cv::Size& input_size,
+		const cv::Size& output_size,
 		const cv::Rect& region
 	)
 	{

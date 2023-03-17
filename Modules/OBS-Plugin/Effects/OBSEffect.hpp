@@ -35,7 +35,7 @@ namespace lvk
 
 		static bool Render(
 			obs_source_t* source,
-			const cv::Size render_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 
@@ -46,7 +46,7 @@ namespace lvk
 
 		static bool Render(
 			gs_texture_t* texture,
-			const cv::Size render_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 
@@ -65,7 +65,7 @@ namespace lvk
 
 		bool render(
 			obs_source_t* source,
-			const cv::Size render_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 
@@ -76,7 +76,7 @@ namespace lvk
 
 		bool render(
 			gs_texture_t* texture,
-			const cv::Size render_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 
@@ -96,14 +96,14 @@ namespace lvk
 		virtual ~OBSEffect() = default;
 
 		virtual const char* configure(
-			const cv::Size source_size,
-			const cv::Size render_size,
+			const cv::Size& source_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 
 		virtual bool should_skip(
-			const cv::Size source_size,
-			const cv::Size render_size,
+			const cv::Size& source_size,
+			const cv::Size& render_size,
 			Args... args
 		) const;
 
@@ -117,8 +117,8 @@ namespace lvk
 
 		bool is_renderable(
 			obs_source_t* source,
-			const cv::Size source_size,
-			const cv::Size render_size,
+			const cv::Size& source_size,
+			const cv::Size& render_size,
 			Args... args
 		);
 

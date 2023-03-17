@@ -46,7 +46,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::Render(
 		obs_source_t* source,
-		const cv::Size render_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -70,7 +70,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::Render(
 		gs_texture_t* texture,
-		const cv::Size render_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -94,7 +94,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::render(
 		obs_source_t* source,
-		const cv::Size render_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -150,7 +150,7 @@ namespace lvk
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::render(
 		gs_texture_t* texture,
-		const cv::Size render_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -254,8 +254,8 @@ namespace lvk
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::is_renderable(
 		obs_source_t* source,
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -294,8 +294,8 @@ namespace lvk
 	
 	template<typename E, typename...Args>
 	const char* OBSEffect<E, Args...>::configure(
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		Args... args
 	)
 	{
@@ -306,8 +306,8 @@ namespace lvk
 	
 	template<typename E, typename...Args>
 	bool OBSEffect<E, Args...>::should_skip(
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		Args... args
 	) const
 	{

@@ -31,14 +31,14 @@ namespace lvk
 	private:
 
 		const char* configure(
-			const cv::Size source_size,
-			const cv::Size render_size,
+			const cv::Size& source_size,
+			const cv::Size& render_size,
 			const cv::Rect& region
 		) override;
 
 		bool should_skip(
-			const cv::Size source_size,
-			const cv::Size render_size,
+			const cv::Size& source_size,
+			const cv::Size& render_size,
 			const cv::Rect& region
 		) const override;
 

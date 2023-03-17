@@ -53,27 +53,27 @@ namespace lvk
 		// NOTE: returns ROI to internal buffers
 		cv::UMat upload_planes(
 			const obs_source_frame& src,
-			const cv::Size plane_0_size,
+			const cv::Size& plane_0_size,
 			const uint32_t plane_0_channels
 		);
 		
 		// NOTE: returns ROI to internal buffers
 		std::tuple<cv::UMat, cv::UMat> upload_planes(
 			const obs_source_frame& src,
-			const cv::Size plane_0_size,
+			const cv::Size& plane_0_size,
 			const uint32_t plane_0_channels,
-			const cv::Size plane_1_size,
+			const cv::Size& plane_1_size,
 			const uint32_t plane_1_channels
 		);
 		
 		// NOTE: returns ROI to internal buffers
 		std::tuple<cv::UMat, cv::UMat, cv::UMat> upload_planes(
 			const obs_source_frame& src,
-			const cv::Size plane_0_size,
+			const cv::Size& plane_0_size,
 			const uint32_t plane_0_channels,
-			const cv::Size plane_1_size,
+			const cv::Size& plane_1_size,
 			const uint32_t plane_1_channels,
-			const cv::Size plane_2_size,
+			const cv::Size& plane_2_size,
 			const uint32_t plane_2_channels
 		);
 

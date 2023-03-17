@@ -48,8 +48,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	bool CASEffect::should_skip(
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		const float sharpness
 	) const
 	{
@@ -60,8 +60,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	const char* CASEffect::configure(
-		const cv::Size source_size,
-		const cv::Size render_size,
+		const cv::Size& source_size,
+		const cv::Size& render_size,
 		const float sharpness
 	)
 	{
