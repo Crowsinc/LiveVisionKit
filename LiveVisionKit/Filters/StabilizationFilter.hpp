@@ -59,6 +59,8 @@ namespace lvk
 
 		void restart();
 
+        bool ready() const;
+
 		void reset_context();
 
 		float stability() const;
