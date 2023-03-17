@@ -31,12 +31,12 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     CompositeFilter::CompositeFilter(
-        const std::initializer_list<std::shared_ptr<lvk::VideoFilter>> filter_chain,
+        const std::initializer_list<std::shared_ptr<lvk::VideoFilter>>& filter_chain,
         const CompositeFilterSettings& settings
     )
-        : CompositeFilter(CompositeFilterSettings{
-                // TODO: add any new settings...
-                .filter_chain = filter_chain
+        : CompositeFilter({
+                .filter_chain = filter_chain,
+                .save_outputs = settings.save_outputs
           })
     {}
 

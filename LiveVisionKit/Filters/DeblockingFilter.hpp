@@ -42,7 +42,6 @@ namespace lvk
 
 	private:
 
-        // NOTE: Supports in-place operation.
         void filter(
             Frame&& input,
             Frame& output,

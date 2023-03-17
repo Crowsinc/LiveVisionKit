@@ -43,7 +43,7 @@ namespace lvk
         LVK_ASSERT(between_strict(settings.scene_margins, 0.0f, 1.0f));
         LVK_ASSERT(settings.path_prediction_frames > 0);
 
-        // If the motion resolution has changed, we need to rescale all our fields.
+        // If the motion resolution has changed, we need to resize all our fields.
         if(m_Settings.motion_resolution != settings.motion_resolution)
         {
             m_Trace.resize(settings.motion_resolution);

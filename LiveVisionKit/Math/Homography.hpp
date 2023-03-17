@@ -90,7 +90,6 @@ namespace lvk
         bool is_zero() const;
 
 
-
         Homography& operator=(const cv::Mat& other);
 
         Homography& operator=(const Homography& other);

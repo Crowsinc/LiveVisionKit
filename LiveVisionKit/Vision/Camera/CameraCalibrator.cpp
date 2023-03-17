@@ -35,7 +35,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool CameraCalibrator::feed(cv::UMat& frame, const bool draw_corners)
+	bool CameraCalibrator::
+    feed(cv::UMat& frame, const bool draw_corners)
 	{
 		if(m_ImageSize.empty())
 			m_ImageSize = frame.size();

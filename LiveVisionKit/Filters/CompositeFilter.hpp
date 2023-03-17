@@ -40,7 +40,7 @@ namespace lvk
         explicit CompositeFilter(const CompositeFilterSettings& settings = {});
 
         CompositeFilter(
-            const std::initializer_list<std::shared_ptr<lvk::VideoFilter>> filter_chain,
+            const std::initializer_list<std::shared_ptr<lvk::VideoFilter>>& filter_chain,
             const CompositeFilterSettings& settings = {}
         );
 
