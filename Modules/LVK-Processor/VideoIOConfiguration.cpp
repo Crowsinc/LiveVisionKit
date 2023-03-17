@@ -433,7 +433,7 @@ namespace clt
                 config_parser.add_variable(
                     {".smoothing", ".s"},
                     "The amount of camera smoothing to apply to the video.",
-                    &config.smoothing_strength
+                    &config.smoothing_frames
                 );
             }
         );

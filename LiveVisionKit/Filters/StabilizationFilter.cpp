@@ -35,6 +35,7 @@ namespace lvk
 
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
+        LVK_ASSERT(settings.smoothing_frames > 0);
         LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
         LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
         LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
@@ -50,7 +51,8 @@ namespace lvk
 
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
             path_settings.scene_margins = settings.crop_proportion;
-            path_settings.smoothing_coefficient = settings.smoothing_strength;
+            path_settings.path_prediction_frames = settings.smoothing_frames;
+            path_settings.motion_resolution = settings.tracking_settings.motion_resolution;
         });
 
         m_Settings = settings;

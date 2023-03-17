@@ -27,41 +27,53 @@
 namespace lvk
 {
 
-	struct PathStabilizerSettings
-	{
-        float smoothing_coefficient = 0.7f;
-        float drift_coefficient = 1.5f;
+    struct PathStabilizerSettings
+    {
+        // NOTE: frame delay is proportional to smoothing samples
+        size_t path_prediction_frames = 10;
+        cv::Size motion_resolution = {2,2};
+
         float scene_margins = 0.1f;
+        bool clamp_path_to_margins = true;
 
-        bool force_rigid_output = true;
-        float rigidity_tolerance = 0.25f;
-	};
+        float rigidity_tolerance = 0.2f;
+        bool force_output_rigidity = true;
+    };
 
-	class PathStabilizer final : public Configurable<PathStabilizerSettings>
-	{
-	public:
+    class PathStabilizer final : public Configurable<PathStabilizerSettings>
+    {
+    public:
 
-		explicit PathStabilizer(const PathStabilizerSettings& settings = {});
+        explicit PathStabilizer(const PathStabilizerSettings& settings = {});
 
-		void configure(const PathStabilizerSettings& settings) override;
+        void configure(const PathStabilizerSettings& settings) override;
 
         Frame next(const Frame& frame, const WarpField& motion);
 
         Frame next(Frame&& frame, const WarpField& motion);
 
-		void restart();
+        void restart();
 
-        WarpField raw_position() const;
+        bool ready() const;
 
-        WarpField smooth_position() const;
+        size_t frame_delay() const;
+
+        WarpField position() const;
 
         const cv::Rect& stable_region() const;
 
     private:
-        cv::Rect m_Margins{0,0,0,0};
+
+        void configure_buffers();
+
+    private:
+        float m_SmoothingFactor = 0.0f;
+        SlidingBuffer<WarpField> m_Path;
         WarpField m_Trace{WarpField::MinimumSize};
-        WarpField m_Position{WarpField::MinimumSize};
+
+        cv::Rect m_Margins{0,0,0,0};
+        SlidingBuffer<Frame> m_FrameQueue;
         cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-	};
+    };
 
 }
