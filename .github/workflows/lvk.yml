@@ -1,0 +1,119 @@
+name: 'Build LVK'
+
+on:
+  push:
+    paths-ignore: ['**.md']
+  pull_request:
+    paths-ignore: ['**.md']
+
+# Limit to only one build can be run in current branch
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  CACHE_REVISION: '006'
+  CEF_BUILD_VERSION_WIN: '5060'
+  QT_VERSION_WIN: '6.3.1'
+  DEPS_VERSION_WIN: '2023-03-04'
+  VLC_VERSION_WIN: '3.0.0-git'
+  OPENCV_VERSION: '4.7.0'
+
+jobs:
+  windows_build:
+    name: 'Windows x64'
+    runs-on: [windows-2022]
+    strategy:
+      matrix:
+        arch: [x64]
+    env:
+      CMAKE_GENERATOR: 'Visual Studio 17 2022'
+      CMAKE_SYSTEM_VERSION: '10.0.18363.657'
+      VIRTUALCAM-GUID: 'A3FCE0F5-3493-419F-958A-ABA1250EC20B'
+      BUILD_FOR_DISTRIBUTION: ${{ startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+    defaults:
+      run:
+        working-directory: 'obs-studio'
+    steps:
+      - name: 'Checkout OBS'
+        uses: actions/checkout@v3
+        with:
+          repository: 'obsproject/obs-studio'
+          submodules: 'recursive'
+          path: 'obs-studio'
+          fetch-depth: 0
+
+      - name: 'Checkout LVK'
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+          path: 'lvk'
+
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@main
+
+      - name: 'Restore VLC dependency from cache'
+        id: vlc-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'vlc-cache'
+        with:
+          path: ${{ github.workspace }}/obs-build-dependencies/vlc-${{ env.VLC_VERSION_WIN }}
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.VLC_VERSION_WIN }}-${{ env.CACHE_REVISION }}
+
+      - name: 'Restore Chromium Embedded Framework from cache'
+        id: cef-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'cef-cache'
+        with:
+          path: ${{ github.workspace }}/obs-build-dependencies/cef_binary_${{ env.CEF_BUILD_VERSION_WIN }}_windows_${{ matrix.arch }}
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CEF_BUILD_VERSION_WIN }}-${{ matrix.arch }}-${{ env.CACHE_REVISION }}
+
+      - name: Setup Environment
+        id: setup
+        run: |
+          $CommitHash = git rev-parse --short=9 HEAD
+          "commitHash=${CommitHash}" >> $env:GITHUB_OUTPUT
+
+      - name: 'Install dependencies'
+        env:
+          RESTORED_VLC: ${{ steps.vlc-cache.outputs.cache-hit }}
+          RESTORED_CEF: ${{ steps.cef-cache.outputs.cache-hit }}
+        run: CI/windows/01_install_dependencies.ps1 -BuildArch ${{ matrix.arch }}
+
+      - name: 'Build OBS'
+        run: |
+          CI/windows/02_build_obs.ps1 -BuildArch ${{ matrix.arch }}
+          echo "OBS_dir=$pwd" >> $env:GITHUB_ENV
+
+      - name: 'Create build artifact'
+        run: |
+          CI/windows/03_package_obs.ps1 -BuildArch ${{ matrix.arch }} -Package
+          $ArtifactName = Get-ChildItem -filter "obs-studio-*-windows-${{ matrix.arch }}.zip" -File
+          Write-Output "FILE_NAME=${ArtifactName}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: 'Setup OpenCV'
+        working-directory: 'lvk'
+        run: |
+          curl -fLOS https://github.com/opencv/opencv/releases/download/${{ env.OPENCV_VERSION }}/opencv-${{ env.OPENCV_VERSION }}-windows.exe
+          mkdir opencv
+          7z x opencv-${{ env.OPENCV_VERSION }}-windows.exe -oopencv
+          cd opencv/opencv
+          echo "OpenCV_DIR=$pwd/build" >> $env:GITHUB_ENV
+
+      - name: 'Build LVK'
+        working-directory: 'lvk'
+        run: |
+          mkdir build && cd build && mkdir dist
+          cmake -D OPENCV_BUILD_PATH="${{ env.OpenCV_DIR }}" -D OBS_BUILD_PATH="${{ env.obs_dir }}\build64" -D OBS_PLUGIN_AUTO_INSTALL=ON -D OBS_PLUGIN_AUTO_INSTALL_PATHS=$pwd\dist ..
+          msbuild /m /p:Configuration="RelWithDebInfo" "$pwd\LiveVisionKit.sln" || exit 1
+          msbuild /m /p:Configuration="RelWithDebInfo" "$pwd\INSTALL.vcxproj" || exit 1
+          cd dist
+          7z a ../lvk.7z -m0=LZMA2 -mx9 -mtm
+
+      - name: 'Upload build artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'LiveVisionKit'
+          path: 'lvk/build/lvk.7z'
