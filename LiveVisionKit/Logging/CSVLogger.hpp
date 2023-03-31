@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <ostream>
-
 #include "Logger.hpp"
+
+#include <ostream>
 
 namespace lvk
 {

@@ -15,9 +15,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <obs-module.h>
-#include <Diagnostics/Directives.hpp>
+#pragma once
 
+#include <obs-module.h>
+
+#include "Directives.hpp"
 #include "Logging.hpp"
 
 namespace lvk::dispatch
@@ -25,12 +27,12 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename... T>
-	void skip(T...) {}
+    inline void skip(T...) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	obs_properties_t* filter_properties(void* data)
+    inline obs_properties_t* filter_properties(void* data)
 	{
 		return T::Properties();
 	}
@@ -38,7 +40,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void filter_load_defaults(obs_data_t* settings)
+    inline void filter_load_defaults(obs_data_t* settings)
 	{
 		T::LoadDefaults(settings);
 	}
@@ -46,7 +48,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void* filter_create(obs_data_t* settings, obs_source_t* context)
+    inline void* filter_create(obs_data_t* settings, obs_source_t* context)
 	{
 		return T::Create(context, settings);
 	}
@@ -54,7 +56,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void* filter_create_auto(obs_data_t* settings, obs_source_t* context)
+    inline void* filter_create_auto(obs_data_t* settings, obs_source_t* context)
 	{
 		LVK_ASSERT(context != nullptr);
 		LVK_ASSERT(settings != nullptr);
@@ -76,7 +78,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void filter_delete(void* data)
+    inline void filter_delete(void* data)
 	{
 		delete static_cast<T*>(data);
 	}
@@ -84,7 +86,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void filter_configure(void* data, obs_data_t* settings)
+    inline void filter_configure(void* data, obs_data_t* settings)
 	{
 		static_cast<T*>(data)->configure(settings);
 	}
@@ -92,7 +94,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void filter_tick(void* data, float seconds)
+    inline void filter_tick(void* data, float seconds)
 	{
 		static_cast<T*>(data)->tick();
 	}
@@ -100,7 +102,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	void filter_render(void* data, gs_effect_t* effect)
+    inline void filter_render(void* data, gs_effect_t* effect)
 	{
 		static_cast<T*>(data)->render();
 	}
@@ -108,7 +110,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	obs_source_frame* filter_process(void* data, obs_source_frame* frame)
+    inline obs_source_frame* filter_process(void* data, obs_source_frame* frame)
 	{
 		return static_cast<T*>(data)->process(frame);
 	}
@@ -116,7 +118,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	uint32_t filter_width(void* data)
+    inline uint32_t filter_width(void* data)
 	{
 		return static_cast<T*>(data)->width();
 	}
@@ -124,7 +126,7 @@ namespace lvk::dispatch
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	uint32_t filter_height(void* data)
+    inline uint32_t filter_height(void* data)
 	{
 		return static_cast<T*>(data)->height();
 	}

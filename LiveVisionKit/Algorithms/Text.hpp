@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <vector>
 #include <string>
 #include <algorithm>
 #include <functional>
@@ -25,31 +24,15 @@
 namespace lvk
 {
 
-	// Erase quickly without care for preserving the element ordering
-	template<typename T>
-	void fast_erase(std::vector<T>& data, const size_t index);
-
-	// Filter quickly without care for preserving the element ordering
-	template<typename T, typename P>
-	void fast_filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
-
-	// Filter quickly without care for preserving the element ordering
-	template<typename T, typename P>
-	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert = false);
-
-
-	template<typename T, typename P>
-	void filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
-
-	// String Algorithms
-
-	template<typename T>
-	std::vector<T> parse(
-		const std::string& string,
-		const char delimiter = ',',
-		const std::function<bool(size_t,T&,bool)>& validate = [](size_t index, T& value, bool fail){return !fail;}
-	);
+    template<typename T>
+    std::vector<T> parse_sequence(
+        const std::string& string,
+        const char delimiter = ',',
+        const std::function<bool(size_t,T&,bool)>& validate = [](auto index, auto value, auto failed){
+            return !failed;
+        }
+    );
 
 }
 
-#include "Algorithm.tpp"
+#include "Text.tpp"

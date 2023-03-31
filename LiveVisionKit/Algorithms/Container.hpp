@@ -18,39 +18,28 @@
 #pragma once
 
 #include <vector>
-
-#include "VideoFilter.hpp"
-#include "Utility/Configurable.hpp"
+#include <string>
+#include <algorithm>
+#include <functional>
 
 namespace lvk
 {
+	// Erase quickly without care for preserving the element ordering
+	template<typename T>
+	void fast_erase(std::vector<T>& data, const size_t index);
 
-    struct ConversionFilterSettings
-    {
-        cv::ColorConversionCodes conversion_code = cv::COLOR_BGR2YUV;
-        std::optional<size_t> output_channels;
-    };
+	template<typename T, typename P>
+	void filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
-    class ConversionFilter final : public VideoFilter, public Configurable<ConversionFilterSettings>
-    {
-    public:
+	// Filter quickly without care for preserving the element ordering
+	template<typename T, typename P>
+	void fast_filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
-        explicit ConversionFilter(const ConversionFilterSettings& settings = {});
-
-        explicit ConversionFilter(const cv::ColorConversionCodes conversion_code);
-
-        void configure(const ConversionFilterSettings& settings) override;
-
-    private:
-
-        void filter(
-            Frame&& input,
-            Frame& output,
-            Stopwatch& timer,
-            const bool debug
-        ) override;
-
-    };
+	// Filter quickly without care for preserving the element ordering
+	template<typename T, typename P>
+	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert = false);
 
 }
+
+#include "Container.tpp"
 

@@ -51,19 +51,27 @@ target_sources(
     ${PROJECT_NAME}
     PRIVATE
         LiveVisionKit.hpp
+        Directives.hpp
+        Directives.cpp
 )
 
-# DIAGNOSTICS SOURCES
+
+# ALGORITHMS SOURCES
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Diagnostics/Directives.hpp
-        Diagnostics/Directives.cpp
-        Diagnostics/Logging/CSVLogger.cpp
-        Diagnostics/Logging/CSVLogger.hpp
-        Diagnostics/Logging/Logger.hpp
-        Diagnostics/Logging/Logger.tpp
+        Algorithms/Container.hpp
+        Algorithms/Container.tpp
+        Algorithms/Drawing.hpp
+        Algorithms/Drawing.tpp
+        Algorithms/Logic.hpp
+        Algorithms/Logic.tpp
+        Algorithms/Math.hpp
+        Algorithms/Math.tpp
+        Algorithms/Text.hpp
+        Algorithms/Text.tpp
 )
+
 
 # FILTER SOURCES
 target_sources(
@@ -83,6 +91,16 @@ target_sources(
         Filters/VideoFrame.hpp
 )
 
+# Logging SOURCES
+target_sources(
+        ${PROJECT_NAME}
+        PRIVATE
+        Logging/CSVLogger.cpp
+        Logging/CSVLogger.hpp
+        Logging/Logger.hpp
+        Logging/Logger.tpp
+)
+
 # MATH SOURCES
 target_sources(
     ${PROJECT_NAME}
@@ -91,10 +109,8 @@ target_sources(
         Math/BoundingQuad.hpp
         Math/Homography.cpp
         Math/Homography.hpp
-        Math/Logic.hpp
-        Math/Logic.tpp
-        Math/Math.hpp
-        Math/Math.tpp
+        Math/WarpField.hpp
+        Math/WarpField.cpp
         Math/VirtualGrid.hpp
         Math/VirtualGrid.cpp
 )
@@ -109,38 +125,41 @@ target_sources(
         Structures/SpatialMap.tpp
 )
 
+
+# TIMING SOURCES
+target_sources(
+        ${PROJECT_NAME}
+        PRIVATE
+        Timing/Stopwatch.cpp
+        Timing/Stopwatch.hpp
+        Timing/TickTimer.cpp
+        Timing/TickTimer.hpp
+        Timing/Time.cpp
+        Timing/Time.hpp
+)
+
+
 # UTILITY SOURCES
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Utility/Algorithm.hpp
-        Utility/Algorithm.tpp
-        Utility/Drawing.hpp
-        Utility/Drawing.tpp
-        Utility/Properties/Configurable.hpp
-        Utility/Properties/Configurable.tpp
-        Utility/Properties/Unique.hpp
-        Utility/Properties/Unique.tpp
-        Utility/Timing/Stopwatch.cpp
-        Utility/Timing/Stopwatch.hpp
-        Utility/Timing/TickTimer.cpp
-        Utility/Timing/TickTimer.hpp
-        Utility/Timing/Time.cpp
-        Utility/Timing/Time.hpp
+        Utility/Configurable.hpp
+        Utility/Configurable.tpp
+        Utility/Unique.hpp
+        Utility/Unique.tpp
 )
+
 
 # VISION SOURCES
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Vision/Camera/CameraCalibrator.cpp
-        Vision/Camera/CameraCalibrator.hpp
-        Vision/Tracking/FrameTracker.cpp
-        Vision/Tracking/FrameTracker.hpp
-        Vision/Tracking/GridDetector.cpp
-        Vision/Tracking/GridDetector.hpp
-        Vision/Tracking/PathStabilizer.cpp
-        Vision/Tracking/PathStabilizer.hpp
-        Vision/Tracking/WarpField.hpp
-        Vision/Tracking/WarpField.cpp
+        Vision/CameraCalibrator.cpp
+        Vision/CameraCalibrator.hpp
+        Vision/FrameTracker.cpp
+        Vision/FrameTracker.hpp
+        Vision/GridDetector.cpp
+        Vision/GridDetector.hpp
+        Vision/PathStabilizer.cpp
+        Vision/PathStabilizer.hpp
 )

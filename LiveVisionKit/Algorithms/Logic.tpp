@@ -15,6 +15,8 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#pragma once
+
 #include <type_traits>
 
 namespace lvk
@@ -23,7 +25,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 	
 	template<typename T>
-	bool test_bits(const T bits, const T test_flag)
+	inline bool test_bits(const T bits, const T test_flag)
 	{
 		static_assert(std::is_integral_v<T>);
 
@@ -33,7 +35,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename ...Options>
-	bool any_of(T value, Options ...option)
+    inline bool any_of(T value, Options ...option)
 	{
 		return (... || (value == option));
 	}
@@ -41,7 +43,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename ...Options>
-	bool all_of(T value, Options ...option)
+    inline bool all_of(T value, Options ...option)
 	{
 		return (... && (value == option));
 	}

@@ -16,7 +16,7 @@
 
 #include "Stopwatch.hpp"
 
-#include "Diagnostics/Directives.hpp"
+#include "Directives.hpp"
 
 #include <opencv2/core/ocl.hpp>
 #include <thread>

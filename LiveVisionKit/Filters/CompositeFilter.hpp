@@ -20,7 +20,7 @@
 #include <memory>
 
 #include "VideoFilter.hpp"
-#include "Utility/Properties/Configurable.hpp"
+#include "Utility/Configurable.hpp"
 
 namespace lvk
 {

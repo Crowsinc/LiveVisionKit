@@ -149,14 +149,19 @@ namespace lvk
 
 		const std::string output_pattern = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
 		if(output_pattern == OUTPUT_SIZE_CANVAS)
+        {
 			m_MatchCanvasSize = true;
+        }
 		else if(output_pattern.find('x') != std::string::npos)
 		{
 			// NOTE: ^^ must be last check in case non-numeric list values include the letter 'x'
-
-			std::vector<float> tokens = parse<float>(output_pattern, 'x', [](auto _, float& value, const bool fail) {
-				return !fail && value > 0;
-				});
+			std::vector<float> tokens = parse_sequence<float>(
+                output_pattern,
+                'x',
+                [](auto _, float& value, const bool fail) {
+			    	return !fail && value > 0;
+				}
+            );
 
 			// Interpret custom resolution
 			if (tokens.size() == 2 || tokens.size() == 3)

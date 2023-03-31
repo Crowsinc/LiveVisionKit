@@ -17,7 +17,7 @@
 
 #include "Homography.hpp"
 
-#include "Diagnostics/Directives.hpp"
+#include "Directives.hpp"
 
 namespace lvk
 {

@@ -368,21 +368,21 @@ namespace lvk
 	std::tuple<std::string, cv::Scalar> CCTool::generate_calibration_status() const
 	{
 		if(m_CalibrationSuccess)
-			return {std::string(L("cct.hud.status.successful")), draw::YUV_GREEN};
+			return {std::string(L("cct.hud.status.successful")), yuv::GREEN};
 
 		if(m_CalibrationFail)
-			return {std::string(L("cct.hud.status.failed")), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.failed")), yuv::RED};
 
 		if(m_ProfileName.empty())
-			return {std::string(L("cct.hud.status.profile-empty")), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.profile-empty")), yuv::RED};
 
 		if(remaining_captures() > 0)
-			return {std::string(L("cct.hud.status.more-captures")), draw::YUV_RED};
+			return {std::string(L("cct.hud.status.more-captures")), yuv::RED};
 
 		if(remaining_captures() == 0)
-			return {std::string(L("cct.hud.status.ready")), draw::YUV_MAGENTA};
+			return {std::string(L("cct.hud.status.ready")), yuv::MAGENTA};
 
-		return {L("cct.hud.status.unknown"), draw::YUV_RED};
+		return {L("cct.hud.status.unknown"), yuv::RED};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -395,32 +395,32 @@ namespace lvk
 		cv::Point text_origin(5, 40);
 		const std::string separator(": ");
 
-		draw::text(
+        draw_text(
 			frame,
 			L("cct.hud.profile") + separator + m_ProfileName,
 			text_origin,
-			draw::YUV_MAGENTA
+            yuv::MAGENTA
 		);
 		text_origin += text_offset;
 
-		draw::text(
+        draw_text(
 			frame,
 			L("cct.hud.square-size") + separator + std::to_string(m_SquareSize) + "mm",
 			text_origin,
-			draw::YUV_MAGENTA
+            yuv::MAGENTA
 		);
 		text_origin += text_offset;
 
-		draw::text(
+		draw_text(
 			frame,
 			L("cct.hud.remaining") + separator + std::to_string(remaining_captures()),
 			text_origin,
-			draw::YUV_MAGENTA
+            yuv::MAGENTA
 		);
 		text_origin += text_offset;
 
 		const auto& [status_text, status_color] = generate_calibration_status();
-		draw::text(
+        draw_text(
 			frame,
 			L("cct.hud.status") + separator + status_text,
 			text_origin,

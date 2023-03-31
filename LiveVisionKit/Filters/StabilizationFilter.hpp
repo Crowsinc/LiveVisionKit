@@ -18,9 +18,9 @@
 #pragma once
 
 #include "VideoFilter.hpp"
-#include "Vision/Tracking/FrameTracker.hpp"
-#include "Vision/Tracking/PathStabilizer.hpp"
-#include "Utility/Properties/Configurable.hpp"
+#include "Vision/FrameTracker.hpp"
+#include "Vision/PathStabilizer.hpp"
+#include "Utility/Configurable.hpp"
 
 namespace lvk
 {

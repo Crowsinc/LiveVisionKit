@@ -15,7 +15,9 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include <Diagnostics/Directives.hpp>
+#pragma once
+
+#include "Directives.hpp"
 
 #include "Utility/Logging.hpp"
 
@@ -25,7 +27,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	E& OBSEffect<E,Args...>::Instance()
+    inline E& OBSEffect<E,Args...>::Instance()
 	{
 		// Lazily initialize a global instance of the effect
 		static E cached_instance;
@@ -35,7 +37,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::IsCompiled()
+    inline bool OBSEffect<E, Args...>::IsCompiled()
 	{
 		return E::Instance().is_compiled();
 	}
@@ -44,7 +46,7 @@ namespace lvk
 	
 	// Render source
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Render(
+    inline bool OBSEffect<E, Args...>::Render(
 		obs_source_t* source,
 		const cv::Size& render_size,
 		Args... args
@@ -56,7 +58,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Render(
+    inline bool OBSEffect<E, Args...>::Render(
 		obs_source_t* source,
 		Args... args
 	)
@@ -68,7 +70,7 @@ namespace lvk
 
 	// Render texture to source
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Render(
+    inline bool OBSEffect<E, Args...>::Render(
 		gs_texture_t* texture,
 		const cv::Size& render_size,
 		Args... args
@@ -80,7 +82,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::Render(
+    inline bool OBSEffect<E, Args...>::Render(
 		gs_texture_t* texture,
 		Args... args
 	)
@@ -92,7 +94,7 @@ namespace lvk
 
 	// Render source
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::render(
+    inline bool OBSEffect<E, Args...>::render(
 		obs_source_t* source,
 		const cv::Size& render_size,
 		Args... args
@@ -128,7 +130,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::render(
+    inline bool OBSEffect<E, Args...>::render(
 		obs_source_t* source,
 		Args... args
 	)
@@ -148,7 +150,7 @@ namespace lvk
 
 	// Render texture to source
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::render(
+    inline bool OBSEffect<E, Args...>::render(
 		gs_texture_t* texture,
 		const cv::Size& render_size,
 		Args... args
@@ -187,7 +189,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::render(
+    inline bool OBSEffect<E, Args...>::render(
 		gs_texture_t* texture,
 		Args... args
 	)
@@ -205,7 +207,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	OBSEffect<E, Args...>::OBSEffect(const std::string& name)
+    inline OBSEffect<E, Args...>::OBSEffect(const std::string& name)
 		: m_Handle(nullptr)
 	{
 		const std::string effect_file = name + ".effect";
@@ -237,14 +239,14 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	OBSEffect<E, Args...>::OBSEffect(gs_effect_t* handle)
+    inline OBSEffect<E, Args...>::OBSEffect(gs_effect_t* handle)
 		: m_Handle(handle)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::is_compiled()
+    inline bool OBSEffect<E, Args...>::is_compiled()
 	{
 		return handle() != nullptr && validate();
 	}
@@ -252,7 +254,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::is_renderable(
+    inline bool OBSEffect<E, Args...>::is_renderable(
 		obs_source_t* source,
 		const cv::Size& source_size,
 		const cv::Size& render_size,
@@ -269,7 +271,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	gs_effect_t* OBSEffect<E, Args...>::handle()
+    inline gs_effect_t* OBSEffect<E, Args...>::handle()
 	{
 		return m_Handle;
 	}
@@ -277,7 +279,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 	
 	template<typename E, typename...Args>
-	gs_eparam_t* OBSEffect<E, Args...>::load_param(const char* name)
+    inline gs_eparam_t* OBSEffect<E, Args...>::load_param(const char* name)
 	{
 		return gs_effect_get_param_by_name(handle(), name);
 	}
@@ -285,7 +287,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::validate() const
+    inline bool OBSEffect<E, Args...>::validate() const
 	{
 		return true;
 	}
@@ -293,7 +295,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 	
 	template<typename E, typename...Args>
-	const char* OBSEffect<E, Args...>::configure(
+    inline const char* OBSEffect<E, Args...>::configure(
 		const cv::Size& source_size,
 		const cv::Size& render_size,
 		Args... args
@@ -305,7 +307,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 	
 	template<typename E, typename...Args>
-	bool OBSEffect<E, Args...>::should_skip(
+    inline bool OBSEffect<E, Args...>::should_skip(
 		const cv::Size& source_size,
 		const cv::Size& render_size,
 		Args... args

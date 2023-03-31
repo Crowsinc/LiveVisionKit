@@ -15,15 +15,17 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#pragma once
+
 #include <opencv2/opencv.hpp>
 
-namespace lvk::draw
+namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    void rect(
+    inline void draw_rect(
         cv::UMat& dst,
         const cv::Rect_<T>& rect,
         const cv::Scalar& color,
@@ -35,7 +37,7 @@ namespace lvk::draw
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    inline void grid(
+    inline void draw_grid(
         cv::UMat& dst,
         const cv::Size& grid,
         const cv::Scalar& color,
@@ -64,7 +66,7 @@ namespace lvk::draw
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline void markers(
+	inline void draw_markers(
 		cv::UMat& dst,
 		const cv::Scalar& color,
 		const std::vector<cv::Point_<T>>& markers,
@@ -83,6 +85,7 @@ namespace lvk::draw
 		draw_mask.create(dst.size(), CV_8UC1);
 		draw_mask.setTo(cv::Scalar(0));
 
+        // TODO: paralellize?
 		for(const auto& point : markers)
         {
             cv::Point_<T> scaled_point(
@@ -100,7 +103,7 @@ namespace lvk::draw
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline void text(
+	inline void draw_text(
 		cv::UMat& dst,
 		const std::string& text,
 		const cv::Point_<T>& position,
@@ -120,7 +123,6 @@ namespace lvk::draw
 			font_thickness
 		);
 	}
-
 
 //---------------------------------------------------------------------------------------------------------------------
 

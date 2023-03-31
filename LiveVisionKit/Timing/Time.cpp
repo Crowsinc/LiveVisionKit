@@ -15,7 +15,8 @@
 // 	  **********************************************************************
 
 #include "Time.hpp"
-#include "Diagnostics/Directives.hpp"
+
+#include "Directives.hpp"
 
 #include <ctime>
 #include <iomanip>

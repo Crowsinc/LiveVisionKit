@@ -22,7 +22,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
-#include "Utility/Drawing.hpp"
+#include "Algorithms/Drawing.hpp"
 
 namespace lvk
 {
@@ -125,7 +125,7 @@ namespace lvk
         ) const;
 
 
-        void draw(cv::UMat& dst, const cv::Scalar& color = draw::YUV_MAGENTA, const int thickness = 2) const;
+        void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
 
 
         WarpField& operator=(WarpField&& other) noexcept;

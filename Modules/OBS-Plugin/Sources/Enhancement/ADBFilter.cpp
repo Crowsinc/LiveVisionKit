@@ -117,11 +117,11 @@ namespace lvk
 		const auto frame_time_ms = m_Filter.timings().average().milliseconds();
 		const auto deviation_ms = m_Filter.timings().deviation().milliseconds();
 
-		draw::text(
+		draw_text(
 			frame,
             cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			cv::Point(5, 40),
-			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
+			frame_time_ms < TIMING_THRESHOLD_MS ? yuv::GREEN : yuv::RED
 		);
 	}
 

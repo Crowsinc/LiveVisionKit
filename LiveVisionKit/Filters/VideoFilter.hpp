@@ -22,8 +22,8 @@
 #include <opencv2/videoio.hpp>
 
 #include "VideoFrame.hpp"
-#include "Utility/Properties/Unique.hpp"
-#include "Utility/Timing/TickTimer.hpp"
+#include "Utility/Unique.hpp"
+#include "Timing/Stopwatch.hpp"
 
 namespace lvk
 {

@@ -20,11 +20,11 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-#include "Utility/Timing/Time.hpp"
+#include "Timing/Time.hpp"
 
 //---------------------------------------------------------------------------------------------------------------------
 
-std::function<void(std::string, std::string, std::string)> lvk::global::assert_handler = [](
+std::function<void(std::string, std::string, std::string)> lvk::context::assert_handler = [](
     std::string file,
     std::string function,
     std::string assertion

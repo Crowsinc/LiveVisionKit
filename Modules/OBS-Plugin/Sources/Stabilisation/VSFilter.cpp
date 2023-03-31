@@ -279,13 +279,13 @@ namespace lvk
 		const double deviation_ms = m_Filter.timings().deviation().milliseconds();
 		const auto& crop_region = m_Filter.crop_region();
 
-		draw::text(
+		draw_text(
 			frame,
             cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			crop_region.tl() + cv::Point(5, 40),
-			frame_time_ms < TIMING_THRESHOLD_MS ? draw::YUV_GREEN : draw::YUV_RED
+			frame_time_ms < TIMING_THRESHOLD_MS ? yuv::GREEN : yuv::RED
 		);
-		draw::rect(frame, crop_region, draw::YUV_MAGENTA);
+		draw_rect(frame, crop_region, yuv::MAGENTA);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

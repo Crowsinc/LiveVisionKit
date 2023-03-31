@@ -19,39 +19,40 @@
 
 #include <opencv2/opencv.hpp>
 
-namespace lvk::draw
+// COLOUR CONSTANTS
+namespace lvk::bgr
 {
-    // YUV/BGR COLOURS
+    const cv::Scalar BLACK(0, 0, 0);
+    const cv::Scalar WHITE(255, 255, 255);
+    const cv::Scalar MAGENTA(255, 0, 255);
+    const cv::Scalar GREEN(0, 255, 0);
+    const cv::Scalar BLUE(255, 0, 0);
+    const cv::Scalar RED(0, 0, 255);
+}
+namespace lvk::yuv
+{
+    const cv::Scalar BLACK(0, 128, 128);
+    const cv::Scalar WHITE(255, 0, 0);
+    const cv::Scalar MAGENTA(105, 212, 234);
+    const cv::Scalar GREEN(149, 43, 21);
+    const cv::Scalar BLUE(29, 255, 107);
+    const cv::Scalar RED(76, 84, 255);
+}
 
-    const cv::Scalar BGR_BLACK(0, 0, 0);
-    const cv::Scalar YUV_BLACK(0, 128, 128);
 
-    const cv::Scalar BGR_WHITE(255, 255, 255);
-    const cv::Scalar YUV_WHITE(255, 0, 0);
-
-	const cv::Scalar BGR_MAGENTA(255, 0, 255);
-    const cv::Scalar YUV_MAGENTA(105, 212, 234);
-
-	const cv::Scalar BGR_GREEN(0, 255, 0);
-    const cv::Scalar YUV_GREEN(149, 43, 21);
-
-	const cv::Scalar BGR_BLUE(255, 0, 0);
-    const cv::Scalar YUV_BLUE(29, 255, 107);
-
-	const cv::Scalar YUV_RED(76, 84, 255);
-    const cv::Scalar BGR_RED(0, 0, 255);
-
-    // DRAWING FUNCTIONS
+// DRAWING FUNCTIONS
+namespace lvk
+{
 
     template<typename T>
-    void rect(
+    void draw_rect(
         cv::UMat& dst,
         const cv::Rect_<T>& rect,
         const cv::Scalar& color,
         const int thickness = 2
     );
 
-    void grid(
+    void draw_grid(
         cv::UMat& dst,
         const cv::Size& grid,
         const cv::Scalar& color,
@@ -59,7 +60,7 @@ namespace lvk::draw
     );
 
     template<typename T>
-    void markers(
+    void draw_markers(
         cv::UMat& dst,
         const cv::Scalar& color,
         const std::vector<cv::Point_<T>>& markers,
@@ -70,7 +71,7 @@ namespace lvk::draw
     );
 
 	template<typename T>
-	void text(
+	void draw_text(
 		cv::UMat& dst,
 		const std::string& text,
 		const cv::Point_<T>& position,

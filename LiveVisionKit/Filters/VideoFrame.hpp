@@ -28,7 +28,6 @@ namespace lvk
 
     public:
 
-
         Frame();
 
         explicit Frame(const uint64_t timestamp);

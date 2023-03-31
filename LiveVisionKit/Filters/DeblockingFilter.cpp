@@ -17,7 +17,7 @@
 
 #include "DeblockingFilter.hpp"
 
-#include "Utility/Drawing.hpp"
+#include "Algorithms/Drawing.hpp"
 
 namespace lvk
 {
@@ -104,7 +104,7 @@ namespace lvk
 
 		// Set smoothing frame to magenta so that we can see all the detection levels.
 		if(debug)
-			m_SmoothFrame.setTo(draw::YUV_MAGENTA);
+			m_SmoothFrame.setTo(yuv::MAGENTA);
 
 		// Adaptively blend original and smooth frames
 		cv::blendLinear(

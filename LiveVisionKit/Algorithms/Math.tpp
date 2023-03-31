@@ -15,9 +15,11 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
+#pragma once
+
 #include <opencv2/opencv.hpp>
 
-#include "Diagnostics/Directives.hpp"
+#include "Directives.hpp"
 
 namespace lvk
 {
@@ -25,7 +27,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	T round_even(const T& value)
+    inline T round_even(const T& value)
 	{
 		return std::round(value / 2) * 2;
 	}
@@ -33,7 +35,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	int sign(const T& value, const T& reference)
+    inline int sign(const T& value, const T& reference)
 	{
 		// Returns 0 if the value is equal to the reference, -1 if it is on its left, 1 if its on its right
 		return (reference < value) - (value < reference);
@@ -42,7 +44,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	int sign_2d(const cv::Point_<T>& p, const cv::Point_<T>& l1, const cv::Point_<T>& l2)
+    inline int sign_2d(const cv::Point_<T>& p, const cv::Point_<T>& l1, const cv::Point_<T>& l2)
 	{
 		// Returns 0 if p is on the infinite line l1 to l2, -1 if it is on its left, 1 if its on its right
 		return sign((l1.x - l2.x) * (p.y - l2.y) - (l1.y - l2.y) * (p.x - l2.x));
@@ -51,7 +53,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename V, typename T>
-	V lerp(const V& from, const V& to, const T& t)
+    inline V lerp(const V& from, const V& to, const T& t)
 	{
 		return from + t * (to - from);
 	}
@@ -59,7 +61,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename V, typename T>
-	V step(const V& current, const V& target, const T& amount)
+    inline V step(const V& current, const V& target, const T& amount)
 	{
 		LVK_ASSERT(amount >= 0);
 		if(current > target)
@@ -71,7 +73,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion)
+    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion)
 	{
 		const T total_horz_crop = region.width * proportion;
 		const T total_vert_crop = region.height * proportion;
@@ -87,7 +89,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	bool between(const T& value, const T& min, const T& max)
+    inline bool between(const T& value, const T& min, const T& max)
 	{
 		LVK_ASSERT(min <= max);
 
@@ -97,7 +99,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	bool between_strict(const T& value, const T& min, const T& max)
+    inline bool between_strict(const T& value, const T& min, const T& max)
 	{
 		LVK_ASSERT(min < max);
 
@@ -107,14 +109,14 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	T exp_moving_average(const T average, const T new_sample, const float smoothing_factor)
+    inline T exp_moving_average(const T average, const T new_sample, const float smoothing_factor)
 	{
 		return smoothing_factor * new_sample + (1.0f - smoothing_factor) * average;
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	inline size_t index_2d(size_t x, size_t y, size_t row_length)
+    inline size_t index_2d(size_t x, size_t y, size_t row_length)
 	{
 		LVK_ASSERT(row_length > 0);
 
@@ -132,6 +134,5 @@ namespace lvk
     }
 
 //---------------------------------------------------------------------------------------------------------------------
-
 
 }

@@ -15,13 +15,13 @@
 //     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //     **********************************************************************
 
-#include "SpatialMap.hpp"
-
-#include "Diagnostics/Directives.hpp"
-#include "Utility/Algorithm.hpp"
-#include "Math/Math.hpp"
+#pragma once
 
 #include <array>
+
+#include "Directives.hpp"
+#include "Algorithms/Math.hpp"
+#include "Algorithms/Container.hpp"
 
 namespace lvk
 {
@@ -70,7 +70,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SpatialMap<T>& SpatialMap<T>::operator=(SpatialMap&& other) noexcept
+    inline SpatialMap<T>& SpatialMap<T>::operator=(SpatialMap&& other) noexcept
     {
         m_Map = std::move(other.m_Map);
         m_Data = std::move(other.m_Data);
@@ -82,7 +82,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SpatialMap<T>& SpatialMap<T>::operator=(const SpatialMap& other)
+    inline SpatialMap<T>& SpatialMap<T>::operator=(const SpatialMap& other)
     {
         m_Map = other.m_Map;
         m_Data = other.m_Data;
@@ -151,7 +151,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    int SpatialMap<T>::rows() const
+    inline int SpatialMap<T>::rows() const
     {
         return m_VirtualGrid.rows();
     }
@@ -159,7 +159,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    int SpatialMap<T>::cols() const
+    inline int SpatialMap<T>::cols() const
     {
         return m_VirtualGrid.cols();
     }

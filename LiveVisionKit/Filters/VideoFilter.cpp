@@ -18,10 +18,12 @@
 #include "VideoFilter.hpp"
 
 #include <condition_variable>
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <mutex>
-#include <atomic>
+
+#include "Timing/TickTimer.hpp"
 
 namespace lvk
 {

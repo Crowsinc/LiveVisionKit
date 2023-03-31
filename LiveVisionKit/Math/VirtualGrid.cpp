@@ -17,8 +17,8 @@
 
 #include "VirtualGrid.hpp"
 
-#include "Diagnostics/Directives.hpp"
-#include "Math/Math.hpp"
+#include "Directives.hpp"
+#include "Algorithms/Math.hpp"
 
 namespace lvk
 {

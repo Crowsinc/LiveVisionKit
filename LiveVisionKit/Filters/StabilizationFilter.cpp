@@ -17,8 +17,9 @@
 
 #include "StabilizationFilter.hpp"
 
-#include "Math/Math.hpp"
-#include "Utility/Drawing.hpp"
+#include "Directives.hpp"
+#include "Algorithms/Math.hpp"
+#include "Algorithms/Drawing.hpp"
 
 namespace lvk
 {
@@ -103,9 +104,9 @@ namespace lvk
         );
 
         // Draw tracking markers onto frame
-        draw::markers(
+        draw_markers(
             frame,
-            lerp(draw::YUV_GREEN, draw::YUV_RED, m_SuppressionFactor),
+            lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
             m_FrameTracker.tracking_points(),
             point_scaling,
             cv::MarkerTypes::MARKER_CROSS,

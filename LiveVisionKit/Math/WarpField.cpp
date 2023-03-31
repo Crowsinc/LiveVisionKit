@@ -20,10 +20,10 @@
 #include <array>
 #include <numeric>
 
-#include "Diagnostics/Directives.hpp"
+#include "Directives.hpp"
 #include "Math/VirtualGrid.hpp"
-#include "Utility/Drawing.hpp"
-#include "Math/Math.hpp"
+#include "Algorithms/Drawing.hpp"
+#include "Algorithms/Math.hpp"
 
 namespace lvk
 {

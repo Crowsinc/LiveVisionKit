@@ -15,9 +15,8 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // 	  **********************************************************************
 
-#include "Diagnostics/Directives.hpp"
+#include "Directives.hpp"
 #include "Logger.hpp"
-
 
 namespace lvk
 {
@@ -195,7 +194,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	inline void Logger::end_record(std::ostream& stream) 
+	inline void Logger::end_record(std::ostream& stream)
 	{ 
 		stream << "\n";
 	}

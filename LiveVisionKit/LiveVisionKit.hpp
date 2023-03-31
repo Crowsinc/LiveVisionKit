@@ -20,36 +20,47 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
-#include "Math/Math.hpp"
-#include "Math/Logic.hpp"
+#include "Directives.hpp"
 
-#include "Math/Homography.hpp"
-#include "Math/BoundingQuad.hpp"
+#include "Algorithms/Math.hpp"
+#include "Algorithms/Text.hpp"
+#include "Algorithms/Logic.hpp"
+#include "Algorithms/Drawing.hpp"
+#include "Algorithms/Container.hpp"
 
-#include "Structures/SlidingBuffer.hpp"
-#include "Structures/SpatialMap.hpp"
-
-#include "Utility/Algorithm.hpp"
-#include "Utility/Drawing.hpp"
-
-#include "Utility/Properties/Unique.hpp"
-#include "Utility/Properties/Configurable.hpp"
-
-#include "Utility/Timing/Time.hpp"
-#include "Utility/Timing/Stopwatch.hpp"
-#include "Utility/Timing/TickTimer.hpp"
-
-#include "Vision/Tracking/WarpField.hpp"
-#include "Vision/Tracking/FrameTracker.hpp"
-#include "Vision/Tracking/GridDetector.hpp"
-#include "Vision/Camera/CameraCalibrator.hpp"
-
-#include "Diagnostics/Directives.hpp"
-#include "Diagnostics/Logging/Logger.hpp"
-#include "Diagnostics/Logging/CSVLogger.hpp"
 
 #include "Filters/VideoFilter.hpp"
 #include "Filters/CompositeFilter.hpp"
 #include "Filters/ConversionFilter.hpp"
 #include "Filters/DeblockingFilter.hpp"
 #include "Filters/StabilizationFilter.hpp"
+
+
+#include "Logging/Logger.hpp"
+#include "Logging/CSVLogger.hpp"
+
+
+#include "Math/WarpField.hpp"
+#include "Math/Homography.hpp"
+#include "Math/VirtualGrid.hpp"
+#include "Math/BoundingQuad.hpp"
+#include "Vision/PathStabilizer.hpp"
+
+#include "Structures/SpatialMap.hpp"
+#include "Structures/SlidingBuffer.hpp"
+
+#include "Timing/Time.hpp"
+#include "Timing/Stopwatch.hpp"
+#include "Timing/TickTimer.hpp"
+
+
+#include "Utility/Unique.hpp"
+#include "Utility/Configurable.hpp"
+
+
+#include "Vision/FrameTracker.hpp"
+#include "Vision/GridDetector.hpp"
+#include "Vision/CameraCalibrator.hpp"
+
+
+

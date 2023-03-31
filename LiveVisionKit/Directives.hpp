@@ -34,7 +34,7 @@
 
 // ASSERTS
 
-namespace lvk::global
+namespace lvk::context
 {
     extern std::function<void(
         std::string file,
@@ -48,7 +48,7 @@ namespace lvk::global
 #define LVK_ASSERT(assertion)																						   \
 	if(!(assertion))																								   \
 	{                                                                                                                  \
-        lvk::global::assert_handler(LVK_FILE, __func__, #assertion);                                                   \
+        lvk::context::assert_handler(LVK_FILE, __func__, #assertion);                                                  \
 	}
 #else
 

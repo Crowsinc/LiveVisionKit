@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     signal(SIGINT, [](int s){signal_handler();});
 
     // Set up LVK assert handler
-    lvk::global::assert_handler = [](auto, auto, const std::string& assertion){
+    lvk::context::assert_handler = [](auto, auto, const std::string& assertion){
         std::cerr << cv::format("LiveVisionKit failed condition: %s\n", assertion.c_str());
         std::abort();
     };
