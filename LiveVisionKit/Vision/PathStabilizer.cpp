@@ -40,8 +40,8 @@ namespace lvk
 
     void PathStabilizer::configure(const PathStabilizerSettings& settings)
     {
-        LVK_ASSERT(between_strict(settings.scene_margins, 0.0f, 1.0f));
         LVK_ASSERT(settings.path_prediction_frames > 0);
+        LVK_ASSERT_01_STRICT(settings.scene_margins);
 
         // If the motion resolution has changed, we need to resize all our fields.
         if(m_Settings.motion_resolution != settings.motion_resolution)

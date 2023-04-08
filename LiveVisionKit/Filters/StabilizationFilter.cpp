@@ -37,7 +37,7 @@ namespace lvk
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
         LVK_ASSERT(settings.smoothing_frames > 0);
-        LVK_ASSERT(between_strict(settings.crop_proportion, 0.0f, 1.0f));
+        LVK_ASSERT_01_STRICT(settings.crop_proportion);
         LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
         LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
         LVK_ASSERT(settings.suppression_smoothing_rate > 0);

@@ -195,9 +195,9 @@ namespace lvk
         LVK_ASSERT(src.data[0] != nullptr);
         LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.height, 1, src.height);
 
 		const int import_length = plane_0_size.area() * static_cast<int>(plane_0_channels);
 
@@ -229,12 +229,12 @@ namespace lvk
 		LVK_ASSERT(src.data[1] != nullptr);
         LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
-		LVK_ASSERT(between<uint32_t>(plane_1_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_1_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_1_size.height, 1, src.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.height, 1, src.height);
+		LVK_ASSERT_RANGE_STRICT(plane_1_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_1_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_1_size.height, 1, src.height);
 
 		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -283,15 +283,15 @@ namespace lvk
 		LVK_ASSERT(src.data[2] != nullptr);
         LVK_ASSERT(src.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(src.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_0_size.height, 1, src.height));
-		LVK_ASSERT(between<uint32_t>(plane_1_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_1_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_1_size.height, 1, src.height));
-		LVK_ASSERT(between<uint32_t>(plane_2_channels, 1, 4));
-		LVK_ASSERT(between<uint32_t>(plane_2_size.width, 1, src.width));
-		LVK_ASSERT(between<uint32_t>(plane_2_size.height, 1, src.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0_size.height, 1, src.height);
+		LVK_ASSERT_RANGE_STRICT(plane_1_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_1_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_1_size.height, 1, src.height);
+		LVK_ASSERT_RANGE_STRICT(plane_2_channels, 1, 4);
+		LVK_ASSERT_RANGE_STRICT(plane_2_size.width, 1, src.width);
+		LVK_ASSERT_RANGE_STRICT(plane_2_size.height, 1, src.height);
 
 		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -339,8 +339,8 @@ namespace lvk
         LVK_ASSERT(dst.data[0] != nullptr);
         LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0.rows, 1, dst.height);
 
 		const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
 
@@ -361,10 +361,10 @@ namespace lvk
 		LVK_ASSERT(dst.data[1] != nullptr);
         LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
-		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_1.rows, 1, dst.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0.rows, 1, dst.height);
+		LVK_ASSERT_RANGE_STRICT(plane_1.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_1.rows, 1, dst.height);
 
 		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -401,12 +401,12 @@ namespace lvk
 		LVK_ASSERT(dst.data[2] != nullptr);
         LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
         LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT(between<uint32_t>(plane_0.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_0.rows, 1, dst.height));
-		LVK_ASSERT(between<uint32_t>(plane_1.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_1.rows, 1, dst.height));
-		LVK_ASSERT(between<uint32_t>(plane_2.cols, 1, dst.width));
-		LVK_ASSERT(between<uint32_t>(plane_2.rows, 1, dst.height));
+		LVK_ASSERT_RANGE_STRICT(plane_0.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_0.rows, 1, dst.height);
+		LVK_ASSERT_RANGE_STRICT(plane_1.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_1.rows, 1, dst.height);
+		LVK_ASSERT_RANGE_STRICT(plane_2.cols, 1, dst.width);
+		LVK_ASSERT_RANGE_STRICT(plane_2.rows, 1, dst.height);
 
 		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].

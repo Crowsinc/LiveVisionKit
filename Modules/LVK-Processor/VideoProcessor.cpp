@@ -371,7 +371,7 @@ namespace clt
 
     std::string VideoProcessor::make_progress_bar(const uint32_t length, const double progress)
     {
-        LVK_ASSERT(lvk::between(progress, 0.0, 1.0));
+        LVK_ASSERT_01(progress);
 
         const auto position = static_cast<uint32_t>(progress * static_cast<double>(length));
 

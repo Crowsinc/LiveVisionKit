@@ -297,7 +297,7 @@ namespace lvk
 
     void WarpField::undistort(const float tolerance)
     {
-        LVK_ASSERT(between(tolerance, 0.0f, 1.0f));
+        LVK_ASSERT_01(tolerance);
 
         // TODO: document and optimize
 

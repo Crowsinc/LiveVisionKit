@@ -50,8 +50,8 @@ namespace lvk
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
         LVK_ASSERT(settings.sample_size_threshold >= 4);
-        LVK_ASSERT(between(settings.stability_threshold, 0.0f, 1.0f));
-        LVK_ASSERT(between(settings.uniformity_threshold, 0.0f, 1.0f));
+        LVK_ASSERT_01(settings.uniformity_threshold);
+        LVK_ASSERT_01(settings.stability_threshold);
 
         m_FeatureDetector.configure(settings.detection_settings);
         m_TrackedPoints.reserve(m_FeatureDetector.feature_capacity());

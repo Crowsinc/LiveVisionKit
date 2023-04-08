@@ -47,7 +47,7 @@ namespace lvk
     {
         LVK_ASSERT(settings.input_resolution.width > 0);
         LVK_ASSERT(settings.input_resolution.height > 0);
-        LVK_ASSERT(between(settings.detection_threshold, 0.0f, 1.0f));
+        LVK_ASSERT_01(settings.detection_threshold);
 
         // Grids must be smaller or equal to resolution
         LVK_ASSERT(settings.feature_grid_shape.width <= settings.input_resolution.width);

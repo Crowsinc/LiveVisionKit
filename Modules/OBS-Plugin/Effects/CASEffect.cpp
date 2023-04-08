@@ -53,7 +53,7 @@ namespace lvk
 		const float sharpness
 	) const
 	{
-		LVK_ASSERT(between(sharpness, 0.0f, 1.0f));
+		LVK_ASSERT_01(sharpness);
 		return false;
 	}
 
