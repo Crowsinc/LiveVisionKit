@@ -21,31 +21,42 @@
 
 namespace lvk
 {
-	template<typename T>
+
+    template<typename T>
+    T round_multiple(const T& value, const T& base);
+
+    template<typename T>
 	T round_even(const T& value);
 
-	template<typename T>
-	int sign(const T& value, const T& reference = T());
 
-	// 2D Line based sign operation
+    size_t index_2d(size_t x, size_t y, size_t row_length);
+
+    cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length);
+
+
 	template<typename T>
-	int sign_2d(const cv::Point_<T>& p, const cv::Point_<T>& l1 = {0,0}, const cv::Point_<T>& l2 = {0,1});
+	int sign(const T& value, const T& origin = T());
+
+	template<typename T>
+	int sign_2d(const cv::Point_<T>& point, const cv::Point_<T>& l1, const cv::Point_<T>& l2);
+
 
 	template<typename V, typename T>
-	inline V lerp(const V& from, const V& to, const T& t);
+	inline V lerp(const V& current, const V& target, const T& amount);
 
 	template<typename V, typename T>
 	inline V step(const V& current, const V& target, const T& amount);
 
-	// Applies percentage crop to the given size
-	template<typename T>
-	cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion);
 
-	// Inclusive
-	template<typename T>
+    template<typename T>
+    bool between_01(const T& value);
+
+    template<typename T>
+    bool between_01_strict(const T& value);
+
+    template<typename T>
 	bool between(const T& value, const T& min, const T& max);
 
-	// Exclusive
 	template<typename T>
 	bool between_strict(const T& value, const T& min, const T& max);
 
@@ -53,9 +64,12 @@ namespace lvk
 	template<typename T>
 	T exp_moving_average(const T average, const T new_sample, const float smoothing_factor);
 
-    size_t index_2d(size_t x, size_t y, size_t row_length);
+    template<typename T>
+    T moving_median(const T median, const T new_sample, const float learning_rate);
 
-    cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length);
+
+    template<typename T>
+    cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion);
 
 }
 

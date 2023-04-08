@@ -27,35 +27,64 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
+    inline T round_multiple(const T& value, const T& base)
+	{
+		return std::round<T>(value / base) * base;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline T round_even(const T& value)
+    {
+        return std::round<T>(value / 2) * 2;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline size_t index_2d(size_t x, size_t y, size_t row_length)
+    {
+        LVK_ASSERT(row_length > 0);
+
+        return y * row_length + x;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    inline cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length)
+    {
+        return cv::Point_<size_t>(
+            index % row_length,
+            index / row_length
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename T>
+    inline int sign(const T& value, const T& origin)
 	{
-		return std::round(value / 2) * 2;
+		// Returns 0 if the value is equal to the origin, -1 if it is on its left, 1 if its on its right
+		return (origin < value) - (value < origin);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline int sign(const T& value, const T& reference)
-	{
-		// Returns 0 if the value is equal to the reference, -1 if it is on its left, 1 if its on its right
-		return (reference < value) - (value < reference);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline int sign_2d(const cv::Point_<T>& p, const cv::Point_<T>& l1, const cv::Point_<T>& l2)
+    inline int sign_2d(const cv::Point_<T>& point, const cv::Point_<T>& l1, const cv::Point_<T>& l2)
 	{
 		// Returns 0 if p is on the infinite line l1 to l2, -1 if it is on its left, 1 if its on its right
-		return sign((l1.x - l2.x) * (p.y - l2.y) - (l1.y - l2.y) * (p.x - l2.x));
+		return sign((l1.x - l2.x) * (point.y - l2.y) - (l1.y - l2.y) * (point.x - l2.x));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename V, typename T>
-    inline V lerp(const V& from, const V& to, const T& t)
+    inline V lerp(const V& current, const V& target, const T& amount)
 	{
-		return from + t * (to - from);
+        LVK_ASSERT(amount >= 0);
+
+		return current + amount * (target - current);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -64,6 +93,7 @@ namespace lvk
     inline V step(const V& current, const V& target, const T& amount)
 	{
 		LVK_ASSERT(amount >= 0);
+
 		if(current > target)
 			return std::max<V>(current - amount, target);
 		else
@@ -72,19 +102,19 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T>
-    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const double proportion)
-	{
-		const T total_horz_crop = region.width * proportion;
-		const T total_vert_crop = region.height * proportion;
+    template<typename T>
+    inline bool between_01(const T& value)
+    {
+        return (value >= static_cast<T>(0)) && (value <= static_cast<T>(1));
+    }
 
-		return cv::Rect_<T>(
-				total_horz_crop / 2,
-				total_vert_crop / 2,
-				region.width - total_horz_crop,
-				region.height - total_vert_crop
-		);
-	}
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline bool between_01_strict(const T& value)
+    {
+        return (value > static_cast<T>(0)) && (value < static_cast<T>(1));
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -111,25 +141,34 @@ namespace lvk
 	template<typename T>
     inline T exp_moving_average(const T average, const T new_sample, const float smoothing_factor)
 	{
-		return smoothing_factor * new_sample + (1.0f - smoothing_factor) * average;
-	}
-	
-//---------------------------------------------------------------------------------------------------------------------
+        LVK_ASSERT(smoothing_factor >= 0.0f);
 
-    inline size_t index_2d(size_t x, size_t y, size_t row_length)
-	{
-		LVK_ASSERT(row_length > 0);
-
-		return y * row_length + x;
+        return average + smoothing_factor * (new_sample - smoothing_factor);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    inline cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length)
+    template<typename T>
+    inline T moving_median(const T median, const T new_sample, const float learning_rate)
     {
-        return cv::Point_<size_t>(
-            index % row_length,
-            index / row_length
+        LVK_ASSERT(learning_rate >= 0.0f);
+
+        return median + learning_rate * sign(new_sample - median);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion)
+    {
+        const T total_horz_crop = region.width * proportion;
+        const T total_vert_crop = region.height * proportion;
+
+        return cv::Rect_<T>(
+            total_horz_crop / 2,
+            total_vert_crop / 2,
+            region.width - total_horz_crop,
+            region.height - total_vert_crop
         );
     }
 
