@@ -50,9 +50,47 @@ namespace lvk::context
 	{                                                                                                                  \
         lvk::context::assert_handler(LVK_FILE, __func__, #assertion);                                                  \
 	}
+
+#define LVK_ASSERT_IF(condition, assertion)                                                                            \
+	if((condition) && !(assertion))                                                                                    \
+	{                                                                                                                  \
+        lvk::context::assert_handler(LVK_FILE, __func__, #assertion);                                                  \
+	}
+
+#define LVK_ASSERT_01(value)                                                                                           \
+	if(value < 0 || value > 1)                                                                                         \
+	{                                                                                                                  \
+        lvk::context::assert_handler(LVK_FILE, __func__, "0 <= #value <= 1");                                          \
+	}
+
+#define LVK_ASSERT_01_STRICT(value)                                                                                    \
+	if(value <= 0 || value >= 1)                                                                                       \
+	{                                                                                                                  \
+        lvk::context::assert_handler(LVK_FILE, __func__, "0 < #value < 1");                                            \
+	}
+
+#define LVK_ASSERT_RANGE(value, min, max)                                                                              \
+	if(value < min || value > max)                                                                                     \
+	{                                                                                                                  \
+        lvk::context::assert_handler(LVK_FILE, __func__, "#min <= #value <= #max");                                    \
+	}
+
+#define LVK_ASSERT_RANGE_STRICT(value, min, max)                                                                       \
+	if(value <= min || value >= max)                                                                                   \
+	{                                                                                                                  \
+        lvk::context::assert_handler(LVK_FILE, __func__, "#min < #value < #max");                                      \
+	}
+
+
 #else
 
 #define LVK_ASSERT(assertion)
+#define LVK_ASSERT_IF(condition, assertion)
+
+#define LVK_ASSERT_01(value)
+#define LVK_ASSERT_01_STRICT(value)
+#define LVK_ASSERT_RANGE(value, min, max)
+#define LVK_ASSERT_RANGE_STRICT(value, min, max)
 
 #endif
 
