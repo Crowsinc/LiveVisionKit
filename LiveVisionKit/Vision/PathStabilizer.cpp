@@ -68,7 +68,7 @@ namespace lvk
 
     Frame PathStabilizer::next(Frame&& frame, const WarpField& motion)
     {
-        LVK_ASSERT(m_FrameQueue.is_empty() || frame.size() == m_FrameQueue.newest().size());
+        LVK_ASSERT(motion.size() == m_Settings.motion_resolution);
         LVK_ASSERT(!frame.is_empty());
 
         // Update the path's current state
