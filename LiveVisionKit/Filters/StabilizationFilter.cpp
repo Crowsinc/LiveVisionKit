@@ -159,36 +159,4 @@ namespace lvk
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-
-	Homography StabilizationFilter::suppress(Homography& motion)
-	{
-		if (!m_Settings.auto_suppression || !m_Settings.stabilize_output)
-		{
-			m_SuppressionFactor = 0.0f;
-			return motion;
-		}
-		
-		const float scene_stability = m_FrameTracker.scene_stability();
-		const float suppression_threshold = m_Settings.suppression_threshold;
-		const float saturation_threshold = m_Settings.suppression_saturation_limit;
-
-		float suppression_target = 0.0f;
-		if (between(scene_stability, saturation_threshold, suppression_threshold))
-		{
-			const float length = suppression_threshold - saturation_threshold;
-			suppression_target = 1.0f - ((scene_stability - saturation_threshold) / length);
-		}
-		else if (scene_stability < saturation_threshold)
-			suppression_target = 1.0f;
-
-		m_SuppressionFactor = step(
-			m_SuppressionFactor,
-			suppression_target,
-			m_Settings.suppression_smoothing_rate
-		);
-
-		return (1.0f - m_SuppressionFactor) * motion + m_SuppressionFactor * Homography::Identity();
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
 }

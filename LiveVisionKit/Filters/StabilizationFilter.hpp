@@ -78,8 +78,6 @@ namespace lvk
             const bool debug
         ) override;
 
-		Homography suppress(Homography& motion);
-
         void draw_trackers(cv::UMat& frame);
 
 	private:
