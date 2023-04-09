@@ -56,14 +56,19 @@ target_sources(
 )
 
 
+
 # ALGORITHMS SOURCES
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
+        Algorithms/OpenCL/Kernels.hpp
+        Algorithms/OpenCL/Kernels.cpp
         Algorithms/Container.hpp
         Algorithms/Container.tpp
         Algorithms/Drawing.hpp
         Algorithms/Drawing.tpp
+        Algorithms/Image.hpp
+        Algorithms/Image.cpp
         Algorithms/Logic.hpp
         Algorithms/Logic.tpp
         Algorithms/Math.hpp
