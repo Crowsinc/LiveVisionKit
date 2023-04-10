@@ -24,6 +24,6 @@ namespace lvk
 
     void upscale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size, const bool yuv = true);
 
-    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offsets, const bool yuv = true);
+    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv = true);
 
 }

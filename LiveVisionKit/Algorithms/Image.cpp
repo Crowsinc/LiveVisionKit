@@ -78,13 +78,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offsets, const bool yuv)
+    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv)
     {
         LVK_ASSERT(src.cols > 8 && src.rows > 8);
-        LVK_ASSERT(offsets.size() == src.size());
-        LVK_ASSERT(offsets.type() == CV_32FC2);
+        LVK_ASSERT(offset_map.type() == CV_32FC2);
         LVK_ASSERT(src.type() == CV_8UC3);
-        LVK_ASSERT(!offsets.empty());
+        LVK_ASSERT(!offset_map.empty());
         LVK_ASSERT(!src.empty());
 
         // FSR program has yuv and bgr versions for different luma calculations.
@@ -100,8 +99,14 @@ namespace lvk
             kernel.create("easu_remap", yuv ? program_yuv : program_bgr);
         }
 
-        // Allocate the output.
-        dst.create(src.size(), CV_8UC3);
+        // Allocate the output based on the size of the offset map. This allows
+        // an ROI of the source to be remapped and scaling operations to occur.
+        dst.create(offset_map.size(), CV_8UC3);
+
+        // We need to account for the ROI offset in the map
+        // when we create the output coordinates in the kernel.
+        cv::Size map_size; cv::Point dst_offset;
+        offset_map.locateROI(map_size, dst_offset);
 
         // The FSR kernel does not perform bounds to minimize the performance
         // impact of not being able to usen image sampler. Instead, we shrink
@@ -122,10 +127,12 @@ namespace lvk
                 safe_region.x, safe_region.y,
                 safe_region.width, safe_region.height
             },
-            cv::Vec2f{1,1},
             cv::ocl::KernelArg::WriteOnlyNoSize(dst),
-            cv::Vec2i{dst.cols, dst.rows},
-            cv::ocl::KernelArg::ReadOnlyNoSize(offsets)
+            cv::Vec4i{
+                dst_offset.x, dst_offset.y,
+                dst.cols, dst.rows
+            },
+            cv::ocl::KernelArg::ReadOnlyNoSize(offset_map)
         ).run_(2, global_work_size, local_work_size, false);
 
         // Create next kernel while the last one runs.

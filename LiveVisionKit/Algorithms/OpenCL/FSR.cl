@@ -346,8 +346,8 @@ __kernel void easu_scale(
 }
 
 __kernel void easu_remap(
-    __global uchar* src, int src_step, int src_offset, int4 src_bounds, float2 rscale,
-    __global uchar* dst, int dst_step, int dst_offset, int2 bounds,
+    __global uchar* src, int src_step, int src_offset, int4 src_bounds, 
+    __global uchar* dst, int dst_step, int dst_offset, int4 dst_bounds,
     __global uchar* map, int map_step, int map_offset
 )
 {
@@ -356,14 +356,14 @@ __kernel void easu_remap(
     int2 dst_coord = remapRed8x8(id) + (int2)(get_group_id(0) << 3, get_group_id(1) << 3); 
 
     // Exit early if out of bounds (for uneven output sizes)
-    if(dst_coord.x >= bounds.x || dst_coord.y >= bounds.y)
+    if(dst_coord.x >= dst_bounds.z || dst_coord.y >= dst_bounds.w)
         return;
 
     // Load remapping offset
     int map_index = dst_coord.y * map_step + (8 * dst_coord.x) +  map_offset;
     float2 offset = as_float2(vload8(0, map + map_index));
 
-    float2 src_coord = (convert_float2(dst_coord) + offset) * rscale;
+    float2 src_coord = convert_float2(dst_coord + dst_bounds.xy) + offset;
 
     uchar3 dst_pixel = (uchar)(0,0,0);
     if(src_coord.x >= src_bounds.x && src_coord.y >= src_bounds.y && 
