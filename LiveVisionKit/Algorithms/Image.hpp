@@ -26,4 +26,6 @@ namespace lvk
 
     void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv = true);
 
+    void sharpen(const cv::UMat& src, cv::UMat& dst, const float sharpness = 0.9f);
+
 }

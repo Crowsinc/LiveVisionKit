@@ -80,8 +80,8 @@ namespace lvk
 
     void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv)
     {
-        LVK_ASSERT(src.cols > 8 && src.rows > 8);
         LVK_ASSERT(offset_map.type() == CV_32FC2);
+        LVK_ASSERT(src.cols > 5 && src.rows > 5);
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT(!offset_map.empty());
         LVK_ASSERT(!src.empty());
@@ -138,6 +138,41 @@ namespace lvk
         // Create next kernel while the last one runs.
         kernel.create("easu_remap", yuv ? program_yuv : program_bgr);
         kernel_is_yuv = yuv;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void sharpen(const cv::UMat& src, cv::UMat& dst, const float sharpness)
+    {
+        LVK_ASSERT(src.cols > 2 && src.rows > 2);
+        LVK_ASSERT(src.type() == CV_8UC3);
+        LVK_ASSERT_01(sharpness);
+        LVK_ASSERT(!src.empty());
+
+        // Create FSR RCAS kernel
+        static auto program = ocl::load_program("fsr", ocl::src::fsr_source);
+        thread_local cv::ocl::Kernel kernel("rcas", program);
+        LVK_ASSERT(!program.empty() && !kernel.empty());
+
+        // Allocate the output.
+        dst.create(src.size(), CV_8UC3);
+
+        // Set the local and global work sizes for the kernel. Note that we must
+        // enforce that the global work size is a multiple of the local work size.
+        size_t local_work_size[2] = {8,8}, global_work_size[2] = {
+            static_cast<size_t>(std::ceil(static_cast<float>(dst.cols) / 8.0f)) * 8,
+            static_cast<size_t>(std::ceil(static_cast<float>(dst.rows) / 8.0f)) * 8
+        };
+
+        // Run the kernel in async mode.
+        kernel.args(
+            cv::ocl::KernelArg::ReadOnly(src),
+            cv::ocl::KernelArg::WriteOnlyNoSize(dst),
+            (1.0f - sharpness) * 2.0f
+        ).run_(2, global_work_size, local_work_size, false);
+
+        // Create next kernel while the last one runs.
+        kernel.create("rcas", program);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
