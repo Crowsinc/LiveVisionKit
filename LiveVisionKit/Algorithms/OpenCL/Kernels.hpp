@@ -24,7 +24,7 @@
 namespace lvk::ocl
 {
 
-    cv::ocl::Kernel load_kernel(const char* kernel, const char* source, const char* flags = "");
+    cv::ocl::Program load_program(const char* name, const char* source, const char* flags = "");
 
     // OpenCL Kernel Sources
     namespace src

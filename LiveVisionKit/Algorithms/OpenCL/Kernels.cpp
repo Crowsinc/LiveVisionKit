@@ -24,11 +24,11 @@ namespace lvk::ocl
 
 //---------------------------------------------------------------------------------------------------------------------
 
-cv::ocl::Kernel load_kernel(const char* kernel, const char* source, const char* flags)
+cv::ocl::Program load_program(const char* name, const char* source, const char* flags)
 {
     cv::String compilation_log;
 
-    cv::ocl::ProgramSource program_source("", kernel, source, "");
+    cv::ocl::ProgramSource program_source(name, name, source, "");
     cv::ocl::Program program(program_source, flags, compilation_log);
     if(program.ptr() == nullptr)
     {
@@ -36,12 +36,12 @@ cv::ocl::Kernel load_kernel(const char* kernel, const char* source, const char* 
         lvk::context::assert_handler(
             LVK_FILE,
             __func__,
-            std::string("Failed to compile OpenCL kernel \'")
-                + kernel + "\' with compilation log: \n\n" + compilation_log
+            std::string("Failed to compile OpenCL program \'")
+                + name + "\' with compilation log: \n\n" + compilation_log
         );
         return {};
     };
-    return {kernel, program};
+    return std::move(program);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
