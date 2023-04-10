@@ -24,12 +24,12 @@ namespace lvk::ocl
 
 //---------------------------------------------------------------------------------------------------------------------
 
-cv::ocl::Kernel load_kernel(const char* kernel, const char* source)
+cv::ocl::Kernel load_kernel(const char* kernel, const char* source, const char* flags)
 {
     cv::String compilation_log;
 
     cv::ocl::ProgramSource program_source("", kernel, source, "");
-    cv::ocl::Program program(program_source, "", compilation_log);
+    cv::ocl::Program program(program_source, flags, compilation_log);
     if(program.ptr() == nullptr)
     {
         // Perform custom assert with compilation error log.

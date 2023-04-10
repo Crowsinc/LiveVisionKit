@@ -17,13 +17,14 @@
 
 #pragma once
 
+#include <vector>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 
 namespace lvk::ocl
 {
 
-    cv::ocl::Kernel load_kernel(const char* kernel, const char* source);
+    cv::ocl::Kernel load_kernel(const char* kernel, const char* source, const char* flags = "");
 
     // OpenCL Kernel Sources
     namespace src
