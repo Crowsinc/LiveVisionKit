@@ -22,11 +22,8 @@
 namespace lvk
 {
 
-    // NOTE: this is for RGB images
-    void scale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size);
+    void upscale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size, const bool yuv = true);
 
-    // NOTE: this is for RGB images
-    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offsets);
-
+    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offsets, const bool yuv = true);
 
 }

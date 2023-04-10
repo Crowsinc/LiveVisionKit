@@ -81,6 +81,12 @@ float saturate(float x){return fmax(0.0f, fmin(1.0f, x));}
 float3 max4(float3 a, float3 b, float3 c, float3 d){return max(a, max(b, max(c, d)));}
 float3 min4(float3 a, float3 b, float3 c, float3 d){return min(a, min(b, min(c, d)));}
 
+uint ABfe(uint src, uint off, uint bits){uint mask = (1u << bits) - 1; return (src >> off) & mask;}
+uint ABfiM(uint src, uint ins, uint bits){uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask));}
+
+int2 remap8x8(uint id){return convert_int2((uint2)(ABfe(id, 1u, 3u), ABfiM(ABfe(id, 3u, 3u), id, 1u)));}
+int2 remapRed8x8(uint id){return convert_int2((uint2)(ABfiM(ABfe(id,2u,3u),id,1u),ABfiM(ABfe(id,3u,3u),ABfe(id,1u,2u),2u)));}
+
 //======================================================================================================================
 //                                    FSR - [EASU] EDGE ADAPTIVE SPATIAL UPSAMPLING
 //======================================================================================================================
@@ -166,98 +172,73 @@ void easu_accumulate(
     *len += lenY * w;
 }
 
+// )" R"(
 //----------------------------------------------------------------------------------------------------------------------
 
-void gather_four(
-    __global uchar* src, int src_step, int src_offset, int2 src_size,
-    int2 coord, float4* r, float4* g, float4* b
-)
-{   
-    // Gather4 pixel ordering
-    //      +---+---+
-    //      | 4 | 3 |
-    //      +---+---+
-    //      | 1 | 2 |
-    //      +---+---+
-    //
-    // Coord refers to top left of the gather4.
-
-    // Clamp coords to avoid accessing memory that is out of bounds, this
-    // can lead to slightly incorrect colouring on the edges but is negligible. 
-    coord.x = clamp(coord.x, 0, src_size.x - 2);
-    coord.y = clamp(coord.y, 0, src_size.y - 2);
-
-    // Read source pixels in batches and normalize to float type
-    int src_index = coord.y * src_step + (3 * coord.x) + src_offset;
-    float8 top = convert_float8(vload8(0, src + src_index)) * 0.00392156862f;
-    float8 bot = convert_float8(vload8(0, src + src_index + src_step)) * 0.00392156862f;
-
-    *r = (float4)(bot.s0, bot.s3, top.s3, top.s0);
-    *g = (float4)(bot.s1, bot.s4, top.s4, top.s1);
-    *b = (float4)(bot.s2, bot.s5, top.s5, top.s2);
-}
-
-)" R"(
-    
-//----------------------------------------------------------------------------------------------------------------------
-
-__kernel void easu(
-    __global uchar* src, int src_step, int src_offset,
-    __global uchar* dst, int dst_step, int dst_offset, 
-    int2 src_size, float2 inv_scale, float2 warp_offset 
-)
+void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, uchar3* dst_pixel)
 {
-    int x = get_global_id(0), y = get_global_id(1);
 
-    // 12-tap kernel.
-    //    b c
-    //  e f g h
-    //  i j k l
-    //    n o
-    
-    // Get position of 'f'.
-    float2 pp = (float2)(x, y) * inv_scale.xy + warp_offset; 
-    float2 fp = floor(pp);
-    pp -= fp;
-
-    // Centers of gather4
+    // Required pixel load ops, given that we are processing the current point 'f'.
     //      +---+---+
-    //      |   |   |
-    //      +--(0)--+
-    //      | b | c |
-    //  +---+---+---+---+
-    //  | e | f | g | h |
-    //  +--(1)--+--(2)--+
-    //  | i | j | k | l |
-    //  +---+---+---+---+
-    //      | n | o |
-    //      +--(3)--+
-    //      |   |   |
-    //      +---+---+
+    //      | b | c |       | R0 (6  bytes)
+    //  +---+---+---+---+   |
+    //  | e | f | g | h |   | R1 (12 bytes)
+    //  +---+---+---+---+   |
+    //  | i | j | k | l |   | R2 (12 bytes)
+    //  +---+---+---+---+   |
+    //      | n | o |       | R3 (6  bytes)
+    //      +---+---+   
+    //
 
-    // NOTE: these coords refer to top left pixel of gather4s
-    int2 p0 = convert_int2(fp) + (int2)(0,-1);
-    int2 p1 = p0 + (int2)(-1, 2);
-    int2 p2 = p0 + (int2)( 1, 2);
-    int2 p3 = p0 + (int2)( 0, 4);
+    float2 pp = src_coord - floor(src_coord);
 
-    float4 bczzR, bczzG, bczzB;
-    gather_four(src, src_step, src_offset, src_size, p0, &bczzR, &bczzG, &bczzB);
+    int2 pf = convert_int2_rtz(src_coord);
+    int r0_index = (pf.y - 1) * src_step + (3 * pf.x) + src_offset;
+    int r1_index = r0_index + src_step - 3;
 
-    float4 ijfeR, ijfeG, ijfeB;
-    gather_four(src, src_step, src_offset, src_size, p1, &ijfeR, &ijfeG, &ijfeB);
+    uchar8 r0_data  =  vload8(0, src + r0_index); 
+    uchar16 r1_data = vload16(0, src + r1_index); 
+    uchar16 r2_data = vload16(0, src + r1_index + src_step); 
+    uchar8 r3_data  =  vload8(0, src + r0_index + 3 * src_step); 
 
-    float4 klhgR, klhgG, klhgB;
-    gather_four(src, src_step, src_offset, src_size, p2, &klhgR, &klhgG, &klhgB);
+    // Convert from uchars to float representation
+    const float norm_factor = 0.00392156862f;
 
-    float4 zzonR, zzonG, zzonB;
-    gather_four(src, src_step, src_offset, src_size, p3, &zzonR, &zzonG, &zzonB);
+    float8 r0_px  =  convert_float8(r0_data) * norm_factor;
+    float16 r1_px = convert_float16(r1_data) * norm_factor;
+    float16 r2_px = convert_float16(r2_data) * norm_factor;
+    float8 r3_px  =  convert_float8(r3_data) * norm_factor;
 
+    // NOTE: BGR format is used instead of RGB
+    float4 bczzR = (float4)(r0_px.s0, r0_px.s3, 0, 0);
+    float4 bczzG = (float4)(r0_px.s1, r0_px.s4, 0, 0);
+    float4 bczzB = (float4)(r0_px.s2, r0_px.s5, 0, 0);
+
+    float4 ijfeR = (float4)(r2_px.s0, r2_px.s3, r1_px.s3, r1_px.s0);
+    float4 ijfeG = (float4)(r2_px.s1, r2_px.s4, r1_px.s4, r1_px.s1);
+    float4 ijfeB = (float4)(r2_px.s2, r2_px.s5, r1_px.s5, r1_px.s2);
+
+    float4 klhgR = (float4)(r2_px.s6, r2_px.s9, r1_px.s9, r1_px.s6);
+    float4 klhgG = (float4)(r2_px.s7, r2_px.sA, r1_px.sA, r1_px.s7);
+    float4 klhgB = (float4)(r2_px.s8, r2_px.sB, r1_px.sB, r1_px.s8);
+
+    float4 zzonR = (float4)(0, 0, r3_px.s3, r3_px.s0);
+    float4 zzonG = (float4)(0, 0, r3_px.s4, r3_px.s1);
+    float4 zzonB = (float4)(0, 0, r3_px.s5, r3_px.s2);
+
+#ifndef YUV_INPUT
+    // In YUV the first channel already represents luma
+    float4 bczzL = bczzR;
+    float4 ijfeL = ijfeR;
+    float4 klhgL = klhgR;
+    float4 zzonL = zzonR;
+#else
     // Simplest multi-channel approximate luma possible (luma times 2, in 2 FMA/MAD).
     float4 bczzL = bczzB * (float4)(0.5) + (bczzR * (float4)(0.5) + bczzG);
     float4 ijfeL = ijfeB * (float4)(0.5) + (ijfeR * (float4)(0.5) + ijfeG);
     float4 klhgL = klhgB * (float4)(0.5) + (klhgR * (float4)(0.5) + klhgG);
     float4 zzonL = zzonB * (float4)(0.5) + (zzonR * (float4)(0.5) + zzonG);
+#endif
 
     // Accumulate for bilinear interpolation.
     float len = 0.0f;
@@ -315,52 +296,86 @@ __kernel void easu(
     );
 
     // Accumulation.
-    float3 aC =(float3)(0.0f);
+    float3 aC = (float3)(0.0f);
     float aW = 0.0f;
 
-    easu_tap(&aC,&aW,(float2)( 0.0,-1.0)-pp,dir,len2,lob,clp,(float3)(bczzR.x,bczzG.x,bczzB.x)); // b
-    easu_tap(&aC,&aW,(float2)( 1.0,-1.0)-pp,dir,len2,lob,clp,(float3)(bczzR.y,bczzG.y,bczzB.y)); // c
-    easu_tap(&aC,&aW,(float2)(-1.0, 1.0)-pp,dir,len2,lob,clp,(float3)(ijfeR.x,ijfeG.x,ijfeB.x)); // i
-    easu_tap(&aC,&aW,(float2)( 0.0, 1.0)-pp,dir,len2,lob,clp,(float3)(ijfeR.y,ijfeG.y,ijfeB.y)); // j
-    easu_tap(&aC,&aW,(float2)( 0.0, 0.0)-pp,dir,len2,lob,clp,(float3)(ijfeR.z,ijfeG.z,ijfeB.z)); // f
-    easu_tap(&aC,&aW,(float2)(-1.0, 0.0)-pp,dir,len2,lob,clp,(float3)(ijfeR.w,ijfeG.w,ijfeB.w)); // e
-    easu_tap(&aC,&aW,(float2)( 1.0, 1.0)-pp,dir,len2,lob,clp,(float3)(klhgR.x,klhgG.x,klhgB.x)); // k
-    easu_tap(&aC,&aW,(float2)( 2.0, 1.0)-pp,dir,len2,lob,clp,(float3)(klhgR.y,klhgG.y,klhgB.y)); // l
-    easu_tap(&aC,&aW,(float2)( 2.0, 0.0)-pp,dir,len2,lob,clp,(float3)(klhgR.z,klhgG.z,klhgB.z)); // h
-    easu_tap(&aC,&aW,(float2)( 1.0, 0.0)-pp,dir,len2,lob,clp,(float3)(klhgR.w,klhgG.w,klhgB.w)); // g
-    easu_tap(&aC,&aW,(float2)( 0.0, 2.0)-pp,dir,len2,lob,clp,(float3)(zzonR.w,zzonG.w,zzonB.w)); // n
-    easu_tap(&aC,&aW,(float2)( 1.0, 2.0)-pp,dir,len2,lob,clp,(float3)(zzonR.z,zzonG.z,zzonB.z)); // o
+    easu_tap(&aC, &aW, (float2)( 0.0,-1.0) - pp, dir, len2, lob, clp, (float3)(bczzR.x,bczzG.x,bczzB.x)); // b
+    easu_tap(&aC, &aW, (float2)( 1.0,-1.0) - pp, dir, len2, lob, clp, (float3)(bczzR.y,bczzG.y,bczzB.y)); // c
+    easu_tap(&aC, &aW, (float2)(-1.0, 1.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.x,ijfeG.x,ijfeB.x)); // i
+    easu_tap(&aC, &aW, (float2)( 0.0, 1.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.y,ijfeG.y,ijfeB.y)); // j
+    easu_tap(&aC, &aW, (float2)( 0.0, 0.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.z,ijfeG.z,ijfeB.z)); // f
+    easu_tap(&aC, &aW, (float2)(-1.0, 0.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.w,ijfeG.w,ijfeB.w)); // e
+    easu_tap(&aC, &aW, (float2)( 1.0, 1.0) - pp, dir, len2, lob, clp, (float3)(klhgR.x,klhgG.x,klhgB.x)); // k
+    easu_tap(&aC, &aW, (float2)( 2.0, 1.0) - pp, dir, len2, lob, clp, (float3)(klhgR.y,klhgG.y,klhgB.y)); // l
+    easu_tap(&aC, &aW, (float2)( 2.0, 0.0) - pp, dir, len2, lob, clp, (float3)(klhgR.z,klhgG.z,klhgB.z)); // h
+    easu_tap(&aC, &aW, (float2)( 1.0, 0.0) - pp, dir, len2, lob, clp, (float3)(klhgR.w,klhgG.w,klhgB.w)); // g
+    easu_tap(&aC, &aW, (float2)( 0.0, 2.0) - pp, dir, len2, lob, clp, (float3)(zzonR.w,zzonG.w,zzonB.w)); // n
+    easu_tap(&aC, &aW, (float2)( 1.0, 2.0) - pp, dir, len2, lob, clp, (float3)(zzonR.z,zzonG.z,zzonB.z)); // o
 
     // Normalize and dering.
-    float3 fpx = min(ma4, max(mi4, aC* (float3)(native_recip(aW))));
-    uchar3 px = convert_uchar3(fpx * 255.0f);
-
-    // Write pixel.
-    int dst_index = y * dst_step + (3 * x) + dst_offset;
-    vstore3(px, 0, dst + dst_index);
+    float3 fpx = min(ma4, max(mi4, aC * (float3)(native_recip(aW))));
+    *dst_pixel = convert_uchar3(fpx * 255.0f);
 }
 
 // )" R"(
+//----------------------------------------------------------------------------------------------------------------------
 
 
-__kernel void easu_warp(
-    __global uchar* src, int src_step, int src_offset,
-    __global uchar* dst, int dst_step, int dst_offset,
-    __global uchar* map, int map_step, int map_offset,
-    int2 src_size, float2 inv_scale 
+__kernel void easu_scale(
+    __global uchar* src, int src_step, int src_offset, float2 rscale,
+    __global uchar* dst, int dst_step, int dst_offset, int2 bounds
 )
 {
-    int x = get_global_id(0), y = get_global_id(1);
+    // Swizzle the threads for potentially better cache use.
+    int id = get_local_id(1) * 8 + get_local_id(0);
+    int2 dst_coord = remapRed8x8(id) + (int2)(get_group_id(0) << 3, get_group_id(1) << 3); 
 
-    int map_index = y * map_step + (8 * x) + 8 * map_offset;
-    float2 warp_offset = as_float2(vload8(0, map + map_index));
+    // Exit early if out of bounds (for uneven output sizes)
+    if(dst_coord.x >= bounds.x || dst_coord.y >= bounds.y)
+        return;
 
-    easu(src, src_step, src_offset, dst, dst_step, dst_offset, src_size, inv_scale, warp_offset);
+    float2 src_coord = convert_float2(dst_coord) * rscale;
+
+    // Run EASU
+    uchar3 dst_pixel;
+    easu(src, src_step, src_offset, src_coord, &dst_pixel);
+
+    // Write pixel.
+    int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+    vstore3(dst_pixel, 0, dst + dst_index);
 }
 
+__kernel void easu_remap(
+    __global uchar* src, int src_step, int src_offset, int4 src_bounds, float2 rscale,
+    __global uchar* dst, int dst_step, int dst_offset, int2 bounds,
+    __global uchar* map, int map_step, int map_offset
+)
+{
+    // Swizzle the threads for potentially better cache use.
+    int id = get_local_id(1) * 8 + get_local_id(0);
+    int2 dst_coord = remapRed8x8(id) + (int2)(get_group_id(0) << 3, get_group_id(1) << 3); 
+
+    // Exit early if out of bounds (for uneven output sizes)
+    if(dst_coord.x >= bounds.x || dst_coord.y >= bounds.y)
+        return;
+
+    // Load remapping offset
+    int map_index = dst_coord.y * map_step + (8 * dst_coord.x) +  map_offset;
+    float2 offset = as_float2(vload8(0, map + map_index));
+
+    float2 src_coord = (convert_float2(dst_coord) + offset) * rscale;
+
+    uchar3 dst_pixel = (uchar)(0,0,0);
+    if(src_coord.x >= src_bounds.x && src_coord.y >= src_bounds.y && 
+       src_coord.x <  src_bounds.z && src_coord.y <  src_bounds.w )
+        easu(src, src_step, src_offset, src_coord, &dst_pixel);
+        
+    // Write pixel.
+    int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+    vstore3(dst_pixel, 0, dst + dst_index);
+}
 
 // )" R"(
-
 //==============================================================================================================================
 //                                      FSR - [RCAS] ROBUST CONTRAST ADAPTIVE SHARPENING
 //==============================================================================================================================
@@ -463,4 +478,4 @@ __kernel void easu_warp(
 //   return;
 // } 
 
-)"
+// )"
