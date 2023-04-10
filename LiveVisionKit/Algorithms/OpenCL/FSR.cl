@@ -342,6 +342,25 @@ __kernel void easu(
 
 // )" R"(
 
+
+__kernel void easu_warp(
+    __global uchar* src, int src_step, int src_offset,
+    __global uchar* dst, int dst_step, int dst_offset,
+    __global uchar* map, int map_step, int map_offset,
+    int2 src_size, float2 inv_scale 
+)
+{
+    int x = get_global_id(0), y = get_global_id(1);
+
+    int map_index = y * map_step + (8 * x) + 8 * map_offset;
+    float2 warp_offset = as_float2(vload8(0, map + map_index));
+
+    easu(src, src_step, src_offset, dst, dst_step, dst_offset, src_size, inv_scale, warp_offset);
+}
+
+
+// )" R"(
+
 //==============================================================================================================================
 //                                      FSR - [RCAS] ROBUST CONTRAST ADAPTIVE SHARPENING
 //==============================================================================================================================
@@ -351,9 +370,6 @@ __kernel void easu(
 #define FSR_RCAS_LIMIT 0.1875 
 
 // Input callback prototypes that need to be implemented by calling shader
-
-// We have to comment these out and just define them as necessary
-// otherwise OBS experiences a segmentation fault (at least on my end)
 //AF4 FsrRcasLoadF(ASU2 p);
 //void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b);
 

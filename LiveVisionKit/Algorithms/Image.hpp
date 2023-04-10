@@ -25,4 +25,8 @@ namespace lvk
     // NOTE: this is for RGB images
     void scale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size);
 
+    // NOTE: this is for RGB images
+    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offsets);
+
+
 }
