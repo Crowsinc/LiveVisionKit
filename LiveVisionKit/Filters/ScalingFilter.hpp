@@ -36,6 +36,8 @@ namespace lvk
 
         explicit ScalingFilter(const ScalingFilterSettings& settings = {});
 
+        explicit ScalingFilter(const cv::Size& output_size, const float sharpness = 0.8f);
+
         void configure(const ScalingFilterSettings& settings) override;
 
     private:

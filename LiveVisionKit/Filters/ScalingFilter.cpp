@@ -32,6 +32,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    ScalingFilter::ScalingFilter(const cv::Size& output_size, const float sharpness)
+        : ScalingFilter(ScalingFilterSettings{.output_size=output_size,.sharpness=sharpness})
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void ScalingFilter::configure(const ScalingFilterSettings& settings)
     {
         LVK_ASSERT_01(settings.sharpness);
