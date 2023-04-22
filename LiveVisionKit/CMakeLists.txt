@@ -56,25 +56,24 @@ target_sources(
 )
 
 
-
-# ALGORITHMS SOURCES
+# FUNCTION SOURCES
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Algorithms/OpenCL/Kernels.hpp
-        Algorithms/OpenCL/Kernels.cpp
-        Algorithms/Container.hpp
-        Algorithms/Container.tpp
-        Algorithms/Drawing.hpp
-        Algorithms/Drawing.tpp
-        Algorithms/Image.hpp
-        Algorithms/Image.cpp
-        Algorithms/Logic.hpp
-        Algorithms/Logic.tpp
-        Algorithms/Math.hpp
-        Algorithms/Math.tpp
-        Algorithms/Text.hpp
-        Algorithms/Text.tpp
+        Functions/OpenCL/Kernels.hpp
+        Functions/OpenCL/Kernels.cpp
+        Functions/Container.hpp
+        Functions/Container.tpp
+        Functions/Drawing.hpp
+        Functions/Drawing.tpp
+        Functions/Image.hpp
+        Functions/Image.cpp
+        Functions/Logic.hpp
+        Functions/Logic.tpp
+        Functions/Math.hpp
+        Functions/Math.tpp
+        Functions/Text.hpp
+        Functions/Text.tpp
 )
 
 

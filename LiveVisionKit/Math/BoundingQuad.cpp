@@ -17,7 +17,7 @@
 
 #include "BoundingQuad.hpp"
 
-#include "Algorithms/Math.hpp"
+#include "Functions/Math.hpp"
 
 namespace lvk
 {

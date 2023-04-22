@@ -22,7 +22,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
-#include "Algorithms/Drawing.hpp"
+#include "Functions/Drawing.hpp"
 
 namespace lvk
 {

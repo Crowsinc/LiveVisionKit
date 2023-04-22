@@ -22,8 +22,12 @@
 
 #include "Directives.hpp"
 #include "Math/VirtualGrid.hpp"
-#include "Algorithms/Drawing.hpp"
-#include "Algorithms/Math.hpp"
+#include "Functions/Drawing.hpp"
+#include "Functions/Math.hpp"
+
+#include <opencv2/core/ocl.hpp>
+#include "Timing/Stopwatch.hpp"
+#include "Functions/Image.hpp"
 
 namespace lvk
 {

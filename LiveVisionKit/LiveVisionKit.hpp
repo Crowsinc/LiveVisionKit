@@ -22,11 +22,12 @@
 
 #include "Directives.hpp"
 
-#include "Algorithms/Math.hpp"
-#include "Algorithms/Text.hpp"
-#include "Algorithms/Logic.hpp"
-#include "Algorithms/Drawing.hpp"
-#include "Algorithms/Container.hpp"
+#include "Functions/Math.hpp"
+#include "Functions/Text.hpp"
+#include "Functions/Image.hpp"
+#include "Functions/Logic.hpp"
+#include "Functions/Drawing.hpp"
+#include "Functions/Container.hpp"
 
 
 #include "Filters/VideoFilter.hpp"

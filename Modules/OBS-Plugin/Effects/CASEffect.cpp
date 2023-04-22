@@ -17,7 +17,7 @@
 
 #include "CASEffect.hpp"
 
-#include "Algorithms/Math.hpp"
+#include "Functions/Math.hpp"
 #include "Utility/Logging.hpp"
 
 #define A_CPU 1

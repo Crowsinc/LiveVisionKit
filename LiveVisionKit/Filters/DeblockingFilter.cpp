@@ -17,7 +17,7 @@
 
 #include "DeblockingFilter.hpp"
 
-#include "Algorithms/Drawing.hpp"
+#include "Functions/Drawing.hpp"
 
 namespace lvk
 {

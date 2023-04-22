@@ -17,7 +17,7 @@
 
 #include "PathStabilizer.hpp"
 
-#include "Algorithms/Math.hpp"
+#include "Functions/Math.hpp"
 #include "Logging/CSVLogger.hpp"
 
 namespace lvk

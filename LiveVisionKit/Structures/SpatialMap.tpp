@@ -20,8 +20,8 @@
 #include <array>
 
 #include "Directives.hpp"
-#include "Algorithms/Math.hpp"
-#include "Algorithms/Container.hpp"
+#include "Functions/Math.hpp"
+#include "Functions/Container.hpp"
 
 namespace lvk
 {

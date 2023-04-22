@@ -17,7 +17,7 @@
 
 #include "ScalingFilter.hpp"
 
-#include "Algorithms/Image.hpp"
+#include "Functions/Image.hpp"
 
 namespace lvk
 {

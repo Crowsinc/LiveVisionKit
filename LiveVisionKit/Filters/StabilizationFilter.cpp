@@ -18,8 +18,8 @@
 #include "StabilizationFilter.hpp"
 
 #include "Directives.hpp"
-#include "Algorithms/Math.hpp"
-#include "Algorithms/Drawing.hpp"
+#include "Functions/Math.hpp"
+#include "Functions/Drawing.hpp"
 
 namespace lvk
 {
