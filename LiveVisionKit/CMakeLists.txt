@@ -90,6 +90,8 @@ target_sources(
         Filters/DeblockingFilter.hpp
         Filters/StabilizationFilter.cpp
         Filters/StabilizationFilter.hpp
+        Filters/ScalingFilter.cpp
+        Filters/ScalingFilter.hpp
         Filters/VideoFilter.cpp
         Filters/VideoFilter.hpp
         Filters/VideoFrame.cpp
