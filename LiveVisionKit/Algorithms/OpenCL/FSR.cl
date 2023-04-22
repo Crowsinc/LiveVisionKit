@@ -178,7 +178,7 @@ void easu_accumulate(
 // )" R"(
 //----------------------------------------------------------------------------------------------------------------------
 
-void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, uchar3* dst_pixel)
+void easu(__global uchar* src, int src_step, int src_offset, int2 src_coord, float2 sub_pixel, uchar3* dst_pixel)
 {
 
     // Required pixel load ops, given that we are processing the current point 'f'.
@@ -193,10 +193,7 @@ void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, u
     //      +---+---+   
     //
 
-    float2 pp = src_coord - floor(src_coord);
-
-    int2 pf = convert_int2_rtz(src_coord);
-    int r0_index = (pf.y - 1) * src_step + (3 * pf.x) + src_offset;
+    int r0_index = (src_coord.y - 1) * src_step + (3 * src_coord.x) + src_offset;
     int r1_index = r0_index + src_step - 3;
 
     uchar8 r0_data  =  vload8(0, src + r0_index); 
@@ -246,10 +243,10 @@ void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, u
     // Accumulate for bilinear interpolation.
     float len = 0.0f;
     float2 dir = (float2)(0.0f);
-    easu_accumulate(&dir, &len, pp, true , false, false, false, bczzL.x, ijfeL.w, ijfeL.z, klhgL.w, ijfeL.y);
-    easu_accumulate(&dir, &len, pp, false, true , false, false, bczzL.y, ijfeL.z, klhgL.w, klhgL.z, klhgL.x);
-    easu_accumulate(&dir, &len, pp, false, false, true , false, ijfeL.z, ijfeL.x, ijfeL.y, klhgL.x, zzonL.w);
-    easu_accumulate(&dir, &len, pp, false, false, false, true , klhgL.w, ijfeL.y, klhgL.x, klhgL.y, zzonL.z);
+    easu_accumulate(&dir, &len, sub_pixel, true , false, false, false, bczzL.x, ijfeL.w, ijfeL.z, klhgL.w, ijfeL.y);
+    easu_accumulate(&dir, &len, sub_pixel, false, true , false, false, bczzL.y, ijfeL.z, klhgL.w, klhgL.z, klhgL.x);
+    easu_accumulate(&dir, &len, sub_pixel, false, false, true , false, ijfeL.z, ijfeL.x, ijfeL.y, klhgL.x, zzonL.w);
+    easu_accumulate(&dir, &len, sub_pixel, false, false, false, true , klhgL.w, ijfeL.y, klhgL.x, klhgL.y, zzonL.z);
 
     // Normalize with approximation, and cleanup close to zero.
     float2 dir2 = dir * dir;
@@ -302,18 +299,18 @@ void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, u
     float3 aC = (float3)(0.0f);
     float aW = 0.0f;
 
-    easu_tap(&aC, &aW, (float2)( 0.0,-1.0) - pp, dir, len2, lob, clp, (float3)(bczzR.x,bczzG.x,bczzB.x)); // b
-    easu_tap(&aC, &aW, (float2)( 1.0,-1.0) - pp, dir, len2, lob, clp, (float3)(bczzR.y,bczzG.y,bczzB.y)); // c
-    easu_tap(&aC, &aW, (float2)(-1.0, 1.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.x,ijfeG.x,ijfeB.x)); // i
-    easu_tap(&aC, &aW, (float2)( 0.0, 1.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.y,ijfeG.y,ijfeB.y)); // j
-    easu_tap(&aC, &aW, (float2)( 0.0, 0.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.z,ijfeG.z,ijfeB.z)); // f
-    easu_tap(&aC, &aW, (float2)(-1.0, 0.0) - pp, dir, len2, lob, clp, (float3)(ijfeR.w,ijfeG.w,ijfeB.w)); // e
-    easu_tap(&aC, &aW, (float2)( 1.0, 1.0) - pp, dir, len2, lob, clp, (float3)(klhgR.x,klhgG.x,klhgB.x)); // k
-    easu_tap(&aC, &aW, (float2)( 2.0, 1.0) - pp, dir, len2, lob, clp, (float3)(klhgR.y,klhgG.y,klhgB.y)); // l
-    easu_tap(&aC, &aW, (float2)( 2.0, 0.0) - pp, dir, len2, lob, clp, (float3)(klhgR.z,klhgG.z,klhgB.z)); // h
-    easu_tap(&aC, &aW, (float2)( 1.0, 0.0) - pp, dir, len2, lob, clp, (float3)(klhgR.w,klhgG.w,klhgB.w)); // g
-    easu_tap(&aC, &aW, (float2)( 0.0, 2.0) - pp, dir, len2, lob, clp, (float3)(zzonR.w,zzonG.w,zzonB.w)); // n
-    easu_tap(&aC, &aW, (float2)( 1.0, 2.0) - pp, dir, len2, lob, clp, (float3)(zzonR.z,zzonG.z,zzonB.z)); // o
+    easu_tap(&aC, &aW, (float2)( 0.0,-1.0) - sub_pixel, dir, len2, lob, clp, (float3)(bczzR.x,bczzG.x,bczzB.x)); // b
+    easu_tap(&aC, &aW, (float2)( 1.0,-1.0) - sub_pixel, dir, len2, lob, clp, (float3)(bczzR.y,bczzG.y,bczzB.y)); // c
+    easu_tap(&aC, &aW, (float2)(-1.0, 1.0) - sub_pixel, dir, len2, lob, clp, (float3)(ijfeR.x,ijfeG.x,ijfeB.x)); // i
+    easu_tap(&aC, &aW, (float2)( 0.0, 1.0) - sub_pixel, dir, len2, lob, clp, (float3)(ijfeR.y,ijfeG.y,ijfeB.y)); // j
+    easu_tap(&aC, &aW, (float2)( 0.0, 0.0) - sub_pixel, dir, len2, lob, clp, (float3)(ijfeR.z,ijfeG.z,ijfeB.z)); // f
+    easu_tap(&aC, &aW, (float2)(-1.0, 0.0) - sub_pixel, dir, len2, lob, clp, (float3)(ijfeR.w,ijfeG.w,ijfeB.w)); // e
+    easu_tap(&aC, &aW, (float2)( 1.0, 1.0) - sub_pixel, dir, len2, lob, clp, (float3)(klhgR.x,klhgG.x,klhgB.x)); // k
+    easu_tap(&aC, &aW, (float2)( 2.0, 1.0) - sub_pixel, dir, len2, lob, clp, (float3)(klhgR.y,klhgG.y,klhgB.y)); // l
+    easu_tap(&aC, &aW, (float2)( 2.0, 0.0) - sub_pixel, dir, len2, lob, clp, (float3)(klhgR.z,klhgG.z,klhgB.z)); // h
+    easu_tap(&aC, &aW, (float2)( 1.0, 0.0) - sub_pixel, dir, len2, lob, clp, (float3)(klhgR.w,klhgG.w,klhgB.w)); // g
+    easu_tap(&aC, &aW, (float2)( 0.0, 2.0) - sub_pixel, dir, len2, lob, clp, (float3)(zzonR.w,zzonG.w,zzonB.w)); // n
+    easu_tap(&aC, &aW, (float2)( 1.0, 2.0) - sub_pixel, dir, len2, lob, clp, (float3)(zzonR.z,zzonG.z,zzonB.z)); // o
 
     // Normalize and dering.
     float3 fpx = min(ma4, max(mi4, aC * (float3)(native_recip(aW))));
@@ -325,31 +322,45 @@ void easu(__global uchar* src, int src_step, int src_offset, float2 src_coord, u
 
 
 __kernel void easu_scale(
-    __global uchar* src, int src_step, int src_offset, float2 rscale,
-    __global uchar* dst, int dst_step, int dst_offset, int2 bounds
+    __global uchar* src, int src_step, int src_offset, int src_rows, int src_cols,
+    __global uchar* dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+    float2 rscale // Inverse scaling (from the point of view of the dst)
 )
 {
     // Swizzle the threads for potentially better cache use.
     int id = get_local_id(1) * 8 + get_local_id(0);
+    
     int2 dst_coord = remapRed8x8(id) + (int2)(get_group_id(0) << 3, get_group_id(1) << 3); 
+    float2 sub_pixel = convert_float2(dst_coord) * rscale;
+    int2 src_coord = convert_int2_rtz(sub_pixel);
+    sub_pixel -= floor(sub_pixel);
 
-    // Exit early if out of bounds (for uneven output sizes)
-    if(dst_coord.x >= bounds.x || dst_coord.y >= bounds.y)
+    // Nest the border conditions together to help load balance and minimize branches.
+    if(src_coord.x == 0 || src_coord.y == 0 || src_coord.x >= src_cols - 4 || src_coord.y >= src_rows - 4 || dst_coord.x >= dst_cols || dst_coord.y >= dst_rows)
+    {
+        // If we are out of the src bounds (but inside dst bounds), scale by nearest neighbour. 
+        if(dst_coord.x < dst_cols && dst_coord.y < dst_rows)
+        {
+            int src_index = src_coord.y * src_step + (3 * src_coord.x) + src_offset;
+            int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+            vstore3(vload3(0, src + src_index), 0, dst + dst_index);
+        }
         return;
-
-    float2 src_coord = convert_float2(dst_coord) * rscale;
+    }
 
     // Run EASU
     uchar3 dst_pixel;
-    easu(src, src_step, src_offset, src_coord, &dst_pixel);
+    easu(src, src_step, src_offset, src_coord, sub_pixel, &dst_pixel);
 
     // Write pixel.
     int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
     vstore3(dst_pixel, 0, dst + dst_index);
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+
 __kernel void easu_remap(
-    __global uchar* src, int src_step, int src_offset, int4 src_bounds, 
+    __global uchar* src, int src_step, int src_offset, int src_rows, int src_cols,
     __global uchar* dst, int dst_step, int dst_offset, int4 dst_bounds,
     __global uchar* map, int map_step, int map_offset
 )
@@ -366,13 +377,26 @@ __kernel void easu_remap(
     int map_index = dst_coord.y * map_step + (8 * dst_coord.x) +  map_offset;
     float2 offset = as_float2(vload8(0, map + map_index));
 
-    float2 src_coord = convert_float2(dst_coord + dst_bounds.xy) + offset;
+    // Remap the src coord
+    float2 sub_pixel = convert_float2(dst_coord + dst_bounds.xy) + offset;
+    int2 src_coord = convert_int2_rtz(sub_pixel);
+    sub_pixel -= floor(sub_pixel);
 
-    uchar3 dst_pixel = (uchar)(0,0,0);
-    if(src_coord.x >= src_bounds.x && src_coord.y >= src_bounds.y && 
-       src_coord.x <  src_bounds.z && src_coord.y <  src_bounds.w )
-        easu(src, src_step, src_offset, src_coord, &dst_pixel);
-        
+    // Nest the border conditions on the src to help load balance and minimize branches.
+    uchar3 dst_pixel = (uchar3)(0, 0, 0);
+    if(src_coord.x < 1 || src_coord.y < 1 || src_coord.x >= src_cols - 4 || src_coord.y >= src_rows - 4)
+    {
+        // If we are still within the overall src bounds use nearest neighbour. 
+        if(src_coord.x >= 0 && src_coord.x < src_cols && src_coord.y >= 0 && src_coord.y < src_rows)
+        {
+            int src_index = src_coord.y * src_step + (3 * src_coord.x) + src_offset;
+            int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+            vstore3(vload3(0, src + src_index), 0, dst + dst_index);
+            return;
+        }
+    }
+    else easu(src, src_step, src_offset, src_coord, sub_pixel, &dst_pixel);
+
     // Write pixel.
     int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
     vstore3(dst_pixel, 0, dst + dst_index);
@@ -400,63 +424,64 @@ __kernel void rcas(
     int src_index = coord.y * src_step + (3 * coord.x) + src_offset;
     int dst_index = coord.y * dst_step + (3 * coord.x) + dst_offset;
 
-    // Exit early if out of bounds (for uneven output sizes)
-    if(coord.x >= src_cols || coord.y >= src_rows)
+    // Nest the border conditions together to help load balance and minimize branches.
+    if(coord.x == 0 || coord.x >= src_cols - 1 || coord.y == 0 || coord.y >= src_rows - 1)
+    {
+        // Perform direct copy if we are on the border of the image. 
+        if(coord.x <= src_cols || coord.y <= src_rows)
+            vstore3(vload3(0, src + src_index), 0, dst + dst_index);
         return;
+    }
 
     // Do not run sharpening on edges to avoid going out of bounds
-    if(coord.x > 0 && coord.y > 0 && coord.x < src_cols - 1 && coord.y < src_rows - 1)
-    {
-        const float norm_factor = 0.00392156862f;
+    const float norm_factor = 0.00392156862f;
 
-        uchar3 r0 = vload3(0, src + src_index - src_step);
-        uchar8 r1 = vload8(0, src + src_index - 3);
-        uchar3 r2 = vload3(0, src + src_index + src_step);
+    uchar3 r0 = vload3(0, src + src_index - src_step);
+    uchar8 r1 = vload8(0, src + src_index - 3);
+    uchar3 r2 = vload3(0, src + src_index + src_step);
 
-        float3 b = convert_float3(r0) * norm_factor;
-        float3 h = convert_float3(r2) * norm_factor;
-        float3 d = convert_float3((uchar3)(r1.s0, r1.s1, r1.s2)) * norm_factor;
-        float3 e = convert_float3((uchar3)(r1.s3, r1.s4, r1.s5)) * norm_factor;
-        float3 f = convert_float3((uchar3)(r1.s6, r1.s7, src[src_index + 5])) * norm_factor;
-        
-        // Rename 
-        float bR=b.r; float bG=b.g; float bB=b.b;
-        float dR=d.r; float dG=d.g; float dB=d.b;
-        float eR=e.r; float eG=e.g; float eB=e.b;
-        float fR=f.r; float fG=f.g; float fB=f.b;
-        float hR=h.r; float hG=h.g; float hB=h.b;
+    float3 b = convert_float3(r0) * norm_factor;
+    float3 h = convert_float3(r2) * norm_factor;
+    float3 d = convert_float3((uchar3)(r1.s0, r1.s1, r1.s2)) * norm_factor;
+    float3 e = convert_float3((uchar3)(r1.s3, r1.s4, r1.s5)) * norm_factor;
+    float3 f = convert_float3((uchar3)(r1.s6, r1.s7, src[src_index + 5])) * norm_factor;
+    
+    // Rename 
+    float bR=b.r; float bG=b.g; float bB=b.b;
+    float dR=d.r; float dG=d.g; float dB=d.b;
+    float eR=e.r; float eG=e.g; float eB=e.b;
+    float fR=f.r; float fG=f.g; float fB=f.b;
+    float hR=h.r; float hG=h.g; float hB=h.b;
 
-        // Min and max of ring.
-        float mn4R = min4f(bR,dR,fR,hR);
-        float mn4G = min4f(bG,dG,fG,hG);
-        float mn4B = min4f(bB,dB,fB,hB);
-        float mx4R = max4f(bR,dR,fR,hR);
-        float mx4G = max4f(bG,dG,fG,hG);
-        float mx4B = max4f(bB,dB,fB,hB);
+    // Min and max of ring.
+    float mn4R = min4f(bR,dR,fR,hR);
+    float mn4G = min4f(bG,dG,fG,hG);
+    float mn4B = min4f(bB,dB,fB,hB);
+    float mx4R = max4f(bR,dR,fR,hR);
+    float mx4G = max4f(bG,dG,fG,hG);
+    float mx4B = max4f(bB,dB,fB,hB);
 
-        // Immediate constants for peak range.
-        float2 peakC = (float2)(1.0, -4.0);
+    // Immediate constants for peak range.
+    float2 peakC = (float2)(1.0, -4.0);
 
-        // Limiters, these need to be high precision RCPs.
-        float hitMinR = min(mn4R, eR) * native_recip(4.0f * mx4R);
-        float hitMinG = min(mn4G, eG) * native_recip(4.0f * mx4G);
-        float hitMinB = min(mn4B, eB) * native_recip(4.0f * mx4B);
-        float hitMaxR = (peakC.x - max(mx4R,eR)) * native_recip(4.0f * mn4R + peakC.y);
-        float hitMaxG = (peakC.x - max(mx4G,eG)) * native_recip(4.0f * mn4G + peakC.y);
-        float hitMaxB = (peakC.x - max(mx4B,eB)) * native_recip(4.0f * mn4B + peakC.y);
-        float lobeR = max(-hitMinR, hitMaxR);
-        float lobeG = max(-hitMinG, hitMaxG);
-        float lobeB = max(-hitMinB, hitMaxB);
-        float lobe = clamp(max(lobeR,max(lobeG,lobeB)), -0.1875f, 0.0f) * sharpness;
+    // Limiters, these need to be high precision RCPs.
+    float hitMinR = min(mn4R, eR) * native_recip(4.0f * mx4R);
+    float hitMinG = min(mn4G, eG) * native_recip(4.0f * mx4G);
+    float hitMinB = min(mn4B, eB) * native_recip(4.0f * mx4B);
+    float hitMaxR = (peakC.x - max(mx4R,eR)) * native_recip(4.0f * mn4R + peakC.y);
+    float hitMaxG = (peakC.x - max(mx4G,eG)) * native_recip(4.0f * mn4G + peakC.y);
+    float hitMaxB = (peakC.x - max(mx4B,eB)) * native_recip(4.0f * mn4B + peakC.y);
+    float lobeR = max(-hitMinR, hitMaxR);
+    float lobeG = max(-hitMinG, hitMaxG);
+    float lobeB = max(-hitMinB, hitMaxB);
+    float lobe = clamp(max(lobeR,max(lobeG,lobeB)), -0.1875f, 0.0f) * sharpness;
 
-        // Resolve, which needs the medium precision rcp approximation to avoid visible tonality changes.
-        float rcpL = APrxMedRcpF1(4.0f * lobe + 1.0f);
-        float3 fpx = (((b + d + h + f) * lobe) + e) * rcpL;
+    // Resolve, which needs the medium precision rcp approximation to avoid visible tonality changes.
+    float rcpL = APrxMedRcpF1(4.0f * lobe + 1.0f);
+    float3 fpx = (((b + d + h + f) * lobe) + e) * rcpL;
 
-        uchar3 dst_pixel = convert_uchar3(fpx * 255.0f);
-        vstore3(dst_pixel, 0, dst + dst_index);
-    }
-    else vstore3(vload3(0, src + src_index), 0, dst + dst_index);
+    uchar3 dst_pixel = convert_uchar3(fpx * 255.0f);
+    vstore3(dst_pixel, 0, dst + dst_index);
 } 
 
 // )"
