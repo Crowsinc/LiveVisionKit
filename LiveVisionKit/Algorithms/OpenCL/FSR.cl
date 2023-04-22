@@ -410,17 +410,16 @@ __kernel void rcas(
         const float norm_factor = 0.00392156862f;
 
         uchar3 r0 = vload3(0, src + src_index - src_step);
-        uchar8 r1l = vload8(0, src + src_index - 3);
-        uchar  r1r = src[src_index + 3];
+        uchar8 r1 = vload8(0, src + src_index - 3);
         uchar3 r2 = vload3(0, src + src_index + src_step);
 
         float3 b = convert_float3(r0) * norm_factor;
         float3 h = convert_float3(r2) * norm_factor;
-        float3 d = convert_float3(r1l.xyz) * norm_factor;
-        float3 f = convert_float3((uchar3)(r1l.s6, r1l.s7, r1r)) * norm_factor;
-        float3 e = convert_float3((uchar3)(r1l.s3, r1l.s4, r1l.s5)) * norm_factor;
+        float3 d = convert_float3((uchar3)(r1.s0, r1.s1, r1.s2)) * norm_factor;
+        float3 e = convert_float3((uchar3)(r1.s3, r1.s4, r1.s5)) * norm_factor;
+        float3 f = convert_float3((uchar3)(r1.s6, r1.s7, src[src_index + 5])) * norm_factor;
         
-        // Rename (32-bit) or regroup (16-bit).
+        // Rename 
         float bR=b.r; float bG=b.g; float bB=b.b;
         float dR=d.r; float dG=d.g; float dB=d.b;
         float eR=e.r; float eG=e.g; float eB=e.b;
@@ -436,7 +435,7 @@ __kernel void rcas(
         float mx4B = max4f(bB,dB,fB,hB);
 
         // Immediate constants for peak range.
-        float2 peakC = (float2)(1.0,-1.0*4.0);
+        float2 peakC = (float2)(1.0, -4.0);
 
         // Limiters, these need to be high precision RCPs.
         float hitMinR = min(mn4R, eR) * native_recip(4.0f * mx4R);
