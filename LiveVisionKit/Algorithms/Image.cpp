@@ -85,6 +85,12 @@ namespace lvk
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT(!src.empty());
 
+        if(size == src.size())
+        {
+            src.copyTo(dst);
+            return;
+        }
+
         // FSR program has yuv and bgr versions for different luma calculations.
         static auto program_yuv = ocl::load_program("fsr", ocl::src::fsr_source, "-D YUV_INPUT");
         static auto program_bgr = ocl::load_program("fsr", ocl::src::fsr_source);
