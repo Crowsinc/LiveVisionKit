@@ -17,29 +17,26 @@
 
 #pragma once
 
-#include <vector>
-
 #include "VideoFilter.hpp"
 #include "Utility/Configurable.hpp"
 
 namespace lvk
 {
 
-    struct ConversionFilterSettings
+    struct ScalingFilterSettings
     {
-        cv::ColorConversionCodes conversion_code = cv::COLOR_BGR2YUV;
-        std::optional<size_t> output_channels;
+        cv::Size output_size = {1920, 1080};
+        float sharpness = 0.8f;
+        bool yuv_input = true;
     };
 
-    class ConversionFilter final : public VideoFilter, public Configurable<ConversionFilterSettings>
+    class ScalingFilter final : public VideoFilter, public Configurable<ScalingFilterSettings>
     {
     public:
 
-        explicit ConversionFilter(const ConversionFilterSettings& settings = {});
+        explicit ScalingFilter(const ScalingFilterSettings& settings = {});
 
-        explicit ConversionFilter(const cv::ColorConversionCodes conversion_code);
-
-        void configure(const ConversionFilterSettings& settings) override;
+        void configure(const ScalingFilterSettings& settings) override;
 
     private:
 

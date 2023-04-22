@@ -15,35 +15,35 @@
 //     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //     **********************************************************************
 
-#include "ConversionFilter.hpp"
+#include "ScalingFilter.hpp"
+
+#include "Algorithms/Image.hpp"
 
 namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    ConversionFilter::ConversionFilter(const ConversionFilterSettings& settings)
-        : VideoFilter("Conversion Filter")
+    ScalingFilter::ScalingFilter(const ScalingFilterSettings& settings)
+        : VideoFilter("Scaling Filter")
     {
         configure(settings);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    ConversionFilter::ConversionFilter(const cv::ColorConversionCodes conversion_code)
-        : ConversionFilter(ConversionFilterSettings{.conversion_code = conversion_code})
-    {}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void ConversionFilter::configure(const ConversionFilterSettings& settings)
+    void ScalingFilter::configure(const ScalingFilterSettings& settings)
     {
+        LVK_ASSERT_01(settings.sharpness);
+        LVK_ASSERT(settings.output_size.width > 0);
+        LVK_ASSERT(settings.output_size.height > 0);
+
         m_Settings = settings;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ConversionFilter::filter(
+    void ScalingFilter::filter(
         Frame&& input,
         Frame& output,
         Stopwatch& timer,
@@ -52,14 +52,9 @@ namespace lvk
     {
         LVK_ASSERT(!input.is_empty());
 
-        cv::cvtColor(
-            input.data,
-            input.data,
-            m_Settings.conversion_code,
-            static_cast<int>(m_Settings.output_channels.value_or(0))
-        );
-
-        output = std::move(input);
+        lvk::upscale(input.data, output.data, m_Settings.output_size, m_Settings.yuv_input);
+        lvk::sharpen(output.data, output.data, m_Settings.sharpness);
+        output.timestamp = input.timestamp;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
