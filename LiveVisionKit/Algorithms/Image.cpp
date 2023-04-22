@@ -168,7 +168,7 @@ namespace lvk
         kernel.args(
             cv::ocl::KernelArg::ReadOnly(src),
             cv::ocl::KernelArg::WriteOnlyNoSize(dst),
-            (1.0f - sharpness) * 2.0f
+            std::exp2(-2.0f * (1.0f - sharpness))
         ).run_(2, global_work_size, local_work_size, false);
 
         // Create next kernel while the last one runs.
