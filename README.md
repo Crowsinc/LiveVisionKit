@@ -15,7 +15,7 @@ LiveVisionKit (LVK) is a set of real-time video processing filters for manipulat
 - **Filter Wiki:** https://github.com/Crowsinc/LiveVisionKit/wiki
 - **Build Instructions:** https://github.com/Crowsinc/LiveVisionKit/wiki/Build-Guide
 - **Issue/Bug Reporting:** Please use the [issues tab](https://github.com/Crowsinc/LiveVisionKit/issues).
-- **Share Test Footage:** https://forms.gle/9qWKxBfEJ2ChcYpR8 
+- **Share Test Videos:** https://forms.gle/9qWKxBfEJ2ChcYpR8 
 
 
 # Demonstrations
