@@ -31,6 +31,8 @@ Each LiveVisionKit filter is engineered from the ground up using state of the ar
 
 - **PayPal**: https://paypal.me/crowsinc
 
+*Donations above $5 USD will permanently receive the supporter role on the Discord server as a mark of appreciation - this role does not currently come with any extra server benefits. Please include your Discord name and tag in the donation message - or contact @Crowsinc directly on Discord*
+
 ### Translations
 Help expand usability in non-English speaking countries by contributing to language translations on [Crowdin](https://crowdin.com/project/livevisionkit) - simply make a free account and start translating to your native language. Updated translations will be released alongside new versions of LiveVisionKit. 
 
