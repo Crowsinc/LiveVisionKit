@@ -44,7 +44,9 @@ namespace lvk
 			// we only increase the size if we are not overstepping on the start index. 
 			m_EndIndex = (m_EndIndex + 1) % m_Capacity;
 			if (m_StartIndex == m_EndIndex)
+            {
 				m_StartIndex = (m_StartIndex + 1) % m_Capacity;
+            }
 			else m_Size++;
 		}
 		else
