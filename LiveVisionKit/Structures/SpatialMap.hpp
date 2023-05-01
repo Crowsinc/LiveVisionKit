@@ -22,6 +22,7 @@
 #include <opencv2/opencv.hpp>
 #include <optional>
 #include <vector>
+#include <tuple>
 
 namespace lvk
 {
@@ -153,6 +154,7 @@ namespace lvk
         const_iterator begin() const;
 
         const_iterator cbegin() const;
+
 
         iterator end();
 
