@@ -32,6 +32,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
+        : m_Path(1), // NOTE: initialized properly in configure.
+          m_FrameQueue(1) // NOTE: initialized properly in configure.
 	{
 		configure(settings);
 	}

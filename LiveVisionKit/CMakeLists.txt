@@ -125,8 +125,8 @@ target_sources(
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
-        Structures/SlidingBuffer.hpp
-        Structures/SlidingBuffer.tpp
+        Structures/StreamBuffer.hpp
+        Structures/StreamBuffer.tpp
         Structures/SpatialMap.hpp
         Structures/SpatialMap.tpp
         Structures/Iterators.hpp

@@ -22,8 +22,6 @@
 #include <algorithm>
 #include <functional>
 
-#include "Structures/SlidingBuffer.hpp"
-
 namespace lvk
 {
 	// Erase quickly without care for preserving the element ordering

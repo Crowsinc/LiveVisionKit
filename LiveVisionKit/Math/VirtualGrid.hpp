@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <optional>
 #include <opencv2/opencv.hpp>
 
 namespace lvk

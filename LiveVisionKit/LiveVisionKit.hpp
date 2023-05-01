@@ -48,7 +48,7 @@
 #include "Vision/PathStabilizer.hpp"
 
 #include "Structures/SpatialMap.hpp"
-#include "Structures/SlidingBuffer.hpp"
+#include "Structures/StreamBuffer.hpp"
 
 #include "Timing/Time.hpp"
 #include "Timing/Stopwatch.hpp"

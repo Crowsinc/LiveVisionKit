@@ -168,7 +168,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	const SlidingBuffer<Time>& Stopwatch::history() const
+	const StreamBuffer<Time>& Stopwatch::history() const
 	{
 		return m_History;
 	}

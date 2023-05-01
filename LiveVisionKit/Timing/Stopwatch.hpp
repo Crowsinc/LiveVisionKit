@@ -17,7 +17,7 @@
 #pragma once
 
 #include "Time.hpp"
-#include "Structures/SlidingBuffer.hpp"
+#include "Structures/StreamBuffer.hpp"
 
 namespace lvk
 {
@@ -50,13 +50,13 @@ namespace lvk
 		
 		Time deviation() const;
 
-		const SlidingBuffer<Time>& history() const;
+		const StreamBuffer<Time>& history() const;
 
         void reset_history();
 
 	private:
         bool m_Running = false;
-		SlidingBuffer<Time> m_History;
+		StreamBuffer<Time> m_History;
 		Time m_ElapsedTime, m_StartTime, m_Memory;
 	};
 

@@ -26,14 +26,14 @@ namespace lvk
 {
 
 	template<typename T>
-	class SlidingBuffer
+	class StreamBuffer
 	{
 	public:
         using iterator = lvk::circular_iterator<T>;
         using const_iterator = lvk::const_circular_iterator<T>;
     public:
 
-		explicit SlidingBuffer(const size_t capacity);
+		explicit StreamBuffer(const size_t capacity);
 
 
 		void push(const T& element);
@@ -92,10 +92,10 @@ namespace lvk
 
 
 		template<typename K>
-		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel) const;
+		StreamBuffer<T> convolve(const StreamBuffer<K>& kernel) const;
 
 		template<typename K>
-		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const;
+		T convolve_at(const StreamBuffer<K>& kernel, const size_t index) const;
 
 
         iterator begin();
@@ -122,8 +122,8 @@ namespace lvk
 
 
     template<typename T>
-	std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer);
+	std::ostream& operator<<(std::ostream& stream, const StreamBuffer<T>& buffer);
 
 }
 
-#include "SlidingBuffer.tpp"
+#include "StreamBuffer.tpp"

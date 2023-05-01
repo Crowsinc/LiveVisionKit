@@ -22,7 +22,7 @@
 #include "Math/WarpField.hpp"
 #include "Filters/VideoFrame.hpp"
 #include "Utility/Configurable.hpp"
-#include "Structures/SlidingBuffer.hpp"
+#include "Structures/StreamBuffer.hpp"
 
 namespace lvk
 {
@@ -68,11 +68,11 @@ namespace lvk
 
     private:
         float m_SmoothingFactor = 0.0f;
-        SlidingBuffer<WarpField> m_Path;
+        StreamBuffer<WarpField> m_Path;
         WarpField m_Trace{WarpField::MinimumSize};
 
         cv::Rect m_Margins{0,0,0,0};
-        SlidingBuffer<Frame> m_FrameQueue;
+        StreamBuffer<Frame> m_FrameQueue;
         cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 
