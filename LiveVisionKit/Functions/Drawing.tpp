@@ -18,6 +18,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <execution>
 
 namespace lvk
 {
@@ -81,20 +82,18 @@ namespace lvk
 		// NOTE: Individually drawing lots of points on a UMat is very inefficient.
 		// Instead, draw the points to a mask and apply them in bulk to the UMat.
 
-		thread_local cv::Mat draw_mask;
+		cv::Mat draw_mask;
 		draw_mask.create(dst.size(), CV_8UC1);
 		draw_mask.setTo(cv::Scalar(0));
 
-        // TODO: paralellize?
-		for(const auto& point : markers)
-        {
-            cv::Point_<T> scaled_point(
+        std::for_each(std::execution::par, markers.begin(), markers.end(), [&](const cv::Point_<T>& point){
+            const cv::Point_<T> scaled_point(
                 point.x * position_scaling.width,
                 point.y * position_scaling.height
             );
 
 			cv::drawMarker(draw_mask, scaled_point, color, marker_type, marker_size, marker_thickness);
-        }
+        });
 
 		draw_mask.copyTo(colour_mask);
 		dst.setTo(color, colour_mask);
