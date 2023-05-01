@@ -22,6 +22,8 @@
 #include <algorithm>
 #include <functional>
 
+#include "Structures/SlidingBuffer.hpp"
+
 namespace lvk
 {
 	// Erase quickly without care for preserving the element ordering
@@ -31,13 +33,29 @@ namespace lvk
 	template<typename T, typename P>
 	void filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
-	// Filter quickly without care for preserving the element ordering
+	// NOTE: does not preserve element ordering
 	template<typename T, typename P>
 	void fast_filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
-	// Filter quickly without care for preserving the element ordering
+    // NOTE: does not preserve element ordering
 	template<typename T, typename P>
 	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert = false);
+
+
+    template<typename iterator>
+    auto max(const iterator begin, const iterator end);
+
+    template<typename iterator>
+    auto min(const iterator begin, const iterator end);
+
+    template<typename iterator>
+    auto sum(const iterator begin, const iterator end);
+
+    template<typename iterator>
+    auto mean(const iterator begin, const iterator end);
+
+    template<typename iterator>
+    auto variance(const iterator begin, const iterator end);
 
 }
 

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <numeric>
 #include <algorithm>
 #include <functional>
 
@@ -59,8 +60,8 @@ namespace lvk
 	{
 		LVK_ASSERT(data.size() == keep.size());
 
-		// We need to filter in reverse so that the fast erase doesn't affect the
-		// data/keep element correspondence of unprocessed elements.
+		// We need to filter in reverse so that the fast erase doesn't affect
+        // the data and keep element correspondence of unprocessed elements.
 		for(int k = keep.size() - 1; k >= 0; k--)
 			if(invert == static_cast<bool>(keep[k]))
 				fast_erase(data, k);
@@ -74,8 +75,8 @@ namespace lvk
 		LVK_ASSERT(data_1.size() == keep.size());
 		LVK_ASSERT(data_2.size() == keep.size());
 
-		// We need to filter in reverse so that the fast erase doesn't affect the
-		// vector element correspondence of unprocessed elements.
+        // We need to filter in reverse so that the fast erase doesn't affect
+        // the data and keep element correspondence of unprocessed elements.
 		for(int k = keep.size() - 1; k >= 0; k--)
         {
 			if(invert == static_cast<bool>(keep[k]))
@@ -85,6 +86,60 @@ namespace lvk
 			}
         }
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // This is just a shortcut function
+    template<typename iterator>
+    inline auto max(const iterator begin, const iterator end)
+    {
+        return std::max_element(begin, end);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // This is just a shortcut function
+    template<typename iterator>
+    inline auto min(const iterator begin, const iterator end)
+    {
+        return std::min_element(begin, end);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename iterator>
+    inline auto sum(const iterator begin, const iterator end)
+    {
+        using value_type = iterator::value_type;
+        return std::accumulate(begin, end, value_type(0));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename iterator>
+    inline auto mean(const iterator begin, const iterator end)
+    {
+        using value_type = iterator::value_type;
+        if(begin == end) return value_type(0);
+
+        return sum(begin, end) / (end - begin);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename iterator>
+    inline auto variance(const iterator begin, const iterator end)
+    {
+        using value_type = iterator::value_type;
+        auto var = value_type(0);
+
+        const auto m = mean(begin, end);
+        std::for_each(begin, end, [&](const auto v){
+            var += (v - m) * (v - m);
+        });
+
+        return var;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
