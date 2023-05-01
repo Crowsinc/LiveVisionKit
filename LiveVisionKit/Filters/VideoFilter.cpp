@@ -21,6 +21,7 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <queue>
 #include <mutex>
 
 #include "Timing/TickTimer.hpp"

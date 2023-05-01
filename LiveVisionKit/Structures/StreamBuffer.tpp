@@ -25,7 +25,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline SlidingBuffer<T>::SlidingBuffer(const size_t capacity)
+    inline StreamBuffer<T>::StreamBuffer(const size_t capacity)
 		: m_Capacity(capacity)
 	{
 		LVK_ASSERT(capacity > 0);
@@ -35,7 +35,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::advance_window()
+    inline void StreamBuffer<T>::advance_window()
 	{
 		if (m_InternalBuffer.size() == capacity())
 		{
@@ -58,7 +58,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::push(const T& element)
+    inline void StreamBuffer<T>::push(const T& element)
 	{
 		advance_window();
 
@@ -71,7 +71,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::push(T&& element)
+    inline void StreamBuffer<T>::push(T&& element)
 	{
 		advance_window();
 
@@ -85,7 +85,7 @@ namespace lvk
 
 	template<typename T>
 	template<typename... Args>
-    inline T& SlidingBuffer<T>::advance(Args&&... args)
+    inline T& StreamBuffer<T>::advance(Args&&... args)
 	{
 		// Advances the window, either emplacing a new element or re-using the element
 		// being overwritten when full. This exists in order to enable user-level
@@ -102,7 +102,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& SlidingBuffer<T>::skip()
+    inline T& StreamBuffer<T>::skip()
 	{
 		LVK_ASSERT(!is_empty());
 
@@ -118,7 +118,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::skip(const size_t amount)
+    inline void StreamBuffer<T>::skip(const size_t amount)
 	{
 		if (amount == 0)
 			return;
@@ -141,7 +141,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::trim(const size_t amount)
+    inline void StreamBuffer<T>::trim(const size_t amount)
 	{
 		// Trimming elements from the front of the buffer, while also removing
 		// elements from memory requires the circular queue to be zero-alligned.
@@ -174,7 +174,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::resize(const size_t new_capacity)
+    inline void StreamBuffer<T>::resize(const size_t new_capacity)
 	{
 		LVK_ASSERT(m_Capacity > 0);
 
@@ -193,7 +193,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline void SlidingBuffer<T>::clear()
+    inline void StreamBuffer<T>::clear()
 	{
 		m_Size = 0;
 		m_EndIndex = 0;
@@ -204,7 +204,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& SlidingBuffer<T>::at(const size_t index)
+    inline T& StreamBuffer<T>::at(const size_t index)
 	{
 		LVK_ASSERT(index < size());
 
@@ -214,7 +214,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SlidingBuffer<T>::at(const size_t index) const
+    inline const T& StreamBuffer<T>::at(const size_t index) const
     {
         LVK_ASSERT(index < size());
 
@@ -224,7 +224,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& SlidingBuffer<T>::operator[](const size_t index)
+    inline T& StreamBuffer<T>::operator[](const size_t index)
 	{
 		return at(index);
 	}
@@ -232,7 +232,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline const T& SlidingBuffer<T>::operator[](const size_t index) const
+    inline const T& StreamBuffer<T>::operator[](const size_t index) const
 	{
 		return at(index);
 	}
@@ -240,7 +240,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T& SlidingBuffer<T>::oldest(const int offset)
+    inline T& StreamBuffer<T>::oldest(const int offset)
     {
         LVK_ASSERT(!is_empty());
         LVK_ASSERT(offset >= 0);
@@ -251,7 +251,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline const T& SlidingBuffer<T>::oldest(const int offset) const
+    inline const T& StreamBuffer<T>::oldest(const int offset) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset >= 0);
@@ -262,7 +262,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& SlidingBuffer<T>::centre(const int offset)
+    inline T& StreamBuffer<T>::centre(const int offset)
 	{
 		LVK_ASSERT(!is_empty());
 
@@ -273,7 +273,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SlidingBuffer<T>::centre(const int offset) const
+    inline const T& StreamBuffer<T>::centre(const int offset) const
     {
         LVK_ASSERT(!is_empty());
 
@@ -284,7 +284,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& SlidingBuffer<T>::newest(const int offset)
+    inline T& StreamBuffer<T>::newest(const int offset)
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(offset <= 0);
@@ -295,7 +295,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline const T& SlidingBuffer<T>::newest(const int offset) const
+    inline const T& StreamBuffer<T>::newest(const int offset) const
     {
         LVK_ASSERT(!is_empty());
         LVK_ASSERT(offset <= 0);
@@ -306,7 +306,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline bool SlidingBuffer<T>::is_full() const
+    inline bool StreamBuffer<T>::is_full() const
 	{
 		return size() == capacity();
 	}
@@ -314,7 +314,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline bool SlidingBuffer<T>::is_empty() const
+    inline bool StreamBuffer<T>::is_empty() const
 	{
 		return size() == 0;
 	}
@@ -322,7 +322,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline size_t SlidingBuffer<T>::size() const
+    inline size_t StreamBuffer<T>::size() const
 	{
 		return m_Size;
 	}
@@ -330,7 +330,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline size_t SlidingBuffer<T>::capacity() const
+    inline size_t StreamBuffer<T>::capacity() const
 	{
 		return m_Capacity;
 	}
@@ -338,7 +338,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline size_t SlidingBuffer<T>::centre_index() const
+    inline size_t StreamBuffer<T>::centre_index() const
 	{
 		LVK_ASSERT(!is_empty());
 
@@ -351,7 +351,7 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-    inline T SlidingBuffer<T>::convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const
+    inline T StreamBuffer<T>::convolve_at(const StreamBuffer<K>& kernel, const size_t index) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
@@ -392,13 +392,13 @@ namespace lvk
 
 	template<typename T>
 	template<typename K>
-    inline SlidingBuffer<T> SlidingBuffer<T>::convolve(const SlidingBuffer<K>& kernel) const
+    inline StreamBuffer<T> StreamBuffer<T>::convolve(const StreamBuffer<K>& kernel) const
 	{
 		LVK_ASSERT(!is_empty());
 		LVK_ASSERT(!kernel.is_empty());
 		LVK_ASSERT(size() >= kernel.size());
 
-		SlidingBuffer<T> buffer(capacity());
+		StreamBuffer<T> buffer(capacity());
 		for (size_t i = 0; i < size(); i++)
 			buffer.push(convolve_at(kernel, i));
 
@@ -408,9 +408,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::iterator SlidingBuffer<T>::begin()
+    StreamBuffer<T>::iterator StreamBuffer<T>::begin()
     {
-        return SlidingBuffer<T>::iterator(
+        return StreamBuffer<T>::iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
@@ -420,9 +420,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::begin() const
+    StreamBuffer<T>::const_iterator StreamBuffer<T>::begin() const
     {
-        return SlidingBuffer<T>::const_iterator(
+        return StreamBuffer<T>::const_iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
@@ -432,9 +432,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::cbegin() const
+    StreamBuffer<T>::const_iterator StreamBuffer<T>::cbegin() const
     {
-        return SlidingBuffer<T>::const_iterator(
+        return StreamBuffer<T>::const_iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
@@ -444,10 +444,10 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::iterator SlidingBuffer<T>::end()
+    StreamBuffer<T>::iterator StreamBuffer<T>::end()
     {
         // NOTE: The end iterator is a begin iterator on its second cycle.
-        return SlidingBuffer<T>::iterator(
+        return StreamBuffer<T>::iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
@@ -458,10 +458,10 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::end() const
+    StreamBuffer<T>::const_iterator StreamBuffer<T>::end() const
     {
         // NOTE: The end iterator is a begin iterator on its second cycle.
-        return SlidingBuffer<T>::const_iterator(
+        return StreamBuffer<T>::const_iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
@@ -472,10 +472,10 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::cend() const
+    StreamBuffer<T>::const_iterator StreamBuffer<T>::cend() const
     {
         // NOTE: The end iterator is a begin iterator on its second cycle.
-        return SlidingBuffer<T>::const_iterator(
+        return StreamBuffer<T>::const_iterator(
             &oldest(),
             std::make_pair(&oldest(), &newest()),
             std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
@@ -486,7 +486,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-	inline std::ostream& operator<<(std::ostream& stream, const SlidingBuffer<T>& buffer)
+	inline std::ostream& operator<<(std::ostream& stream, const StreamBuffer<T>& buffer)
 	{
 		stream << '[';
 		if(!buffer.is_empty())
