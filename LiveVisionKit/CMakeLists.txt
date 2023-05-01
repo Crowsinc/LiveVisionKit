@@ -129,6 +129,8 @@ target_sources(
         Structures/SlidingBuffer.tpp
         Structures/SpatialMap.hpp
         Structures/SpatialMap.tpp
+        Structures/Iterators.hpp
+        Structures/Iterators.tpp
 )
 
 

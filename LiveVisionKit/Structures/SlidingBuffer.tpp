@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include "SlidingBuffer.hpp"
-
 #include "Directives.hpp"
 
 namespace lvk
@@ -149,7 +147,7 @@ namespace lvk
 		// elements from memory requires the circular queue to be zero-alligned.
 		// Simplest way to do this is to allocate a new internal buffer and copy 
 		// over all the untrimmed elements. Note that trim(0) is effectively a 
-		// zero-allign operation. 
+		// zero-align operation.
 
 		if (amount < m_Size)
 		{
@@ -215,20 +213,20 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T>
-    inline T& SlidingBuffer<T>::operator[](const size_t index)
-	{
-		return at(index);
-	}
+    template<typename T>
+    inline const T& SlidingBuffer<T>::at(const size_t index) const
+    {
+        LVK_ASSERT(index < size());
+
+        return m_InternalBuffer[(m_StartIndex + index) % m_Capacity];
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline const T& SlidingBuffer<T>::at(const size_t index) const
+    inline T& SlidingBuffer<T>::operator[](const size_t index)
 	{
-		LVK_ASSERT(index < size());
-
-		return m_InternalBuffer[(m_StartIndex + index) % m_Capacity];
+		return at(index);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -241,14 +239,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T>
-    inline const T& SlidingBuffer<T>::centre(const int offset) const
-	{
-		LVK_ASSERT(!is_empty());
+    template<typename T>
+    inline T& SlidingBuffer<T>::oldest(const int offset)
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(offset >= 0);
 
-		// NOTE: Gets lower centre for even sizing.
-		return at(centre_index() + offset);
-	}
+        return at(offset);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -264,27 +262,6 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline const T& SlidingBuffer<T>::newest(const int offset) const
-	{
-		LVK_ASSERT(!is_empty());
-		LVK_ASSERT(offset <= 0);
-
-		return at((size() - 1) + offset);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline const T& SlidingBuffer<T>::previous() const
-	{
-		LVK_ASSERT(size() > 1);
-
-		return newest(-1);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
     inline T& SlidingBuffer<T>::centre(const int offset)
 	{
 		LVK_ASSERT(!is_empty());
@@ -295,14 +272,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T>
-    inline T& SlidingBuffer<T>::oldest(const int offset)
-	{
-		LVK_ASSERT(!is_empty());
-		LVK_ASSERT(offset >= 0);
+    template<typename T>
+    inline const T& SlidingBuffer<T>::centre(const int offset) const
+    {
+        LVK_ASSERT(!is_empty());
 
-		return at(offset);
-	}
+        // NOTE: Gets lower centre for even sizing.
+        return at(centre_index() + offset);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -317,13 +294,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T>
-    inline T& SlidingBuffer<T>::previous()
-	{
-		LVK_ASSERT(size() > 1);
+    template<typename T>
+    inline const T& SlidingBuffer<T>::newest(const int offset) const
+    {
+        LVK_ASSERT(!is_empty());
+        LVK_ASSERT(offset <= 0);
 
-		return newest(-1);
-	}
+        return at((size() - 1) + offset);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -430,137 +408,79 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T SlidingBuffer<T>::average(const size_t start, const size_t count) const
+    SlidingBuffer<T>::iterator SlidingBuffer<T>::begin()
     {
-        LVK_ASSERT(!is_empty());
-        LVK_ASSERT(start < size());
-        LVK_ASSERT(start + count <= size());
-
-        return sum(start, count) / count;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline T SlidingBuffer<T>::average() const
-	{
-		return average(0, size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline T SlidingBuffer<T>::variance(const size_t start, const size_t count) const
-    {
-        LVK_ASSERT(!is_empty());
-        LVK_ASSERT(start < size());
-        LVK_ASSERT(start + count <= size());
-
-        // Kick start calculation with first element to avoid
-        // requirement of a default initialisation of T.
-        const T avg = average(start, count);
-        T diff = at(start) - avg;
-        T var = diff * diff;
-
-        for(size_t i = start + 1; i < start + count; i++)
-        {
-            diff = at(i) - avg;
-            var += diff * diff;
-        }
-
-        return var / count;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline T SlidingBuffer<T>::variance() const
-	{
-		return variance(0, size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline T SlidingBuffer<T>::min(const size_t start, const size_t count) const
-    {
-        LVK_ASSERT(!is_empty());
-        LVK_ASSERT(start < size());
-        LVK_ASSERT(start + count <= size());
-
-        // Kick start calculation with first element to avoid
-        // requirement of a default initialisation of T.
-        T min = at(start);
-        for (size_t i = start + 1; i < start + count; i++)
-        {
-            auto& value = at(i);
-            if(value < min) min = value;
-        }
-
-        return min;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline T SlidingBuffer<T>::min() const
-	{
-        return min(0, size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline T SlidingBuffer<T>::max(const size_t start, const size_t count) const
-    {
-        LVK_ASSERT(!is_empty());
-        LVK_ASSERT(start < size());
-        LVK_ASSERT(start + count <= size());
-
-        // Kick start calculation with first element to avoid
-        // requirement of a default initialisation of T.
-        T max = at(start);
-        for (size_t i = start + 1; i < start + count; i++)
-        {
-            auto& value = at(i);
-            if(value > max) max = value;
-        }
-
-        return max;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-    inline T SlidingBuffer<T>::max() const
-	{
-        return max(0, size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    template<typename T>
-    inline T SlidingBuffer<T>::sum(const size_t start, const size_t count) const
-    {
-        LVK_ASSERT(!is_empty());
-        LVK_ASSERT(start < size());
-        LVK_ASSERT(start + count <= size());
-
-        // Kick start calculation with first element to avoid
-        // requirement of a default initialisation of T.
-        T sum = at(start);
-        for(size_t i = start + 1; i < start + count; i++)
-            sum += at(i);
-
-        return sum;
+        return SlidingBuffer<T>::iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
+        );
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline T SlidingBuffer<T>::sum() const
+    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::begin() const
     {
-        return sum(0, size());
+        return SlidingBuffer<T>::const_iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::cbegin() const
+    {
+        return SlidingBuffer<T>::const_iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back())
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    SlidingBuffer<T>::iterator SlidingBuffer<T>::end()
+    {
+        // NOTE: The end iterator is a begin iterator on its second cycle.
+        return SlidingBuffer<T>::iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
+            1
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::end() const
+    {
+        // NOTE: The end iterator is a begin iterator on its second cycle.
+        return SlidingBuffer<T>::const_iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
+            1
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    SlidingBuffer<T>::const_iterator SlidingBuffer<T>::cend() const
+    {
+        // NOTE: The end iterator is a begin iterator on its second cycle.
+        return SlidingBuffer<T>::const_iterator(
+            &oldest(),
+            std::make_pair(&oldest(), &newest()),
+            std::make_pair(&m_InternalBuffer.front(), &m_InternalBuffer.back()),
+            1
+        );
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -20,6 +20,8 @@
 #include <vector>
 #include <ostream>
 
+#include "iterators.hpp"
+
 namespace lvk
 {
 
@@ -27,49 +29,56 @@ namespace lvk
 	class SlidingBuffer
 	{
 	public:
+        using iterator = lvk::circular_iterator<T>;
+        using const_iterator = lvk::const_circular_iterator<T>;
+    public:
 
-		explicit SlidingBuffer(const size_t capacity = 5);
+		explicit SlidingBuffer(const size_t capacity);
+
 
 		void push(const T& element);
 
 		void push(T&& element);
 
+        // TODO: clean this up
 		template<typename... Args>
 		T& advance(Args&&... args);
 
+
+        // TODO: clean this up
 		T& skip();
-		
+
 		void skip(const size_t amount);
 
 		void trim(const size_t amount);
-		
+
+
 		void resize(const size_t capacity);
 		
 		void clear();
 
+
 		T& at(const size_t index);
-
-		T& operator[](const size_t index);
-
-		T& centre(const int offset = 0);
-
-		T& oldest(const int offset = 0);
-
-		T& newest(const int offset = 0);
-
-		T& previous();
 
 		const T& at(const size_t index) const;
 
+        T& operator[](const size_t index);
+
 		const T& operator[](const size_t index) const;
 
-		const T& centre(const int offset = 0) const;
+
+        T& oldest(const int offset = 0);
 
 		const T& oldest(const int offset = 0) const;
 
+        T& centre(const int offset = 0);
+
+		const T& centre(const int offset = 0) const;
+
+        T& newest(const int offset = 0);
+
 		const T& newest(const int offset = 0) const;
 
-		const T& previous() const;
 
 		bool is_full() const;
 
@@ -81,37 +90,31 @@ namespace lvk
 
 		size_t centre_index() const;
 
+
 		template<typename K>
 		SlidingBuffer<T> convolve(const SlidingBuffer<K>& kernel) const;
 
 		template<typename K>
 		T convolve_at(const SlidingBuffer<K>& kernel, const size_t index) const;
 
-        T average(const size_t start, const size_t count) const;
 
-        T average() const;
+        iterator begin();
 
-        T variance(const size_t start, const size_t count) const;
+        const_iterator begin() const;
 
-        T variance() const;
+        const_iterator cbegin() const;
 
-        T min(const size_t start, const size_t count) const;
 
-        T min() const;
+        iterator end();
 
-        T max(const size_t start, const size_t count) const;
+        const_iterator end() const;
 
-        T max() const;
+        const_iterator cend() const;
 
-        T sum(const size_t start, const size_t count) const;
-
-        T sum() const;
 
 	private:
-
 		void advance_window();
 
-	private:
 		size_t m_Capacity, m_Size = 0;
 		std::vector<T> m_InternalBuffer;
 		size_t m_StartIndex = 0, m_EndIndex = 0;

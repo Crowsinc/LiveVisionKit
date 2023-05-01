@@ -17,6 +17,7 @@
 #include "Stopwatch.hpp"
 
 #include "Directives.hpp"
+#include "Functions/Container.hpp"
 
 #include <opencv2/core/ocl.hpp>
 #include <thread>
@@ -140,7 +141,7 @@ namespace lvk
 
 	Time Stopwatch::average() const
 	{
-		return m_History.is_empty() ? Time(0) : m_History.average();
+		return m_History.is_empty() ? Time(0) : mean(m_History.begin(), m_History.end());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -150,7 +151,7 @@ namespace lvk
 		if(m_History.size() < 2)
 			return Time(0);
 
-		const Time average_time = m_History.average();
+		const Time average_time = average();
 
 		Time total_deviation(0);
 		for(auto i = 0; i < m_History.size(); i++)
