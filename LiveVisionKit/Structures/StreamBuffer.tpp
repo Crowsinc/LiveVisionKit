@@ -37,7 +37,7 @@ namespace lvk
 	template<typename T>
     inline void StreamBuffer<T>::advance_window()
 	{
-		if (m_InternalBuffer.size() == capacity())
+		if(m_InternalBuffer.size() == capacity())
 		{
 			// If the internal buffer is full, then we are running as a circular queue.
 			// However, It is still possible that the queue is not full, so ensure that
@@ -102,28 +102,15 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T>
-    inline T& StreamBuffer<T>::skip()
-	{
-		LVK_ASSERT(!is_empty());
-
-		// Advances the start pointer to pop one element from the front of the buffer.
-		// This is the counter-part to advance() and does not de-allocate memory.
-
-		T& ref = oldest();
-		skip(1);
-
-		return ref;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
     inline void StreamBuffer<T>::skip(const size_t amount)
 	{
 		if (amount == 0)
 			return;
 
-		if (amount >= m_Size)
+        // Advances the start pointer to pop 'amount' elements from the front of the buffer.
+        // This is the optimized counter-part to trim which does not de-allocate memory.
+
+		if(amount >= m_Size)
 		{
 			// If the skip is clearing the buffer, or the buffer is already empty
 			// then reset the buffer to be empty, but do not de-allocate memory. 
@@ -143,13 +130,12 @@ namespace lvk
 	template<typename T>
     inline void StreamBuffer<T>::trim(const size_t amount)
 	{
-		// Trimming elements from the front of the buffer, while also removing
-		// elements from memory requires the circular queue to be zero-alligned.
-		// Simplest way to do this is to allocate a new internal buffer and copy 
-		// over all the untrimmed elements. Note that trim(0) is effectively a 
-		// zero-align operation.
+		// Trimming elements from the front of the buffer, while also removing elements
+        // from memory requires the circular queue to be zero-alligned. Simplest way to
+        // do this is to allocate a new internal buffer and copy over all the untrimmed
+        // elements. Note that trim(0) is effectively a zero-align operation.
 
-		if (amount < m_Size)
+		if(amount < m_Size)
 		{
 			const size_t new_size = m_Size - amount;
 

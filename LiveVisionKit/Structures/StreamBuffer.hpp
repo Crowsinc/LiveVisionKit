@@ -36,21 +36,17 @@ namespace lvk
 		explicit StreamBuffer(const size_t capacity);
 
 
-		void push(const T& element);
-
 		void push(T&& element);
 
-        // TODO: clean this up
+		void push(const T& element);
+
 		template<typename... Args>
 		T& advance(Args&&... args);
 
 
-        // TODO: clean this up
-		T& skip();
+		void trim(const size_t amount);
 
 		void skip(const size_t amount);
-
-		void trim(const size_t amount);
 
 
 		void resize(const size_t capacity);
