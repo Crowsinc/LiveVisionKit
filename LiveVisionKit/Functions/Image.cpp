@@ -56,12 +56,9 @@ namespace lvk
         cv::Size map_size; cv::Point dst_offset;
         offset_map.locateROI(map_size, dst_offset);
 
-        // Set the local and global work sizes for the kernel. Note that we must
-        // enforce that the global work size is a multiple of the local work size.
-        size_t local_work_size[2] = {8,8}, global_work_size[2] = {
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.cols) / 8.0f)) * 8,
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.rows) / 8.0f)) * 8
-        };
+        // Find optimal work sizes for the 2D dst buffer.
+        size_t local_work_size[2], global_work_size[2];
+        ocl::optimal_groups(dst, local_work_size, global_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -107,12 +104,9 @@ namespace lvk
         // Allocate the output.
         dst.create(size, CV_8UC3);
 
-        // Set the local and global work sizes for the kernel. Note that we must
-        // enforce that the global work size is a multiple of the local work size.
-        size_t local_work_size[2] = {8,8}, global_work_size[2] = {
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.cols) / 8.0f)) * 8,
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.rows) / 8.0f)) * 8
-        };
+        // Find optimal work sizes for the 2D dst buffer.
+        size_t local_work_size[2], global_work_size[2];
+        ocl::optimal_groups(dst, local_work_size, global_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -146,12 +140,9 @@ namespace lvk
         // Allocate the output.
         dst.create(src.size(), CV_8UC3);
 
-        // Set the local and global work sizes for the kernel. Note that we must
-        // enforce that the global work size is a multiple of the local work size.
-        size_t local_work_size[2] = {8,8}, global_work_size[2] = {
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.cols) / 8.0f)) * 8,
-            static_cast<size_t>(std::ceil(static_cast<float>(dst.rows) / 8.0f)) * 8
-        };
+        // Find optimal work sizes for the 2D dst buffer.
+        size_t local_work_size[2], global_work_size[2];
+        ocl::optimal_groups(dst, local_work_size, global_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
