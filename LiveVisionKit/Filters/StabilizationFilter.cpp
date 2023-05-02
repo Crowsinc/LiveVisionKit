@@ -98,20 +98,18 @@ namespace lvk
 
     void StabilizationFilter::draw_trackers(cv::UMat& frame)
     {
-        const cv::Size2f point_scaling(
+        const cv::Scalar point_scaling(
             static_cast<float>(frame.cols) / static_cast<float>(m_FrameTracker.tracking_resolution().width),
             static_cast<float>(frame.rows) / static_cast<float>(m_FrameTracker.tracking_resolution().height)
         );
 
-        // Draw tracking markers onto frame
-        draw_markers(
+        // Draw tracking points onto frame
+        draw_points(
             frame,
-            lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
             m_FrameTracker.tracking_points(),
-            point_scaling,
-            cv::MarkerTypes::MARKER_CROSS,
-            8,
-            2
+            lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
+            3,
+            point_scaling
         );
     }
 

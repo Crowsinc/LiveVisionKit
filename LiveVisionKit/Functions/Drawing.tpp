@@ -18,7 +18,9 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
-#include <execution>
+
+#include "Directives.hpp"
+#include "OpenCL/Kernels.hpp"
 
 namespace lvk
 {
@@ -45,23 +47,87 @@ namespace lvk
         const int thickness
     )
     {
-        thread_local cv::UMat colour_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        LVK_ASSERT(dst.type() == CV_8UC3);
+        LVK_ASSERT(thickness >= 1);
+        LVK_ASSERT(!dst.empty());
 
-        // NOTE: Individually drawing lots of lines on a UMat is very inefficient.
-        // Instead, draw the grid lines to a mask and apply them in bulk to the UMat.
+        // Create FSR RCAS kernel
+        static auto program = ocl::load_program("draw", ocl::src::drawing_source);
+        thread_local cv::ocl::Kernel kernel("grid", program);
+        LVK_ASSERT(!program.empty() && !kernel.empty());
 
-        thread_local cv::Mat draw_mask;
-        draw_mask.create(dst.size(), CV_8UC1);
+        // Find cell size of the grid
+        const float cell_width = static_cast<float>(dst.cols) / static_cast<float>(grid.width);
+        const float cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
 
-        const auto cell_width = static_cast<float>(dst.cols) / static_cast<float>(grid.width);
-        const auto cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
+        // Find optimal work sizes for the 2D dst buffer.
+        size_t local_work_size[2], global_work_size[2];
+        ocl::optimal_groups(dst, local_work_size, global_work_size);
 
-        draw_mask.forEach<uint8_t>([&](uint8_t& mask, const int coord[]){
-            mask = std::fmod(coord[1], cell_width) < thickness || std::fmod(coord[0], cell_height) < thickness;
-        });
+        // Run the kernel in async mode.
+        kernel.args(
+            cv::ocl::KernelArg::WriteOnly(dst),
+            cell_width, cell_height, thickness,
+            cv::Vec4b{
+                static_cast<uint8_t>(color[0]),
+                static_cast<uint8_t>(color[1]),
+                static_cast<uint8_t>(color[2]),
+                0 // NOTE: 4th component is unused
+            }
+        ).run_(2, global_work_size, local_work_size, false);
 
-        draw_mask.copyTo(colour_mask);
-        dst.setTo(color, colour_mask);
+        // Create next kernel while the last one runs.
+        kernel.create("grid", program);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline void draw_points(
+        cv::UMat& dst,
+        const std::vector<cv::Point_<T>>& points,
+        const cv::Scalar& color,
+        const int32_t point_size,
+        const cv::Scalar& point_scaling
+    )
+    {
+        LVK_ASSERT(point_scaling[0] >= 0 && point_scaling[1] >= 0);
+        LVK_ASSERT(dst.type() == CV_8UC3);
+        LVK_ASSERT(point_size >= 1);
+        LVK_ASSERT(!dst.empty());
+
+        if(points.empty())
+            return;
+
+        // Create FSR RCAS kernel
+        static auto program = ocl::load_program("draw", ocl::src::drawing_source);
+        thread_local cv::ocl::Kernel kernel("points", program);
+        LVK_ASSERT(!program.empty() && !kernel.empty());
+
+        // Upload and scale points to 32bit int image coords.
+        thread_local cv::UMat staging_buffer, points_buffer;
+        cv::Mat(points, false).copyTo(staging_buffer);
+        cv::multiply(staging_buffer, point_scaling, points_buffer, 1, CV_32S);
+
+        // Find optimal work sizes for the 1D points buffer.
+        size_t local_work_size[1], global_work_size[1];
+        ocl::optimal_groups(points_buffer, local_work_size, global_work_size);
+
+        // Run the kernel in async mode.
+        kernel.args(
+            cv::ocl::KernelArg::ReadOnly(points_buffer),
+            cv::ocl::KernelArg::WriteOnly(dst),
+            (point_size + 1) / 2,
+            cv::Vec4b{
+                static_cast<uint8_t>(color[0]),
+                static_cast<uint8_t>(color[1]),
+                static_cast<uint8_t>(color[2]),
+                0 // NOTE: 4th component is unused
+            }
+        ).run_(1, local_work_size, global_work_size, false);
+
+        // Create next kernel while the last one runs.
+        kernel.create("points", program);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

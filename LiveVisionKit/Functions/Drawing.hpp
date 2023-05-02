@@ -60,14 +60,12 @@ namespace lvk
     );
 
     template<typename T>
-    void draw_markers(
+    void draw_points(
         cv::UMat& dst,
+        const std::vector<cv::Point_<T>>& points,
         const cv::Scalar& color,
-        const std::vector<cv::Point_<T>>& markers,
-        const cv::Size2f& position_scaling = {1, 1},
-        const cv::MarkerTypes marker_type = cv::MarkerTypes::MARKER_CROSS,
-        const int marker_size = 10,
-        const int marker_thickness = 2
+        const int32_t point_size = 10,
+        const cv::Scalar& point_scaling = {1, 1}
     );
 
 	template<typename T>
