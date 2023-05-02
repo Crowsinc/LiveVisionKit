@@ -26,18 +26,17 @@ namespace lvk::ocl
 
     cv::ocl::Program load_program(const char* name, const char* source, const char* flags = "");
 
-    // NOTE: The global and local groups and are arrays of length equal to buffer dimensions.
-    void optimal_groups(const cv::UMat& buffer, size_t* local_groups, size_t* global_groups);
+    void optimal_groups(const cv::UMat& buffer, size_t global_groups[3], size_t local_groups[3]);
 
     // OpenCL Kernel Sources
     namespace src
     {
         inline const char* fsr_source =
-            #include "FSR.cl"
-        ;
+            #include "Sources/FSR.cl"
+;
 
         inline const char* drawing_source =
-            #include "Drawing.cl"
-        ;
+            #include "Sources/Drawing.cl"
+;
     }
 }

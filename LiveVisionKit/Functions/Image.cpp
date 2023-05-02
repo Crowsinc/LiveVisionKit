@@ -57,8 +57,8 @@ namespace lvk
         offset_map.locateROI(map_size, dst_offset);
 
         // Find optimal work sizes for the 2D dst buffer.
-        size_t local_work_size[2], global_work_size[2];
-        ocl::optimal_groups(dst, local_work_size, global_work_size);
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(dst, global_work_size, local_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -105,8 +105,8 @@ namespace lvk
         dst.create(size, CV_8UC3);
 
         // Find optimal work sizes for the 2D dst buffer.
-        size_t local_work_size[2], global_work_size[2];
-        ocl::optimal_groups(dst, local_work_size, global_work_size);
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(dst, global_work_size, local_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -141,8 +141,8 @@ namespace lvk
         dst.create(src.size(), CV_8UC3);
 
         // Find optimal work sizes for the 2D dst buffer.
-        size_t local_work_size[2], global_work_size[2];
-        ocl::optimal_groups(dst, local_work_size, global_work_size);
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(dst, global_work_size, local_work_size);
 
         // Run the kernel in async mode.
         kernel.args(

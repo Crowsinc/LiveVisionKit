@@ -61,8 +61,8 @@ namespace lvk
         const float cell_height = static_cast<float>(dst.rows) / static_cast<float>(grid.height);
 
         // Find optimal work sizes for the 2D dst buffer.
-        size_t local_work_size[2], global_work_size[2];
-        ocl::optimal_groups(dst, local_work_size, global_work_size);
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(dst, global_work_size, local_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -110,8 +110,8 @@ namespace lvk
         cv::multiply(staging_buffer, point_scaling, points_buffer, 1, CV_32S);
 
         // Find optimal work sizes for the 1D points buffer.
-        size_t local_work_size[1], global_work_size[1];
-        ocl::optimal_groups(points_buffer, local_work_size, global_work_size);
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(points_buffer, global_work_size, local_work_size);
 
         // Run the kernel in async mode.
         kernel.args(
@@ -124,46 +124,11 @@ namespace lvk
                 static_cast<uint8_t>(color[2]),
                 0 // NOTE: 4th component is unused
             }
-        ).run_(1, local_work_size, global_work_size, false);
+        ).run_(1, global_work_size, local_work_size, false);
 
         // Create next kernel while the last one runs.
         kernel.create("points", program);
     }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	template<typename T>
-	inline void draw_markers(
-		cv::UMat& dst,
-		const cv::Scalar& color,
-		const std::vector<cv::Point_<T>>& markers,
-        const cv::Size2f& position_scaling,
-		const cv::MarkerTypes marker_type,
-		const int marker_size,
-		const int marker_thickness
-	)
-	{
-		thread_local cv::UMat colour_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		// NOTE: Individually drawing lots of points on a UMat is very inefficient.
-		// Instead, draw the points to a mask and apply them in bulk to the UMat.
-
-		cv::Mat draw_mask;
-		draw_mask.create(dst.size(), CV_8UC1);
-		draw_mask.setTo(cv::Scalar(0));
-
-        std::for_each(std::execution::par, markers.begin(), markers.end(), [&](const cv::Point_<T>& point){
-            const cv::Point_<T> scaled_point(
-                point.x * position_scaling.width,
-                point.y * position_scaling.height
-            );
-
-			cv::drawMarker(draw_mask, scaled_point, color, marker_type, marker_size, marker_thickness);
-        });
-
-		draw_mask.copyTo(colour_mask);
-		dst.setTo(color, colour_mask);
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

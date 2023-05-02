@@ -46,28 +46,28 @@ cv::ocl::Program load_program(const char* name, const char* source, const char* 
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void optimal_groups(const cv::UMat& buffer, size_t* local_groups, size_t* global_groups)
+    void optimal_groups(const cv::UMat& buffer, size_t global_groups[3], size_t local_groups[3])
     {
+        // Reset all group sizings to identity.
+        local_groups[0] = 1; local_groups[1] = 1; local_groups[2] = 1;
+        global_groups[0] = 1; global_groups[1] = 1; global_groups[2] = 1;
+
         // Figure out optimal and compatible 2D local and global work sizes for a kernel.
         // Note that this is just based on rule of thumbs, rather than concrete optimality.
-
-        switch(buffer.dims)
+        if(buffer.dims == 1 || buffer.cols == 1)
         {
             // 1D buffers: default to a work group of 64x1 threads.
-            case 1:
-                local_groups[0] = 64;
-                global_groups[0] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.rows) / 64.0f)) * 64;
-                break;
-
-            // 2D buffers: default to a work group of 8x8 threads.
-            case 2:
-                local_groups[0] = 8; local_groups[1] = 8;
-                global_groups[0] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.cols) / 8.0f)) * 8;
-                global_groups[1] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.rows) / 8.0f)) * 8;
-
-            default:
-                LVK_ASSERT(false && "Buffer dimensions not supported");
+            local_groups[0] = 64;
+            global_groups[0] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.rows) / 64.0f)) * 64;
         }
+        else if(buffer.dims == 2)
+        {
+            // 2D buffers: default to a work group of 8x8 threads.
+            local_groups[0] = 8; local_groups[1] = 8;
+            global_groups[0] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.cols) / 8.0f)) * 8;
+            global_groups[1] = static_cast<size_t>(std::ceil(static_cast<float>(buffer.rows) / 8.0f)) * 8;
+        }
+        else LVK_ASSERT(false && "Buffer dimensions are not supported");
     }
 
 //---------------------------------------------------------------------------------------------------------------------
