@@ -133,8 +133,10 @@ namespace lvk
         m_FeatureDetector.detect(m_PrevFrame, m_TrackedPoints);
         m_Uniformity = m_FeatureDetector.distribution_quality();
 
-        if(m_TrackedPoints.size() < m_Settings.sample_size_threshold
-        || m_Uniformity < m_Settings.uniformity_threshold)
+        if(m_TrackedPoints.size() < m_Settings.sample_size_threshold)
+            return abort_tracking();
+
+        if(m_Uniformity < m_Settings.uniformity_threshold)
             return abort_tracking();
 
 
