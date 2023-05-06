@@ -21,8 +21,6 @@
 #include <thread>
 #include <LiveVisionKit.hpp>
 
-#include "Utility/Logging.hpp" // TODO: temp remove me
-
 namespace lvk
 {
 
