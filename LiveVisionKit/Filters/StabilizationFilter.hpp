@@ -78,8 +78,6 @@ namespace lvk
             const bool debug
         ) override;
 
-        void draw_trackers(cv::UMat& frame);
-
 	private:
 		float m_SuppressionFactor = 0.0f;
 

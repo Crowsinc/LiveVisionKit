@@ -20,6 +20,7 @@
 #include "Directives.hpp"
 #include "Functions/Math.hpp"
 #include "Functions/Drawing.hpp"
+#include "Functions/Extensions.hpp"
 
 namespace lvk
 {
@@ -83,7 +84,15 @@ namespace lvk
                 // If we're in debug, draw the motion trackers,
                 // ensuring we do not time the debug rendering.
                 timer.sync_gpu(debug).pause();
-                draw_trackers(input.data);
+
+                draw_points(
+                    input.data,
+                    m_FrameTracker.tracking_points(),
+                    lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
+                    3,
+                    cv::Size2f(input.size()) / cv::Size2f(m_FrameTracker.tracking_resolution())
+                );
+
                 timer.sync_gpu(debug).start();
             }
         }
@@ -93,25 +102,6 @@ namespace lvk
         if(m_Settings.crop_output && !output.is_empty())
             output.data = output.data(m_Stabilizer.stable_region());
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void StabilizationFilter::draw_trackers(cv::UMat& frame)
-    {
-        const cv::Scalar point_scaling(
-            static_cast<float>(frame.cols) / static_cast<float>(m_FrameTracker.tracking_resolution().width),
-            static_cast<float>(frame.rows) / static_cast<float>(m_FrameTracker.tracking_resolution().height)
-        );
-
-        // Draw tracking points onto frame
-        draw_points(
-            frame,
-            m_FrameTracker.tracking_points(),
-            lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
-            3,
-            point_scaling
-        );
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
