@@ -62,6 +62,8 @@ target_sources(
     PRIVATE
         Functions/OpenCL/Kernels.hpp
         Functions/OpenCL/Kernels.cpp
+        Functions/Extensions.hpp
+        Functions/Extensions.cpp
         Functions/Container.hpp
         Functions/Container.tpp
         Functions/Drawing.hpp
