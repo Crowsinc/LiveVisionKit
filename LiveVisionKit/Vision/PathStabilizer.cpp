@@ -45,17 +45,7 @@ namespace lvk
         LVK_ASSERT(settings.path_prediction_frames > 0);
         LVK_ASSERT_01_STRICT(settings.scene_margins);
 
-        // If the motion resolution has changed, we need to resize all our fields.
-        if(m_Settings.motion_resolution != settings.motion_resolution)
-        {
-            m_Trace.resize(settings.motion_resolution);
-            for(size_t i = 0; i < m_Path.size(); i++)
-            {
-                m_Path[i].resize(settings.motion_resolution);
-            }
-        }
         m_Settings = settings;
-
         configure_buffers();
     }
 
@@ -70,8 +60,11 @@ namespace lvk
 
     Frame PathStabilizer::next(Frame&& frame, const WarpField& motion)
     {
-        LVK_ASSERT(motion.size() == m_Settings.motion_resolution);
         LVK_ASSERT(!frame.is_empty());
+
+        // Resize past motions if a new size is given.
+        if(motion.size() != m_Trace.size())
+            resize_fields(motion.size());
 
         // Update the path's current state
         m_FrameQueue.push(std::move(frame));
@@ -147,7 +140,7 @@ namespace lvk
         m_Path.clear();
 
         // Pre-fill the trace to avoid having to deal with edge cases.
-        while(!m_Path.is_full()) m_Path.advance(m_Settings.motion_resolution);
+        while(!m_Path.is_full()) m_Path.advance(WarpField::MinimumSize);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -216,6 +209,17 @@ namespace lvk
                 if(m_FrameQueue.is_empty())
                     restart();
             }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void PathStabilizer::resize_fields(const cv::Size& new_size)
+    {
+        m_Trace.resize(new_size);
+        for(auto& position : m_Path)
+        {
+            position.resize(new_size);
         }
     }
 

@@ -31,7 +31,6 @@ namespace lvk
     {
         // NOTE: frame delay is proportional to smoothing samples
         size_t path_prediction_frames = 10;
-        cv::Size motion_resolution = {2,2};
 
         float scene_margins = 0.1f;
         bool clamp_path_to_margins = true;
@@ -65,6 +64,8 @@ namespace lvk
     private:
 
         void configure_buffers();
+
+        void resize_fields(const cv::Size& new_size);
 
     private:
         float m_SmoothingFactor = 0.0f;
