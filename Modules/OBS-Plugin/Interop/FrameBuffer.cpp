@@ -35,19 +35,19 @@ namespace lvk
 	{
 		obs_enter_graphics();
 
-		if (m_ReadBuffer != nullptr)
+		if(m_ReadBuffer != nullptr)
 		{
 			gs_stagesurface_destroy(m_ReadBuffer);
 			m_ReadBuffer = nullptr;
 		}
 
-		if (m_WriteBuffer != nullptr)
+		if(m_WriteBuffer != nullptr)
 		{
 			gs_texture_destroy(m_WriteBuffer);
 			m_WriteBuffer = nullptr;
 		}
 
-		if (m_InteropBuffer != nullptr)
+		if(m_InteropBuffer != nullptr)
 		{
 			gs_texture_destroy(m_InteropBuffer);
 			m_InteropBuffer = nullptr;
@@ -76,10 +76,10 @@ namespace lvk
 	{
 		LVK_ASSERT(obs_frame != nullptr);
 
-		if (!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
+		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
 			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
-		if (m_FrameIngest)
+		if(m_FrameIngest)
 		{
 			m_FrameIngest->upload(obs_frame, data);
 			timestamp = obs_frame->timestamp;
@@ -98,7 +98,7 @@ namespace lvk
 		if(!m_FrameIngest || m_FrameIngest->format() != obs_frame->format)
 			m_FrameIngest = FrameIngest::Select(obs_frame->format);
 
-		if (m_FrameIngest)
+		if(m_FrameIngest)
 		{
 			m_FrameIngest->download(data, obs_frame);
 			timestamp = obs_frame->timestamp;
@@ -117,7 +117,7 @@ namespace lvk
 		const uint32_t texture_width = gs_texture_get_width(texture);
 		const uint32_t texture_height = gs_texture_get_height(texture);
 
-		if (lvk::ocl::InteropContext::Available())
+		if(lvk::ocl::InteropContext::Available())
 		{
 			prepare_interop_buffer(texture_width, texture_height);
 
@@ -172,7 +172,7 @@ namespace lvk
 		// Convert from YUV to RGBA
 		cv::cvtColor(data, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
 
-		if (lvk::ocl::InteropContext::Available())
+		if(lvk::ocl::InteropContext::Available())
 		{
 			prepare_interop_buffer(data.cols, data.rows);
 			

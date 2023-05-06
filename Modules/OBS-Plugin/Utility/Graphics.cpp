@@ -39,7 +39,7 @@ namespace lvk
 			|| gs_texture_get_height(texture) != height
 			|| gs_texture_get_color_format(texture) != format;
 
-		if (outdated)
+		if(outdated)
 		{
 			gs_texture_destroy(texture);
 			texture = gs_texture_create(
@@ -69,7 +69,7 @@ namespace lvk
 			|| gs_stagesurface_get_height(surface) != height
 			|| gs_stagesurface_get_color_format(surface) != format;
 
-		if (outdated)
+		if(outdated)
 		{
 			gs_stagesurface_destroy(surface);
 			surface = gs_stagesurface_create(

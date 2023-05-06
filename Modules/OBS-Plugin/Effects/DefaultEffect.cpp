@@ -48,7 +48,7 @@ namespace lvk
 							   && source_size.width > 0 && source_size.height > 0
 							   && texture_size == source_size;
 
-		if (render_valid)
+		if(render_valid)
 		{
 			const auto target_flags = obs_source_get_output_flags(target);
 			const bool allow_direct_render = !test_bits<uint32_t>(target_flags, OBS_SOURCE_CUSTOM_DRAW)
@@ -79,7 +79,7 @@ namespace lvk
 			vec4_zero(&clear_color);
 			gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
 
-			if (target == parent && allow_direct_render)
+			if(target == parent && allow_direct_render)
 				obs_source_default_render(target);
 			else
 				obs_source_video_render(target);

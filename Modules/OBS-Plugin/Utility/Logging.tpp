@@ -34,7 +34,7 @@ namespace lvk::log
 	template<typename... T>
 	void log_if(const bool condition, const int log_level, const std::string& format, T... args)
 	{
-		if (condition)
+		if(condition)
 			log(log_level, format.c_str(), args...);
 	}
 

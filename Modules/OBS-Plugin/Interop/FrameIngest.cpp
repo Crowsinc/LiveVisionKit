@@ -473,7 +473,7 @@ namespace lvk
 		LVK_ASSERT(!u_roi.empty());
 		LVK_ASSERT(!v_roi.empty());
 
-		if (chroma_size != frame_size)
+		if(chroma_size != frame_size)
 		{
 			cv::resize(u_roi, m_USubPlane, frame_size, 0, 0, cv::INTER_LINEAR);
 			cv::resize(v_roi, m_VSubPlane, frame_size, 0, 0, cv::INTER_LINEAR);
@@ -492,7 +492,7 @@ namespace lvk
 
 		split_planes(src, m_YPlane, m_UPlane, m_VPlane);
 
-		if (m_ChromaScaling.width != 1.0f || m_ChromaScaling.height != 1.0f)
+		if(m_ChromaScaling.width != 1.0f || m_ChromaScaling.height != 1.0f)
 		{
 			cv::resize(
 				m_UPlane,
@@ -585,7 +585,7 @@ namespace lvk
 		cv::resize(m_UVSubPlane.reshape(2, m_UVSubPlane.rows), m_UVPlane, plane_roi.size(), 0, 0, cv::INTER_LINEAR);
 
 		std::vector<int> from_to(6);
-		if (m_UFirst)
+		if(m_UFirst)
 			from_to = {(m_YFirst ? 0 : 1),0,  2,1,  3,2};
 		else
 			from_to = {(m_YFirst ? 0 : 1),0,  2,2,  3,1};
@@ -605,7 +605,7 @@ namespace lvk
 		m_MixBuffer.create(src.size(), CV_8UC2);
 
 		// Extract uv planes
-		if (m_UFirst)
+		if(m_UFirst)
 			cv::mixChannels({src}, std::vector<cv::UMat>{m_MixBuffer}, {1,0,  2,1});
 		else
 			cv::mixChannels({src}, std::vector<cv::UMat>{m_MixBuffer}, {2,0,  1,1});
@@ -616,7 +616,7 @@ namespace lvk
 
 		// Pack y and interleaved uv planes
 		cv::extractChannel(src, m_YPlane, 0);
-		if (m_YFirst)
+		if(m_YFirst)
 			cv::mixChannels({{m_YPlane, m_UVPlane}}, std::vector<cv::UMat>{m_MixBuffer}, {0,0,  1,1});
 		else
 			cv::mixChannels({{m_YPlane, m_UVPlane}}, std::vector<cv::UMat>{m_MixBuffer}, {0,1,  1,0});
@@ -711,7 +711,7 @@ namespace lvk
 		LVK_ASSERT(test_obs_frame(src));
 		auto& frame = *src;
 
-		if (m_SteppedConversion)
+		if(m_SteppedConversion)
 		{
 			cv::cvtColor(upload_planes(frame, m_Components), m_ConversionBuffer, m_ForwardStepConversion);
 			cv::cvtColor(m_ConversionBuffer, dst, m_ForwardConversion);
@@ -726,7 +726,7 @@ namespace lvk
 		LVK_ASSERT(test_obs_frame(dst));
 		auto& frame = *dst;
 
-		if (m_SteppedConversion)
+		if(m_SteppedConversion)
 		{
 			cv::cvtColor(src, m_StepConversionBuffer, m_BackwardStepConversion);
 			cv::cvtColor(m_StepConversionBuffer, m_ConversionBuffer, m_BackwardConversion);

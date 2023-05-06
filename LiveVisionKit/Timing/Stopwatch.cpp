@@ -157,7 +157,7 @@ namespace lvk
 		for(auto i = 0; i < m_History.size(); i++)
 		{
 			const auto& current_time = m_History[i];
-			if (average_time > current_time)
+			if(average_time > current_time)
 				total_deviation += average_time - current_time;
 			else 
 				total_deviation += current_time - average_time;

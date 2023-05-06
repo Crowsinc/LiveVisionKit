@@ -164,10 +164,10 @@ namespace lvk
             );
 
 			// Interpret custom resolution
-			if (tokens.size() == 2 || tokens.size() == 3)
+			if(tokens.size() == 2 || tokens.size() == 3)
 			{
 				// Interpret optional multiplier
-				if (tokens.size() == 3)
+				if(tokens.size() == 3)
 					m_SizeMultiplier = tokens[2];
 
 				m_RequestedSize = {
@@ -177,7 +177,7 @@ namespace lvk
 			}
 
 			// Interpret solo multiplier
-			if (tokens.size() == 1)
+			if(tokens.size() == 1)
 			{
 				m_SizeMultiplier = tokens[0];
 				m_MatchSourceSize = true;
@@ -266,7 +266,7 @@ namespace lvk
 		);
 
 		// Bad parameters will automatically get rejected by the effect.
-		if (!FSREffect::Render(m_Context, m_OutputSize, m_ScalingRegion))
+		if(!FSREffect::Render(m_Context, m_OutputSize, m_ScalingRegion))
 			obs_source_skip_video_filter(m_Context);
 	}
 

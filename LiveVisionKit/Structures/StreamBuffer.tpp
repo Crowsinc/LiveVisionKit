@@ -43,7 +43,7 @@ namespace lvk
 			// However, It is still possible that the queue is not full, so ensure that
 			// we only increase the size if we are not overstepping on the start index. 
 			m_EndIndex = (m_EndIndex + 1) % m_Capacity;
-			if (m_StartIndex == m_EndIndex)
+			if(m_StartIndex == m_EndIndex)
             {
 				m_StartIndex = (m_StartIndex + 1) % m_Capacity;
             }
@@ -106,7 +106,7 @@ namespace lvk
 	template<typename T>
     inline void StreamBuffer<T>::skip(const size_t amount)
 	{
-		if (amount == 0)
+		if(amount == 0)
 			return;
 
         // Advances the start pointer to pop 'amount' elements from the front of the buffer.
@@ -349,7 +349,7 @@ namespace lvk
 		const auto kernel_size = kernel.size(), buffer_size = this->size();
 
 		size_t elems = 0, buffer_offset = 0, kernel_offset = 0;
-		if (index <= kernel_centre_index)
+		if(index <= kernel_centre_index)
 		{
 			// If the convolution index is left of the kernel's centre, then the 
 			// left side of the kernel is going to be clipped off. This done by 

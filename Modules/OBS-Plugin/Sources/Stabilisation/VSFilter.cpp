@@ -174,22 +174,22 @@ namespace lvk
 
 			// TODO: remove Motion Model
 //			const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
-//			if (new_model == MOTION_MODEL_AFFINE)
+//			if(new_model == MOTION_MODEL_AFFINE)
 //				stab_settings.motion_model = MotionModel::AFFINE;
-//			else if (new_model == MOTION_MODEL_HOMOGRAPHY)
+//			else if(new_model == MOTION_MODEL_HOMOGRAPHY)
 //				stab_settings.motion_model = MotionModel::HOMOGRAPHY;
-//			else if (new_model == MOTION_MODEL_DYNAMIC)
+//			else if(new_model == MOTION_MODEL_DYNAMIC)
 //				stab_settings.motion_model = MotionModel::DYNAMIC;
 
 			// Suppression Mode
 			const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);
-			if (new_mode == SUPPRESSION_MODE_STRICT)
+			if(new_mode == SUPPRESSION_MODE_STRICT)
 			{
 				stab_settings.auto_suppression = true;
 				stab_settings.suppression_threshold = SUPPRESSION_RANGE_STRICT.y;
 				stab_settings.suppression_saturation_limit = SUPPRESSION_RANGE_STRICT.x;
 			}
-			else if (new_mode == SUPPRESSION_MODE_RELAXED)
+			else if(new_mode == SUPPRESSION_MODE_RELAXED)
 			{
 				stab_settings.auto_suppression = true;
 				stab_settings.suppression_threshold = SUPPRESSION_RANGE_RELAXED.y;
@@ -236,10 +236,10 @@ namespace lvk
         );
 		const cv::Rect render_region = crop(render_size, m_Filter.settings().crop_proportion);
 
-		if (frame == nullptr)
+		if(frame == nullptr)
 		{
 			// As Video Filter
-			if (m_TestMode || !FSREffect::Render(m_Context, render_size, render_region))
+			if(m_TestMode || !FSREffect::Render(m_Context, render_size, render_region))
 				obs_source_skip_video_filter(m_Context);
 		}
 		else
@@ -247,7 +247,7 @@ namespace lvk
 			// As Effects Filter
 			if(m_TestMode)
 				DefaultEffect::Render(frame);
-			else if (!FSREffect::Render(frame, render_size, render_region))
+			else if(!FSREffect::Render(frame, render_size, render_region))
 				obs_source_skip_video_filter(m_Context);
 		}
 	}
@@ -256,7 +256,7 @@ namespace lvk
 
 	void VSFilter::filter(FrameBuffer& buffer)
 	{
-		if (m_TestMode)
+		if(m_TestMode)
 		{
 			m_Filter.process(buffer, buffer, true);
 			if(m_Filter.ready())

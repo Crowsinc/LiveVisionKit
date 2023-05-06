@@ -32,7 +32,7 @@ namespace lvk
 	CASEffect::CASEffect()
 		: OBSEffect("cas")
 	{
-		if (handle() != nullptr)
+		if(handle() != nullptr)
 		{
 			obs_enter_graphics();
 

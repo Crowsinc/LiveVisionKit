@@ -74,7 +74,7 @@ namespace lvk::ocl
 				s_TestPassed = false;
 			}
 
-			if (!s_TestPassed.value())
+			if(!s_TestPassed.value())
 			{
 				lvk::log::error("The OpenCL interop context failed to initialize and has been disabled! (bad drivers?)");
 				return false;
@@ -118,7 +118,7 @@ namespace lvk::ocl
 
 			gs_texture_destroy(obs_texture);
 
-			if (!s_TestPassed.value())
+			if(!s_TestPassed.value())
 			{
 				Release();
 				lvk::log::error("The OpenCL interop context failed to pass validation tests and has been disabled!");
@@ -130,7 +130,7 @@ namespace lvk::ocl
 		// NOTE: We are making the assumption that 
 		// OBS only ever has one graphics context. 
 		LVK_ASSERT(gs_get_context() == s_GraphicsContext);
-		if (!Attached())
+		if(!Attached())
 		{
 			// If the context is not attached to the current thread, then bind it
 			s_OCLContext.bind();
@@ -160,10 +160,10 @@ namespace lvk::ocl
 
 	bool InteropContext::Supported()
 	{
-		if (!s_Supported.has_value())
+		if(!s_Supported.has_value())
 		{
 			// NOTE: this check is actually relatively slow for what it does (~0.1ms)
-			if (cv::ocl::haveOpenCL())
+			if(cv::ocl::haveOpenCL())
 			{
 				auto& device = cv::ocl::Device::getDefault();
 				try 

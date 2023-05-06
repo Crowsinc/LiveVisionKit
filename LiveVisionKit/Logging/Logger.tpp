@@ -41,7 +41,7 @@ namespace lvk
 	{
         m_Started = true;
 
-        if (!m_HoldInputs)
+        if(!m_HoldInputs)
 		{
 			if(m_NewRecord)
 				begin_record(m_Stream);
@@ -115,7 +115,7 @@ namespace lvk
 	{
         m_Started = true;
 
-        if (!m_HoldRecord)
+        if(!m_HoldRecord)
 		{
 			end_record(m_Stream);
 			m_NewRecord = true;

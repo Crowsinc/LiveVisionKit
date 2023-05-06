@@ -108,11 +108,11 @@ namespace lvk
             static_cast<int>(obs_source_get_base_height(target))
 		);
 
-		if (!is_renderable(source, source_size, render_size, args...))
+		if(!is_renderable(source, source_size, render_size, args...))
 			return false;
 
 		// Perform normal rendering of source filter
-		if (obs_source_process_filter_begin(source, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
+		if(obs_source_process_filter_begin(source, GS_RGBA, OBS_ALLOW_DIRECT_RENDERING))
 		{
 			obs_source_process_filter_tech_end(
 				source,
@@ -163,7 +163,7 @@ namespace lvk
             static_cast<int>(gs_texture_get_height(texture))
 		);
 
-		if (!is_renderable(nullptr, source_size, render_size, args...))
+		if(!is_renderable(nullptr, source_size, render_size, args...))
 			return false;
 
 		const bool use_srgb = gs_get_linear_srgb();
@@ -172,7 +172,7 @@ namespace lvk
 		gs_enable_framebuffer_srgb(use_srgb);
 
 		auto image_param = gs_effect_get_param_by_name(handle(), "image");
-		if (use_srgb)
+		if(use_srgb)
 			gs_effect_set_texture_srgb(image_param, texture);
 		else
 			gs_effect_set_texture(image_param, texture);
@@ -217,7 +217,7 @@ namespace lvk
 			effect_path.c_str()
 		);
 
-		if (found_path != nullptr)
+		if(found_path != nullptr)
 		{
 			obs_enter_graphics();
 
