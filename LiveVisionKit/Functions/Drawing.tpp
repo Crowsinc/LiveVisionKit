@@ -88,10 +88,10 @@ namespace lvk
         const std::vector<cv::Point_<T>>& points,
         const cv::Scalar& color,
         const int32_t point_size,
-        const cv::Scalar& point_scaling
+        const cv::Size2f& coord_scaling
     )
     {
-        LVK_ASSERT(point_scaling[0] >= 0 && point_scaling[1] >= 0);
+        LVK_ASSERT(coord_scaling.width >= 0 && coord_scaling.height >= 0);
         LVK_ASSERT(dst.type() == CV_8UC3);
         LVK_ASSERT(point_size >= 1);
         LVK_ASSERT(!dst.empty());
@@ -107,7 +107,7 @@ namespace lvk
         // Upload and scale points to 32bit int image coords.
         thread_local cv::UMat staging_buffer, points_buffer;
         cv::Mat(points, false).copyTo(staging_buffer);
-        cv::multiply(staging_buffer, point_scaling, points_buffer, 1, CV_32S);
+        cv::multiply(staging_buffer, cv::Scalar(coord_scaling.width, coord_scaling.height), points_buffer, 1, CV_32S);
 
         // Find optimal work sizes for the 1D points buffer.
         size_t global_work_size[3], local_work_size[3];

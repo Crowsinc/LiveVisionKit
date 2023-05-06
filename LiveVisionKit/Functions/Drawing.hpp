@@ -65,7 +65,7 @@ namespace lvk
         const std::vector<cv::Point_<T>>& points,
         const cv::Scalar& color,
         const int32_t point_size = 10,
-        const cv::Scalar& point_scaling = {1, 1}
+        const cv::Size2f& coord_scaling = {1, 1}
     );
 
 	template<typename T>
