@@ -28,6 +28,10 @@ namespace lvk
 {
 
 //---------------------------------------------------------------------------------------------------------------------
+
+    constexpr size_t MAX_FRAME_SKIPS = 15;
+
+//---------------------------------------------------------------------------------------------------------------------
 	
 	std::unordered_map<const obs_source_t*, VisionFilter::SourceCache> VisionFilter::s_SourceCaches;
 	std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> VisionFilter::s_Filters;
@@ -73,15 +77,15 @@ namespace lvk
 
 	void VisionFilter::release_resources()
 	{
-		while (m_Source != nullptr && !m_AsyncFrameQueue.empty())
+		while(m_Source != nullptr && !m_AsyncFrameQueue.empty())
 		{
-			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
+			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front().first);
 			m_AsyncFrameQueue.pop_front();
 		}
 
 		obs_enter_graphics();
 
-		if (m_RenderBuffer != nullptr)
+		if(m_RenderBuffer != nullptr)
 		{
 			gs_texture_destroy(m_RenderBuffer);
 			m_RenderBuffer = nullptr;
@@ -96,11 +100,11 @@ namespace lvk
 	{
 		std::scoped_lock cache_lock(s_CacheMutex);
 
-		if (m_CacheKey != nullptr)
+		if(m_CacheKey != nullptr)
 		{
 			s_SourceCaches[m_CacheKey].refs--;
 
-			if (s_SourceCaches[m_CacheKey].refs == 0)
+			if(s_SourceCaches[m_CacheKey].refs == 0)
 			{
 				log::warn("Releasing filter cache for \'%s\'", obs_source_get_name(m_CacheKey));
 				s_SourceCaches.erase(m_CacheKey);
@@ -115,13 +119,13 @@ namespace lvk
 		std::scoped_lock cache_lock(s_CacheMutex);
 
 		// Lazy initialization of source cache.
-		if (m_CacheKey == nullptr)
+		if(m_CacheKey == nullptr)
 		{
 			// NOTE: this assumes that a filter's parent cannot change in its life time. 
 			// This seems to hold true in the OBS source but is not guaranteed in the future. 
 			m_CacheKey = obs_filter_get_parent(m_Context);
 
-			if (s_SourceCaches.count(m_CacheKey) == 0)
+			if(s_SourceCaches.count(m_CacheKey) == 0)
 				s_SourceCaches.emplace(m_CacheKey, SourceCache{});
 			else
 				s_SourceCaches[m_CacheKey].refs++;
@@ -135,7 +139,7 @@ namespace lvk
 	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
 	{
 		m_Source = obs_filter_get_parent(m_Context);
-		if (m_Source == nullptr || input_frame == nullptr)
+		if(m_Source == nullptr || input_frame == nullptr)
 			return input_frame;
 
 		auto& buffer = fetch_cache().frame_buffer;
@@ -143,9 +147,9 @@ namespace lvk
 		// If we are at the start of a new chain, upload the frame to the frame buffer. 
 		// If the upload fails, because the frame format isn't supported, then we will
 		// disable this filter and pass the given frame down the filter chain.
-		if (is_vision_filter_chain_start())
+		if(is_vision_filter_chain_start())
 		{
-			if (!buffer.try_upload_frame(input_frame))
+			if(!buffer.try_upload_frame(input_frame))
 			{
 				log::error(
 					"\'%s\' was applied on an unsupported video stream (%s), disabling the filter...",
@@ -162,14 +166,14 @@ namespace lvk
 		filter(buffer);
 
 		auto output_frame = match_async_frame(buffer, input_frame);
-		if (output_frame == nullptr)
+		if(output_frame == nullptr)
 			return nullptr;
 
 		// If the next filter is not a vision filter, then we need to save the
 		// frame buffer back into the OBS frame for the non-vision filter.
-		if (is_vision_filter_chain_end())
+		if(is_vision_filter_chain_end())
 		{
-			if (!buffer.try_download_frame(output_frame))
+			if(!buffer.try_download_frame(output_frame))
 			{
 				log::error(
 					"\'%s\' tried to download its frame buffer to an unsupported video stream! (%s)",
@@ -188,50 +192,61 @@ namespace lvk
 	{
 		obs_source_frame* output_frame = nullptr;
 
-		if(!output_buffer.is_empty())
-		{
-			// Directly return the frame if there is no existing or introduced filter delay.
-			if (m_AsyncFrameQueue.empty() && output_buffer.timestamp == input_frame->timestamp)
-				return input_frame;
+        // If there is no output buffer, then we are just building delay.
+        if(output_buffer.is_empty())
+        {
+            m_AsyncFrameQueue.emplace_back(input_frame, 0);
+            return nullptr;
+        }
 
-			m_AsyncFrameQueue.push_back(input_frame);
+        // If the output buffer is already matched with the input frame then we
+        // can directly return. This will be the case for all zero delay filters.
+        // Otherwise, we need to go through the full matching and clean up process.
+        if(m_AsyncFrameQueue.empty() && output_buffer.timestamp == input_frame->timestamp)
+        {
+            return input_frame;
+        }
+        else m_AsyncFrameQueue.emplace_back(input_frame, 0);
 
-			// Find the frame which matches the output buffer, this should be O(1) under
-			// normal operation because the frame should be at the front of the queue.
-			auto matching_frame = std::find_if(
-				m_AsyncFrameQueue.begin(),
-				m_AsyncFrameQueue.end(), 
-				[&](obs_source_frame* frame) { return frame->timestamp == output_buffer.timestamp; }
-			);
+        // Attempt to match the output buffer to an existing frame in the queue. The
+        // frame queue is in the same order that the filter is applied to the frames,
+        // so any frames which come before the match are assumed to be skipped. Once
+        // a frame has been skipped too many times it will be deallocated and removed.
+        size_t released_frames = 0;
+        for(auto iter = m_AsyncFrameQueue.begin(); iter != m_AsyncFrameQueue.end(); ++iter)
+        {
+            obs_source_frame* frame = iter->first;
+            size_t& skips = iter->second;
 
-			if(matching_frame != m_AsyncFrameQueue.end())
-			{
-				// Release any frames before the matched frame that have been skipped
-				auto skipped_frames = std::distance(m_AsyncFrameQueue.begin(), matching_frame);
-				for(auto i = 0; i < skipped_frames; i++)
-				{
-					obs_source_release_frame(m_Source, m_AsyncFrameQueue.front());
-					m_AsyncFrameQueue.pop_front();
-				}
+            if(frame->timestamp == output_buffer.timestamp)
+            {
+                // Frame was matched
+                output_frame = frame;
+                m_AsyncFrameQueue.erase(iter);
+                break;
+            }
 
-				log::warn_if(
-					skipped_frames > 0,
-					"\'%s\' released %d frames.",
-					obs_source_get_name(m_Context),
-					skipped_frames
-				);
-			
-				output_frame = *matching_frame;
-				m_AsyncFrameQueue.pop_front();
-			}
-			
-			log::error_if(
-				output_frame == nullptr,
-				"\'%s\' failed to find a matching frame!",
-				obs_source_get_name(m_Context)
-			);
-		}
-		else m_AsyncFrameQueue.push_back(input_frame);
+            if(skips++ == MAX_FRAME_SKIPS)
+            {
+                // Frame needs to be released
+                m_AsyncFrameQueue.erase(iter);
+                obs_source_release_frame(m_Source, frame);
+                released_frames++;
+            }
+        }
+
+        log::warn_if(
+            released_frames > 0,
+            "\'%s\' released %d frames.",
+            obs_source_get_name(m_Context),
+            released_frames
+        );
+
+        log::error_if(
+            output_frame == nullptr,
+            "\'%s\' failed to find a matching frame!",
+            obs_source_get_name(m_Context)
+        );
 
 		return output_frame;
 	}
@@ -243,12 +258,12 @@ namespace lvk
 		LVK_ASSERT(gs_get_context() != nullptr);
 
 		m_Source = obs_filter_get_parent(m_Context);
-		if (m_Source == nullptr)
+		if(m_Source == nullptr)
 			return;
 
 		// Disable the filter if we are passed a HDR color space
 		const auto color_space = obs_source_get_color_space(m_Source, 0, nullptr);
-		if (!any_of(color_space, GS_CS_SRGB))
+		if(!any_of(color_space, GS_CS_SRGB))
 		{
 			log::error(
 				"\'%s\' was applied with an unsupported color space, disabling the filter...",
@@ -265,7 +280,7 @@ namespace lvk
 		// this is true, we can avoid re-rendering the filter by rendering the
 		// render buffer, which must contain the most up to date frame because
 		// we are the last filter in the chain.
-		if (gs_get_render_target() == nullptr)
+		if(gs_get_render_target() == nullptr)
 		{
 			hybrid_render(m_RenderBuffer);
 			return;
@@ -273,7 +288,7 @@ namespace lvk
 
 		// All asynchronous vision filters which are configured with a render()
 		// are hybrid render filters by definition, and should be handled here.
-		if (m_Asynchronous)
+		if(m_Asynchronous)
 		{
 			m_HybridRender = true;
 			hybrid_render(nullptr);
@@ -290,13 +305,12 @@ namespace lvk
 		// Render to the frame buffer if we are at the start of a new chain,
 		// otherwise pretend to skip the filter so that OBS travels up the
 		// filter chain to process previous effects filters.
-		if (is_chain_start = is_vision_filter_chain_start(); is_chain_start)
+		if(is_chain_start = is_vision_filter_chain_start(); is_chain_start)
 		{
-			// If rendering to the frame buffer somehow fails, then
-			// release the buffer so that upcoming filters don't try
-			// and filter and an outdated frame. This should rarely
-			// occur during normal operation.
-			if (!acquire_render(buffer))
+			// If rendering to the frame buffer somehow fails, then release
+            // the buffer so that upcoming filters don't try to filter an
+            // outdated frame. This shouldn't occur during normal operation.
+			if(!acquire_render(buffer))
 			{
 				buffer.data.release();
 				obs_source_skip_video_filter(m_Context);
@@ -311,18 +325,18 @@ namespace lvk
 
 		// Here we are travelling back down the filter chain so 
 		// perform filtering on the buffer's captured frame, if any. 
-		if (!buffer.is_empty())
+		if(!buffer.is_empty())
 		{
 			m_TickTimer.tick();
 			filter(buffer);
 
 			// Frame was captured by the filter (probably to introduce delay).
-			if (buffer.is_empty())
+			if(buffer.is_empty())
 				return;
 
 			// If this is the last filter in the vision filter chain,
 			// then render out the buffer for the non-vision filters. 
-			if (is_chain_end = is_vision_filter_chain_end(); is_chain_end)
+			if(is_chain_end = is_vision_filter_chain_end(); is_chain_end)
 			{
 				prepare_render_buffer(buffer.width(), buffer.height());
 				buffer.export_texture(m_RenderBuffer);
@@ -331,7 +345,7 @@ namespace lvk
 		}
 
 		// Clean up buffers if we are not at the chain ends
-		if (!is_chain_start && !is_chain_end && m_RenderBuffer != nullptr)
+		if(!is_chain_start && !is_chain_end && m_RenderBuffer != nullptr)
 		{
 			gs_texture_destroy(m_RenderBuffer);
 			m_RenderBuffer = nullptr;
@@ -363,10 +377,10 @@ namespace lvk
 			// recent test, corresponding to the previous filter, is returned at the end.
 
 			// Deactivate search once we reach the reference filter.
-			if (curr_filter == ref_filter->m_Context)
+			if(curr_filter == ref_filter->m_Context)
 				runflag = false;
 
-			if (runflag && obs_source_enabled(curr_filter))
+			if(runflag && obs_source_enabled(curr_filter))
 			{
 				const auto flags = obs_source_get_output_flags(curr_filter);
 
@@ -376,21 +390,20 @@ namespace lvk
 				const bool is_vision_filter = s_Filters.count(curr_filter) != 0;
 				const bool is_hybrid_render = is_vision_filter && s_Filters.at(curr_filter).get().m_HybridRender;
 
-				if (is_same_type)
+				if(is_same_type)
 				{
 					// Start chain if the previous filter is not a vision filter or we
 					// are both synchronous, but the previous filter is hybrid render.
 					start_chain = !is_vision_filter || (!is_asynchronous && is_hybrid_render);
 				}
-				else if (!is_same_type && is_asynchronous && is_hybrid_render)
+				else if(!is_same_type && is_asynchronous && is_hybrid_render)
 				{
 					// Always start a new chain if we are synchronous and the 
 					// previous filter is an asynchronous hybrid render filter
 					start_chain = true;
 				}
 			}
-
-			}, &search_state);
+        }, &search_state);
 
 		return std::get<0>(search_state);
 	}
@@ -408,7 +421,7 @@ namespace lvk
 		>;
 
 		// Always end the chain if we have synchronous hybrid render
-		if (m_HybridRender && !m_Asynchronous)
+		if(m_HybridRender && !m_Asynchronous)
 			return true;
 
 		// NOTE: Search result defaults to ending the chain by default
@@ -418,7 +431,7 @@ namespace lvk
 
 			auto& [end_chain, runflag, ref_filter] = *static_cast<SearchState*>(state);
 
-			if (runflag && obs_source_enabled(curr_filter))
+			if(runflag && obs_source_enabled(curr_filter))
 			{
 				const auto flags = obs_source_get_output_flags(curr_filter);
 
@@ -429,13 +442,13 @@ namespace lvk
 				const bool is_hybrid_render = is_vision_filter && s_Filters.at(curr_filter).get().m_HybridRender;
 
 				// First filter of the same type is the next filter
-				if (is_same_type)
+				if(is_same_type)
 				{
 					// End chain if next filter is not another vision filter
 					end_chain = !is_vision_filter;
 					runflag = false;
 				}
-				else if (!is_same_type && is_asynchronous && is_hybrid_render)
+				else if(!is_same_type && is_asynchronous && is_hybrid_render)
 				{
 					// Always end the chain if we are synchronous and the 
 					// next filter is an asynchronous hybrid render filter
@@ -445,7 +458,7 @@ namespace lvk
 			}
 
 			// Only activate the search once we reach the reference filter
-			if (curr_filter == ref_filter->m_Context)
+			if(curr_filter == ref_filter->m_Context)
 				runflag = true;
 
 			}, &search_state);
@@ -461,11 +474,11 @@ namespace lvk
 		const uint32_t source_width = obs_source_get_base_width(target);
 		const uint32_t source_height = obs_source_get_base_height(target);
 
-		if (target == nullptr || source_width == 0 || source_height == 0)
+		if(target == nullptr || source_width == 0 || source_height == 0)
 			return false;
 
 		prepare_render_buffer(source_width, source_height);
-		if (DefaultEffect::Acquire(m_Context, m_RenderBuffer))
+		if(DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
 			buffer.import_texture(m_RenderBuffer);
 			buffer.timestamp = os_gettime_ns();

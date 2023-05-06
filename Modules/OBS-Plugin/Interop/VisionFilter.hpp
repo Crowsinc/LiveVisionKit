@@ -18,10 +18,9 @@
 #pragma once
 
 #include <LiveVisionKit.hpp>
-#include <opencv2/core.hpp>
-#include <obs-module.h>
-
 #include <unordered_map>
+#include <obs-module.h>
+#include <tuple>
 #include <mutex>
 #include <deque>
 
@@ -81,7 +80,6 @@ namespace lvk
 		obs_source_frame* match_async_frame(FrameBuffer& output_buffer, obs_source_frame* input_frame);
 
 	private:
-
 		static std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> s_Filters;
 		static std::unordered_map<const obs_source_t*, SourceCache> s_SourceCaches;
 		static std::mutex s_CacheMutex;
@@ -94,7 +92,7 @@ namespace lvk
 		TickTimer m_TickTimer;
 
 		gs_texture_t* m_RenderBuffer = nullptr;
-		std::deque<obs_source_frame*> m_AsyncFrameQueue;
+		std::deque<std::pair<obs_source_frame*, size_t>> m_AsyncFrameQueue;
 	};
 
 }
