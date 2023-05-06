@@ -42,22 +42,11 @@ namespace lvk
 	constexpr auto CROP_PERCENTAGE_MIN = 1;
 	constexpr auto CROP_PERCENTAGE_MAX = 25;
 
-	constexpr auto PROP_MOTION_MODEL = "MOTION_MODEL";
-	constexpr auto MOTION_MODEL_AFFINE = "AFFINE";
-	constexpr auto MOTION_MODEL_HOMOGRAPHY = "HOMOGRAPHY";
-	
-	constexpr auto MOTION_MODEL_DYNAMIC = "DYNAMIC";
-	constexpr auto MOTION_MODEL_DEFAULT = MOTION_MODEL_DYNAMIC;
-
-	constexpr auto PROP_SUPPRESSION_MODE = "SUPPRESSION_MODE";
-	constexpr auto SUPPRESSION_MODE_OFF = "SM_OFF";
-	constexpr auto SUPPRESSION_MODE_STRICT = "SM_STRICT";
-	constexpr auto SUPPRESSION_MODE_RELAXED = "SM_RELAXED";
-	constexpr auto SUPPRESSION_MODE_DEFAULT = SUPPRESSION_MODE_STRICT;
-
-	const auto SUPPRESSION_RANGE_STRICT = cv::Point2f(0.70f, 0.90f);
-	const auto SUPPRESSION_RANGE_RELAXED = cv::Point2f(0.0f, 0.30f);
-	constexpr auto SUPPRESSION_SMOOTHING_STEP = 3.0f;
+	constexpr auto PROP_SUPPRESSION_THRESH = "SUPPRESSION_THRESH";
+    constexpr auto SUPPRESSION_THRESH_DEFAULT = 0.7f;
+    constexpr auto SUPPRESSION_THRESH_MIN = 0.0f;
+    constexpr auto SUPPRESSION_THRESH_MAX = 1.0f;
+    constexpr auto STABILITY_UNIFORMITY_RATIO = 0.5f;
 
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
@@ -104,27 +93,15 @@ namespace lvk
 		);
 		obs_property_int_set_suffix(property, "%");
 
-		property = obs_properties_add_list(
-			properties,
-			PROP_MOTION_MODEL,
-			L("vs.model"),
-			OBS_COMBO_TYPE_LIST,
-			OBS_COMBO_FORMAT_STRING
-		);
-		obs_property_list_add_string(property, L("vs.model.dynamic"), MOTION_MODEL_DYNAMIC);
-		obs_property_list_add_string(property, L("vs.model.affine"), MOTION_MODEL_AFFINE);
-		obs_property_list_add_string(property, L("vs.model.homography"), MOTION_MODEL_HOMOGRAPHY);
 
-		property = obs_properties_add_list(
-			properties,
-			PROP_SUPPRESSION_MODE,
-			L("vs.suppression"),
-			OBS_COMBO_TYPE_LIST,
-			OBS_COMBO_FORMAT_STRING
-		);
-		obs_property_list_add_string(property, L("vs.suppression.off"), SUPPRESSION_MODE_OFF);
-		obs_property_list_add_string(property, L("vs.suppression.strict"), SUPPRESSION_MODE_STRICT);
-		obs_property_list_add_string(property, L("vs.suppression.relaxed"), SUPPRESSION_MODE_RELAXED);
+        obs_properties_add_float_slider(
+            properties,
+            PROP_SUPPRESSION_THRESH,
+            L("vs.suppression"),
+            SUPPRESSION_THRESH_MIN,
+            SUPPRESSION_THRESH_MAX,
+            0.01f
+        );
 
 		obs_properties_add_bool(
 			properties,
@@ -147,10 +124,9 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+        obs_data_set_default_double(settings, PROP_SUPPRESSION_THRESH, SUPPRESSION_THRESH_DEFAULT);
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
-		obs_data_set_default_string(settings, PROP_MOTION_MODEL, MOTION_MODEL_DEFAULT);
-		obs_data_set_default_string(settings, PROP_SUPPRESSION_MODE, SUPPRESSION_MODE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
@@ -167,35 +143,13 @@ namespace lvk
 		const float frame_ms = 1000.0f/video_fps;
 
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
-			stab_settings.crop_proportion = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
-			stab_settings.smoothing_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
+			stab_settings.scene_margins = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
+			stab_settings.path_prediction_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
-			stab_settings.suppression_smoothing_rate = SUPPRESSION_SMOOTHING_STEP / video_fps;
 
-			// TODO: remove Motion Model
-//			const std::string new_model = obs_data_get_string(settings, PROP_MOTION_MODEL);
-//			if(new_model == MOTION_MODEL_AFFINE)
-//				stab_settings.motion_model = MotionModel::AFFINE;
-//			else if(new_model == MOTION_MODEL_HOMOGRAPHY)
-//				stab_settings.motion_model = MotionModel::HOMOGRAPHY;
-//			else if(new_model == MOTION_MODEL_DYNAMIC)
-//				stab_settings.motion_model = MotionModel::DYNAMIC;
-
-			// Suppression Mode
-			const std::string new_mode = obs_data_get_string(settings, PROP_SUPPRESSION_MODE);
-			if(new_mode == SUPPRESSION_MODE_STRICT)
-			{
-				stab_settings.auto_suppression = true;
-				stab_settings.suppression_threshold = SUPPRESSION_RANGE_STRICT.y;
-				stab_settings.suppression_saturation_limit = SUPPRESSION_RANGE_STRICT.x;
-			}
-			else if(new_mode == SUPPRESSION_MODE_RELAXED)
-			{
-				stab_settings.auto_suppression = true;
-				stab_settings.suppression_threshold = SUPPRESSION_RANGE_RELAXED.y;
-				stab_settings.suppression_saturation_limit = SUPPRESSION_RANGE_RELAXED.x;
-			}
-			else stab_settings.auto_suppression = false;
+			// Suppression Threshold
+            stab_settings.stability_threshold = obs_data_get_double(settings, PROP_SUPPRESSION_THRESH);
+            stab_settings.uniformity_threshold = stab_settings.stability_threshold * STABILITY_UNIFORMITY_RATIO;
 		});
 
 		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
@@ -234,7 +188,7 @@ namespace lvk
             static_cast<int>(obs_source_get_base_width(target)),
             static_cast<int>(obs_source_get_base_height(target))
         );
-		const cv::Rect render_region = crop(render_size, m_Filter.settings().crop_proportion);
+		const cv::Rect render_region = crop(render_size, m_Filter.settings().scene_margins);
 
 		if(frame == nullptr)
 		{

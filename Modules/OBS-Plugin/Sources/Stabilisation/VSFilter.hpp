@@ -47,7 +47,6 @@ namespace lvk
 		void draw_debug_hud(cv::UMat& frame);
 
 	private:
-
 		obs_source_t* m_Context = nullptr;
 
 		StabilizationFilter m_Filter;
