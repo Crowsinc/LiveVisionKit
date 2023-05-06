@@ -45,26 +45,26 @@ namespace lvk
 
     void GridDetector::configure(const GridDetectorSettings& settings)
     {
-        LVK_ASSERT(settings.input_resolution.width > 0);
-        LVK_ASSERT(settings.input_resolution.height > 0);
+        LVK_ASSERT(settings.detect_resolution.width > 0);
+        LVK_ASSERT(settings.detect_resolution.height > 0);
         LVK_ASSERT_01(settings.detection_threshold);
 
         // Grids must be smaller or equal to resolution
-        LVK_ASSERT(settings.feature_grid_shape.width <= settings.input_resolution.width);
-        LVK_ASSERT(settings.feature_grid_shape.height <= settings.input_resolution.height);
-        LVK_ASSERT(settings.detection_zones.width <= settings.input_resolution.width);
-        LVK_ASSERT(settings.detection_zones.height <= settings.input_resolution.height);
+        LVK_ASSERT(settings.feature_grid_shape.width <= settings.detect_resolution.width);
+        LVK_ASSERT(settings.feature_grid_shape.height <= settings.detect_resolution.height);
+        LVK_ASSERT(settings.detection_zones.width <= settings.detect_resolution.width);
+        LVK_ASSERT(settings.detection_zones.height <= settings.detect_resolution.height);
 
         // Grids must evenly divide the resolution
-        LVK_ASSERT(settings.input_resolution.height % settings.detection_zones.height == 0);
-        LVK_ASSERT(settings.input_resolution.width % settings.detection_zones.width == 0);
-        LVK_ASSERT(settings.input_resolution.height % settings.feature_grid_shape.height == 0);
-        LVK_ASSERT(settings.input_resolution.width % settings.feature_grid_shape.width == 0);
+        LVK_ASSERT(settings.detect_resolution.height % settings.detection_zones.height == 0);
+        LVK_ASSERT(settings.detect_resolution.width % settings.detection_zones.width == 0);
+        LVK_ASSERT(settings.detect_resolution.height % settings.feature_grid_shape.height == 0);
+        LVK_ASSERT(settings.detect_resolution.width % settings.feature_grid_shape.width == 0);
 
         m_Settings = settings;
 
-        const cv::Rect input_region({0,0}, settings.input_resolution);
-        const auto input_area = static_cast<float>(settings.input_resolution.area());
+        const cv::Rect input_region({0,0}, settings.detect_resolution);
+        const auto input_area = static_cast<float>(settings.detect_resolution.area());
         const auto detect_zones = static_cast<float>(settings.detection_zones.area());
         const auto feature_blocks = static_cast<float>(settings.feature_grid_shape.area());
 
@@ -87,7 +87,7 @@ namespace lvk
 
 	void GridDetector::construct_detection_zones()
 	{
-        m_DetectionZones.align({{0,0}, m_Settings.input_resolution});
+        m_DetectionZones.align({{0,0}, m_Settings.detect_resolution});
         const cv::Size2f detection_zone_size = m_DetectionZones.key_size();
 
         m_DetectionZones.clear();
@@ -243,7 +243,7 @@ namespace lvk
 
     const cv::Size& GridDetector::input_resolution() const
     {
-        return m_Settings.input_resolution;
+        return m_Settings.detect_resolution;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

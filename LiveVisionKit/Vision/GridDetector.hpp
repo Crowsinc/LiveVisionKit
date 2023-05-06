@@ -27,7 +27,7 @@ namespace lvk
 
     struct GridDetectorSettings
     {
-        cv::Size input_resolution = {640, 360};
+        cv::Size detect_resolution = {640, 360};
         cv::Size feature_grid_shape = {32, 18};
 
         cv::Size detection_zones = {2, 1};

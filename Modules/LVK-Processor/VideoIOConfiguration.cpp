@@ -423,7 +423,7 @@ namespace clt
                 config_parser.add_variable(
                     {".crop_prop", ".cp"},
                     "Used to percentage crop and movement area allowed for stabilization",
-                    &config.crop_proportion
+                    &config.scene_margins
                 );
                 config_parser.add_switch(
                     {".crop_out", ".co"},
@@ -433,7 +433,7 @@ namespace clt
                 config_parser.add_variable(
                     {".smoothing", ".s"},
                     "The amount of camera smoothing to apply to the video.",
-                    &config.smoothing_frames
+                    &config.path_prediction_frames
                 );
             }
         );

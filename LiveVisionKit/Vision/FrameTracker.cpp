@@ -53,7 +53,7 @@ namespace lvk
         LVK_ASSERT_01(settings.uniformity_threshold);
         LVK_ASSERT_01(settings.stability_threshold);
 
-        m_FeatureDetector.configure(settings.detection_settings);
+        m_FeatureDetector.configure(settings);
         m_TrackedPoints.reserve(m_FeatureDetector.feature_capacity());
         m_MatchedPoints.reserve(m_FeatureDetector.feature_capacity());
         m_InlierStatus.reserve(m_FeatureDetector.feature_capacity());
@@ -236,7 +236,7 @@ namespace lvk
 
     const cv::Size& FrameTracker::tracking_resolution() const
     {
-        return m_Settings.detection_settings.input_resolution;
+        return m_Settings.detect_resolution;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

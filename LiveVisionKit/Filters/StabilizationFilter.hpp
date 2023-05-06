@@ -25,15 +25,10 @@
 namespace lvk
 {
 
-	struct StabilizationFilterSettings
+	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathStabilizerSettings
 	{
-        FrameTrackerSettings tracking_settings;
-
-		size_t smoothing_frames = 10;
 		bool stabilize_output = true;
-
 		bool crop_output = false;
-		float crop_proportion = 0.05f;
 	};
 
 

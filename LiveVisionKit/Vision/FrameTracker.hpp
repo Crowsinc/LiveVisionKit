@@ -26,12 +26,9 @@
 namespace lvk
 {
 
-    struct FrameTrackerSettings
+    struct FrameTrackerSettings : public GridDetectorSettings
     {
         cv::Size motion_resolution = {2, 2};
-        GridDetectorSettings detection_settings{
-            .input_resolution = {640, 360}
-        };
 
         // Motion Estimation Constraints
         float stability_threshold = 0.3f;

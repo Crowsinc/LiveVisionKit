@@ -36,22 +36,15 @@ namespace lvk
 
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
-        LVK_ASSERT_01_STRICT(settings.crop_proportion);
-        LVK_ASSERT(settings.smoothing_frames > 0);
-
         // Reset the tracking when disabling the stabilization otherwise we will have
         // a discontinuity in the tracking once we start up again with a brand new scene.
         if(m_Settings.stabilize_output && !settings.stabilize_output)
             reset_context();
 
-        m_NullMotion.resize(settings.tracking_settings.motion_resolution);
+        m_NullMotion.resize(settings.motion_resolution);
 
-        m_FrameTracker.configure(settings.tracking_settings);
-        m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
-            path_settings.scene_margins = settings.crop_proportion;
-            path_settings.path_prediction_frames = settings.smoothing_frames;
-            path_settings.motion_resolution = settings.tracking_settings.motion_resolution;
-        });
+        m_FrameTracker.configure(settings);
+        m_Stabilizer.configure(settings);
 
         m_Settings = settings;
     }
