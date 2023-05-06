@@ -18,7 +18,6 @@
 #include "StabilizationFilter.hpp"
 
 #include "Directives.hpp"
-#include "Functions/Math.hpp"
 #include "Functions/Drawing.hpp"
 #include "Functions/Extensions.hpp"
 
@@ -37,20 +36,17 @@ namespace lvk
 
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
-        LVK_ASSERT(settings.smoothing_frames > 0);
         LVK_ASSERT_01_STRICT(settings.crop_proportion);
-        LVK_ASSERT(between(settings.suppression_threshold, settings.suppression_saturation_limit + 1e-4f, 1.0f));
-        LVK_ASSERT(between(settings.suppression_saturation_limit, 0.0f, settings.suppression_threshold - 1e-4f));
-        LVK_ASSERT(settings.suppression_smoothing_rate > 0);
+        LVK_ASSERT(settings.smoothing_frames > 0);
 
         // Reset the tracking when disabling the stabilization otherwise we will have
         // a discontinuity in the tracking once we start up again with a brand new scene.
         if(m_Settings.stabilize_output && !settings.stabilize_output)
             reset_context();
 
-        m_FrameTracker.configure(settings.tracking_settings);
         m_NullMotion.resize(settings.tracking_settings.motion_resolution);
 
+        m_FrameTracker.configure(settings.tracking_settings);
         m_Stabilizer.reconfigure([&](PathStabilizerSettings& path_settings) {
             path_settings.scene_margins = settings.crop_proportion;
             path_settings.path_prediction_frames = settings.smoothing_frames;
@@ -88,7 +84,7 @@ namespace lvk
                 draw_points(
                     input.data,
                     m_FrameTracker.tracking_points(),
-                    lerp(yuv::GREEN, yuv::RED, m_SuppressionFactor),
+                    yuv::GREEN,
                     3,
                     cv::Size2f(input.size()) / cv::Size2f(m_FrameTracker.tracking_resolution())
                 );

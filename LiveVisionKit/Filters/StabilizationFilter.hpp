@@ -27,25 +27,13 @@ namespace lvk
 
 	struct StabilizationFilterSettings
 	{
+        FrameTrackerSettings tracking_settings;
+
 		size_t smoothing_frames = 10;
 		bool stabilize_output = true;
 
 		bool crop_output = false;
 		float crop_proportion = 0.05f;
-
-		bool auto_suppression = false;
-		float suppression_threshold = 0.9f;
-		float suppression_saturation_limit = 0.7f;
-		float suppression_smoothing_rate = 0.05f;
-
-        // TODO: organize better
-        FrameTrackerSettings tracking_settings = {
-            .motion_resolution = {48, 48},
-            .detection_settings = {
-                .feature_grid_shape = {128, 72},
-                .detection_zones = {4, 4}
-            }
-        };
 	};
 
 
@@ -79,8 +67,6 @@ namespace lvk
         ) override;
 
 	private:
-		float m_SuppressionFactor = 0.0f;
-
 		FrameTracker m_FrameTracker;
 		PathStabilizer m_Stabilizer;
 
