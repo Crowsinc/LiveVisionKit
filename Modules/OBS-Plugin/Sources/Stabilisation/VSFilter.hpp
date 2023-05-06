@@ -46,14 +46,11 @@ namespace lvk
 
 		void draw_debug_hud(cv::UMat& frame);
 
-		bool is_queue_outdated(const FrameBuffer& new_frame); // TODO: rename
-
 	private:
 
 		obs_source_t* m_Context = nullptr;
 
 		StabilizationFilter m_Filter;
-		uint64_t m_LastTimestamp = 0;
 		bool m_TestMode = false;
 	};
 

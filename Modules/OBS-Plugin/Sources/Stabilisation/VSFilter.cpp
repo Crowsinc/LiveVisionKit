@@ -256,12 +256,6 @@ namespace lvk
 
 	void VSFilter::filter(FrameBuffer& buffer)
 	{
-		if(is_queue_outdated(buffer))
-		{
-			m_Filter.restart();
-			log::warn("\'%s\' frame queue is outdated, restarting...", obs_source_get_name(m_Context));
-		}
-
 		if (m_TestMode)
 		{
 			m_Filter.process(buffer, buffer, true);
@@ -286,23 +280,6 @@ namespace lvk
 			frame_time_ms < TIMING_THRESHOLD_MS ? yuv::GREEN : yuv::RED
 		);
 		draw_rect(frame, crop_region, yuv::MAGENTA);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool VSFilter::is_queue_outdated(const FrameBuffer& new_frame)
-	{
-		// We consider the queue as being outdated if the next frame is over a second 
-		// away from the previous frame. To avoid issues with uint64_t underflow, we
-		// also consider the queue to be outdated if the previous frame is somehow 
-		// newer than the next.
-
-		const auto next_time = new_frame.timestamp;
-		const auto curr_time = m_LastTimestamp;
-		m_LastTimestamp = new_frame.timestamp;
-
-		return (curr_time > next_time)
-			|| (next_time - curr_time > static_cast<uint64_t>(Time::Seconds(1).nanoseconds())); 
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
