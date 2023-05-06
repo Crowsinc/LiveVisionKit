@@ -68,7 +68,7 @@ namespace lvk
 
         // Update the path's current state
         m_FrameQueue.push(std::move(frame));
-        (m_Path.advance(motion.size()) = m_Path.newest()) += motion;
+        m_Path.advance(motion.size()) = m_Path.newest() + motion;
 
         if(ready())
         {
