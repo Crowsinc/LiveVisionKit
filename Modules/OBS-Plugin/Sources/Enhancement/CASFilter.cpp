@@ -28,7 +28,7 @@ namespace lvk
 	constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
 	constexpr auto SHARPNESS_MIN = 0.0f;
 	constexpr auto SHARPNESS_MAX = 1.0f;
-	constexpr auto SHARPNESS_STEP = 0.05f;
+	constexpr auto SHARPNESS_STEP = 0.01f;
 	constexpr auto SHARPNESS_DEFAULT = 0.8f;
 
 //---------------------------------------------------------------------------------------------------------------------
