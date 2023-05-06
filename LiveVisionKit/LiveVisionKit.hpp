@@ -28,6 +28,7 @@
 #include "Functions/Logic.hpp"
 #include "Functions/Drawing.hpp"
 #include "Functions/Container.hpp"
+#include "Functions/Extensions.hpp"
 
 
 #include "Filters/VideoFilter.hpp"
