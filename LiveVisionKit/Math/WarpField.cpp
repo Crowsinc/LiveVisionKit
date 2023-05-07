@@ -19,13 +19,14 @@
 
 #include <array>
 #include <numeric>
+#include <opencv2/core/ocl.hpp>
 
 #include "Directives.hpp"
 #include "Math/VirtualGrid.hpp"
 #include "Functions/Drawing.hpp"
 #include "Functions/Math.hpp"
 
-#include <opencv2/core/ocl.hpp>
+#include "Functions/Extensions.hpp"
 #include "Timing/Stopwatch.hpp"
 #include "Functions/Image.hpp"
 
@@ -55,18 +56,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const cv::Mat& warp_offsets)
-        : m_WarpOffsets(warp_offsets.clone())
+    WarpField::WarpField(const cv::Mat& warp, const bool as_map)
+        : m_WarpOffsets(warp.clone())
     {
-        LVK_ASSERT(warp_offsets.type() == CV_32FC2);
+        LVK_ASSERT(m_WarpOffsets.type() == CV_32FC2);
+
+        // If the warp was given as a map, we need to convert it to offsets.
+        if(as_map) cv::subtract(m_WarpOffsets, view_identity_field(m_WarpOffsets.size()), m_WarpOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(cv::Mat&& warp_offsets)
-        : m_WarpOffsets(std::move(warp_offsets))
+    WarpField::WarpField(cv::Mat&& warp, const bool as_map)
+        : m_WarpOffsets(std::move(warp))
     {
         LVK_ASSERT(m_WarpOffsets.type() == CV_32FC2);
+
+        // If the warp was given as a map, we need to convert it to offsets.
+        if(as_map) cv::subtract(m_WarpOffsets, view_identity_field(m_WarpOffsets.size()), m_WarpOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -367,6 +374,17 @@ namespace lvk
 
             offset.x = tolerance * offset.x + (1.0f - tolerance) * rigid_x;
             offset.y = tolerance * offset.y + (1.0f - tolerance) * rigid_y;
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::scale(const cv::Size2f& scaling_factors)
+    {
+        const cv::Size2f inverse_scaling = (1.0f / scaling_factors) - 1.0f;
+        write([&](cv::Point2f& offset, const cv::Point& coord){
+            offset.x += static_cast<float>(coord.x) * inverse_scaling.width;
+            offset.y += static_cast<float>(coord.y) * inverse_scaling.height;
         });
     }
 

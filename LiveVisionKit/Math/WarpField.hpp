@@ -38,9 +38,9 @@ namespace lvk
 
         WarpField(const cv::Size& size, const cv::Point2f& motion);
 
-        explicit WarpField(const cv::Mat& warp_offsets);
+        explicit WarpField(const cv::Mat& warp, const bool as_map = false);
 
-        explicit WarpField(cv::Mat&& warp_offsets);
+        explicit WarpField(cv::Mat&& warp, const bool as_map = false);
 
         WarpField(WarpField&& other) noexcept;
 
@@ -61,7 +61,6 @@ namespace lvk
             const std::optional<Homography>& motion_hint
         );
 
-
         void resize(const cv::Size& new_size);
 
         cv::Size size() const;
@@ -76,6 +75,7 @@ namespace lvk
         const cv::Mat& offsets() const;
 
 
+        // TODO: remove these
         cv::Point2f sample(const cv::Point& coord) const;
 
         cv::Point2f sample(const cv::Point2f& coord) const;
@@ -86,6 +86,9 @@ namespace lvk
         void warp(const cv::UMat& src, cv::UMat& dst) const;
 
         void undistort(const float tolerance = 0.7f);
+
+
+        void scale(const cv::Size2f& scaling_factors);
 
 
         void set_identity();
