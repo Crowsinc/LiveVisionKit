@@ -53,13 +53,6 @@ namespace lvk
 		for(const auto& profile : profiles)
 			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
 
-
-		obs_properties_add_bool(
-			properties,
-			PROP_CORRECT_DISTORTION,
-			L("lc.correct-distortion")
-		);
-
 		return properties;
 	}
 
@@ -67,7 +60,6 @@ namespace lvk
 
 	void LCFilter::LoadDefaults(obs_data_t* settings)
 	{
-		obs_data_set_default_bool(settings, PROP_CORRECT_DISTORTION, CORRECT_DISTORTION_DEFAULT);
 		obs_data_set_default_string(settings, PROP_PROFILE, PROFILE_DEFAULT);
 	}
 
@@ -85,9 +77,9 @@ namespace lvk
 	void LCFilter::configure(obs_data_t* settings)
 	{
 		const std::string profile = obs_data_get_string(settings, PROP_PROFILE);
-		bool profile_selected = profile != PROFILE_DEFAULT;
+        m_ProfileSelected = profile != PROFILE_DEFAULT;
 
-		if(profile_selected && m_Profile != profile)
+		if(m_ProfileSelected && m_Profile != profile)
 		{
 			if(auto parameters = CCTool::LoadProfile(profile); parameters.has_value())
 			{
@@ -97,10 +89,8 @@ namespace lvk
 				// Reset the undistort field to load in new profiles
                 m_FieldOutdated = true;
 			}
-			else profile_selected = false;
-		} 
-
-		m_CorrectDistortion = profile_selected && obs_data_get_bool(settings, PROP_CORRECT_DISTORTION);
+			else m_ProfileSelected = false;
+		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -149,7 +139,7 @@ namespace lvk
 	{
         LVK_PROFILE;
 
-		if(m_CorrectDistortion)
+		if(m_ProfileSelected)
 		{
 			prepare_undistort_maps(frame);
 

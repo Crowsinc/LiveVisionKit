@@ -46,7 +46,7 @@ namespace lvk
 
 	private:
 		obs_source_t* m_Context = nullptr;
-		bool m_CorrectDistortion = false;
+		bool m_ProfileSelected = false;
 
 		std::string m_Profile;
 		CameraParameters m_Parameters;
