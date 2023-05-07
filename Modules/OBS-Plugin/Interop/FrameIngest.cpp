@@ -21,6 +21,8 @@
 #include <thread>
 #include <LiveVisionKit.hpp>
 
+#include "Utility/ScopedProfiler.hpp"
+
 namespace lvk
 {
 
@@ -35,7 +37,7 @@ namespace lvk
 
 	std::unique_ptr<FrameIngest> FrameIngest::Select(video_format format)
 	{
-		switch (format)
+		switch(format)
 		{
 			// Planar 4xx formats
 			case video_format::VIDEO_FORMAT_YUVA:
@@ -198,6 +200,7 @@ namespace lvk
 		LVK_ASSERT_RANGE(plane_0_size.height, 1, src.height);
 		LVK_ASSERT_RANGE(plane_0_size.width, 1, src.width);
 		LVK_ASSERT_RANGE(plane_0_channels, 1, 4);
+        LVK_PROFILE;
 
 		const int import_length = plane_0_size.area() * static_cast<int>(plane_0_channels);
 
@@ -235,6 +238,7 @@ namespace lvk
 		LVK_ASSERT_RANGE(plane_1_size.height, 1, src.height);
 		LVK_ASSERT_RANGE(plane_1_size.width, 1, src.width);
 		LVK_ASSERT_RANGE(plane_1_channels, 1, 4);
+        LVK_PROFILE;
 
 		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -292,6 +296,7 @@ namespace lvk
 		LVK_ASSERT_RANGE(plane_2_size.height, 1, src.height);
 		LVK_ASSERT_RANGE(plane_2_size.width, 1, src.width);
 		LVK_ASSERT_RANGE(plane_2_channels, 1, 4);
+        LVK_PROFILE;
 
 		// NOTE: Uploads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -341,6 +346,7 @@ namespace lvk
         LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
 		LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
 		LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
+        LVK_PROFILE;
 
 		const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
 
@@ -365,6 +371,7 @@ namespace lvk
 		LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
 		LVK_ASSERT_RANGE(plane_1.cols, 1, dst.width);
 		LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
+        LVK_PROFILE;
 
 		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -407,6 +414,7 @@ namespace lvk
 		LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
 		LVK_ASSERT_RANGE(plane_2.cols, 1, dst.width);
 		LVK_ASSERT_RANGE(plane_2.rows, 1, dst.height);
+        LVK_PROFILE;
 
 		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
 		// are all stored in one contiguous span of memory starting at src.data[0].
@@ -450,7 +458,9 @@ namespace lvk
 	void I4XXIngest::upload(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(test_obs_frame(src));
-		auto& frame = *src;
+        LVK_PROFILE;
+
+        auto& frame = *src;
 		
 		const cv::Size frame_size(
 			static_cast<int>(src->width),
@@ -488,7 +498,9 @@ namespace lvk
 	void I4XXIngest::download(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(test_obs_frame(dst));
-		auto& frame = *dst;
+        LVK_PROFILE;
+
+        auto& frame = *dst;
 
 		split_planes(src, m_YPlane, m_UPlane, m_VPlane);
 
@@ -528,6 +540,8 @@ namespace lvk
 	void NV12Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(test_obs_frame(src));
+        LVK_PROFILE;
+
 		auto& frame = *src;
 
 		const cv::Size frame_size(static_cast<int>(frame.width), static_cast<int>(frame.height));
@@ -549,6 +563,8 @@ namespace lvk
 	void NV12Ingest::download(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(test_obs_frame(dst));
+        LVK_PROFILE;
+
 		auto& frame = *dst;
 
 		m_YPlane.create(src.size(), CV_8UC1);
@@ -576,7 +592,9 @@ namespace lvk
 	void P422Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(test_obs_frame(src));
-		auto& frame = *src;
+        LVK_PROFILE;
+
+        auto& frame = *src;
 
 		cv::UMat plane_roi = upload_planes(frame, 2);
 
@@ -600,6 +618,8 @@ namespace lvk
 	void P422Ingest::download(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(test_obs_frame(dst));
+        LVK_PROFILE;
+
 		auto& frame = *dst;
 
 		m_MixBuffer.create(src.size(), CV_8UC2);
@@ -635,6 +655,8 @@ namespace lvk
 	void P444Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(test_obs_frame(src));
+        LVK_PROFILE;
+
 		auto& frame = *src;
 
 		cv::UMat plane_roi = upload_planes(frame, 4);
@@ -648,6 +670,8 @@ namespace lvk
 	void P444Ingest::download(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(test_obs_frame(dst));
+        LVK_PROFILE;
+
 		auto& frame = *dst;
 
 		// NOTE: To preserve the frame's alpha we need to import the frame and 
@@ -666,7 +690,7 @@ namespace lvk
 	DirectIngest::DirectIngest(video_format uncompressed_format)
 		: FrameIngest(uncompressed_format)
 	{
-		switch (uncompressed_format)
+		switch(uncompressed_format)
 		{
 			case video_format::VIDEO_FORMAT_Y800:
 				m_Components = 1;
@@ -709,6 +733,8 @@ namespace lvk
 	void DirectIngest::upload(const obs_source_frame* src, cv::UMat& dst)
 	{
 		LVK_ASSERT(test_obs_frame(src));
+        LVK_PROFILE;
+
 		auto& frame = *src;
 
 		if(m_SteppedConversion)
@@ -724,6 +750,8 @@ namespace lvk
 	void DirectIngest::download(const cv::UMat& src, obs_source_frame* dst)
 	{
 		LVK_ASSERT(test_obs_frame(dst));
+        LVK_PROFILE;
+
 		auto& frame = *dst;
 
 		if(m_SteppedConversion)

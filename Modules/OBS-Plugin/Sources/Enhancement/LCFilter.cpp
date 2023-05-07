@@ -17,6 +17,7 @@
 
 #include "LCFilter.hpp"
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Sources/Tools/CCTool.hpp"
 #include "Utility/Locale.hpp"
 
@@ -133,6 +134,8 @@ namespace lvk
 
 	void LCFilter::filter(cv::UMat& frame)
 	{
+        LVK_PROFILE;
+
 		if(m_CorrectDistortion)
 		{
 			prepare_undistort_maps(frame);

@@ -19,6 +19,7 @@
 
 #include "InteropContext.hpp"
 #include "Utility/Graphics.hpp"
+#include "Utility/ScopedProfiler.hpp"
 
 namespace lvk
 {
@@ -113,7 +114,8 @@ namespace lvk
 	{
 		LVK_ASSERT(texture != nullptr);
 		LVK_ASSERT(gs_texture_get_color_format(texture) == GS_RGBA);
-	
+        LVK_PROFILE;
+
 		const uint32_t texture_width = gs_texture_get_width(texture);
 		const uint32_t texture_height = gs_texture_get_height(texture);
 
@@ -168,6 +170,7 @@ namespace lvk
 		LVK_ASSERT(gs_texture_get_color_format(texture) == GS_RGBA);
 		LVK_ASSERT(gs_texture_get_width(texture) == data.cols);
 		LVK_ASSERT(gs_texture_get_height(texture) == data.rows);
+        LVK_PROFILE;
 
 		// Convert from YUV to RGBA
 		cv::cvtColor(data, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);

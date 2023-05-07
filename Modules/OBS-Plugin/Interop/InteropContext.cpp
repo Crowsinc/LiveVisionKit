@@ -18,8 +18,8 @@
 #include "InteropContext.hpp"
 
 #include <LiveVisionKit.hpp>
-
 #include "Utility/Logging.hpp"
+#include "Utility/ScopedProfiler.hpp"
 
 #ifdef _WIN32
 #include <dxgi.h>
@@ -224,6 +224,7 @@ namespace lvk::ocl
 	{
 		LVK_ASSERT(Attached());
 		LVK_ASSERT(src != nullptr);
+        LVK_PROFILE;
 
 #ifdef _WIN32 // DirectX11 Interop
 		
@@ -262,6 +263,7 @@ namespace lvk::ocl
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(src.cols == static_cast<int>(gs_texture_get_width(dst)));
 		LVK_ASSERT(src.rows == static_cast<int>(gs_texture_get_height(dst)));
+        LVK_PROFILE;
 
 #ifdef _WIN32 // DirectX11 Interop
 		

@@ -17,6 +17,7 @@
 
 #include "VisionFilter.hpp"
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Effects/DefaultEffect.hpp"
 #include "Utility/Graphics.hpp"
 #include "Utility/Logging.hpp"
@@ -138,6 +139,8 @@ namespace lvk
 
 	obs_source_frame* VisionFilter::process(obs_source_frame* input_frame)
 	{
+        LVK_PROFILE;
+
 		m_Source = obs_filter_get_parent(m_Context);
 		if(m_Source == nullptr || input_frame == nullptr)
 			return input_frame;
@@ -190,6 +193,8 @@ namespace lvk
 
 	obs_source_frame* VisionFilter::match_async_frame(FrameBuffer& output_buffer, obs_source_frame* input_frame)
 	{
+        LVK_PROFILE;
+
 		obs_source_frame* output_frame = nullptr;
 
         // If there is no output buffer, then we are just building delay.
@@ -256,6 +261,7 @@ namespace lvk
 	void VisionFilter::render()
 	{
 		LVK_ASSERT(gs_get_context() != nullptr);
+        LVK_PROFILE;
 
 		m_Source = obs_filter_get_parent(m_Context);
 		if(m_Source == nullptr)
@@ -456,6 +462,8 @@ namespace lvk
 
 	bool VisionFilter::acquire_render(FrameBuffer& buffer)
 	{
+        LVK_PROFILE;
+
 		const auto target = obs_filter_get_target(m_Context);
 		const uint32_t source_width = obs_source_get_base_width(target);
 		const uint32_t source_height = obs_source_get_base_height(target);

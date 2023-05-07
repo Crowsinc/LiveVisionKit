@@ -21,6 +21,7 @@
 
 #include "Effects/FSREffect.hpp"
 #include "Effects/DefaultEffect.hpp"
+#include "Utility/ScopedProfiler.hpp"
 #include "Utility/Locale.hpp"
 
 namespace lvk
@@ -210,6 +211,8 @@ namespace lvk
 
 	void VSFilter::filter(FrameBuffer& buffer)
 	{
+        LVK_PROFILE;
+
 		if(m_TestMode)
 		{
 			m_Filter.process(buffer, buffer, true);
@@ -223,6 +226,8 @@ namespace lvk
 
 	void VSFilter::draw_debug_hud(cv::UMat& frame)
 	{
+        LVK_PROFILE;
+
 		const double frame_time_ms = m_Filter.timings().average().milliseconds();
 		const double deviation_ms = m_Filter.timings().deviation().milliseconds();
 		const auto& crop_region = m_Filter.crop_region();

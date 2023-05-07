@@ -20,6 +20,7 @@
 #include <util/platform.h>
 #include <functional>
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Utility/Locale.hpp"
 
 namespace lvk
@@ -102,6 +103,8 @@ namespace lvk
 
 	void ADBFilter::filter(FrameBuffer& frame)
 	{
+        LVK_PROFILE;
+
 		if(m_TestMode)
 		{
 			m_Filter.process(frame, frame, true);
@@ -114,6 +117,8 @@ namespace lvk
 
 	void ADBFilter::draw_debug_hud(cv::UMat& frame)
 	{
+        LVK_PROFILE;
+
 		const auto frame_time_ms = m_Filter.timings().average().milliseconds();
 		const auto deviation_ms = m_Filter.timings().deviation().milliseconds();
 

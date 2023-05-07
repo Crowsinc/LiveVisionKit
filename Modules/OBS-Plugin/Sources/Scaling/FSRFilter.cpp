@@ -17,6 +17,7 @@
 
 #include "FSRFilter.hpp"
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Effects/FSREffect.hpp"
 #include "Utility/Locale.hpp"
 
@@ -205,6 +206,8 @@ namespace lvk
 
 	void FSRFilter::tick()
 	{
+        LVK_PROFILE;
+
 		// NOTE: We set the output size and scaling region here so that the width() and height()
 		// functions return the correct sizing for the render, which avoids glitchy looking
 		// interactions with the bounding boxes. The input size come from the render tick so it
@@ -259,6 +262,8 @@ namespace lvk
 
 	void FSRFilter::render()
 	{
+        LVK_PROFILE;
+
 		const auto filter_target = obs_filter_get_target(m_Context);
 		m_InputSize = cv::Size(
 			static_cast<int>(obs_source_get_base_width(filter_target)),

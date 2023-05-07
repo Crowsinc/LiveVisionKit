@@ -19,6 +19,7 @@
 
 #include <filesystem>
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Utility/Logging.hpp"
 #include "Utility/Locale.hpp"
 
@@ -432,6 +433,8 @@ namespace lvk
 
 	void CCTool::filter(cv::UMat& frame)
 	{
+        LVK_PROFILE;
+
 		if(m_FrameHoldCountdown-- > 0)
 			m_HoldFrame.copyTo(frame);
 

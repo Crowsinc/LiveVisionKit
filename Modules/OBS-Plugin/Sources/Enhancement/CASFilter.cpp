@@ -17,6 +17,7 @@
 
 #include "CASFilter.hpp"
 
+#include "Utility/ScopedProfiler.hpp"
 #include "Effects/CASEffect.hpp"
 #include "Utility/Locale.hpp"
 
@@ -79,6 +80,7 @@ namespace lvk
 
 	void CASFilter::render()
 	{
+        LVK_PROFILE;
 		if(!CASEffect::Render(m_Context, m_Sharpness))
 			obs_source_skip_video_filter(m_Context);
 	}
