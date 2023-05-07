@@ -25,7 +25,7 @@ namespace lvk
 
     cv::Size2f operator/(const float v1, const cv::Size2f& v2);
 
-    cv::Size2f operator/(const cv::Size2f& v1, const float v2);
+    cv::Size2f operator-(const cv::Size2f& v1, const float v2);
 
 
 
@@ -35,6 +35,6 @@ namespace lvk
 
     cv::Size operator/(const int v1, const cv::Size& v2);
 
-    cv::Size operator/(const cv::Size& v1, const int v2);
+    cv::Size operator-(const cv::Size& v1, const int v2);
 
 }
