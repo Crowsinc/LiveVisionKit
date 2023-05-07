@@ -238,4 +238,6 @@ target_sources(
         Utility/Logging.tpp
         Utility/OBSDispatch.hpp
         Utility/OBSDispatch.tpp
+        Utility/ScopedProfiler.hpp
+        Utility/ScopedProfiler.cpp
 )
