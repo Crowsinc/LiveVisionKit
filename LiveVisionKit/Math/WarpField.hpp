@@ -83,7 +83,7 @@ namespace lvk
         cv::Point2f trace(const cv::Point2f& coord) const;
 
 
-        void warp(const cv::UMat& src, cv::UMat& dst) const;
+        void warp(const cv::UMat& src, cv::UMat& dst, const bool high_quality = true) const;
 
         void undistort(const float tolerance = 0.7f);
 

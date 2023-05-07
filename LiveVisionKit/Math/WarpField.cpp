@@ -257,7 +257,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::warp(const cv::UMat& src, cv::UMat& dst) const
+    void WarpField::warp(const cv::UMat& src, cv::UMat& dst, const bool high_quality) const
     {
         // If we have a minimum size field, we can handle this as a Homography.
         if(m_WarpOffsets.cols == 2 && m_WarpOffsets.rows == 2)
@@ -300,8 +300,13 @@ namespace lvk
 
         m_WarpOffsets.copyTo(staging_buffer);
         cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
-        cv::add(warp_map, view_identity_field(src.size()), warp_map);
-        cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+
+        if(!high_quality)
+        {
+            cv::add(warp_map, view_identity_field(src.size()), warp_map);
+            cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+        }
+        else lvk::remap(src, dst, warp_map, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
