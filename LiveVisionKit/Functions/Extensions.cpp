@@ -42,6 +42,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    cv::Size2f operator-(const cv::Size2f& v1, const float v2)
+    {
+        return cv::Size2f(v1.width - v2, v1.height - v2);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     cv::Size operator*(const cv::Size& v1, const cv::Size& v2)
     {
         return cv::Size(v1.width * v2.width, v1.height * v2.height);
@@ -59,6 +66,13 @@ namespace lvk
     cv::Size operator/(const int v1, const cv::Size& v2)
     {
         return cv::Size(v1 / v2.width, v1 / v2.height);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Size operator-(const cv::Size& v1, const int v2)
+    {
+        return cv::Size(v1.width - v2, v1.height - v2);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
