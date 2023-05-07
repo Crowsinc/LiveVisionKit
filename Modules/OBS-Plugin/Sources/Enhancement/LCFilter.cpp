@@ -21,6 +21,8 @@
 #include "Sources/Tools/CCTool.hpp"
 #include "Utility/Locale.hpp"
 
+#include <LiveVisionKit.hpp>
+
 namespace lvk
 {
 
@@ -50,6 +52,7 @@ namespace lvk
 		const auto& profiles = CCTool::ListProfiles();
 		for(const auto& profile : profiles)
 			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
+
 
 		obs_properties_add_bool(
 			properties,
@@ -91,9 +94,8 @@ namespace lvk
 				m_Parameters = *parameters;
 				m_Profile = profile;
 
-				// Reset the undistort maps to load in new profiles
-				m_UndistortMap.release();
-				m_AuxUndistortMap.release();
+				// Reset the undistort field to load in new profiles
+                m_FieldOutdated = true;
 			}
 			else profile_selected = false;
 		} 
@@ -106,27 +108,38 @@ namespace lvk
 	void LCFilter::prepare_undistort_maps(cv::UMat& frame)
 	{
 		// Update undistort map if it is outdated or missing
-		if(m_UndistortMap.empty() || m_UndistortMap.size() != frame.size())
+		if(m_FieldOutdated || m_UndistortField.size() != frame.size())
 		{
+            cv::Rect undistort_crop;
 			cv::Mat optimal_camera_matrix = cv::getOptimalNewCameraMatrix(
 				m_Parameters.camera_matrix,
 				m_Parameters.distortion_coefficients,
 				frame.size(),
 				0,
 				frame.size(),
-				&m_UndistortCrop
+				&undistort_crop
 			);
 
+            cv::Mat undistort_map;
 			cv::initUndistortRectifyMap(
 				m_Parameters.camera_matrix,
 				m_Parameters.distortion_coefficients,
 				cv::noArray(),
 				optimal_camera_matrix,
 				frame.size(),
-				CV_16SC2,
-				m_UndistortMap,
-				m_AuxUndistortMap
+				CV_32FC2,
+                undistort_map,
+				cv::noArray()
 			);
+
+            // Convert the undistort map to a warp field.
+            m_UndistortField = WarpField(std::move(undistort_map), true);
+
+            // Upscale the field to apply the crop in the same operation.
+            // TODO: this won't be enough if the crop also applies an offset!
+            m_UndistortField.scale(cv::Size2f(frame.size()) / cv::Size2f(undistort_crop.size()));
+
+            m_FieldOutdated = false;
 		}
 	}
 
@@ -140,8 +153,8 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-			cv::remap(frame, m_UndistortFrame, m_UndistortMap, m_AuxUndistortMap, cv::INTER_LINEAR);
-			cv::resize(m_UndistortFrame(m_UndistortCrop), frame, frame.size(), 0, 0, cv::INTER_LINEAR);
+            m_UndistortField.warp(frame, m_UndistortFrame);
+            std::swap(frame, m_UndistortFrame);
 		}
 	}
 

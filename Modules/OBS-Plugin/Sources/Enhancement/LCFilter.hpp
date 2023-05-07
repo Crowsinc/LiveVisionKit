@@ -45,18 +45,15 @@ namespace lvk
 		void filter(cv::UMat& frame) override;
 
 	private:
-
 		obs_source_t* m_Context = nullptr;
+		bool m_CorrectDistortion = false;
 
 		std::string m_Profile;
 		CameraParameters m_Parameters;
 
-		bool m_CorrectDistortion = false;
-		cv::Rect m_UndistortCrop;
-		
-		cv::UMat m_UndistortMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_AuxUndistortMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_UndistortFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        cv::UMat m_UndistortFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        WarpField m_UndistortField{WarpField::MinimumSize};
+        bool m_FieldOutdated = true;
 	};
 
 }
