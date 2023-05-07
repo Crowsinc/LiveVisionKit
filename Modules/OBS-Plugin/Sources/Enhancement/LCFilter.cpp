@@ -143,7 +143,7 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-            m_UndistortField.warp(frame, m_UndistortFrame);
+            m_UndistortField.warp(frame, m_UndistortFrame, true);
             std::swap(frame, m_UndistortFrame);
 		}
 	}
