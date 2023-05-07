@@ -22,7 +22,9 @@ namespace lvk
 
     class ScopedProfiler
     {
-        ScopedProfiler(const char* scope_name);
+    public:
+
+        explicit ScopedProfiler(const char* scope_name);
 
         ~ScopedProfiler();
 
