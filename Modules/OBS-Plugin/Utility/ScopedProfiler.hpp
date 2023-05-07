@@ -31,5 +31,13 @@ namespace lvk
     private:
         const char* m_ScopeName;
     };
-
 }
+#ifdef GCC
+    #define LVK_PROFILE ScopedProfiler _profiler(__PRETTY_FUNCTION__)
+#else
+    #ifdef _MSC_VER
+        #define LVK_PROFILE ScopedProfiler _profiler(__FUNCTION__)
+    #else
+        #define LVK_PROFILE ScopedProfiler _profiler(__func__)
+    #endif
+#endif
