@@ -42,8 +42,6 @@ namespace lvk
 
         void filter(FrameBuffer& buffer) override;
 
-		void hybrid_render(gs_texture_t* frame) override;
-
 		void draw_debug_hud(cv::UMat& frame);
 
 	private:

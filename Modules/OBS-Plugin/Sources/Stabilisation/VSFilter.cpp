@@ -143,17 +143,18 @@ namespace lvk
 		const float video_fps = static_cast<float>(video_info.fps_num) / static_cast<float>(video_info.fps_den);
 		const float frame_ms = 1000.0f/video_fps;
 
+        m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
 			stab_settings.scene_margins = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
 			stab_settings.path_prediction_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+            stab_settings.crop_frame_to_margins = !m_TestMode;
 
 			// Suppression Threshold
             stab_settings.stability_threshold = obs_data_get_double(settings, PROP_SUPPRESSION_THRESH);
             stab_settings.uniformity_threshold = stab_settings.stability_threshold * STABILITY_UNIFORMITY_RATIO;
 		});
-
-		m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
 		// Update the frame delay indicator for the user
 		const auto old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
@@ -179,33 +180,6 @@ namespace lvk
 
         m_Filter.set_timing_samples(TIMING_SAMPLES);
     }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VSFilter::hybrid_render(gs_texture_t* frame)
-	{
-		const auto target = obs_filter_get_target(m_Context);
-		const cv::Size render_size(
-            static_cast<int>(obs_source_get_base_width(target)),
-            static_cast<int>(obs_source_get_base_height(target))
-        );
-		const cv::Rect render_region = crop(render_size, m_Filter.settings().scene_margins);
-
-		if(frame == nullptr)
-		{
-			// As Video Filter
-			if(m_TestMode || !FSREffect::Render(m_Context, render_size, render_region))
-				obs_source_skip_video_filter(m_Context);
-		}
-		else
-		{
-			// As Effects Filter
-			if(m_TestMode)
-				DefaultEffect::Render(frame);
-			else if(!FSREffect::Render(frame, render_size, render_region))
-				obs_source_skip_video_filter(m_Context);
-		}
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
