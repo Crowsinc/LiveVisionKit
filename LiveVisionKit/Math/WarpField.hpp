@@ -36,30 +36,14 @@ namespace lvk
 
         explicit WarpField(const cv::Size& size);
 
-        WarpField(const cv::Size& size, const cv::Point2f& motion);
+        WarpField(cv::Mat&& warp_map, const bool as_offsets);
 
-        explicit WarpField(const cv::Mat& warp, const bool as_map = false);
-
-        explicit WarpField(cv::Mat&& warp, const bool as_map = false);
+        WarpField(const cv::Mat& warp_map, const bool as_offsets);
 
         WarpField(WarpField&& other) noexcept;
 
         WarpField(const WarpField& other);
 
-        
-        WarpField(
-            const cv::Size& size,
-            const Homography& motion,
-            const cv::Size2f& scale
-        );
-
-        WarpField(
-            const cv::Size& size,
-            const cv::Rect2f& described_region,
-            const std::vector<cv::Point2f>& origin_points,
-            const std::vector<cv::Point2f>& warped_points,
-            const std::optional<Homography>& motion_hint
-        );
 
         void resize(const cv::Size& new_size);
 
@@ -70,32 +54,30 @@ namespace lvk
         int rows() const;
 
 
-        cv::Mat& offsets();
-
         const cv::Mat& offsets() const;
 
+        void to_map(cv::Mat& dst) const;
 
-        // TODO: remove these
-        cv::Point2f sample(const cv::Point& coord) const;
+        void to_map(cv::UMat& dst) const;
 
-        cv::Point2f sample(const cv::Point2f& coord) const;
-
-        cv::Point2f trace(const cv::Point2f& coord) const;
-
-
-        void warp(const cv::UMat& src, cv::UMat& dst, const bool high_quality = true) const;
 
         void undistort(const float tolerance = 0.7f);
 
+        void apply(const cv::UMat& src, cv::UMat& dst, const bool high_quality = true) const;
 
-        void scale(const cv::Size2f& scaling_factors);
+        void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
 
 
-        void set_identity();
+        void read(
+            const std::function<void(const cv::Point2f& offset, const cv::Point& coord)>& operation,
+            const bool parallel = true
+        ) const;
 
-        void set_to(const cv::Point2f& motion);
+        void write(
+            const std::function<void(cv::Point2f& offset, const cv::Point& coord)>& operation,
+            const bool parallel = true
+        );
 
-        void set_to(const Homography& motion, const cv::Size2f& scale);
 
         void fit_points(
             const cv::Rect2f& described_region,
@@ -104,31 +86,31 @@ namespace lvk
             const std::optional<Homography>& motion_hint
         );
 
+
+        void set_identity();
+
+        void set_to(const cv::Point2f& motion);
+
+        void set_to(const Homography& motion, const cv::Size2f& field_scale);
+
+
+        void scale(const cv::Size2f& scaling_factor, const cv::Size2f& field_scale);
+
+        void crop_in(const cv::Rect2f& region, const cv::Size2f& field_scale);
+
+        void rotate(const float degrees, const cv::Size2f& field_scale);
+
+
         void clamp(const cv::Size2f& magnitude);
 
         void clamp(const cv::Size2f& min, const cv::Size2f& max);
-
-
-        void combine(const WarpField& field, const float scaling = 1.0f);
 
 
         void blend(const float field_weight, const WarpField& field);
 
         void blend(const float weight_1, const float weight_2, const WarpField& field);
 
-
-        void write(
-            const std::function<void(cv::Point2f& offset, const cv::Point& coord)>& operation,
-            const bool parallel = true
-        );
-
-        void read(
-            const std::function<void(const cv::Point2f& offset, const cv::Point& coord)>& operation,
-            const bool parallel = true
-        ) const;
-
-
-        void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
+        void combine(const WarpField& field, const float scaling = 1.0f);
 
 
         WarpField& operator=(WarpField&& other) noexcept;
@@ -143,13 +125,13 @@ namespace lvk
         void operator*=(const WarpField& other);
 
 
-        void operator+=(const cv::Vec2f& motion);
+        void operator+=(const cv::Point2f& motion);
 
-        void operator-=(const cv::Vec2f& motion);
+        void operator-=(const cv::Point2f& motion);
 
-        void operator*=(const cv::Vec2f& scaling);
+        void operator*=(const cv::Size2f& scaling);
 
-        void operator/=(const cv::Vec2f& scaling);
+        void operator/=(const cv::Size2f& scaling);
 
 
         void operator*=(const float scaling);
@@ -158,19 +140,20 @@ namespace lvk
 
     private:
 
-        static const cv::UMat view_identity_field(const cv::Size& resolution);
+        static const cv::Mat view_coord_grid(const cv::Size& resolution);
 
-        static void accumulate_motions(
-            cv::Mat& motion_field,
-            const float motion_weight,
-            const cv::Rect2f& alignment,
-            const std::vector<cv::Point2f>& origin_points,
-            const std::vector<cv::Point2f>& warped_points
-        );
+        static const cv::UMat view_coord_grid_gpu(const cv::Size& resolution);
+
+        const cv::Mat view_field_coord_grid(const cv::Size2f& field_scale);
 
     private:
-        // NOTE: The warp offsets define where warped points originate from.
-        cv::Mat m_WarpOffsets;
+        // Vector offset from dst coord to src coord.
+        cv::Mat m_Offsets;
+
+        // Auxiliary Buffers
+        cv::Size2f m_FieldGridScale = {0, 0};
+        cv::Mat m_FieldGridCache, m_ResultsBuffer;
+        cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 
     WarpField operator+(const WarpField& left, const WarpField& right);
@@ -180,17 +163,17 @@ namespace lvk
     WarpField operator*(const WarpField& left, const WarpField& right);
 
 
-    WarpField operator+(const WarpField& left, const cv::Vec2f& right);
+    WarpField operator+(const WarpField& left, const cv::Point2f& right);
 
-    WarpField operator-(const WarpField& left, const cv::Vec2f& right);
+    WarpField operator-(const WarpField& left, const cv::Point2f& right);
 
-    WarpField operator*(const cv::Vec2f& scaling, const WarpField& field);
+    WarpField operator*(const cv::Size2f& scaling, const WarpField& field);
 
-    WarpField operator*(const WarpField& field, const cv::Vec2f& scaling);
+    WarpField operator*(const WarpField& field, const cv::Size2f& scaling);
 
-    WarpField operator/(const cv::Vec2f& scaling, const WarpField& field);
+    WarpField operator/(const cv::Size2f& scaling, const WarpField& field);
 
-    WarpField operator/(const WarpField& field, const cv::Vec2f& scaling);
+    WarpField operator/(const WarpField& field, const cv::Size2f& scaling);
 
 
     WarpField operator*(const WarpField& field, const float scaling);

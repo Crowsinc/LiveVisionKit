@@ -25,9 +25,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    constexpr float MIN_FILTER_SIGMA = 3.0f;
-    constexpr float MAX_FILTER_SIGMA = 13.0f;
-    constexpr float SIGMA_RESPONSE_RATE = 0.08f;
+    constexpr double MIN_FILTER_SIGMA = 3.0f;
+    constexpr double MAX_FILTER_SIGMA = 13.0f;
+    constexpr double SIGMA_RESPONSE_RATE = 0.08f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -81,13 +81,12 @@ namespace lvk
 
             // Determine how much our smoothed path trace has drifted away from the path,
             // as a percentage of the corrective limits (1.0+ => out of scene bounds).
-            float max_drift_error = 0.0f;
-            m_Trace.read([&](const cv::Point2f& trace, const cv::Point& coord){
-                const auto drift = curr_position.sample(coord) - trace;
-                max_drift_error = std::max(max_drift_error, std::abs(drift.x) / corrective_limits.x);
-                max_drift_error = std::max(max_drift_error, std::abs(drift.y) / corrective_limits.y);
-            }, false);
-            max_drift_error = std::min(max_drift_error, 1.0f);
+            m_Trace -= curr_position;
+            m_Trace /= corrective_limits;
+
+            double min_drift_error, max_drift_error;
+            cv::minMaxIdx(m_Trace.offsets(), &min_drift_error, &max_drift_error);
+            max_drift_error = std::min(max_drift_error, 1.0);
 
             // Adapt the smoothing kernel based on the max drift error. If the trace
             // is close to the original path, the smoothing coefficient is raised to
@@ -123,7 +122,7 @@ namespace lvk
 
             // NOTE: we perform a swap between the resulting warp frame
             // and the original frame data to ensure zero de-allocations.
-            path_correction.warp(curr_frame.data, m_WarpFrame);
+            path_correction.apply(curr_frame.data, m_WarpFrame, true);
             std::swap(m_WarpFrame, curr_frame.data);
 
             return std::move(curr_frame);

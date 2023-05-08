@@ -21,6 +21,7 @@
 #include "Math/Homography.hpp"
 #include "Functions/Math.hpp"
 #include "Functions/Container.hpp"
+#include "Functions/Extensions.hpp"
 
 namespace lvk
 {
@@ -194,11 +195,7 @@ namespace lvk
         // We must scale the motion to match the original frame size.
         const cv::Size2f frame_scale = next_frame.size();
         const cv::Size2f tracking_scale = tracking_resolution();
-
-        motion_field *= cv::Vec2f{
-            frame_scale.width / tracking_scale.width,
-            frame_scale.height / tracking_scale.height
-        };
+        motion_field *= frame_scale / tracking_scale;
 
         return std::move(motion_field);
 	}

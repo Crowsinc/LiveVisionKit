@@ -17,25 +17,23 @@
 
 #include "WarpField.hpp"
 
-#include <array>
-#include <numeric>
 #include <opencv2/core/ocl.hpp>
-
-#include "Directives.hpp"
-#include "Math/VirtualGrid.hpp"
-#include "Functions/Drawing.hpp"
-#include "Functions/Math.hpp"
+#include <array>
 
 #include "Functions/Extensions.hpp"
+#include "Functions/Drawing.hpp"
+#include "Math/VirtualGrid.hpp"
 #include "Timing/Stopwatch.hpp"
 #include "Functions/Image.hpp"
+#include "Functions/Math.hpp"
+#include "Directives.hpp"
 
 namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField::WarpField(const cv::Size& size)
-        : m_WarpOffsets(size, CV_32FC2)
+        : m_Offsets(size, CV_32FC2)
     {
         LVK_ASSERT(size.height >= MinimumSize.height);
         LVK_ASSERT(size.width >= MinimumSize.width);
@@ -45,76 +43,37 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const cv::Size& size, const cv::Point2f& motion)
-        : m_WarpOffsets(size, CV_32FC2)
+    WarpField::WarpField(cv::Mat&& warp_map, const bool as_offsets)
+        : m_Offsets(std::move(warp_map))
     {
-        LVK_ASSERT(size.height >= MinimumSize.height);
-        LVK_ASSERT(size.width >= MinimumSize.width);
+        LVK_ASSERT(m_Offsets.type() == CV_32FC2);
 
-        set_to(motion);
+        // If the warp was given as an absolute warp map, we need to convert it to offsets.
+        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const cv::Mat& warp, const bool as_map)
-        : m_WarpOffsets(warp.clone())
+    WarpField::WarpField(const cv::Mat& warp_map, const bool as_offsets)
+        : m_Offsets(warp_map.clone())
     {
-        LVK_ASSERT(m_WarpOffsets.type() == CV_32FC2);
+        LVK_ASSERT(m_Offsets.type() == CV_32FC2);
 
-        // If the warp was given as a map, we need to convert it to offsets.
-        if(as_map) cv::subtract(m_WarpOffsets, view_identity_field(m_WarpOffsets.size()), m_WarpOffsets);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField::WarpField(cv::Mat&& warp, const bool as_map)
-        : m_WarpOffsets(std::move(warp))
-    {
-        LVK_ASSERT(m_WarpOffsets.type() == CV_32FC2);
-
-        // If the warp was given as a map, we need to convert it to offsets.
-        if(as_map) cv::subtract(m_WarpOffsets, view_identity_field(m_WarpOffsets.size()), m_WarpOffsets);
+        // If the warp was given as an absolute warp map, we need to convert it to offsets.
+        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField::WarpField(WarpField&& other) noexcept
-        : m_WarpOffsets(std::move(other.m_WarpOffsets))
+        : m_Offsets(std::move(other.m_Offsets))
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField::WarpField(const WarpField& other)
-        : m_WarpOffsets(other.m_WarpOffsets.clone())
+        : m_Offsets(other.m_Offsets.clone())
     {}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField::WarpField(const cv::Size& size, const Homography& motion, const cv::Size2f& scale)
-        : m_WarpOffsets(size, CV_32FC2)
-    {
-        LVK_ASSERT(size.height >= MinimumSize.height);
-        LVK_ASSERT(size.width >= MinimumSize.width);
-
-        set_to(motion, scale);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField::WarpField(
-        const cv::Size& size,
-        const cv::Rect2f& described_region,
-        const std::vector<cv::Point2f>& origin_points,
-        const std::vector<cv::Point2f>& warped_points,
-        const std::optional<Homography>& motion_hint
-    )
-        : m_WarpOffsets(size, CV_32FC2)
-    {
-        LVK_ASSERT(size.height >= MinimumSize.height);
-        LVK_ASSERT(size.width >= MinimumSize.width);
-
-        fit_points(described_region, origin_points, warped_points, motion_hint);
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -123,190 +82,54 @@ namespace lvk
         LVK_ASSERT(new_size.height >= MinimumSize.height);
         LVK_ASSERT(new_size.width >= MinimumSize.width);
 
-        if(m_WarpOffsets.size() == new_size)
+        if(m_Offsets.size() == new_size)
             return;
 
-        cv::Mat result;
-        cv::resize(m_WarpOffsets, result, new_size, 0, 0, cv::INTER_LINEAR);
-        m_WarpOffsets = std::move(result);
+        cv::Mat new_field;
+        cv::resize(m_Offsets, new_field, new_size, 0, 0, cv::INTER_LINEAR);
+        m_Offsets = std::move(new_field);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     cv::Size WarpField::size() const
     {
-        return m_WarpOffsets.size();
+        return m_Offsets.size();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     int WarpField::cols() const
     {
-        return m_WarpOffsets.cols;
+        return m_Offsets.cols;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     int WarpField::rows() const
     {
-        return m_WarpOffsets.rows;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    cv::Mat& WarpField::offsets()
-    {
-        return m_WarpOffsets;
+        return m_Offsets.rows;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     const cv::Mat& WarpField::offsets() const
     {
-        return m_WarpOffsets;
+        return m_Offsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    cv::Point2f WarpField::sample(const cv::Point& coord) const
+    void WarpField::to_map(cv::Mat& dst) const
     {
-        LVK_ASSERT(coord.x >= 0 && coord.x < cols());
-        LVK_ASSERT(coord.y >= 0 && coord.y < rows());
-
-        return m_WarpOffsets.at<cv::Point2f>(coord);
+        cv::add(m_Offsets, view_coord_grid(m_Offsets.size()), dst);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    // Sample the warping velocity of the field at the given coord.
-    cv::Point2f WarpField::sample(const cv::Point2f& coord) const
+    void WarpField::to_map(cv::UMat& dst) const
     {
-        LVK_ASSERT(coord.x >= 0.0f && coord.x < static_cast<float>(cols()));
-        LVK_ASSERT(coord.y >= 0.0f && coord.y < static_cast<float>(rows()));
-
-        // To get an accurate reading, we will use bilinear filtering on the field. First,
-        // we need to determine which four field points surround the coord. This is done
-        // by analysing the directions in which we are interpolating towards, with respect
-        // to the center of the 'origin' field point that the coord lies within.
-
-        cv::Point2f top_left(std::floor(coord.x), std::floor(coord.y));
-        cv::Point2f top_right = top_left, bot_left = top_left, bot_right = top_left;
-
-        const cv::Point2f origin = top_left + cv::Point2f(0.5f, 0.5f);
-        if(coord.x >= origin.x)
-        {
-            // We are in quadrant 1 or 4, interpolating rightwards
-            if(top_right.x < static_cast<float>(cols()))
-            {
-                top_right.x++;
-                bot_right.x++;
-            }
-        }
-        else
-        {
-            // We are in quadrant 2 or 3, interpolating leftwards
-            if(top_left.x > 0)
-            {
-                top_left.x--;
-                bot_left.x--;
-            }
-        }
-
-        if(coord.y >= origin.y)
-        {
-            // We are in quadrant 1 or 2, interpolating upwards
-            if(top_left.y < static_cast<float>(rows()))
-            {
-                top_right.y++;
-                top_left.y++;
-            }
-        }
-        else
-        {
-            // We are in quadrant 3 or 4, interpolating downwards
-            if(bot_left.y > 0)
-            {
-                bot_right.y--;
-                bot_left.y--;
-            }
-        }
-
-        // Perform the billinear interpolation using a unit square mapping as outlined
-        // on the Wikipedia page (https://en.wikipedia.org/wiki/Bilinear_interpolation)
-
-        // TODO: check this this is the correct origin point with the inverted y axis.
-        const float x_unit = coord.x - static_cast<float>(top_left.x);
-        const float y_unit = coord.y - static_cast<float>(top_left.y);
-
-        const float inv_x_unit = 1.0f - x_unit;
-        const float inv_y_unit = 1.0f - y_unit;
-
-        return m_WarpOffsets.at<cv::Point2f>(top_left) * inv_x_unit * inv_y_unit
-               + m_WarpOffsets.at<cv::Point2f>(top_right) * x_unit * inv_y_unit
-               + m_WarpOffsets.at<cv::Point2f>(bot_left) * inv_x_unit * y_unit
-               + m_WarpOffsets.at<cv::Point2f>(bot_right) * x_unit * y_unit;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    // Trace the position to get its final position after warping.
-    cv::Point2f WarpField::trace(const cv::Point2f& coord) const
-    {
-        return sample(coord) + coord;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::warp(const cv::UMat& src, cv::UMat& dst, const bool high_quality) const
-    {
-        // If we have a minimum size field, we can handle this as a Homography.
-        if(m_WarpOffsets.cols == 2 && m_WarpOffsets.rows == 2)
-        {
-            const auto width = static_cast<float>(src.cols);
-            const auto height = static_cast<float>(src.rows);
-
-            const std::array<cv::Point2f, 4> destination = {
-                cv::Point2f(0, 0),
-                cv::Point2f(width, 0),
-                cv::Point2f(0, height),
-                cv::Point2f(width, height)
-            };
-            const std::array<cv::Point2f, 4> source = {
-                destination[0] + m_WarpOffsets.at<cv::Point2f>(0, 0),
-                destination[1] + m_WarpOffsets.at<cv::Point2f>(0, 1),
-                destination[2] + m_WarpOffsets.at<cv::Point2f>(1, 0),
-                destination[3] + m_WarpOffsets.at<cv::Point2f>(1, 1)
-            };
-
-            cv::warpPerspective(
-                src,
-                dst,
-                cv::getPerspectiveTransform(destination.data(), source.data()),
-                src.size(),
-                cv::WARP_INVERSE_MAP,
-                cv::BORDER_CONSTANT
-            );
-            return;
-        }
-
-        // Upload the velocity field to the staging buffer and resize it to
-        // match the source input. We then need to add the velocities onto
-        // an identity field in order to create the final warp locations.
-        // If the smoothing option is set, perform a 3x3 Gaussian on the
-        // velocity field to ensure that the field is spatially continous.
-
-        thread_local cv::UMat staging_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-        thread_local cv::UMat warp_map(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-        m_WarpOffsets.copyTo(staging_buffer);
-        cv::resize(staging_buffer, warp_map, src.size(), 0, 0, cv::INTER_LINEAR);
-
-        if(!high_quality)
-        {
-            cv::add(warp_map, view_identity_field(src.size()), warp_map);
-            cv::remap(src, dst, warp_map, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
-        }
-        else lvk::remap(src, dst, warp_map, true);
+        cv::add(m_Offsets, view_coord_grid(m_Offsets.size()), dst);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -314,6 +137,10 @@ namespace lvk
     void WarpField::undistort(const float tolerance)
     {
         LVK_ASSERT_01(tolerance);
+
+        // 2x2 fields have no distortion.
+        if(m_Offsets.size() == MinimumSize)
+            return;
 
         // TODO: document and optimize
 
@@ -343,7 +170,7 @@ namespace lvk
             {
                 auto& [col_y_sum, col_xy_sum] = col_lines[c];
 
-                const auto& [x, y] = m_WarpOffsets.at<cv::Point2f>(r, c);
+                const auto& [x, y] = m_Offsets.at<cv::Point2f>(r, c);
                 row_xy_sum += y * static_cast<float>(c);
                 col_xy_sum += x * static_cast<float>(r);
                 row_y_sum += y;
@@ -384,47 +211,139 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::scale(const cv::Size2f& scaling_factors)
+    void WarpField::apply(const cv::UMat& src, cv::UMat& dst, const bool high_quality) const
     {
-        const cv::Size2f inverse_scaling = (1.0f / scaling_factors) - 1.0f;
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            offset.x += static_cast<float>(coord.x) * inverse_scaling.width;
-            offset.y += static_cast<float>(coord.y) * inverse_scaling.height;
-        });
+        // If we have a minimum size field, we can handle this as a Homography.
+
+        // TODO: test without this
+        if(m_Offsets.size() == MinimumSize)
+        {
+            const auto w = static_cast<float>(src.cols);
+            const auto h = static_cast<float>(src.rows);
+
+            const std::array<cv::Point2f, 4> destination = {
+                cv::Point2f(0, 0), cv::Point2f(w, 0),
+                cv::Point2f(0, h), cv::Point2f(w, h)
+            };
+
+            const std::array<cv::Point2f, 4> source = {
+                destination[0] + m_Offsets.at<cv::Point2f>(0, 0),
+                destination[1] + m_Offsets.at<cv::Point2f>(0, 1),
+                destination[2] + m_Offsets.at<cv::Point2f>(1, 0),
+                destination[3] + m_Offsets.at<cv::Point2f>(1, 1)
+            };
+
+            cv::warpPerspective(
+                src,
+                dst,
+                cv::getPerspectiveTransform(destination.data(), source.data()),
+                src.size(),
+                cv::WARP_INVERSE_MAP | (high_quality ? cv::INTER_CUBIC : cv::INTER_LINEAR),
+                cv::BORDER_CONSTANT
+            );
+            return;
+        }
+
+        cv::resize(m_Offsets, m_WarpMap, src.size(), 0, 0, cv::INTER_LINEAR);
+        if(!high_quality)
+        {
+            cv::add(m_WarpMap, view_coord_grid_gpu(src.size()), m_WarpMap);
+            cv::remap(src, dst, m_WarpMap, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+        }
+        else lvk::remap(src, dst, m_WarpMap, true /* assume yuv */);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_identity()
+    // TODO: optimize this
+    void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
     {
-        m_WarpOffsets.setTo(cv::Vec2f::all(0.0f));
-    }
+        LVK_ASSERT(thickness > 0);
+        LVK_ASSERT(!dst.empty());
 
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::set_to(const cv::Point2f& motion)
-    {
-        // NOTE: we invert the motion as the warp is specified backwards.
-        m_WarpOffsets.setTo(cv::Scalar(-motion.x, -motion.y));
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::set_to(const Homography& motion, const cv::Size2f& scale)
-    {
-        const cv::Size2f point_scaling(
-            scale.width / static_cast<float>(m_WarpOffsets.cols - 1),
-            scale.height / static_cast<float>(m_WarpOffsets.rows - 1)
+        const cv::Size2f frame_scaling(
+            static_cast<float>(dst.cols) / static_cast<float>(m_Offsets.cols - 1),
+            static_cast<float>(dst.rows) / static_cast<float>(m_Offsets.rows - 1)
         );
 
-        const Homography inverse_warp = motion.invert();
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            const cv::Point2f sample_point(
-                static_cast<float>(coord.x) * point_scaling.width,
-                static_cast<float>(coord.y) * point_scaling.height
+        thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        cv::Mat draw_mask;
+
+        draw_mask.create(dst.size(), CV_8UC1);
+        draw_mask.setTo(cv::Scalar(0));
+
+        // Draw all the motion vectors
+        read([&](const cv::Point2f& offset, const cv::Point& coord){
+            const cv::Point2f origin(
+                static_cast<float>(coord.x) * frame_scaling.width,
+                static_cast<float>(coord.y) * frame_scaling.height
             );
-            offset = (inverse_warp * sample_point) - sample_point;
+
+            cv::line(
+                draw_mask,
+                origin,
+                origin - offset,
+                cv::Scalar(255),
+                thickness
+            );
         });
+
+        draw_mask.copyTo(gpu_draw_mask);
+        dst.setTo(color, gpu_draw_mask);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::read(
+        const std::function<void(const cv::Point2f&, const cv::Point&)>& operation,
+        const bool parallel
+    ) const
+    {
+        if(parallel)
+        {
+            // NOTE: this uses a parallel loop internally
+            m_Offsets.forEach<cv::Point2f>([&](const cv::Point2f& value, const int coord[]){
+                operation(value, {coord[1], coord[0]});
+            });
+        }
+        else
+        {
+            for(int r = 0; r < m_Offsets.rows; r++)
+            {
+                const auto* row_ptr = m_Offsets.ptr<cv::Point2f>(r);
+                for(int c = 0; c < m_Offsets.cols; c++)
+                {
+                    operation(row_ptr[c], {c, r});
+                }
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::write(
+        const std::function<void(cv::Point2f&, const cv::Point&)>& operation,
+        const bool parallel
+    )
+    {
+        if(parallel)
+        {
+            // NOTE: this uses a parallel loop internally
+            m_Offsets.forEach<cv::Point2f>([&](cv::Point2f& value, const int coord[]){
+                operation(value, {coord[1], coord[0]});
+            });
+        }
+        else
+        {
+            for(int r = 0; r < m_Offsets.rows; r++)
+            {
+                auto* row_ptr = m_Offsets.ptr<cv::Point2f>(r);
+                for(int c = 0; c < m_Offsets.cols; c++)
+                {
+                    operation(row_ptr[c], {c, r});
+                }
+            }
+        }
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -444,46 +363,45 @@ namespace lvk
         // S. Liu, P. Tan, L. Yuan, J. Sun, and B. Zeng,
         // “MeshFlow: Minimum latency online video stabilization,"
         // Computer Vision – ECCV 2016, pp. 800–815, 2016.
+
         // TODO: optimize and document the entire algorithm
 
         const auto region_offset = described_region.tl();
         const auto region_size = described_region.size();
 
-        cv::Mat motions(2, 2, CV_32FC2);
+        VirtualGrid partitions(MinimumSize);
+        cv::Mat motions, submotions;
+        float motion_weight;
+
         if(motion_hint.has_value())
         {
             const auto warp_transform = motion_hint->invert();
 
-            const cv::Point2f tl(region_offset.x, region_offset.y);
+            const cv::Point2f tl = region_offset;
             const cv::Point2f tr(region_offset.x + region_size.width, region_offset.y);
             const cv::Point2f bl(region_offset.x, region_offset.y + region_size.height);
             const cv::Point2f br(tr.x, bl.y);
 
+            motions.create(2, 2, CV_32FC2);
             motions.at<cv::Point2f>(0, 0) = (warp_transform * tl) - tl;
             motions.at<cv::Point2f>(0, 1) = (warp_transform * tr) - tr;
             motions.at<cv::Point2f>(1, 0) = (warp_transform * bl) - bl;
             motions.at<cv::Point2f>(1, 1) = (warp_transform * br) - br;
+
+            motion_weight = 0.5f;
         }
         else
         {
-            accumulate_motions(
-                motions,
-                1.0f,
-                cv::Rect2f(
-                    region_offset - cv::Point2f(region_size / 2.0f),
-                    region_size * 2.0f
-                ),
-                origin_points,
-                warped_points
-            );
+            motions.create(1, 1, CV_32FC2);
+            motion_weight = 1.0f;
         }
 
-        float motion_weight = 0.5f;
-        while(motions.size() != m_WarpOffsets.size())
+
+        while(motions.size() != m_Offsets.size())
         {
-            cv::Mat submotions(
-                std::min(motions.rows * 2, m_WarpOffsets.rows),
-                std::min(motions.cols * 2, m_WarpOffsets.cols),
+            submotions.create(
+                std::min(motions.rows * 2, m_Offsets.rows),
+                std::min(motions.cols * 2, m_Offsets.cols),
                 CV_32FC2
             );
 
@@ -491,51 +409,104 @@ namespace lvk
                 region_size.width / static_cast<float>(submotions.cols - 1),
                 region_size.height / static_cast<float>(submotions.rows - 1)
             );
-            const cv::Rect2f submotion_alignment(
-                region_offset.x - (submotion_cell_size.width * 0.5f),
-                region_offset.y - (submotion_cell_size.height * 0.5f),
-                static_cast<float>(submotions.cols) * submotion_cell_size.width,
-                static_cast<float>(submotions.rows) * submotion_cell_size.height
-            );
+
+            partitions.align(submotions.size(), cv::Rect2f(
+                region_offset - (submotion_cell_size / 2.0f),
+                cv::Size2f(submotions.size()) * submotion_cell_size
+            ));
+
+            // Re-accumulate all the motions into the new submotions grid.
+            cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
+            for(size_t i = 0; i < origin_points.size(); i++)
+            {
+                const cv::Point2f& origin_point = origin_points[i];
+                const cv::Point2f& warped_point = warped_points[i];
+                auto warp_motion = origin_point - warped_point;
+
+                if(const auto key = partitions.try_key_of(warped_point); key.has_value())
+                {
+                    auto& motion_estimate = submotions.at<cv::Point2f>(
+                        static_cast<int>(key->y), static_cast<int>(key->x)
+                    );
+
+                    motion_estimate.x += motion_weight * static_cast<float>(sign(warp_motion.x - motion_estimate.x));
+                    motion_estimate.y += motion_weight * static_cast<float>(sign(warp_motion.y - motion_estimate.y));
+                }
+            }
+            cv::medianBlur(submotions, motions, 3);
 
             motion_weight /= 2.0f;
-            cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
-            accumulate_motions(submotions, motion_weight, submotion_alignment, origin_points, warped_points);
-            cv::medianBlur(submotions, motions, 3);
         }
 
-        m_WarpOffsets = std::move(motions);
+        m_Offsets = std::move(motions);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::accumulate_motions(
-        cv::Mat& motion_field,
-        const float motion_weight,
-        const cv::Rect2f& alignment,
-        const std::vector<cv::Point2f>& origin_points,
-        const std::vector<cv::Point2f>& warped_points
-    )
+    void WarpField::set_identity()
     {
-        LVK_ASSERT(motion_weight > 0);
+        m_Offsets.setTo(cv::Scalar(0.0f, 0.0f));
+    }
 
-        VirtualGrid partitions(motion_field.size(), alignment);
-        for(size_t i = 0; i < origin_points.size(); i++)
-        {
-            const cv::Point2f& origin_point = origin_points[i];
-            const cv::Point2f& warped_point = warped_points[i];
-            auto warp_motion = origin_point - warped_point;
+//---------------------------------------------------------------------------------------------------------------------
 
-            if(const auto key = partitions.try_key_of(warped_point); key.has_value())
-            {
-                auto& motion_estimate = motion_field.at<cv::Point2f>(
-                    static_cast<int>(key->y), static_cast<int>(key->x)
-                );
+    void WarpField::set_to(const cv::Point2f& motion)
+    {
+        // NOTE: we invert the motion as the warp is specified backwards.
+        m_Offsets.setTo(cv::Scalar(-motion.x, -motion.y));
+    }
 
-                motion_estimate.x += motion_weight * static_cast<float>(sign(warp_motion.x - motion_estimate.x));
-                motion_estimate.y += motion_weight * static_cast<float>(sign(warp_motion.y - motion_estimate.y));
-            }
-        }
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::set_to(const Homography& motion, const cv::Size2f& field_scale)
+    {
+        const cv::Size2f point_scaling(
+            field_scale.width / static_cast<float>(m_Offsets.cols - 1),
+            field_scale.height / static_cast<float>(m_Offsets.rows - 1)
+        );
+
+        const Homography inverse_warp = motion.invert();
+        write([&](cv::Point2f& offset, const cv::Point& coord){
+            const auto sample_point = cv::Point2f(coord) * point_scaling;
+            offset = (inverse_warp * sample_point) - sample_point;
+        });
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::scale(const cv::Size2f& scaling_factor, const cv::Size2f& field_scale)
+    {
+        const cv::Size2f inverse_scaling = 1.0f / scaling_factor;
+        cv::add(m_Offsets, view_field_coord_grid(field_scale), m_Offsets);
+        cv::multiply(m_Offsets, cv::Scalar(inverse_scaling.width, inverse_scaling.height), m_Offsets);
+        cv::subtract(m_Offsets, view_field_coord_grid(field_scale), m_Offsets);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::crop_in(const cv::Rect2f& region, const cv::Size2f& field_scale)
+    {
+        // Move the crop region to the top left of the field, then upscale to fit.
+        cv::add(m_Offsets, cv::Scalar(region.x, region.y), m_Offsets);
+        scale(cv::Size2f(field_scale) / cv::Size2f(region.size()), field_scale);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::rotate(const float degrees, const cv::Size2f& field_scale)
+    {
+        const cv::Point2f center = field_scale / 2.0f;
+
+        // Rotate the field coord grid, then add its offset to the warp field.
+        cv::warpAffine(
+            view_field_coord_grid(field_scale),
+            m_ResultsBuffer,
+            cv::getRotationMatrix2D(center, degrees, 1.0f),
+            m_Offsets.size()
+        );
+
+        cv::subtract(view_field_coord_grid(field_scale), m_ResultsBuffer, m_ResultsBuffer);
+        cv::add(m_ResultsBuffer, m_Offsets, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -560,166 +531,111 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::combine(const WarpField& field, const float scaling)
-    {
-        cv::scaleAdd(field.m_WarpOffsets, scaling, m_WarpOffsets, m_WarpOffsets);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     void WarpField::blend(const float field_weight, const WarpField& field)
     {
-        cv::addWeighted(m_WarpOffsets, (1.0f - field_weight), field.m_WarpOffsets, field_weight, 0.0, m_WarpOffsets);
+        cv::addWeighted(m_Offsets, (1.0f - field_weight), field.m_Offsets, field_weight, 0.0, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void WarpField::blend(const float weight_1, const float weight_2, const WarpField& field)
     {
-        cv::addWeighted(m_WarpOffsets, weight_1, field.m_WarpOffsets, weight_2, 0.0, m_WarpOffsets);
+        cv::addWeighted(m_Offsets, weight_1, field.m_Offsets, weight_2, 0.0, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::write(
-        const std::function<void(cv::Point2f&, const cv::Point&)>& operation,
-        const bool parallel
-    )
+    void WarpField::combine(const WarpField& field, const float scaling)
     {
-        if(parallel)
-        {
-            // NOTE: this uses a parallel loop internally
-            m_WarpOffsets.forEach<cv::Point2f>([&](cv::Point2f& value, const int coord[]){
-                operation(value, {coord[1], coord[0]});
-            });
-        }
-        else
-        {
-            for(int r = 0; r < m_WarpOffsets.rows; r++)
-            {
-                auto* row_ptr = m_WarpOffsets.ptr<cv::Point2f>(r);
-                for(int c = 0; c < m_WarpOffsets.cols; c++)
-                {
-                    operation(row_ptr[c], {c, r});
-                }
-            }
-        }
+        cv::scaleAdd(field.m_Offsets, scaling, m_Offsets, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::read(
-        const std::function<void(const cv::Point2f&, const cv::Point&)>& operation,
-        const bool parallel
-    ) const
+    // NOTE: This returns a view into a shared cache, do not modify the value.
+    const cv::Mat WarpField::view_coord_grid(const cv::Size& resolution)
     {
-        if(parallel)
+        // Since this is a repeated operation that often results in the same output,
+        // we cache a copy of the grid in thread storage and return a view onto it.
+        // If the grid is too small, it must be remade to match the larger size.
+
+        thread_local cv::Mat coord_grid;
+        if(resolution.width > coord_grid.cols || resolution.height > coord_grid.rows)
         {
-            // NOTE: this uses a parallel loop internally
-            m_WarpOffsets.forEach<cv::Point2f>([&](const cv::Point2f& value, const int coord[]){
-                operation(value, {coord[1], coord[0]});
-            });
-        }
-        else
-        {
-            for(int r = 0; r < m_WarpOffsets.rows; r++)
-            {
-                const auto* row_ptr = m_WarpOffsets.ptr<cv::Point2f>(r);
-                for(int c = 0; c < m_WarpOffsets.cols; c++)
-                {
-                    operation(row_ptr[c], {c, r});
-                }
-            }
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
-    {
-        LVK_ASSERT(thickness > 0);
-        LVK_ASSERT(!dst.empty());
-
-        const cv::Size2f frame_scaling(
-            static_cast<float>(dst.cols) / static_cast<float>(m_WarpOffsets.cols - 1),
-            static_cast<float>(dst.rows) / static_cast<float>(m_WarpOffsets.rows - 1)
-        );
-
-        thread_local cv::UMat gpu_draw_mask(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-        cv::Mat draw_mask;
-
-        draw_mask.create(dst.size(), CV_8UC1);
-        draw_mask.setTo(cv::Scalar(0));
-
-        // Draw all the motion vectors
-        read([&](const cv::Point2f& offset, const cv::Point& coord){
-            const cv::Point2f origin(
-                static_cast<float>(coord.x) * frame_scaling.width,
-                static_cast<float>(coord.y) * frame_scaling.height
+            // Combine the resolutions maximally to avoid always throwing out the
+            // cache for non-square resolutions which are rotations of each other.
+            coord_grid.create(
+                std::max(resolution.height, coord_grid.rows),
+                std::max(resolution.width, coord_grid.cols),
+                CV_32FC2
             );
 
-            cv::line(
-                draw_mask,
-                origin,
-                origin - offset,
-                cv::Scalar(1),
-                thickness
-            );
-        });
-
-        draw_mask.copyTo(gpu_draw_mask);
-        dst.setTo(color, gpu_draw_mask);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    // NOTE: This returns an ROI into a shared cache, you do not own the returned value.
-    const cv::UMat WarpField::view_identity_field(const cv::Size& resolution)
-    {
-        // Since this is a repeated operation that often results in the same
-        // output. We will cache an identity field in static thread storage
-        // and return a view onto it as desired. If the cached field is too
-        // small, then we must remake it.
-
-        thread_local cv::UMat identity_field;
-        if(resolution.width > identity_field.cols || resolution.height > identity_field.rows)
-        {
-            // Combine the resolutions maximally to help avoid throwing out the cache
-            // when we have two fields which both larger than each other in one dimension.
-            identity_field.create(
-                cv::Size(
-                    std::max(resolution.width, identity_field.cols),
-                    std::max(resolution.height, identity_field.rows)
-                ),
-                CV_32FC2,
-                cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
-            );
-
-            // Create row and column vectors with the respective x and y values.
+            // Create row and column vectors with the respective coord x and y values.
             // Then use a nearest neighbour resize operation to bring them up to size.
 
-            cv::Mat row_values(1, identity_field.cols, CV_32FC1);
-            for(int i = 0; i < identity_field.cols; i++)
+            cv::Mat row_values(1, coord_grid.cols, CV_32FC1);
+            for(int i = 0; i < coord_grid.cols; i++)
                 row_values.at<float>(0, i) = static_cast<float>(i);
 
-            cv::Mat col_values(identity_field.rows, 1, CV_32FC1);
-            for(int i = 0; i < identity_field.rows; i++)
+            cv::Mat col_values(coord_grid.rows, 1, CV_32FC1);
+            for(int i = 0; i < coord_grid.rows; i++)
                 col_values.at<float>(i, 0) = static_cast<float>(i);
 
             cv::UMat x_plane, y_plane;
-            cv::resize(row_values, x_plane, identity_field.size(), 0, 0, cv::INTER_NEAREST_EXACT);
-            cv::resize(col_values, y_plane, identity_field.size(), 0, 0, cv::INTER_NEAREST_EXACT);
-            cv::merge(std::vector{x_plane, y_plane}, identity_field);
+            cv::resize(row_values, x_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
+            cv::resize(col_values, y_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
+            cv::merge(std::vector{x_plane, y_plane}, coord_grid);
         }
 
-        return identity_field(cv::Rect({0,0}, resolution));
+        return coord_grid(cv::Rect({0,0}, resolution));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // NOTE: This returns a view into a shared cache, do not modify the value.
+    const cv::UMat WarpField::view_coord_grid_gpu(const cv::Size& resolution)
+    {
+        // Since this is a repeated operation that often results in the same output,
+        // we cache a copy of the grid in thread storage and return a view onto it.
+        // If the grid is too small, it must be remade to match the larger size.
+
+        thread_local cv::UMat coord_grid;
+        if(resolution.width > coord_grid.cols || resolution.height > coord_grid.rows)
+        {
+            view_coord_grid(resolution).copyTo(coord_grid);
+        }
+
+        return coord_grid(cv::Rect({0,0}, resolution));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    // NOTE: This returns a view into a shared cache, do not modify the value.
+    const cv::Mat WarpField::view_field_coord_grid(const cv::Size2f& field_scale)
+    {
+        // This operation is likely to be required multiple times
+        // with the same scale so we cache it for better performance.
+        if(field_scale != m_FieldGridScale)
+        {
+            cv::multiply(
+                view_coord_grid(m_Offsets.size()),
+                cv::Scalar(
+                    field_scale.width / static_cast<float>(m_Offsets.cols),
+                    field_scale.height / static_cast<float>(m_Offsets.rows)
+                ),
+                m_FieldGridCache
+            );
+
+            m_FieldGridScale = field_scale;
+        }
+        return m_FieldGridCache;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField& WarpField::operator=(WarpField&& other) noexcept
     {
-        m_WarpOffsets = std::move(other.m_WarpOffsets);
+        m_Offsets = std::move(other.m_Offsets);
 
         return *this;
     }
@@ -728,7 +644,7 @@ namespace lvk
 
     WarpField& WarpField::operator=(const WarpField& other)
     {
-        m_WarpOffsets = other.m_WarpOffsets.clone();
+        m_Offsets = other.m_Offsets.clone();
 
         return *this;
     }
@@ -739,7 +655,7 @@ namespace lvk
     {
         LVK_ASSERT(size() == other.size());
 
-        cv::add(m_WarpOffsets, other.m_WarpOffsets, m_WarpOffsets);
+        cv::add(m_Offsets, other.m_Offsets, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -748,61 +664,51 @@ namespace lvk
     {
         LVK_ASSERT(size() == other.size());
 
-        cv::subtract(m_WarpOffsets, other.m_WarpOffsets, m_WarpOffsets);
+        cv::subtract(m_Offsets, other.m_Offsets, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void WarpField::operator*=(const WarpField& other)
     {
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            const auto multiplier = other.sample(coord);
-            offset.x *= multiplier.x;
-            offset.y *= multiplier.y;
-        });
+        cv::multiply(m_Offsets, other.m_Offsets, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator+=(const cv::Vec2f& offset)
+    void WarpField::operator+=(const cv::Point2f& offset)
     {
-        m_WarpOffsets += offset;
+        cv::add(m_Offsets, cv::Scalar(offset.x, offset.y), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator-=(const cv::Vec2f& offset)
+    void WarpField::operator-=(const cv::Point2f& offset)
     {
-        m_WarpOffsets -= offset;
+        cv::subtract(m_Offsets, cv::Scalar(offset.x, offset.y), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator*=(const cv::Vec2f& scaling)
+    void WarpField::operator*=(const cv::Size2f& scaling)
     {
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            offset.x *= scaling[0];
-            offset.y *= scaling[1];
-        });
+        cv::multiply(m_Offsets, cv::Scalar(scaling.width, scaling.height), m_Offsets);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::operator/=(const cv::Size2f& scaling)
+    {
+        LVK_ASSERT(scaling.width != 0.0f && scaling.height != 0.0f);
+
+        cv::divide(m_Offsets, cv::Scalar(scaling.width, scaling.height), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void WarpField::operator*=(const float scaling)
     {
-        m_WarpOffsets *= scaling;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::operator/=(const cv::Vec2f& scaling)
-    {
-        LVK_ASSERT(scaling[0] != 0.0f && scaling[1] != 0.0f);
-
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            offset.x /= scaling[0];
-            offset.y /= scaling[1];
-        });
+        m_Offsets *= scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -811,7 +717,7 @@ namespace lvk
     {
         LVK_ASSERT(scaling != 0.0f);
 
-        m_WarpOffsets /= scaling;
+        m_Offsets /= scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -821,7 +727,7 @@ namespace lvk
         LVK_ASSERT(left.size() == right.size());
 
         cv::Mat result = left.offsets() + right.offsets();
-        return WarpField(std::move(result));
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -831,7 +737,7 @@ namespace lvk
         LVK_ASSERT(left.size() == right.size());
 
         cv::Mat result = left.offsets() - right.offsets();
-        return WarpField(std::move(result));
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -845,23 +751,23 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator+(const WarpField& left, const cv::Vec2f& right)
+    WarpField operator+(const WarpField& left, const cv::Point2f& right)
     {
-        cv::Mat result = left.offsets() + right;
-        return WarpField(std::move(result));
+        cv::Mat result = left.offsets() + cv::Scalar(right.x, right.y);
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator-(const WarpField& left, const cv::Vec2f& right)
+    WarpField operator-(const WarpField& left, const cv::Point2f& right)
     {
-        cv::Mat result = left.offsets() - right;
-        return WarpField(std::move(result));
+        cv::Mat result = left.offsets() - cv::Scalar(right.x, right.y);
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const WarpField& field, const cv::Vec2f& scaling)
+    WarpField operator*(const WarpField& field, const cv::Size2f& scaling)
     {
         WarpField result(field);
         result *= scaling;
@@ -870,16 +776,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const cv::Vec2f& scaling, const WarpField& field)
+    WarpField operator*(const cv::Size2f& scaling, const WarpField& field)
     {
         return field * scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const WarpField& field, const cv::Vec2f& scaling)
+    WarpField operator/(const WarpField& field, const cv::Size2f& scaling)
     {
-        LVK_ASSERT(scaling[0] != 0.0f && scaling[1] != 0.0f);
+        LVK_ASSERT(scaling.height != 0.0f && scaling.height != 0.0f);
 
         WarpField result(field);
         result /= scaling;
@@ -888,7 +794,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const cv::Vec2f& scaling, const WarpField& field)
+    WarpField operator/(const cv::Size2f& scaling, const WarpField& field)
     {
         return field / scaling;
     }
@@ -898,7 +804,7 @@ namespace lvk
     WarpField operator*(const WarpField& field, const float scaling)
     {
         cv::Mat result = field.offsets() * scaling;
-        return WarpField(std::move(result));
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -915,7 +821,7 @@ namespace lvk
         LVK_ASSERT(scaling != 0.0f);
 
         cv::Mat result = field.offsets() / scaling;
-        return WarpField(std::move(result));
+        return WarpField(std::move(result), true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

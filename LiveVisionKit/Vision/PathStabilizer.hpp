@@ -68,7 +68,7 @@ namespace lvk
         void resize_fields(const cv::Size& new_size);
 
     private:
-        float m_SmoothingFactor = 0.0f;
+        double m_SmoothingFactor = 0.0;
         StreamBuffer<WarpField> m_Path;
         WarpField m_Trace{WarpField::MinimumSize};
 

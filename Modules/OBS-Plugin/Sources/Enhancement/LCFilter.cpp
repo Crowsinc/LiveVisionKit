@@ -124,10 +124,7 @@ namespace lvk
 
             // Convert the undistort map to a warp field.
             m_UndistortField = WarpField(std::move(undistort_map), true);
-
-            // Upscale the field to apply the crop in the same operation.
-            // TODO: this won't be enough if the crop also applies an offset!
-            m_UndistortField.scale(cv::Size2f(frame.size()) / cv::Size2f(undistort_crop.size()));
+            m_UndistortField.crop_in(undistort_crop, frame.size());
 
             m_FieldOutdated = false;
 		}
@@ -143,7 +140,7 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-            m_UndistortField.warp(frame, m_UndistortFrame, true);
+            m_UndistortField.apply(frame, m_UndistortFrame, true);
             std::swap(frame, m_UndistortFrame);
 		}
 	}
