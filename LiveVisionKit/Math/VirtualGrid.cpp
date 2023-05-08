@@ -91,6 +91,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void VirtualGrid::align(const cv::Size& size, const cv::Rect2f& region)
+    {
+        resize(size);
+        align(region);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     const cv::Rect2f& VirtualGrid::alignment() const
     {
         return m_Alignment;

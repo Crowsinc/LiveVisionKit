@@ -46,6 +46,9 @@ namespace lvk
 
         void align(const cv::Rect2f& region);
 
+        void align(const cv::Size& size, const cv::Rect2f& region);
+
+
         const cv::Rect2f& alignment() const;
 
         const cv::Size2f& key_size() const;
