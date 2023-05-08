@@ -143,7 +143,7 @@ namespace lvk
 	{
         LVK_ASSERT(smoothing_factor >= 0.0f);
 
-        return average + smoothing_factor * (new_sample - smoothing_factor);
+        return average + smoothing_factor * (new_sample - average);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
