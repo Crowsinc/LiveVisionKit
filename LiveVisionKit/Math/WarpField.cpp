@@ -141,58 +141,57 @@ namespace lvk
         if(m_Offsets.size() == MinimumSize)
             return;
 
-        // TODO: document and optimize
-
         // Linear regression formulae taken from..
         // https://www.tutorialspoint.com/regression-analysis-and-the-best-fitting-line-using-cplusplus
 
-        // NOTE: for the verticals we treat the y values as x, vice-versa to
-        // keep things consistent and avoid failure case with vertical lines of infinite slope.
+        // NOTE: for the verticals we treat the y values as x, vice-versa to keep things
+        // consistent and avoid the failure case with vertical lines of infinite slope.
+        // That is, all offsets are treated as 'y' values and coord components are 'x'.
 
         const auto nc = static_cast<float>(cols());
         const auto nr = static_cast<float>(rows());
 
+        // Simple sums can be calculated up front using series sums.
         const float row_x_sum = static_cast<float>(nc * (nc - 1)) / 2.0f;
         const float col_x_sum = static_cast<float>(nr * (nr - 1)) / 2.0f;
-
         const float row_x2_sum = (nc * (nc + 1) * (2 * nc + 1)) / 6.0f;
         const float col_x2_sum = (nr * (nr + 1) * (2 * nr + 1)) / 6.0f;
 
+        // Fit lines to each row and column of the offsets
         using LineData = std::tuple<float, float>;
         std::vector<LineData> col_lines(cols(), {0.0f, 0.0f});
         std::vector<LineData> row_lines(rows(), {0.0f, 0.0f});
 
-        for(int r = 0; r < rows(); r++)
+        // Grab all sums which require the 'y' offset values from the field.
+        // We will temporarily store these in the column and row line data.
+        read([&](const cv::Point2f& offset, const cv::Point coord){
+            auto& [row_y_sum, row_xy_sum] = row_lines[coord.y];
+            auto& [col_y_sum, col_xy_sum] = col_lines[coord.x];
+
+            row_xy_sum += offset.y * static_cast<float>(coord.x);
+            col_xy_sum += offset.x * static_cast<float>(coord.y);
+            row_y_sum += offset.y;
+            col_y_sum += offset.x;
+
+        }, false);
+
+        // Convert row sums into slope and intercept values.
+        for(auto& [row_y_sum, row_xy_sum] : row_lines)
         {
-            auto& [row_y_sum, row_xy_sum] = row_lines[r];
-            for(int c = 0; c < cols(); c++)
-            {
-                auto& [col_y_sum, col_xy_sum] = col_lines[c];
-
-                const auto& [x, y] = m_Offsets.at<cv::Point2f>(r, c);
-                row_xy_sum += y * static_cast<float>(c);
-                col_xy_sum += x * static_cast<float>(r);
-                row_y_sum += y;
-                col_y_sum += x;
-            }
-
-            // Once we reach here, row 'r' will be completed and we calculate coefficients.
             const float slope = (nc * row_xy_sum - row_x_sum * row_y_sum)/(nc * row_x2_sum - row_x_sum * row_x_sum);
             const float intercept = (row_y_sum - slope * row_x_sum) / nc;
-
-            // switch the sum variables for calculated coefficient values.
             row_y_sum = slope, row_xy_sum = intercept;
         }
 
+        // Convert column sums into slope and intercept values.
         for(auto& [col_y_sum, col_xy_sum] : col_lines)
         {
             const float slope = (nr * col_xy_sum - col_x_sum * col_y_sum)/(nr * col_x2_sum - col_x_sum * col_x_sum);
             const float intercept = (col_y_sum - slope * col_x_sum) / nr;
-
-            // switch the sum variables for calculated coefficient values.
             col_y_sum = slope, col_xy_sum = intercept;
         }
 
+        // Apply the fitted lines to the warp offsets, taking into account the tolerance.
         write([&](cv::Point2f& offset, const cv::Point& coord){
             auto& [row_slope, row_intercept] = row_lines[coord.y];
             auto& [col_slope, col_intercept] = col_lines[coord.x];
@@ -203,8 +202,8 @@ namespace lvk
             const float rigid_x = y * col_slope + col_intercept;
             const float rigid_y = x * row_slope + row_intercept;
 
-            offset.x = tolerance * offset.x + (1.0f - tolerance) * rigid_x;
-            offset.y = tolerance * offset.y + (1.0f - tolerance) * rigid_y;
+            offset.x = rigid_x + tolerance * (offset.x - rigid_x);
+            offset.y = rigid_y + tolerance * (offset.y - rigid_y);
         });
     }
 
@@ -212,11 +211,22 @@ namespace lvk
 
     void WarpField::apply(const cv::UMat& src, cv::UMat& dst, const bool high_quality) const
     {
-        // If we have a minimum size field, we can handle this as a Homography.
-
-        // TODO: test without this
-        if(m_Offsets.size() == MinimumSize)
+        if(m_Offsets.size() != MinimumSize)
         {
+            // If our field is larger than 2x2 then scale up the field and remap the input.
+            cv::resize(m_Offsets, m_WarpMap, src.size(), 0, 0, cv::INTER_LINEAR_EXACT);
+
+            if(!high_quality)
+            {
+                // Convert offsets to an absolute map for the generic remap function.
+                cv::add(m_WarpMap, view_coord_grid_gpu(src.size()), m_WarpMap);
+                cv::remap(src, dst, m_WarpMap, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
+            }
+            else lvk::remap(src, dst, m_WarpMap, true /* assume yuv */);
+        }
+        else
+        {
+            // If our field is 2x2, then we can directly model it with a homography.
             const auto w = static_cast<float>(src.cols);
             const auto h = static_cast<float>(src.rows);
 
@@ -240,16 +250,7 @@ namespace lvk
                 cv::WARP_INVERSE_MAP | (high_quality ? cv::INTER_CUBIC : cv::INTER_LINEAR),
                 cv::BORDER_CONSTANT
             );
-            return;
         }
-
-        cv::resize(m_Offsets, m_WarpMap, src.size(), 0, 0, cv::INTER_LINEAR);
-        if(!high_quality)
-        {
-            cv::add(m_WarpMap, view_coord_grid_gpu(src.size()), m_WarpMap);
-            cv::remap(src, dst, m_WarpMap, cv::noArray(), cv::INTER_LINEAR, cv::BORDER_CONSTANT);
-        }
-        else lvk::remap(src, dst, m_WarpMap, true /* assume yuv */);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
