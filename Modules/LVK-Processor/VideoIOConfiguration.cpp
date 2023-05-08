@@ -428,7 +428,7 @@ namespace clt
                 config_parser.add_switch(
                     {".crop_out", ".co"},
                     "Specifies that the output should be automatically cropped",
-                    &config.crop_output
+                    &config.crop_frame_to_margins
                 );
                 config_parser.add_variable(
                     {".smoothing", ".s"},

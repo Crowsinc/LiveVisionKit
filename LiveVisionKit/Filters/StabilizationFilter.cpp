@@ -87,9 +87,6 @@ namespace lvk
         }
 
         output = std::move(m_Stabilizer.next(std::move(input), motion.value_or(m_NullMotion)));
-
-        if(m_Settings.crop_output && !output.is_empty())
-            output.data = output.data(m_Stabilizer.stable_region());
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

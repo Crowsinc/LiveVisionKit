@@ -28,7 +28,6 @@ namespace lvk
 	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathStabilizerSettings
 	{
 		bool stabilize_output = true;
-		bool crop_output = false;
 	};
 
 

@@ -34,6 +34,7 @@ namespace lvk
 
         float scene_margins = 0.1f;
         bool clamp_path_to_margins = true;
+        bool crop_frame_to_margins = false;
 
         float rigidity_tolerance = 0.2f;
         bool force_output_rigidity = true;

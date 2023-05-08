@@ -81,12 +81,13 @@ namespace lvk
 
             // Determine how much our smoothed path trace has drifted away from the path,
             // as a percentage of the corrective limits (1.0+ => out of scene bounds).
-            m_Trace -= curr_position;
+            cv::absdiff(m_Trace.offsets(), curr_position.offsets(), m_Trace.offsets());
             m_Trace /= corrective_limits;
 
             double min_drift_error, max_drift_error;
             cv::minMaxIdx(m_Trace.offsets(), &min_drift_error, &max_drift_error);
             max_drift_error = std::min(max_drift_error, 1.0);
+
 
             // Adapt the smoothing kernel based on the max drift error. If the trace
             // is close to the original path, the smoothing coefficient is raised to
@@ -114,11 +115,14 @@ namespace lvk
             // Correct the frame onto the smooth trace position.
             auto path_correction = m_Trace - curr_position;
 
+            if(m_Settings.force_output_rigidity)
+                path_correction.undistort(m_Settings.rigidity_tolerance);
+
             if(m_Settings.clamp_path_to_margins)
                 path_correction.clamp(corrective_limits);
 
-            if(m_Settings.force_output_rigidity)
-                path_correction.undistort(m_Settings.rigidity_tolerance);
+            if(m_Settings.crop_frame_to_margins)
+                path_correction.crop_in(m_Margins, curr_frame.size());
 
             // NOTE: we perform a swap between the resulting warp frame
             // and the original frame data to ensure zero de-allocations.
