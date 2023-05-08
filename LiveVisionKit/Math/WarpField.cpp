@@ -487,15 +487,15 @@ namespace lvk
     void WarpField::crop_in(const cv::Rect2f& region, const cv::Size2f& field_scale)
     {
         // Move the crop region to the top left of the field, then upscale to fit.
-        cv::add(m_Offsets, cv::Scalar(region.x, region.y), m_Offsets);
         scale(cv::Size2f(field_scale) / cv::Size2f(region.size()), field_scale);
+        cv::add(m_Offsets,  cv::Scalar(region.x, region.y), m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     void WarpField::rotate(const float degrees, const cv::Size2f& field_scale)
     {
-        const cv::Point2f center = field_scale / 2.0f;
+        const auto center = cv::Point2f(m_Offsets.size() - 1) / 2;
 
         // Rotate the field coord grid, then add its offset to the warp field.
         cv::warpAffine(
@@ -505,8 +505,8 @@ namespace lvk
             m_Offsets.size()
         );
 
-        cv::subtract(view_field_coord_grid(field_scale), m_ResultsBuffer, m_ResultsBuffer);
-        cv::add(m_ResultsBuffer, m_Offsets, m_Offsets);
+        cv::subtract(m_ResultsBuffer, view_field_coord_grid(field_scale), m_ResultsBuffer);
+        cv::add(m_Offsets, m_ResultsBuffer , m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -620,8 +620,8 @@ namespace lvk
             cv::multiply(
                 view_coord_grid(m_Offsets.size()),
                 cv::Scalar(
-                    field_scale.width / static_cast<float>(m_Offsets.cols),
-                    field_scale.height / static_cast<float>(m_Offsets.rows)
+                    field_scale.width / static_cast<float>(m_Offsets.cols - 1),
+                    field_scale.height / static_cast<float>(m_Offsets.rows - 1)
                 ),
                 m_FieldGridCache
             );
