@@ -29,7 +29,7 @@ namespace lvk
     void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv)
     {
         LVK_ASSERT(offset_map.type() == CV_32FC2);
-        LVK_ASSERT(src.cols > 5 && src.rows > 5);
+        LVK_ASSERT(src.cols > 0 && src.rows > 0);
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT(!offset_map.empty());
         LVK_ASSERT(!src.empty());
@@ -78,7 +78,7 @@ namespace lvk
     void upscale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size, const bool yuv)
     {
         LVK_ASSERT(size.width >= src.cols && size.height >= src.rows);
-        LVK_ASSERT(src.cols > 8 && src.rows > 8);
+        LVK_ASSERT(src.cols > 0 && src.rows > 0);
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT(!src.empty());
 
@@ -127,7 +127,7 @@ namespace lvk
 
     void sharpen(const cv::UMat& src, cv::UMat& dst, const float sharpness)
     {
-        LVK_ASSERT(src.cols > 2 && src.rows > 2);
+        LVK_ASSERT(src.cols > 0 && src.rows > 0);
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT_01(sharpness);
         LVK_ASSERT(!src.empty());
