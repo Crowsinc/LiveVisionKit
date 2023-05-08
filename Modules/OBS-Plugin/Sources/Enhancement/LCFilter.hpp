@@ -51,8 +51,8 @@ namespace lvk
 		std::string m_Profile;
 		CameraParameters m_Parameters;
 
-        cv::UMat m_UndistortFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-        WarpField m_UndistortField{WarpField::MinimumSize};
+        cv::UMat m_CorrectedFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        WarpField m_CorrectionField{WarpField::MinimumSize};
         bool m_FieldOutdated = true;
 	};
 

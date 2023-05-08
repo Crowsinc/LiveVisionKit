@@ -98,19 +98,19 @@ namespace lvk
 	void LCFilter::prepare_undistort_maps(cv::UMat& frame)
 	{
 		// Update undistort map if it is outdated or missing
-		if(m_FieldOutdated || m_UndistortField.size() != frame.size())
+		if(m_FieldOutdated || m_CorrectionField.size() != frame.size())
 		{
-            cv::Rect undistort_crop;
+            cv::Rect view_region;
 			cv::Mat optimal_camera_matrix = cv::getOptimalNewCameraMatrix(
 				m_Parameters.camera_matrix,
 				m_Parameters.distortion_coefficients,
 				frame.size(),
 				0,
 				frame.size(),
-				&undistort_crop
+				&view_region
 			);
 
-            cv::Mat undistort_map;
+            cv::Mat correction_map;
 			cv::initUndistortRectifyMap(
 				m_Parameters.camera_matrix,
 				m_Parameters.distortion_coefficients,
@@ -118,14 +118,13 @@ namespace lvk
 				optimal_camera_matrix,
 				frame.size(),
 				CV_32FC2,
-                undistort_map,
+                correction_map,
 				cv::noArray()
 			);
 
-            // Convert the undistort map to a warp field.
-            m_UndistortField = WarpField(std::move(undistort_map), true);
-            m_UndistortField.crop_in(undistort_crop, frame.size());
-
+            // Convert the correction map to a warp field.
+            m_CorrectionField.set_to(std::move(correction_map), false);
+            m_CorrectionField.crop_in(view_region, frame.size());
             m_FieldOutdated = false;
 		}
 	}
@@ -140,8 +139,8 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-            m_UndistortField.apply(frame, m_UndistortFrame, true);
-            std::swap(frame, m_UndistortFrame);
+            m_CorrectionField.apply(frame, m_CorrectedFrame, true);
+            std::swap(frame, m_CorrectedFrame);
 		}
 	}
 
