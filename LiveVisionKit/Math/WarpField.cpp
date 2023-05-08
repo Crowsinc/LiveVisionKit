@@ -44,23 +44,15 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField::WarpField(cv::Mat&& warp_map, const bool as_offsets)
-        : m_Offsets(std::move(warp_map))
     {
-        LVK_ASSERT(m_Offsets.type() == CV_32FC2);
-
-        // If the warp was given as an absolute warp map, we need to convert it to offsets.
-        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
+        set_to(std::move(warp_map), as_offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     WarpField::WarpField(const cv::Mat& warp_map, const bool as_offsets)
-        : m_Offsets(warp_map.clone())
     {
-        LVK_ASSERT(m_Offsets.type() == CV_32FC2);
-
-        // If the warp was given as an absolute warp map, we need to convert it to offsets.
-        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
+        set_to(warp_map, as_offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -465,6 +457,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::set_to(cv::Mat&& warp_map, const bool as_offsets)
+    {
+        LVK_ASSERT(warp_map.type() == CV_32FC2);
+
+        m_Offsets = std::move(warp_map);
+
+        // If the warp was given as an absolute warp map, we need to convert it to offsets.
+        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void WarpField::set_to(const cv::Mat& warp_map, const bool as_offsets)
+    {
+        LVK_ASSERT(warp_map.type() == CV_32FC2);
+
+        warp_map.copyTo(m_Offsets);
+
+        // If the warp was given as an absolute warp map, we need to convert it to offsets.
+        if(!as_offsets) cv::subtract(m_Offsets, view_coord_grid(m_Offsets.size()), m_Offsets);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void WarpField::set_to(const Homography& motion, const cv::Size2f& field_scale)
     {
         const cv::Size2f point_scaling(
@@ -588,7 +604,7 @@ namespace lvk
             for(int i = 0; i < coord_grid.rows; i++)
                 col_values.at<float>(i, 0) = static_cast<float>(i);
 
-            cv::UMat x_plane, y_plane;
+            cv::Mat x_plane, y_plane;
             cv::resize(row_values, x_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
             cv::resize(col_values, y_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
             cv::merge(std::vector{x_plane, y_plane}, coord_grid);
@@ -618,11 +634,11 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     // NOTE: This returns a view into a shared cache, do not modify the value.
-    const cv::Mat WarpField::view_field_coord_grid(const cv::Size2f& field_scale)
+    const cv::Mat WarpField::view_field_coord_grid(const cv::Size2f& field_scale) const
     {
         // This operation is likely to be required multiple times
         // with the same scale so we cache it for better performance.
-        if(field_scale != m_FieldGridScale)
+        if(field_scale != m_FieldGridCacheScale)
         {
             cv::multiply(
                 view_coord_grid(m_Offsets.size()),
@@ -633,7 +649,7 @@ namespace lvk
                 m_FieldGridCache
             );
 
-            m_FieldGridScale = field_scale;
+            m_FieldGridCacheScale = field_scale;
         }
         return m_FieldGridCache;
     }
@@ -651,7 +667,7 @@ namespace lvk
 
     WarpField& WarpField::operator=(const WarpField& other)
     {
-        m_Offsets = other.m_Offsets.clone();
+        other.m_Offsets.copyTo(m_Offsets);
 
         return *this;
     }

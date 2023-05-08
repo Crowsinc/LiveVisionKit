@@ -93,6 +93,10 @@ namespace lvk
 
         void set_to(const cv::Point2f& motion);
 
+        void set_to(cv::Mat&& warp_map, const bool as_offsets);
+
+        void set_to(const cv::Mat& warp_map, const bool as_offsets);
+
         void set_to(const Homography& motion, const cv::Size2f& field_scale);
 
 
@@ -146,16 +150,17 @@ namespace lvk
 
         static const cv::UMat view_coord_grid_gpu(const cv::Size& resolution);
 
-        const cv::Mat view_field_coord_grid(const cv::Size2f& field_scale);
+        const cv::Mat view_field_coord_grid(const cv::Size2f& field_scale) const;
 
     private:
         // Vector offset from dst coord to src coord.
         cv::Mat m_Offsets;
 
-        // Auxiliary Buffers
-        cv::Size2f m_FieldGridScale = {0, 0};
-        cv::Mat m_FieldGridCache, m_ResultsBuffer;
-        cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        // Cache & Auxiliary Buffers
+        cv::Mat m_ResultsBuffer;
+        mutable cv::Mat m_FieldGridCache;
+        mutable cv::Size2f m_FieldGridCacheScale = {0, 0};
+        mutable cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 
     WarpField operator+(const WarpField& left, const WarpField& right);
