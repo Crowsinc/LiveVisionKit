@@ -47,10 +47,18 @@ namespace lvk
 
     cv::Point2f operator/(const cv::Point2f& p, const cv::Size2f& s);
 
+    cv::Point2f operator+(const cv::Point2f& p, const cv::Size2f& s);
+
+    cv::Point2f operator-(const cv::Point2f& p, const cv::Size2f& s);
+
 
     // cv::Point Operators
     cv::Point operator*(const cv::Point& p, const cv::Size& s);
 
     cv::Point operator/(const cv::Point& p, const cv::Size& s);
+
+    cv::Point operator+(const cv::Point& p, const cv::Size& s);
+
+    cv::Point operator-(const cv::Point& p, const cv::Size& s);
 
 }
