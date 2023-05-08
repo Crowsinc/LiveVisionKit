@@ -54,6 +54,8 @@ namespace lvk
         int rows() const;
 
 
+        cv::Mat& offsets();
+
         const cv::Mat& offsets() const;
 
         void to_map(cv::Mat& dst) const;
