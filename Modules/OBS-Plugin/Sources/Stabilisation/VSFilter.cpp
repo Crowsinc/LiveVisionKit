@@ -64,7 +64,7 @@ namespace lvk
 			L("vs.radius"),
 			SMOOTHING_RADIUS_MIN,
 			SMOOTHING_RADIUS_MAX,
-			2
+			1
 		);
 
 		auto property = obs_properties_add_int(
