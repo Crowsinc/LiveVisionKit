@@ -43,12 +43,6 @@ namespace lvk
 	constexpr auto CROP_PERCENTAGE_MIN = 1;
 	constexpr auto CROP_PERCENTAGE_MAX = 25;
 
-	constexpr auto PROP_SUPPRESSION_THRESH = "SUPPRESSION_THRESH";
-    constexpr auto SUPPRESSION_THRESH_DEFAULT = 0.7f;
-    constexpr auto SUPPRESSION_THRESH_MIN = 0.0f;
-    constexpr auto SUPPRESSION_THRESH_MAX = 1.0f;
-    constexpr auto STABILITY_UNIFORMITY_RATIO = 0.5f;
-
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto STAB_DISABLED_DEFAULT = false;
 
@@ -95,15 +89,6 @@ namespace lvk
 		obs_property_int_set_suffix(property, "%");
 
 
-        obs_properties_add_float_slider(
-            properties,
-            PROP_SUPPRESSION_THRESH,
-            L("vs.suppression"),
-            SUPPRESSION_THRESH_MIN,
-            SUPPRESSION_THRESH_MAX,
-            0.01f
-        );
-
 		obs_properties_add_bool(
 			properties,
 			PROP_STAB_DISABLED,
@@ -125,7 +110,6 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-        obs_data_set_default_double(settings, PROP_SUPPRESSION_THRESH, SUPPRESSION_THRESH_DEFAULT);
 		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
@@ -150,10 +134,6 @@ namespace lvk
 			stab_settings.path_prediction_frames = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
             stab_settings.crop_frame_to_margins = !m_TestMode;
-
-			// Suppression Threshold
-            stab_settings.stability_threshold = obs_data_get_double(settings, PROP_SUPPRESSION_THRESH);
-            stab_settings.uniformity_threshold = stab_settings.stability_threshold * STABILITY_UNIFORMITY_RATIO;
 		});
 
 		// Update the frame delay indicator for the user
