@@ -170,6 +170,6 @@ target_sources(
         Vision/FrameTracker.hpp
         Vision/GridDetector.cpp
         Vision/GridDetector.hpp
-        Vision/PathStabilizer.cpp
+        Vision/PathSmoother.cpp
         Vision/PathSmoother.hpp
 )

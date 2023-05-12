@@ -115,11 +115,12 @@ namespace lvk
             // Correct the frame onto the smooth trace position.
             auto path_correction = m_Trace - curr_position;
 
+            // Clamp path to the margins if we are hitting them.
+            if(m_Settings.clamp_path_to_margins && max_drift_error == 1.0)
+                path_correction.clamp(corrective_limits);
+
             if(m_Settings.force_output_rigidity)
                 path_correction.undistort(m_Settings.rigidity_tolerance);
-
-            if(m_Settings.clamp_path_to_margins)
-                path_correction.clamp(corrective_limits);
 
             if(m_Settings.crop_frame_to_margins)
                 path_correction.crop_in(m_Margins, curr_frame.size());
