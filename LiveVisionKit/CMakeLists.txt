@@ -171,5 +171,5 @@ target_sources(
         Vision/GridDetector.cpp
         Vision/GridDetector.hpp
         Vision/PathStabilizer.cpp
-        Vision/PathStabilizer.hpp
+        Vision/PathSmoother.hpp
 )

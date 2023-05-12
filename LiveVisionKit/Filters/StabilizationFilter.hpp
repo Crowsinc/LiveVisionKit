@@ -19,13 +19,13 @@
 
 #include "VideoFilter.hpp"
 #include "Vision/FrameTracker.hpp"
-#include "Vision/PathStabilizer.hpp"
+#include "Vision/PathSmoother.hpp"
 #include "Utility/Configurable.hpp"
 
 namespace lvk
 {
 
-	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathStabilizerSettings
+	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathSmootherSettings
 	{
 		bool stabilize_output = true;
 	};
@@ -62,7 +62,7 @@ namespace lvk
 
 	private:
 		FrameTracker m_FrameTracker;
-		PathStabilizer m_Stabilizer;
+		PathSmoother m_Stabilizer;
 
         WarpField m_NullMotion{WarpField::MinimumSize};
 		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};

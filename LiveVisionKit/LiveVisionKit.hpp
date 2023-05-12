@@ -46,7 +46,7 @@
 #include "Math/Homography.hpp"
 #include "Math/VirtualGrid.hpp"
 #include "Math/BoundingQuad.hpp"
-#include "Vision/PathStabilizer.hpp"
+#include "Vision/PathSmoother.hpp"
 
 #include "Structures/SpatialMap.hpp"
 #include "Structures/StreamBuffer.hpp"

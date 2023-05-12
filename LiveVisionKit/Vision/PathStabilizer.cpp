@@ -15,7 +15,7 @@
 //     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //     **********************************************************************
 
-#include "PathStabilizer.hpp"
+#include "PathSmoother.hpp"
 
 #include "Functions/Math.hpp"
 #include "Logging/CSVLogger.hpp"
@@ -31,7 +31,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	PathStabilizer::PathStabilizer(const PathStabilizerSettings& settings)
+	PathSmoother::PathSmoother(const PathSmootherSettings& settings)
         : m_Path(1), // NOTE: initialized properly in configure.
           m_FrameQueue(1) // NOTE: initialized properly in configure.
 	{
@@ -40,7 +40,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathStabilizer::configure(const PathStabilizerSettings& settings)
+    void PathSmoother::configure(const PathSmootherSettings& settings)
     {
         LVK_ASSERT(settings.path_prediction_frames > 0);
         LVK_ASSERT_01_STRICT(settings.scene_margins);
@@ -51,14 +51,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame PathStabilizer::next(const Frame& frame, const WarpField& motion)
+    Frame PathSmoother::next(const Frame& frame, const WarpField& motion)
     {
         return next(std::move(frame.clone()), motion);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame PathStabilizer::next(Frame&& frame, const WarpField& motion)
+    Frame PathSmoother::next(Frame&& frame, const WarpField& motion)
     {
         LVK_ASSERT(!frame.is_empty());
 
@@ -137,7 +137,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathStabilizer::restart()
+    void PathSmoother::restart()
     {
         m_FrameQueue.clear();
         m_Path.clear();
@@ -148,14 +148,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool PathStabilizer::ready() const
+    bool PathSmoother::ready() const
     {
         return m_FrameQueue.is_full();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    size_t PathStabilizer::frame_delay() const
+    size_t PathSmoother::frame_delay() const
     {
         // NOTE: capacity can never be zero, per the pre-conditions
         return m_FrameQueue.capacity() - 1;
@@ -163,7 +163,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathStabilizer::position() const
+    WarpField PathSmoother::position() const
     {
         // NOTE: the path will never be empty.
         return m_Path.centre();
@@ -171,14 +171,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const cv::Rect& PathStabilizer::stable_region() const
+    const cv::Rect& PathSmoother::stable_region() const
     {
         return m_Margins;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathStabilizer::configure_buffers()
+    void PathSmoother::configure_buffers()
     {
         // The path is held in a circular buffer representing a windowed
         // view on the actual continuous path. The size of the window is
@@ -217,7 +217,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathStabilizer::resize_fields(const cv::Size& new_size)
+    void PathSmoother::resize_fields(const cv::Size& new_size)
     {
         m_Trace.resize(new_size);
         for(auto& position : m_Path)

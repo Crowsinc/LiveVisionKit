@@ -27,9 +27,9 @@
 namespace lvk
 {
 
-    struct PathStabilizerSettings
+    struct PathSmootherSettings
     {
-        // NOTE: frame delay is proportional to smoothing samples
+        // NOTE: frame delay is proportional to prediction frames
         size_t path_prediction_frames = 10;
 
         float scene_margins = 0.1f;
@@ -40,13 +40,13 @@ namespace lvk
         bool force_output_rigidity = true;
     };
 
-    class PathStabilizer final : public Configurable<PathStabilizerSettings>
+    class PathSmoother final : public Configurable<PathSmootherSettings>
     {
     public:
 
-        explicit PathStabilizer(const PathStabilizerSettings& settings = {});
+        explicit PathSmoother(const PathSmootherSettings& settings = {});
 
-        void configure(const PathStabilizerSettings& settings) override;
+        void configure(const PathSmootherSettings& settings) override;
 
         Frame next(const Frame& frame, const WarpField& motion);
 
