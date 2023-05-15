@@ -35,7 +35,6 @@ extern void register_vs_source()
 	config.destroy = lvk::dispatch::filter_delete<lvk::VSFilter>;
 
 	config.update = lvk::dispatch::filter_configure<lvk::VSFilter>;
-	config.video_render = lvk::dispatch::filter_render<lvk::VSFilter>;
 	config.filter_video = lvk::dispatch::filter_process<lvk::VSFilter>;
 
 	config.get_name = [](void* data) {return  L("vs.name"); };
