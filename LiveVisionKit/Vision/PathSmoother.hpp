@@ -30,14 +30,10 @@ namespace lvk
     struct PathSmootherSettings
     {
         // NOTE: frame delay is proportional to prediction frames
-        size_t path_prediction_frames = 10;
+        size_t path_prediction_samples = 10;
 
-        float scene_margins = 0.1f;
-        bool clamp_path_to_margins = true;
-        bool crop_frame_to_margins = false;
-
-        float rigidity_tolerance = 0.2f;
         bool force_output_rigidity = true;
+        float rigidity_tolerance = 0.2f;
     };
 
     class PathSmoother final : public Configurable<PathSmootherSettings>
@@ -48,34 +44,22 @@ namespace lvk
 
         void configure(const PathSmootherSettings& settings) override;
 
-        Frame next(const Frame& frame, const WarpField& motion);
-
-        Frame next(Frame&& frame, const WarpField& motion);
-
-        void restart();
-
-        bool ready() const;
-
-        size_t frame_delay() const;
+        WarpField next(const WarpField& motion, const cv::Size2f& limits);
 
         WarpField position() const;
 
-        const cv::Rect& stable_region() const;
+        size_t time_delay() const;
+
+        void restart();
 
     private:
-
-        void configure_buffers();
 
         void resize_fields(const cv::Size& new_size);
 
     private:
         double m_SmoothingFactor = 0.0;
-        StreamBuffer<WarpField> m_Path;
+        StreamBuffer<WarpField> m_Path{1};
         WarpField m_Trace{WarpField::MinimumSize};
-
-        cv::Rect m_Margins{0,0,0,0};
-        StreamBuffer<Frame> m_FrameQueue;
-        cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 
 }

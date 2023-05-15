@@ -428,12 +428,12 @@ namespace clt
                 config_parser.add_switch(
                     {".crop_out", ".co"},
                     "Specifies that the output should be automatically cropped",
-                    &config.crop_frame_to_margins
+                    &config.crop_to_margins
                 );
                 config_parser.add_variable(
                     {".smoothing", ".s"},
                     "The amount of camera smoothing to apply to the video.",
-                    &config.path_prediction_frames
+                    &config.path_prediction_samples
                 );
             }
         );

@@ -32,8 +32,6 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	PathSmoother::PathSmoother(const PathSmootherSettings& settings)
-        : m_Path(1), // NOTE: initialized properly in configure.
-          m_FrameQueue(1) // NOTE: initialized properly in configure.
 	{
 		configure(settings);
 	}
@@ -42,124 +40,87 @@ namespace lvk
 
     void PathSmoother::configure(const PathSmootherSettings& settings)
     {
-        LVK_ASSERT(settings.path_prediction_frames > 0);
-        LVK_ASSERT_01_STRICT(settings.scene_margins);
+        LVK_ASSERT(settings.path_prediction_samples > 0);
 
         m_Settings = settings;
-        configure_buffers();
+
+        // The path is held in a circular buffer representing a windowed view on the
+        // full path. The size of the window is based on the number of predictive samples
+        // and is symmetrical with the center position representing the current position
+        // in time. To achieve predictive smoothing the path is implicitely delayed.
+        m_Path.resize(2 * m_Settings.path_prediction_samples + 1);
+
+        // If the path is resized to be larger, it'll no longer be full so pad the front.
+        m_Path.pad_front(m_Path.is_empty() ? WarpField::MinimumSize : m_Path.newest().size());
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Frame PathSmoother::next(const Frame& frame, const WarpField& motion)
+    WarpField PathSmoother::next(const WarpField& motion, const cv::Size2f& limits)
     {
-        return next(std::move(frame.clone()), motion);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    Frame PathSmoother::next(Frame&& frame, const WarpField& motion)
-    {
-        LVK_ASSERT(!frame.is_empty());
+        LVK_ASSERT(limits.width > 0 && limits.height > 0);
 
         // Resize past motions if a new size is given.
         if(motion.size() != m_Trace.size())
             resize_fields(motion.size());
 
-        // Update the path's current state
-        m_FrameQueue.push(std::move(frame));
-        m_Path.advance(motion.size()) = m_Path.newest() + motion;
+        // Update the path's current state.
+        m_Path.push(m_Path.newest() + motion);
 
-        if(ready())
+        // Grab the current path position in time.
+        auto& position = m_Path.centre();
+
+        // Determine how much our smoothed path trace has drifted away from the path,
+        // as a percentage of the corrective limits (1.0+ => out of scene bounds).
+        cv::absdiff(m_Trace.offsets(), position.offsets(), m_Trace.offsets());
+        m_Trace /= limits;
+
+        double min_drift_error, max_drift_error;
+        cv::minMaxIdx(m_Trace.offsets(), &min_drift_error, &max_drift_error);
+        max_drift_error = std::min(max_drift_error, 1.0);
+
+
+        // Adapt the smoothing kernel based on the max drift error. If the trace
+        // is close to the original path, the smoothing coefficient is raised to
+        // maximise the smoothing applied. If the trace starts drifting away from
+        // the path and closer to the corrective limits, the smoothing is lowered
+        // to bring the trace back towards the path.
+        m_SmoothingFactor = exp_moving_average(
+            m_SmoothingFactor,
+            (MAX_FILTER_SIGMA - MIN_FILTER_SIGMA) * (1.0f - max_drift_error) + MIN_FILTER_SIGMA,
+            SIGMA_RESPONSE_RATE
+        );
+
+        const auto smoothing_kernel = cv::getGaussianKernel(
+            static_cast<int>(m_Path.capacity()), m_SmoothingFactor, CV_32F
+        );
+
+        // Apply the filter to get the current smooth trace position.
+        m_Trace.set_identity();
+        auto weight = smoothing_kernel.ptr<float>();
+        for(size_t i = 0; i < m_Path.size(); i++, weight++)
         {
-            const auto& curr_position = m_Path.centre();
-            auto& curr_frame = m_FrameQueue.oldest();
-
-            // Determine the scene margins for the frame size
-            m_Margins = crop(curr_frame.size(), m_Settings.scene_margins);
-            const cv::Point2f corrective_limits(m_Margins.tl());
-
-            // Determine how much our smoothed path trace has drifted away from the path,
-            // as a percentage of the corrective limits (1.0+ => out of scene bounds).
-            cv::absdiff(m_Trace.offsets(), curr_position.offsets(), m_Trace.offsets());
-            m_Trace /= corrective_limits;
-
-            double min_drift_error, max_drift_error;
-            cv::minMaxIdx(m_Trace.offsets(), &min_drift_error, &max_drift_error);
-            max_drift_error = std::min(max_drift_error, 1.0);
-
-
-            // Adapt the smoothing kernel based on the max drift error. If the trace
-            // is close to the original path, the smoothing coefficient is raised to
-            // maximise the smoothing applied. If the trace starts drifting away from
-            // the path and closer to the corrective limits, the smoothing is lowered
-            // to bring the trace back towards the path.
-            m_SmoothingFactor = exp_moving_average(
-                m_SmoothingFactor,
-                (MAX_FILTER_SIGMA - MIN_FILTER_SIGMA) * (1.0f - max_drift_error) + MIN_FILTER_SIGMA,
-                SIGMA_RESPONSE_RATE
-            );
-
-            const auto smoothing_kernel = cv::getGaussianKernel(
-                static_cast<int>(m_Path.capacity()), m_SmoothingFactor, CV_32F
-            );
-
-            // Apply the filter to get the current smooth trace position.
-            m_Trace.set_identity();
-            auto weight = smoothing_kernel.ptr<float>();
-            for(size_t i = 0; i < m_Path.size(); i++, weight++)
-            {
-                m_Trace.combine(m_Path[i], *weight);
-            }
-
-            // Correct the frame onto the smooth trace position.
-            auto path_correction = m_Trace - curr_position;
-
-            // Clamp path to the margins if we are hitting them.
-            if(m_Settings.clamp_path_to_margins && max_drift_error == 1.0)
-                path_correction.clamp(corrective_limits);
-
-            if(m_Settings.force_output_rigidity)
-                path_correction.undistort(m_Settings.rigidity_tolerance);
-
-            if(m_Settings.crop_frame_to_margins)
-                path_correction.crop_in(m_Margins, curr_frame.size());
-
-            // NOTE: we perform a swap between the resulting warp frame
-            // and the original frame data to ensure zero de-allocations.
-            path_correction.apply(curr_frame.data, m_WarpFrame, true);
-            std::swap(m_WarpFrame, curr_frame.data);
-
-            return std::move(curr_frame);
+            m_Trace.combine(m_Path[i], *weight);
         }
 
-        return {};
+        auto path_correction = m_Trace - position;
+
+        // Clamp path to the limits if we are hitting them.
+        if(max_drift_error == 1.0)
+            path_correction.clamp(limits);
+
+        // Undistort the output.
+        if(m_Settings.force_output_rigidity)
+            path_correction.undistort(m_Settings.rigidity_tolerance);
+
+        return std::move(path_correction);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void PathSmoother::restart()
+    size_t PathSmoother::time_delay() const
     {
-        m_FrameQueue.clear();
-        m_Path.clear();
-
-        // Pre-fill the trace to avoid having to deal with edge cases.
-        while(!m_Path.is_full()) m_Path.advance(WarpField::MinimumSize);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    bool PathSmoother::ready() const
-    {
-        return m_FrameQueue.is_full();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    size_t PathSmoother::frame_delay() const
-    {
-        // NOTE: capacity can never be zero, per the pre-conditions
-        return m_FrameQueue.capacity() - 1;
+        return m_Settings.path_prediction_samples;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -172,48 +133,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const cv::Rect& PathSmoother::stable_region() const
+    void PathSmoother::restart()
     {
-        return m_Margins;
-    }
+        m_Path.clear();
 
-//---------------------------------------------------------------------------------------------------------------------
-
-    void PathSmoother::configure_buffers()
-    {
-        // The path is held in a circular buffer representing a windowed
-        // view on the actual continuous path. The size of the window is
-        // based on the number of predictive frames, and is symmetrical
-        // with the center position representing the current position in.
-        // time. To achieve predictive smoothing, there is a frame queue
-        // which delays frames up to match the timing of the path buffer.
-        const size_t smoothing_radius = m_Settings.path_prediction_frames;
-        const size_t new_window_size = 2 * smoothing_radius + 1;
-        const size_t new_queue_size = smoothing_radius + 1;
-
-        if(new_window_size != m_Path.capacity() || new_queue_size != m_FrameQueue.capacity())
-        {
-            const auto old_queue_size = m_FrameQueue.capacity();
-
-            // When shrinking the buffers, they are both trimmed from the front, so their
-            // relative ordering and synchrony is respected. However, resizing the buffers
-            // to a larger capacity will move the path forwards as the new center point is
-            // pushed to the right, relative to the old path data. So the frames which now
-            // corresponded to the path positions that were shifted left towards the past
-            // are no longer relevant and need to be skipped.
-
-            m_Path.resize(new_window_size);
-            m_FrameQueue.resize(new_queue_size);
-
-            if(new_queue_size > old_queue_size)
-            {
-                const auto time_shift = new_queue_size - old_queue_size;
-
-                m_FrameQueue.skip(time_shift);
-                if(m_FrameQueue.is_empty())
-                    restart();
-            }
-        }
+        // Pre-fill the path to avoid having to deal with edge cases.
+        m_Path.pad_back(WarpField::MinimumSize);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -27,6 +27,8 @@ namespace lvk
 
 	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathSmootherSettings
 	{
+        float scene_margins = 0.1f;
+        bool crop_to_margins = false;
 		bool stabilize_output = true;
 	};
 
@@ -45,11 +47,11 @@ namespace lvk
 
 		void reset_context();
 
-		float stability() const;
-
         size_t frame_delay() const;
 
-		const cv::Rect& crop_region() const;
+		float scene_stability() const;
+
+		const cv::Rect& stable_region() const;
 
 	private:
 
@@ -62,10 +64,14 @@ namespace lvk
 
 	private:
 		FrameTracker m_FrameTracker;
-		PathSmoother m_Stabilizer;
+		PathSmoother m_PathSmoother;
+
+        cv::Rect m_FrameMargins{0,0,0,0};
+        StreamBuffer<Frame> m_FrameQueue{1};
+        cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 
         WarpField m_NullMotion{WarpField::MinimumSize};
-		cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }
