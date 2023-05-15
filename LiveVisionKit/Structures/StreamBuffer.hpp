@@ -44,13 +44,20 @@ namespace lvk
 		T& advance(Args&&... args);
 
 
+        template<typename... Args>
+        void pad_front(Args&&... args);
+
+        template<typename... Args>
+        void pad_back(Args&&... args);
+
+
 		void trim(const size_t amount);
 
 		void skip(const size_t amount);
 
 
 		void resize(const size_t capacity);
-		
+
 		void clear();
 
 

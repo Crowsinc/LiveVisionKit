@@ -103,6 +103,28 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    template<typename... Args>
+    void StreamBuffer<T>::pad_front(Args&&... args)
+    {
+        while(!is_full())
+        {
+            advance_window();
+            m_InternalBuffer.insert(m_InternalBuffer.begin() + m_StartIndex, std::move(T(args...)));
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    template<typename... Args>
+    void StreamBuffer<T>::pad_back(Args&&... args)
+    {
+        while(!is_full()) advance(args...);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
     inline void StreamBuffer<T>::skip(const size_t amount)
 	{
