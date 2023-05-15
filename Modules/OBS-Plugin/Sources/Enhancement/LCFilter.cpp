@@ -31,8 +31,11 @@ namespace lvk
 	constexpr auto PROP_PROFILE = "PROP_PROFILE";
 	constexpr auto PROFILE_DEFAULT = "";
 
-	constexpr auto PROP_CORRECT_DISTORTION = "PROP_DISTORTION";
-	constexpr auto CORRECT_DISTORTION_DEFAULT = false;
+	constexpr auto PROP_TEST_MODE = "PROP_TEST_MODE";
+	constexpr auto TEST_MODE_DEFAULT = false;
+    const cv::Size TEST_MODE_GRID = {32, 32};
+
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -53,6 +56,13 @@ namespace lvk
 		for(const auto& profile : profiles)
 			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
 
+
+        obs_properties_add_bool(
+            properties,
+            PROP_TEST_MODE,
+            L("f.testmode")
+        );
+
 		return properties;
 	}
 
@@ -61,6 +71,7 @@ namespace lvk
 	void LCFilter::LoadDefaults(obs_data_t* settings)
 	{
 		obs_data_set_default_string(settings, PROP_PROFILE, PROFILE_DEFAULT);
+        obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -91,6 +102,8 @@ namespace lvk
 			}
 			else m_ProfileSelected = false;
 		}
+
+        m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -134,6 +147,12 @@ namespace lvk
 	void LCFilter::filter(cv::UMat& frame)
 	{
         LVK_PROFILE;
+
+        if(m_TestMode)
+        {
+            // Draw grid so that the correction warp is visible.
+            lvk::draw_grid(frame, TEST_MODE_GRID, lvk::yuv::MAGENTA, 3);
+        }
 
 		if(m_ProfileSelected)
 		{
