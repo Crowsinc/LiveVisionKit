@@ -29,12 +29,12 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_STRENGTH = "STRENGTH";
-	constexpr auto STRENGTH_MAX = 5;
-	constexpr auto STRENGTH_MIN = 1;
-	constexpr auto STRENGTH_DEFAULT = 3;
+	constexpr auto PROP_STRENGTH_MAX = 5;
+	constexpr auto PROP_STRENGTH_MIN = 1;
+	constexpr auto PROP_STRENGTH_DEFAULT = 3;
 
 	constexpr auto PROP_TEST_MODE = "TEST_MODE";
-	constexpr auto TEST_MODE_DEFAULT = false;
+	constexpr auto PROP_TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 3.0;
 	constexpr auto TIMING_SAMPLES = 30;
@@ -45,17 +45,29 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Strength Slider
 		obs_properties_add_int_slider(
 			properties,
 			PROP_STRENGTH,
 			L("adb.strength"),
-			STRENGTH_MIN,
-			STRENGTH_MAX,
+			PROP_STRENGTH_MIN,
+			PROP_STRENGTH_MAX,
 			1
 		);
 
+        // Runtime Controls
+        obs_properties_t* controls = obs_properties_create();
+        obs_properties_add_group(
+            properties,
+            "CONTROL_GROUP",
+            L("f.controls-group"),
+            obs_group_type::OBS_GROUP_NORMAL,
+            controls
+        );
+
+        // Test Mode Toggle
 		obs_properties_add_bool(
-			properties,
+            controls,
 			PROP_TEST_MODE,
 			L("f.testmode")
 		);
@@ -69,8 +81,8 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_data_set_default_int(settings, PROP_STRENGTH, STRENGTH_DEFAULT);
-		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
+		obs_data_set_default_int(settings, PROP_STRENGTH, PROP_STRENGTH_DEFAULT);
+		obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
