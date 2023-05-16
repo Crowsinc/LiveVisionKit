@@ -20,7 +20,6 @@
 #include <util/platform.h>
 
 #include "Effects/FSREffect.hpp"
-#include "Effects/DefaultEffect.hpp"
 #include "Utility/ScopedProfiler.hpp"
 #include "Utility/Locale.hpp"
 
@@ -39,9 +38,9 @@ namespace lvk
 	constexpr auto PROP_STREAM_DELAY_INFO_MIN = 0;
 
     constexpr auto PROP_MOTION_QUALITY = "MOTION_QUALITY";
-    constexpr auto PROP_MOTION_QUALITY_LOW_TAG = "vs.motion.low";
-    constexpr auto PROP_MOTION_QUALITY_MED_TAG = "vs.motion.med";
-    constexpr auto PROP_MOTION_QUALITY_HIGH_TAG = "vs.motion.high";
+    constexpr auto PROP_MOTION_QUALITY_1_TAG = "vs.motion.1";
+    constexpr auto PROP_MOTION_QUALITY_2_TAG = "vs.motion.2";
+    constexpr auto PROP_MOTION_QUALITY_3_TAG = "vs.motion.3";
 
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
@@ -97,9 +96,9 @@ namespace lvk
             obs_combo_type::OBS_COMBO_TYPE_LIST,
             obs_combo_format::OBS_COMBO_FORMAT_STRING
         );
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_LOW_TAG), L(PROP_MOTION_QUALITY_LOW_TAG));
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_MED_TAG), L(PROP_MOTION_QUALITY_MED_TAG));
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_HIGH_TAG), L(PROP_MOTION_QUALITY_HIGH_TAG));
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_1_TAG), L(PROP_MOTION_QUALITY_1_TAG));
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_2_TAG), L(PROP_MOTION_QUALITY_2_TAG));
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_3_TAG), L(PROP_MOTION_QUALITY_3_TAG));
 
         // Crop Slider
 		property = obs_properties_add_int_slider(
@@ -180,14 +179,14 @@ namespace lvk
 
             // Configure motion quality
             const std::string motion_quality = obs_data_get_string(settings, PROP_MOTION_QUALITY);
-            if(motion_quality == L(PROP_MOTION_QUALITY_HIGH_TAG))
+            if(motion_quality == L(PROP_MOTION_QUALITY_3_TAG))
             {
                 stab_settings.detect_resolution = {640, 360};
                 stab_settings.feature_grid_shape = {128, 72};
                 stab_settings.motion_resolution = {32, 32};
                 stab_settings.detection_zones = {2, 1};
             }
-            else if(motion_quality == L(PROP_MOTION_QUALITY_MED_TAG))
+            else if(motion_quality == L(PROP_MOTION_QUALITY_2_TAG))
             {
                 stab_settings.detect_resolution = {640, 360};
                 stab_settings.feature_grid_shape = {64, 36};
