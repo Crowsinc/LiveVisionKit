@@ -29,28 +29,28 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr auto PROP_SMOOTHING_RADIUS = "SMOOTH_RADIUS";
-	constexpr auto SMOOTHING_RADIUS_DEFAULT = 10;
-	constexpr auto SMOOTHING_RADIUS_MIN = 4;
-	constexpr auto SMOOTHING_RADIUS_MAX = 20;
+	constexpr auto PROP_PREDICTIVE_SAMPLES = "SMOOTH_RADIUS";
+	constexpr auto PROP_PREDICTIVE_SAMPLES_DEFAULT = 10;
+	constexpr auto PROP_PREDICTIVE_SAMPLES_MAX = 20;
+	constexpr auto PROP_PREDICTIVE_SAMPLES_MIN = 4;
 
 	constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
-	constexpr auto STREAM_DELAY_INFO_MIN = 0;
-	constexpr auto STREAM_DELAY_INFO_MAX = 100 * SMOOTHING_RADIUS_MAX;
+	constexpr auto PROP_STREAM_DELAY_INFO_MAX = 60000;
+	constexpr auto PROP_STREAM_DELAY_INFO_MIN = 0;
 
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
-	constexpr auto CROP_PERCENTAGE_DEFAULT = 5;
-	constexpr auto CROP_PERCENTAGE_MIN = 1;
-	constexpr auto CROP_PERCENTAGE_MAX = 25;
+	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
+	constexpr auto PROP_CROP_PERCENTAGE_MAX = 25;
+	constexpr auto PROP_CROP_PERCENTAGE_MIN = 1;
 
     constexpr auto PROP_APPLY_CROP = "APPLY_CROP";
-    constexpr auto APPLY_CROP_DEFAULT = true;
+    constexpr auto PROP_APPLY_CROP_DEFAULT = true;
 
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
-	constexpr auto STAB_DISABLED_DEFAULT = false;
+	constexpr auto PROP_STAB_DISABLED_DEFAULT = false;
 
 	constexpr auto PROP_TEST_MODE = "TEST_MODE";
-	constexpr auto TEST_MODE_DEFAULT = false;
+	constexpr auto PROP_TEST_MODE_DEFAULT = false;
 
 	constexpr auto TIMING_THRESHOLD_MS = 6.0;
     constexpr auto TIMING_SAMPLES = 30;
@@ -61,48 +61,54 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Predictive Samples
 		obs_properties_add_int(
-			properties,
-			PROP_SMOOTHING_RADIUS,
-			L("vs.radius"),
-			SMOOTHING_RADIUS_MIN,
-			SMOOTHING_RADIUS_MAX,
-			1
+            properties,
+            PROP_PREDICTIVE_SAMPLES,
+            L("vs.radius"),
+            PROP_PREDICTIVE_SAMPLES_MIN,
+            PROP_PREDICTIVE_SAMPLES_MAX,
+            1
 		);
 
+        // Stream Delay (ms)
 		auto property = obs_properties_add_int(
 			properties,
 			PROP_STREAM_DELAY_INFO,
 			L("vs.delay"),
-			STREAM_DELAY_INFO_MIN,
-			STREAM_DELAY_INFO_MAX,
+			PROP_STREAM_DELAY_INFO_MIN,
+			PROP_STREAM_DELAY_INFO_MAX,
 			1
 		);
 		obs_property_int_set_suffix(property, "ms");
 		obs_property_set_enabled(property, false);
 
+        // Crop Slider
 		property = obs_properties_add_int_slider(
 			properties,
 			PROP_CROP_PERCENTAGE,
 			L("f.crop"),
-			CROP_PERCENTAGE_MIN,
-			CROP_PERCENTAGE_MAX,
+			PROP_CROP_PERCENTAGE_MIN,
+			PROP_CROP_PERCENTAGE_MAX,
 			1
 		);
 		obs_property_int_set_suffix(property, "%");
 
+        // Auto-Apply Crop Toggle
         obs_properties_add_bool(
             properties,
             PROP_APPLY_CROP,
             L("vs.apply-crop")
         );
 
+        // Disable Stabilization Toggle
 		obs_properties_add_bool(
 			properties,
 			PROP_STAB_DISABLED,
 			L("vs.disable")
 		);
 
+        // Test Mode Toggle
 		obs_properties_add_bool(
 			properties,
 			PROP_TEST_MODE,
@@ -118,11 +124,11 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_data_set_default_int(settings, PROP_SMOOTHING_RADIUS, SMOOTHING_RADIUS_DEFAULT);
-		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, CROP_PERCENTAGE_DEFAULT);
-		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, STAB_DISABLED_DEFAULT);
-        obs_data_set_default_bool(settings, PROP_APPLY_CROP, APPLY_CROP_DEFAULT);
-		obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
+		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
+		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, PROP_CROP_PERCENTAGE_DEFAULT);
+		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, PROP_STAB_DISABLED_DEFAULT);
+        obs_data_set_default_bool(settings, PROP_APPLY_CROP, PROP_APPLY_CROP_DEFAULT);
+		obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -141,7 +147,7 @@ namespace lvk
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
 			stab_settings.scene_margins = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
             stab_settings.crop_to_margins = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
-			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_SMOOTHING_RADIUS);
+			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 		});
 
