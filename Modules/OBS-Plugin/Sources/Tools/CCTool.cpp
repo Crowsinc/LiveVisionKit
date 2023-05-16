@@ -35,19 +35,19 @@ namespace lvk
 	constexpr auto FRAME_HOLD_COUNT = 20;
 
 	constexpr auto PROP_UTILITY_BTN = "PROP_UTILITY_BTN";
-#define UTILITY_BTN_CAPTURE_TEXT L("cct.capture")
-#define UTILITY_BTN_CALIBRATE_TEXT L("cct.calibrate")
+    constexpr auto PROP_CAPTURE_BTN_TAG = "cct.capture";
+    constexpr auto PROP_CALIBRATE_BTN_TAG = "cct.calibrate";
 
 	constexpr auto PROP_RESET_BTN = "PROP_RESET_BTN";
 
 	constexpr auto PROP_SQUARE_SIZE = "PROP_SQUARE_SIZE";
-	constexpr auto SQUARE_SIZE_MIN = 1;
-	constexpr auto SQUARE_SIZE_MAX = 100;
-	constexpr auto SQUARE_SIZE_STEP = 1;
-	constexpr auto SQUARE_SIZE_DEFAULT = 24;
+	constexpr auto PROP_SQUARE_SIZE_MIN = 1;
+	constexpr auto PROP_SQUARE_SIZE_MAX = 100;
+	constexpr auto PROP_SQUARE_SIZE_STEP = 1;
+	constexpr auto PROP_SQUARE_SIZE_DEFAULT = 24;
 
 	constexpr auto PROP_PROFILE_NAME = "PROP_PROFILE_NAME";
-	constexpr auto PROFILE_NAME_DEFAULT = "";
+	constexpr auto PROP_PROFILE_NAME_DEFAULT = "";
 
 	constexpr auto CONFIG_FILE = "calib-profiles.ini";
 
@@ -203,6 +203,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Profile Name Input
 		obs_properties_add_text(
 			properties,
 			PROP_PROFILE_NAME,
@@ -210,23 +211,26 @@ namespace lvk
 			obs_text_type::OBS_TEXT_DEFAULT
 		);
 
+        // Square Size Input
 		auto property = obs_properties_add_int(
 			properties,
 			PROP_SQUARE_SIZE,
 			L("cct.square-size"),
-			SQUARE_SIZE_MIN,
-			SQUARE_SIZE_MAX,
-			SQUARE_SIZE_STEP
+			PROP_SQUARE_SIZE_MIN,
+			PROP_SQUARE_SIZE_MAX,
+			PROP_SQUARE_SIZE_STEP
 		);
 		obs_property_int_set_suffix(property, "mm");
 
+        // Utility Button (Capture/Calibrate)
 		obs_properties_add_button(
 			properties,
 			PROP_UTILITY_BTN,
-			UTILITY_BTN_CAPTURE_TEXT,
+			L(PROP_CAPTURE_BTN_TAG),
 			CCTool::on_utility_button
 		);
 
+        // Reset Button
 		obs_properties_add_button(
 			properties,
 			PROP_RESET_BTN,
@@ -241,8 +245,8 @@ namespace lvk
 
 	void CCTool::LoadDefaults(obs_data_t* settings)
 	{
-		obs_data_set_default_int(settings, PROP_SQUARE_SIZE, SQUARE_SIZE_DEFAULT);
-		obs_data_set_default_string(settings, PROP_PROFILE_NAME, PROFILE_NAME_DEFAULT);
+		obs_data_set_default_int(settings, PROP_SQUARE_SIZE, PROP_SQUARE_SIZE_DEFAULT);
+		obs_data_set_default_string(settings, PROP_PROFILE_NAME, PROP_PROFILE_NAME_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -259,7 +263,7 @@ namespace lvk
 		: VisionFilter(context),
 		  m_Context(context),
 		  m_Calibrator({CALIBRATION_PATTERN_COLS, CALIBRATION_PATTERN_ROWS}),
-          m_SquareSize(SQUARE_SIZE_DEFAULT)
+          m_SquareSize(PROP_SQUARE_SIZE_DEFAULT)
 	{
 		reset();
 	}
@@ -297,7 +301,7 @@ namespace lvk
 		else if(tool->remaining_captures() == 1)
 		{
 			// Switch to calibrate button
-			obs_property_set_description(button, UTILITY_BTN_CALIBRATE_TEXT);
+			obs_property_set_description(button, L(PROP_CALIBRATE_BTN_TAG));
 			tool->request_capture();
 		}
 		else tool->request_capture();
@@ -319,7 +323,7 @@ namespace lvk
 
 		// Reset back to start of new calibration
 		auto utility_button = obs_properties_get(properties, PROP_UTILITY_BTN);
-		obs_property_set_description(utility_button, UTILITY_BTN_CAPTURE_TEXT);
+		obs_property_set_description(utility_button, L(PROP_CAPTURE_BTN_TAG));
 		obs_property_set_enabled(utility_button, true);
 
 		return true;
