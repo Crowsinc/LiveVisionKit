@@ -179,8 +179,7 @@ namespace lvk
 		if(m_TestMode)
 		{
 			m_Filter.process(std::move(buffer), buffer, true);
-			if(m_Filter.ready())
-				draw_debug_hud(buffer.data);
+            draw_debug_hud(buffer.data);
 		}
 		else m_Filter.process(std::move(buffer), buffer);
 	}
