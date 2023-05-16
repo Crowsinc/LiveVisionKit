@@ -29,13 +29,11 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_PROFILE = "PROP_PROFILE";
-	constexpr auto PROFILE_DEFAULT = "";
+	constexpr auto PROP_PROFILE_DEFAULT = "";
 
 	constexpr auto PROP_TEST_MODE = "PROP_TEST_MODE";
-	constexpr auto TEST_MODE_DEFAULT = false;
-    const cv::Size TEST_MODE_GRID = {32, 32};
-
-
+	constexpr auto PROP_TEST_MODE_DEFAULT = false;
+    const cv::Size PROP_TEST_MODE_GRID = {32, 32};
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -43,6 +41,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Profile Selector
 		auto property = obs_properties_add_list(
 			properties,
 			PROP_PROFILE,
@@ -51,14 +50,25 @@ namespace lvk
 			obs_combo_format::OBS_COMBO_FORMAT_STRING
 		);
 
-		obs_property_list_add_string(property, PROFILE_DEFAULT, PROFILE_DEFAULT);
+		obs_property_list_add_string(property, PROP_PROFILE_DEFAULT, PROP_PROFILE_DEFAULT);
 		const auto& profiles = CCTool::ListProfiles();
 		for(const auto& profile : profiles)
 			obs_property_list_add_string(property, profile.c_str(), profile.c_str());
 
 
-        obs_properties_add_bool(
+        // Runtime Controls
+        obs_properties_t* controls = obs_properties_create();
+        obs_properties_add_group(
             properties,
+            "CONTROL_GROUP",
+            L("f.controls-group"),
+            obs_group_type::OBS_GROUP_NORMAL,
+            controls
+        );
+
+        // Test Mode Toggle
+        obs_properties_add_bool(
+            controls,
             PROP_TEST_MODE,
             L("f.testmode")
         );
@@ -70,8 +80,8 @@ namespace lvk
 
 	void LCFilter::LoadDefaults(obs_data_t* settings)
 	{
-		obs_data_set_default_string(settings, PROP_PROFILE, PROFILE_DEFAULT);
-        obs_data_set_default_bool(settings, PROP_TEST_MODE, TEST_MODE_DEFAULT);
+		obs_data_set_default_string(settings, PROP_PROFILE, PROP_PROFILE_DEFAULT);
+        obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -88,7 +98,7 @@ namespace lvk
 	void LCFilter::configure(obs_data_t* settings)
 	{
 		const std::string profile = obs_data_get_string(settings, PROP_PROFILE);
-        m_ProfileSelected = profile != PROFILE_DEFAULT;
+        m_ProfileSelected = profile != PROP_PROFILE_DEFAULT;
 
 		if(m_ProfileSelected && m_Profile != profile)
 		{
@@ -151,7 +161,7 @@ namespace lvk
         if(m_TestMode)
         {
             // Draw grid so that the correction warp is visible.
-            lvk::draw_grid(frame, TEST_MODE_GRID, lvk::yuv::MAGENTA, 3);
+            lvk::draw_grid(frame, PROP_TEST_MODE_GRID, lvk::yuv::MAGENTA, 3);
         }
 
 		if(m_ProfileSelected)
