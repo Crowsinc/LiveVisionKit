@@ -44,6 +44,9 @@ namespace lvk
 		T& advance(Args&&... args);
 
 
+        T&& pop_oldest();
+
+
         template<typename... Args>
         void pad_front(Args&&... args);
 
@@ -53,7 +56,7 @@ namespace lvk
 
 		void trim(const size_t amount);
 
-		void skip(const size_t amount);
+        void skip(const size_t amount);
 
 
 		void resize(const size_t capacity);

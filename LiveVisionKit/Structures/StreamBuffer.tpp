@@ -104,6 +104,16 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    T&& StreamBuffer<T>::pop_oldest()
+    {
+        auto& element = oldest();
+        skip(1);
+        return std::move(element);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     template<typename... Args>
     void StreamBuffer<T>::pad_front(Args&&... args)
     {
