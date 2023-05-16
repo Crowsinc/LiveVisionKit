@@ -29,7 +29,7 @@ namespace lvk
 	constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
 	constexpr auto PROP_SHARPNESS_MIN = 0.0f;
 	constexpr auto PROP_SHARPNESS_MAX = 1.0f;
-	constexpr auto PROP_SHARPNESS_STEP = 0.01f;
+    constexpr auto PROP_SHARPNESS_DEFAULT = 0.8f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_data_set_default_double(settings, PROP_SHARPNESS, SHARPNESS_DEFAULT);
+		obs_data_set_default_double(settings, PROP_SHARPNESS, PROP_SHARPNESS_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
