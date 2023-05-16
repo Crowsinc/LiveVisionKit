@@ -140,8 +140,8 @@ namespace lvk
 
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
 			stab_settings.scene_margins = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
-			stab_settings.path_prediction_samples = round_even(obs_data_get_int(settings, PROP_SMOOTHING_RADIUS));
             stab_settings.crop_to_margins = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
+			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_SMOOTHING_RADIUS);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 		});
 
