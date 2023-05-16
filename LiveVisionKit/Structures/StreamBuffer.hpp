@@ -56,7 +56,7 @@ namespace lvk
 
 		void trim(const size_t amount);
 
-        void skip(const size_t amount);
+        void skip(const size_t amount = 1);
 
 
 		void resize(const size_t capacity);
