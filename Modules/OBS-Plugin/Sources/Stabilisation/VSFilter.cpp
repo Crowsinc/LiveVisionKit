@@ -38,6 +38,11 @@ namespace lvk
 	constexpr auto PROP_STREAM_DELAY_INFO_MAX = 60000;
 	constexpr auto PROP_STREAM_DELAY_INFO_MIN = 0;
 
+    constexpr auto PROP_MOTION_QUALITY = "MOTION_QUALITY";
+    constexpr auto PROP_MOTION_QUALITY_LOW_TAG = "vs.motion.low";
+    constexpr auto PROP_MOTION_QUALITY_MED_TAG = "vs.motion.med";
+    constexpr auto PROP_MOTION_QUALITY_HIGH_TAG = "vs.motion.high";
+
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
 	constexpr auto PROP_CROP_PERCENTAGE_MAX = 25;
@@ -61,6 +66,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+
         // Predictive Samples
 		obs_properties_add_int(
             properties,
@@ -83,6 +89,18 @@ namespace lvk
 		obs_property_int_set_suffix(property, "ms");
 		obs_property_set_enabled(property, false);
 
+        // Motion Quality Selection
+        property = obs_properties_add_list(
+            properties,
+            PROP_MOTION_QUALITY,
+            L("vs.motion"),
+            obs_combo_type::OBS_COMBO_TYPE_LIST,
+            obs_combo_format::OBS_COMBO_FORMAT_STRING
+        );
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_LOW_TAG), L(PROP_MOTION_QUALITY_LOW_TAG));
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_MED_TAG), L(PROP_MOTION_QUALITY_MED_TAG));
+        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_HIGH_TAG), L(PROP_MOTION_QUALITY_HIGH_TAG));
+
         // Crop Slider
 		property = obs_properties_add_int_slider(
 			properties,
@@ -101,16 +119,26 @@ namespace lvk
             L("vs.apply-crop")
         );
 
+        // Runtime Controls
+        obs_properties_t* controls = obs_properties_create();
+        obs_properties_add_group(
+            properties,
+            "CONTROL_GROUP",
+            L("f.controls-group"),
+            obs_group_type::OBS_GROUP_NORMAL,
+            controls
+        );
+
         // Disable Stabilization Toggle
 		obs_properties_add_bool(
-			properties,
+            controls,
 			PROP_STAB_DISABLED,
 			L("vs.disable")
 		);
 
         // Test Mode Toggle
 		obs_properties_add_bool(
-			properties,
+            controls,
 			PROP_TEST_MODE,
 			L("f.testmode")
 		);
@@ -149,6 +177,30 @@ namespace lvk
             stab_settings.crop_to_margins = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
 			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+
+            // Configure motion quality
+            const std::string motion_quality = obs_data_get_string(settings, PROP_MOTION_QUALITY);
+            if(motion_quality == L(PROP_MOTION_QUALITY_HIGH_TAG))
+            {
+                stab_settings.detect_resolution = {640, 360};
+                stab_settings.feature_grid_shape = {128, 72};
+                stab_settings.motion_resolution = {32, 32};
+                stab_settings.detection_zones = {2, 1};
+            }
+            else if(motion_quality == L(PROP_MOTION_QUALITY_MED_TAG))
+            {
+                stab_settings.detect_resolution = {640, 360};
+                stab_settings.feature_grid_shape = {64, 36};
+                stab_settings.motion_resolution = {16, 16};
+                stab_settings.detection_zones = {2, 1};
+            }
+            else // Default to low quality
+            {
+                stab_settings.detect_resolution = {640, 360};
+                stab_settings.feature_grid_shape = {32, 18};
+                stab_settings.motion_resolution = {2, 2};
+                stab_settings.detection_zones = {1, 1};
+            }
 		});
 
 		// Update the frame delay indicator for the user
