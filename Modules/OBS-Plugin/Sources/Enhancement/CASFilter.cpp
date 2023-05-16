@@ -27,10 +27,9 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_SHARPNESS = "OUTPUT_SHARPNESS";
-	constexpr auto SHARPNESS_MIN = 0.0f;
-	constexpr auto SHARPNESS_MAX = 1.0f;
-	constexpr auto SHARPNESS_STEP = 0.01f;
-	constexpr auto SHARPNESS_DEFAULT = 0.8f;
+	constexpr auto PROP_SHARPNESS_MIN = 0.0f;
+	constexpr auto PROP_SHARPNESS_MAX = 1.0f;
+	constexpr auto PROP_SHARPNESS_STEP = 0.01f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -38,13 +37,14 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Sharpness Slider
 		obs_properties_add_float_slider(
 			properties,
 			PROP_SHARPNESS,
 			L("cas.sharpness"),
-			SHARPNESS_MIN,
-			SHARPNESS_MAX,
-			SHARPNESS_STEP
+			PROP_SHARPNESS_MIN,
+			PROP_SHARPNESS_MAX,
+			0.01f
 		);
 
 		return properties;
