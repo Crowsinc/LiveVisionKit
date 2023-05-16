@@ -23,32 +23,27 @@
 
 namespace lvk
 {
-
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto OUTPUT_MAX_DIMENSION = 4096;
 
 	constexpr auto PROP_OUTPUT_SIZE   = "OUTPUT_SIZE";
-	const std::vector<std::string> OUTPUT_SIZES = {
-		"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"
-	};
-#define OUTPUT_SIZE_SOURCE L("fsr.scaling.original")
-#define OUTPUT_SIZE_CANVAS L("fsr.scaling.canvas")
-#define OUTPUT_SIZE_DEFAULT OUTPUT_SIZE_SOURCE
+    constexpr auto PROP_OUTPUT_SIZE_ORG_TAG = "fsr.scaling.original";
+    constexpr auto PROP_OUTPUT_SIZE_CANVAS_TAG = "fsr.scaling.canvas";
+	const std::vector<std::string> OUTPUT_SIZES = {"3840x2160", "2560x1440", "1920x1080", "1280x720", "x2", "x0.5"};
 
 	constexpr auto PROP_MAINTAIN_ASPECT = "MAINTAIN_ASPECT_RATIO";
 	constexpr auto MAINTAIN_ASPECT_DEFAULT = true;
 
 	constexpr auto PROP_CROP_GROUP = "CROP_GROUP";
-	constexpr auto PROP_CROP_TOP = "CROP_TOP";
-	constexpr auto PROP_CROP_LEFT = "CROP_LEFT";
-	constexpr auto PROP_CROP_RIGHT = "CROP_RIGHT";
 	constexpr auto PROP_CROP_BOTTOM = "CROP_BOTTOM";
+	constexpr auto PROP_CROP_RIGHT = "CROP_RIGHT";
+	constexpr auto PROP_CROP_LEFT = "CROP_LEFT";
+	constexpr auto PROP_CROP_TOP = "CROP_TOP";
 
-	constexpr auto CROP_MIN = 0;
-	constexpr auto CROP_MAX = OUTPUT_MAX_DIMENSION;
-	constexpr auto CROP_STEP = 1;
-	constexpr auto CROP_DEFAULT = CROP_MIN;
+	constexpr auto PROP_CROP_DEFAULT = 0;
+	constexpr auto PROP_CROP_MAX = OUTPUT_MAX_DIMENSION;
+	constexpr auto PROP_CROP_MIN = 0;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -56,6 +51,7 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
+        // Output Size Selection
 		auto property = obs_properties_add_list(
 			properties,
 			PROP_OUTPUT_SIZE,
@@ -64,18 +60,19 @@ namespace lvk
 			obs_combo_format::OBS_COMBO_FORMAT_STRING
 		);
 
-		obs_property_list_add_string(property, OUTPUT_SIZE_SOURCE, OUTPUT_SIZE_SOURCE);
-		obs_property_list_add_string(property, OUTPUT_SIZE_CANVAS, OUTPUT_SIZE_CANVAS);
-
+		obs_property_list_add_string(property, L(PROP_OUTPUT_SIZE_ORG_TAG), L(PROP_OUTPUT_SIZE_ORG_TAG));
+		obs_property_list_add_string(property, L(PROP_OUTPUT_SIZE_CANVAS_TAG), L(PROP_OUTPUT_SIZE_CANVAS_TAG));
 		for(const auto& size : OUTPUT_SIZES)
 			obs_property_list_add_string(property, size.c_str(), size.c_str());
 
+        // Aspect Ratio Toggle
 		obs_properties_add_bool(
 			properties,
 			PROP_MAINTAIN_ASPECT,
 			L("fsr.maintain-ratio")
 		);
 
+        // Crop Settings
 		obs_properties_t* crop_properties = obs_properties_create();
 		obs_properties_add_group(
 			properties,
@@ -85,40 +82,44 @@ namespace lvk
 			crop_properties
 		);
 
+        // Top Crop
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_TOP,
 			L("f.top"),
-			CROP_MIN,
-			CROP_MAX,
-			CROP_STEP
+			PROP_CROP_MIN,
+			PROP_CROP_MAX,
+			1
 		);
 
+        // Bottom Crop
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_BOTTOM,
 			L("f.bottom"),
-			CROP_MIN,
-			CROP_MAX,
-			CROP_STEP
+			PROP_CROP_MIN,
+			PROP_CROP_MAX,
+			1
 		);
 
+        // Left Crop
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_LEFT,
 			L("f.left"),
-			CROP_MIN,
-			CROP_MAX,
-			CROP_STEP
+			PROP_CROP_MIN,
+			PROP_CROP_MAX,
+			1
 		);
 
+        // Right Crop
 		obs_properties_add_int(
 			crop_properties,
 			PROP_CROP_RIGHT,
 			L("f.right"),
-			CROP_MIN,
-			CROP_MAX,
-			CROP_STEP
+			PROP_CROP_MIN,
+			PROP_CROP_MAX,
+			1
 		);
 
 		return properties;
@@ -130,13 +131,13 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_data_set_default_string(settings, PROP_OUTPUT_SIZE, OUTPUT_SIZE_DEFAULT);
+		obs_data_set_default_string(settings, PROP_OUTPUT_SIZE, L(PROP_OUTPUT_SIZE_ORG_TAG));
 		obs_data_set_default_bool(settings, PROP_MAINTAIN_ASPECT, MAINTAIN_ASPECT_DEFAULT);
 
-		obs_data_set_default_int(settings, PROP_CROP_TOP, CROP_DEFAULT);
-		obs_data_set_default_int(settings, PROP_CROP_LEFT, CROP_DEFAULT);
-		obs_data_set_default_int(settings, PROP_CROP_RIGHT, CROP_DEFAULT);
-		obs_data_set_default_int(settings, PROP_CROP_BOTTOM, CROP_DEFAULT);
+		obs_data_set_default_int(settings, PROP_CROP_TOP, PROP_CROP_DEFAULT);
+		obs_data_set_default_int(settings, PROP_CROP_LEFT, PROP_CROP_DEFAULT);
+		obs_data_set_default_int(settings, PROP_CROP_RIGHT, PROP_CROP_DEFAULT);
+		obs_data_set_default_int(settings, PROP_CROP_BOTTOM, PROP_CROP_DEFAULT);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -149,7 +150,7 @@ namespace lvk
 		m_MatchCanvasSize = m_MatchSourceSize = false;
 
 		const std::string output_pattern = obs_data_get_string(settings, PROP_OUTPUT_SIZE);
-		if(output_pattern == OUTPUT_SIZE_CANVAS)
+		if(output_pattern == L(PROP_OUTPUT_SIZE_CANVAS_TAG))
         {
 			m_MatchCanvasSize = true;
         }
