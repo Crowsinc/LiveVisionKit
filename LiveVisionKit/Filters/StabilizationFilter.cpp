@@ -41,27 +41,9 @@ namespace lvk
         if(m_Settings.stabilize_output && !settings.stabilize_output)
             reset_context();
 
-        // Configure the path smoother.
-        const auto old_time_delay = m_PathSmoother.time_delay();
+        // Configure the path smoother and our auxiliary frame queue.
         m_PathSmoother.configure(settings);
-        const auto new_time_delay = m_PathSmoother.time_delay();
-
-        // If the time delay has changed on the path smoother, then we will need to
-        // resize the frame queue to match the new delay. When the time delay has
-        // decreased both the path and frame queue are trimmed from the front so both
-        // of their relative orderings are respected. However, when the time delay is
-        // increased, some frames at the start of the frame queue will be pushed to
-        // the past and made irrelevant, so they need to be skipped.
-
         m_FrameQueue.resize(m_PathSmoother.time_delay() + 1);
-        if(new_time_delay > old_time_delay)
-        {
-            const auto time_shift = new_time_delay - old_time_delay;
-
-            m_FrameQueue.skip(time_shift);
-            if(m_FrameQueue.is_empty())
-                restart();
-        }
 
         m_NullMotion.resize(settings.motion_resolution);
         m_FrameTracker.configure(settings);
@@ -89,6 +71,7 @@ namespace lvk
             {
                 // Swap out the frames to avoid unnecessary allocations.
                 std::swap(output, m_FrameQueue.oldest());
+                m_FrameQueue.skip(1);
             }
             else output.release();
             return;
@@ -123,7 +106,10 @@ namespace lvk
         // If the time delay is properly built up, start stabilizing frames
         if(auto warp = m_PathSmoother.next(motion, corrective_limits); ready())
         {
+            // Reference the next frame then skip the buffer by one.
+            // This will shorten the queue without de-allocating.
             auto& next_frame = m_FrameQueue.oldest();
+            m_FrameQueue.skip();
 
             // If we need to crop the frame to the scene margins,
             // combine the crop into the path correction warp field.

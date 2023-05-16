@@ -50,7 +50,7 @@ namespace lvk
         // in time. To achieve predictive smoothing the path is implicitely delayed.
         m_Path.resize(2 * m_Settings.path_prediction_samples + 1);
 
-        // If the path is resized to be larger, it'll no longer be full so pad the front.
+        // Pad the path to keep the buffer full and ensure the existing path is still recent.
         m_Path.pad_front(m_Path.is_empty() ? WarpField::MinimumSize : m_Path.newest().size());
     }
 
@@ -137,7 +137,7 @@ namespace lvk
     {
         m_Path.clear();
 
-        // Pre-fill the path to avoid having to deal with edge cases.
+        // Pre-fill the path to avoid edge cases.
         m_Path.pad_back(WarpField::MinimumSize);
     }
 
