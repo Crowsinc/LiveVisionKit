@@ -1,31 +1,26 @@
 cmake_minimum_required(VERSION 3.21)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
-
 if(APPLE)
     message(FATAL_ERROR "Apple systems are not supported!")
 endif()
 
+set(MI "   ") # Message indents
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
 
-# PROJECT DEFINITION
+
+# Set up project 
 project(LiveVisionKit)
-
-
-# SETTINGS
 message(STATUS "\nConfiguring LiveVisionKit...")
 
-set(MI "   ")
-set(LVK_DEBUG_POSTFIX "d")
+# Project defines
+set(LVK_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LiveVisionKit/")
 set(LVK_RELEASES_DIR "Releases")
 set(LVK_INCLUDES_DIR "Include")
 set(LVK_BINARY_DIR "Binaries")
+set(LVK_DEBUG_POSTFIX "d")
 
-set(LVK_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LiveVisionKit/")
-set(DISABLE_CHECKS "OFF" CACHE BOOL "Compile without asserts and pre-condition checks")
-set(BUILD_OBS_PLUGIN "ON" CACHE BOOL "Build the OBS plugin")
-set(BUILD_VIDEO_PROCESSOR_CLT "ON" CACHE BOOL "Build the Video Processor Command-Line Tool")
-
+# Set default install location
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(
         CMAKE_INSTALL_PREFIX
@@ -36,46 +31,30 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     )
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
-if(WIN32)
-    set(OPENCV_BUILD_PATH "" CACHE PATH "The path to the OpenCV build folder")
-    set(OPENCV_MODULES world CACHE STRING "The desired OpenCV modules to link")
-else()
-    set(OPENCV_BUILD_PATH "" CACHE PATH "An optional path to the desired OpenCV build folder")
-    set(
-        OPENCV_MODULES 
-        core;calib3d;features2d;imgproc;videoio;video;highgui;
-        CACHE STRING 
-        "The OpenCV modules to link"
-    )
-endif()
+# Project settings
+set(BUILD_OBS_PLUGIN "ON" CACHE BOOL "Build the OBS-Studio plugin")
+set(BUILD_VIDEO_EDITOR "ON" CACHE BOOL "Build the video editor CLT")
+set(OPENCV_BUILD_PATH "" CACHE PATH "The path to the OpenCV build folder")
+set(DISABLE_CHECKS "OFF" CACHE BOOL "Compile without asserts and pre-condition checks")
 
-
-# COMMON DEPENDENCIES
-if(OPENCV_BUILD_PATH STREQUAL "")
-    if(WIN32)
-        message(FATAL_ERROR "OPENCV_BUILD_PATH was not provided!")
-    else()
-        find_package(OpenCV REQUIRED ${OPENCV_MODULES})
-    endif()
-else()
-    find_package(OpenCV REQUIRED ${OPENCV_MODULES} PATHS ${OPENCV_BUILD_PATH})
-endif()
-
-if(NOT OpenCV_FOUND)
-    message(FATAL_ERROR "Failed to find the required OpenCV libaries!")
-else()
+# Load common dependencies (OpenCV)
+find_package(OpenCV REQUIRED PATHS ${OPENCV_BUILD_PATH})
+if(OpenCV_FOUND)
     message(STATUS "${MI}Found OpenCV: YES")
     message(STATUS "${MI}OpenCV Version: ${OpenCV_VERSION}")
     message(STATUS "${MI}OpenCV Modules: ${OpenCV_LIBS}")
+else()
+    message(FATAL_ERROR "Failed to find OpenCV!")
 endif()
 
-
-# MODULES
+# Load sub-modules
 add_subdirectory(LiveVisionKit)
-if(BUILD_VIDEO_PROCESSOR_CLT)
-    message(STATUS "\nBuilding with LVK Video Processor CLT...")
-    add_subdirectory(Modules/LVK-Processor)
+
+if(BUILD_VIDEO_EDITOR)                                 
+    message(STATUS "\nBuilding with video editor CLT...")
+    add_subdirectory(Modules/VideoEditor)
 endif()
+
 if(BUILD_OBS_PLUGIN)
     message(STATUS "\nBuilding with LVK OBS-Studio plugin...")
     add_subdirectory(Modules/OBS-Plugin)

@@ -1,26 +1,34 @@
 
-# PROJECT DEFINITION
+# Set up project 
 project(lvk-obs VERSION 1.3.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(${PROJECT_NAME} SHARED)
-set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "LVK OBS-Plugin")
 
+# Set up library 
+add_library(${PROJECT_NAME} SHARED)
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY PROJECT_LABEL "OBS-Plugin")
+set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+# Disable assert checks
+if(DISABLE_CHECKS)
+    add_definitions(-DLVK_DISABLE_CHECKS)
+    add_definitions(-DNDEBUG)
+endif()
+
+# Define the plugin version
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 message(STATUS "${MI}Plugin Version: ${PROJECT_VERSION}")
 
-
-# SETTINGS
-option(
-    OBS_PLUGIN_SHOW_LOCALE_TAG
-    "Show locale tags for translations"
-    "OFF"
-)
+# Project settings
+option(OBS_PLUGIN_SHOW_LOCALE_TAG "Show locale tags for translations" "OFF")
 if(OBS_PLUGIN_SHOW_LOCALE_TAG)
     add_definitions(-DLOCALE_SHOW_TAG)
 endif()
 message(STATUS "${MI}Show Locale Tags: ${OBS_PLUGIN_SHOW_LOCALE_TAG}")
 
+# Install settings
 option(
     OBS_PLUGIN_AUTO_INSTALL 
     "Automatically install the plugin into the given obs-studio folders (RELEASE ONLY)"
@@ -42,9 +50,8 @@ else()
 endif()
 
 
-# DEPENDENCIES
+# Set the OBS-Studio build path 
 set(OBS_BUILD_PATH "" CACHE PATH "The path to the OBS-Studio build folder")
-
 set(OBS_REL_INCLUDE_PATH "/../libobs/")
 if(WIN32)
     set(OBS_REL_LIB_PATH "/install/bin/64bit/obs.lib")
@@ -52,6 +59,7 @@ else()
     set(OBS_REL_LIB_PATH "/install/bin/obs")
 endif()
 
+# Check that the build path exists
 if(OBS_BUILD_PATH STREQUAL "")
     message(FATAL_ERROR "OBS_BUILD_PATH was not provided!")
 else()
@@ -64,6 +72,7 @@ else()
     message(STATUS "${MI}Found OBS-Studio: YES")
 endif()
 
+# Include all dependencies
 target_include_directories(
     ${PROJECT_NAME}
     PRIVATE
@@ -72,6 +81,7 @@ target_include_directories(
     ${OBS_BUILD_PATH}${OBS_REL_INCLUDE_PATH}
 )
 
+# Link all dependencies
 add_dependencies(${PROJECT_NAME} lvk-core)
 target_link_libraries(
     ${PROJECT_NAME}
@@ -80,7 +90,7 @@ target_link_libraries(
 )
 
 
-# AUTO RELEASE & INSTALL
+# Set up install rules
 set(PLUGIN_RELEASE_NAME "LiveVisionKit-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}")
 set(PLUGIN_DEBUG_RELEASE_NAME "DEBUG_${PLUGIN_RELEASE_NAME}")
 
@@ -99,7 +109,6 @@ foreach(INSTALL_DIR ${PLUGIN_RELEASE_INSTALL_DIRS})
     message(STATUS "${MI}${MI} (RELEASE) ${INSTALL_DIR}")
 endforeach()
 
-
 if(WIN32)
     set(PLUGIN_RELEASE_BIN_DIR "/obs-plugins/64bit") 
     set(PLUGIN_RELEASE_DATA_DIR "/data/obs-plugins/${PROJECT_NAME}") 
@@ -110,11 +119,6 @@ if(WIN32)
             TARGETS ${PROJECT_NAME}
             CONFIGURATIONS Release MinSizeRel RelWithDebInfo
             RUNTIME DESTINATION "${INSTALL_DIR}${PLUGIN_RELEASE_BIN_DIR}"
-        )
-        install(
-            IMPORTED_RUNTIME_ARTIFACTS "${OpenCV_LIBS}"
-            CONFIGURATIONS Release MinSizeRel RelWithDebInfo
-            DESTINATION "${INSTALL_DIR}${PLUGIN_RELEASE_BIN_DIR}"
         )
         install(
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Data/
@@ -128,11 +132,6 @@ if(WIN32)
         TARGETS ${PROJECT_NAME}
         CONFIGURATIONS Debug
         RUNTIME DESTINATION "${PLUGIN_DEBUG_RELEASE_ROOT_DIR}${PLUGIN_RELEASE_BIN_DIR}"
-    )
-    install(
-        IMPORTED_RUNTIME_ARTIFACTS "${OpenCV_LIBS}"
-        CONFIGURATIONS Debug
-        DESTINATION "${PLUGIN_DEBUG_RELEASE_ROOT_DIR}${PLUGIN_RELEASE_BIN_DIR}"
     )
     install(
         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Data/
@@ -171,7 +170,7 @@ else()
 endif()
 
 
-# MODULE SOURCES
+# Add library sources
 target_sources(
     ${PROJECT_NAME}
     PRIVATE
@@ -194,12 +193,7 @@ target_sources(
         Sources/Tools/CCSource.cpp
         Sources/Tools/CCTool.cpp
         Sources/Tools/CCTool.hpp
-)
 
-# EFFECT SOURCES
-target_sources(
-    ${PROJECT_NAME}
-    PRIVATE
         Data/effects/ffx_a.h
         Data/effects/ffx_cas.h
         Data/effects/ffx_fsr1.h
@@ -211,12 +205,7 @@ target_sources(
         Effects/FSREffect.hpp
         Effects/OBSEffect.hpp
         Effects/OBSEffect.tpp
-)
 
-# INTEROP SOURCES
-target_sources(
-    ${PROJECT_NAME}
-    PRIVATE
         Interop/FrameBuffer.cpp
         Interop/FrameBuffer.hpp
         Interop/FrameIngest.cpp
@@ -225,12 +214,7 @@ target_sources(
         Interop/InteropContext.hpp
         Interop/VisionFilter.cpp
         Interop/VisionFilter.hpp
-)
 
-# UTILITY SOURCES
-target_sources(
-    ${PROJECT_NAME}
-    PRIVATE
         Utility/Graphics.cpp
         Utility/Graphics.hpp
         Utility/Locale.hpp
