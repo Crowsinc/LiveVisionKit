@@ -34,8 +34,8 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 # Project settings
 set(BUILD_OBS_PLUGIN "ON" CACHE BOOL "Build the OBS-Studio plugin")
 set(BUILD_VIDEO_EDITOR "ON" CACHE BOOL "Build the video editor CLT")
-set(OPENCV_BUILD_PATH "" CACHE PATH "The path to the OpenCV build folder")
 set(DISABLE_CHECKS "OFF" CACHE BOOL "Compile without asserts and pre-condition checks")
+set(OPENCV_BUILD_PATH "./Dependencies/opencv/build/" CACHE PATH "The path to the OpenCV build folder")
 
 # Load common dependencies (OpenCV)
 find_package(OpenCV REQUIRED PATHS ${OPENCV_BUILD_PATH})

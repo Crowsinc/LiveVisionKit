@@ -114,6 +114,7 @@ cmake-build-*/
 
 # Build System
 **/[Bb]uild/
+**/[Dd]ependencies/
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles

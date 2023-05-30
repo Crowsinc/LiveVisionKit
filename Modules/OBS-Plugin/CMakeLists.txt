@@ -51,7 +51,7 @@ endif()
 
 
 # Set the OBS-Studio build path 
-set(OBS_BUILD_PATH "" CACHE PATH "The path to the OBS-Studio build folder")
+set(OBS_BUILD_PATH "./Dependencies/obs-studio/build" CACHE PATH "The path to the OBS-Studio build folder")
 set(OBS_REL_INCLUDE_PATH "/../libobs/")
 if(WIN32)
     set(OBS_REL_LIB_PATH "/install/bin/64bit/obs.lib")

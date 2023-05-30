@@ -35,7 +35,6 @@ target_link_libraries(
     Threads::Threads
     opencv_core
     opencv_video
-    opencv_photo
     opencv_imgproc
     opencv_calib3d
     opencv_highgui
