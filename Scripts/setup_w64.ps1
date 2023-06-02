@@ -2,6 +2,7 @@ param(
     $config="Release"
 )
 
+# Create main paths
 $scripts_path = Get-Location
 $deps_path= Join-Path $scripts_path "/../Dependencies"
 
@@ -13,11 +14,17 @@ if(-Not (Test-Path $deps_path))
 
 # Clone OpenCV
 $opencv_version = "4.7.0"
-$opencv_path = Join-Path $deps_path "./opencv"
+$opencv_path = Join-Path $deps_path "/opencv"
 if(-Not (Test-Path $opencv_path))
 {
     Set-Location $deps_path
     git clone -b $opencv_version git@github.com:opencv/opencv.git 
+}
+
+if(-Not (Test-Path $opencv_path))
+{
+    Write-Error "Error! Could not clone OpenCV."
+    exit
 }
 
 # Create build folder
@@ -29,15 +36,24 @@ if(-Not (Test-Path $opencv_build_path))
 Set-Location $opencv_build_path
 
 # Run CMake configuration
-cmake -DBUILD_SHARED_LIBS=OFF -DCV_TRACE=OFF -DWITH_OPENCL=ON -DWITH_DIRECTX=ON -DWITH_OPENCL_D3D11_NV=ON `
-      -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_opencv_apps=OFF -DBUILD_opencv_ts=OFF `
+cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
+      -DBUILD_SHARED_LIBS=OFF `
+      -DCV_TRACE=OFF `
+      -DWITH_OPENCL=ON `
+      -DWITH_DIRECTX=ON `
+      -DWITH_OPENCL_D3D11_NV=ON `
+      -DBUILD_EXAMPLES=OFF `
+      -DBUILD_TESTS=OFF `
+      -DBUILD_opencv_apps=OFF `
+      -DBUILD_opencv_ts=OFF `
       -DBUILD_opencv_stitching=OFF `
       -DBUILD_opencv_objdetect=OFF `
       -DBUILD_opencv_python3=OFF `
       -DBUILD_opencv_photo=ON `
       -DBUILD_opencv_gapi=OFF `
       -DBUILD_opencv_dnn=OFF `
-      -DBUILD_opencv_ml=OFF ..
+      -DBUILD_opencv_ml=OFF `
+      ..
 
 # Compile and install OpenCV
 cmake --build . --target ALL_BUILD --config "$config"
@@ -50,6 +66,12 @@ if(-Not (Test-Path $obs_studio_path))
 {
     Set-Location $deps_path
     git clone -b $obs_studio_version --recursive git@github.com:obsproject/obs-studio.git 
+}
+
+if(-Not (Test-Path $obs_studio_path))
+{
+    Write-Error "Error! Could not clone OBS-Studio."
+    exit
 }
 
 
@@ -75,7 +97,15 @@ Set-Location $obs_studio_build_path
 
 
 # Run CMake configuration
-cmake -DDepsPath="$obs_studio_deps_path" -DQTDIR="" -DDISABLE_UI=ON -DENABLE_UI=OFF -DBUILD_BROWSER=OFF -DBUILD_VST=OFF -DENABLE_SCRIPTING=OFF ..
+cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
+      -DDepsPath="$obs_studio_deps_path" `
+      -DQTDIR="" `
+      -DDISABLE_UI=ON `
+      -DENABLE_UI=OFF `
+      -DBUILD_BROWSER=OFF `
+      -DBUILD_VST=OFF `
+      -DENABLE_SCRIPTING=OFF `
+      ..
 
 # Compile and install OBS-Studio
 cmake --build . --target ALL_BUILD --config "$config"

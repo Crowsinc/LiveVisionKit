@@ -23,9 +23,26 @@ Set-Location $build_path
 $opencv_build_path = Join-Path $project_path "/Dependencies/opencv/build"
 $obs_studio_build_path = Join-Path $project_path "/Dependencies/obs-studio/build"
 
+if(-Not (Test-Path $opencv_build_path))
+{
+    Write-Error "Error! OpenCV was not properly configured."
+    exit
+}
+
+if(-Not (Test-Path $obs_studio_build_path))
+{
+    Write-Error "Error! OBS-Studio was not properly configured."
+    exit
+}
+
 # Run LVK CMake configuration
-cmake -DBUILD_OBS_PLUGIN="$plugin" -DBUILD_VIDEO_EDITOR="$editor" -DOBS_PLUGIN_AUTO_INSTALL="$install" `
-      -DOBS_BUILD_PATH="$obs_studio_build_path" -DOPENCV_BUILD_PATH="$opencv_build_path" ..
+cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
+      -DBUILD_OBS_PLUGIN="$plugin" `
+      -DBUILD_VIDEO_EDITOR="$editor" `
+      -DOBS_PLUGIN_AUTO_INSTALL="$install" `
+      -DOBS_BUILD_PATH="$obs_studio_build_path" `
+      -DOPENCV_BUILD_PATH="$opencv_build_path" `
+      ..
 
 
 # Compile LiveVisionKit and install it to the build folder. 
