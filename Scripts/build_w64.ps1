@@ -5,7 +5,7 @@ param(
     $config="Release"
 )
 
-$scripts_path = Get-Location
+$scripts_path = $PSScriptRoot
 $project_path = Convert-Path (Join-Path $scripts_path "/../")
 
 # Call setup script
@@ -36,8 +36,7 @@ if(-Not (Test-Path $obs_studio_build_path))
 }
 
 # Run LVK CMake configuration
-cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
-      -DBUILD_OBS_PLUGIN="$plugin" `
+cmake -DBUILD_OBS_PLUGIN="$plugin" `
       -DBUILD_VIDEO_EDITOR="$editor" `
       -DOBS_PLUGIN_AUTO_INSTALL="$install" `
       -DOBS_BUILD_PATH="$obs_studio_build_path" `
