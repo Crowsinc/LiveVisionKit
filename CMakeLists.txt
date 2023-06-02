@@ -38,7 +38,7 @@ set(DISABLE_CHECKS "OFF" CACHE BOOL "Compile without asserts and pre-condition c
 set(OPENCV_BUILD_PATH "./Dependencies/opencv/build/" CACHE PATH "The path to the OpenCV build folder")
 
 # Load common dependencies (OpenCV)
-find_package(OpenCV REQUIRED PATHS ${OPENCV_BUILD_PATH})
+find_package(OpenCV REQUIRED PATHS ${OPENCV_BUILD_PATH} NO_DEFAULT_PATH)
 if(OpenCV_FOUND)
     message(STATUS "${MI}Found OpenCV: YES")
     message(STATUS "${MI}OpenCV Version: ${OpenCV_VERSION}")
