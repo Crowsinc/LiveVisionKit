@@ -47,6 +47,11 @@ else()
     message(FATAL_ERROR "Failed to find OpenCV!")
 endif()
 
+# If we are on Linux, we also need to load QT for OpenCV
+if(UNIX)
+    find_package(Qt5 REQUIRED Core Gui Widgets Test Concurrent OpenGL)
+endif()
+
 # Load sub-modules
 add_subdirectory(LiveVisionKit)
 

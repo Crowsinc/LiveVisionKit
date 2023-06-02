@@ -24,8 +24,7 @@ sudo apt install \
      build-essential \
      cmake \
      pkg-config \
-     libgtk-3-dev \
-     libgtkglext1-dev \
+     qtbase5-dev \
      libavcodec-dev \
      libavformat-dev \
      libswscale-dev \
@@ -61,13 +60,12 @@ fi
 cd "$opencv_build_path"
 
 # Run CMake configuration
-cmake '-DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo' \
+cmake -DCMAKE_BUILD_TYPE="$config" \
       -DBUILD_SHARED_LIBS=OFF \
       -DCV_TRACE=OFF \
       -DWITH_OPENCL=ON \
       -DWITH_OPENGL=ON \
-      -DWITH_GTK=ON \
-      -DWITH_QT=OFF \
+      -DWITH_QT=ON \
       -DBUILD_EXAMPLES=OFF \
       -DBUILD_TESTS=OFF \
       -DBUILD_opencv_apps=OFF \
@@ -149,7 +147,7 @@ fi
 cd "$obs_studio_build_path"
 
 # Run CMake configuration
-cmake '-DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo' \
+cmake -DCMAKE_BUILD_TYPE="$config" \
       -DDISABLE_UI=ON \
       -DENABLE_UI=OFF \
       -DBUILD_BROWSER=OFF \

@@ -42,6 +42,20 @@ target_link_libraries(
     opencv_features2d
 )
 
+if(UNIX)
+# Required by opencv_highgui on Linux
+target_link_libraries(
+    ${PROJECT_NAME}
+    Qt5::Core
+    Qt5::Gui
+    Qt5::Widgets
+    Qt5::Test
+    Qt5::Concurrent
+    Qt5::OpenGL
+)
+endif()
+
+
 # Set up install rules
 install(
     TARGETS ${PROJECT_NAME}

@@ -51,7 +51,7 @@ if [ ! -d "$obs_studio_build_path" ]; then
 fi
 
 # Run LVK CMake configuration
-cmake '-DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo' \
+cmake -DCMAKE_BUILD_TYPE="$config" \
       -DBUILD_OBS_PLUGIN="$build_plugin" \
       -DBUILD_VIDEO_EDITOR="$build_editor" \
       -DOBS_PLUGIN_AUTO_INSTALL="$install_plugin" \
