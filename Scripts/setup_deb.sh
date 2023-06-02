@@ -10,7 +10,7 @@ while getopts "c:" args; do
 done
 
 # Create main paths
-scripts_path=$(pwd)
+scripts_path=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 deps_path="${scripts_path}/../Dependencies"
 
 # Create dependencies directory

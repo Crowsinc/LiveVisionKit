@@ -22,12 +22,13 @@ while getopts "peic:" args; do
     esac
 done
 
-# Call setup script
-./setup_deb.sh -c "$config"
-
 # Create main paths
-scripts_path=$(pwd)
+scripts_path=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 project_path="${scripts_path}/.."
+
+# Call setup script
+cd "$scripts_path"
+./setup_deb.sh -c "$config"
 
 # Create LVK build folder
 build_path="${project_path}/Build"
