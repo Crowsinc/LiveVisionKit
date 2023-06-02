@@ -24,8 +24,8 @@ sudo apt install \
      build-essential \
      cmake \
      pkg-config \
-     qtbase5-dev \
      libgtk-3-dev \
+     libgtkglext1-dev \
      libavcodec-dev \
      libavformat-dev \
      libswscale-dev \
@@ -47,6 +47,12 @@ if [ ! -d "$opencv_path" ]; then
     git clone -b "$opencv_version" git@github.com:opencv/opencv.git
 fi
 
+if [ ! -d "$opencv_path" ]; then
+   echo "Error! Could not clone OpenCV." 
+   exit
+fi
+
+
 # Create build folder
 opencv_build_path="${opencv_path}/build"
 if [ ! -d "$opencv_build_path" ]; then
@@ -60,7 +66,8 @@ cmake '-DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo' \
       -DCV_TRACE=OFF \
       -DWITH_OPENCL=ON \
       -DWITH_OPENGL=ON \
-      -DWITH_QT=ON \
+      -DWITH_GTK=ON \
+      -DWITH_QT=OFF \
       -DBUILD_EXAMPLES=OFF \
       -DBUILD_TESTS=OFF \
       -DBUILD_opencv_apps=OFF \
@@ -127,6 +134,12 @@ if [ ! -d "$obs_studio_path" ]; then
     cd "$deps_path"
     git clone -b "$obs_studio_version" --recursive git@github.com:obsproject/obs-studio.git
 fi
+
+if [ ! -d "$obs_studio_path" ]; then
+    echo "Error! Could not clone OBS-Studio." 
+    exit
+fi
+
 
 # Create build folder
 obs_studio_build_path="${obs_studio_path}/build"

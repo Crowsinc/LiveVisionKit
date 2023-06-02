@@ -40,6 +40,16 @@ cd "$build_path"
 opencv_build_path="${project_path}/Dependencies/opencv/build"
 obs_studio_build_path="${project_path}/Dependencies/obs-studio/build"
 
+if [ ! -d "$opencv_build_path" ]; then
+   echo "Error! OpenCV was not properly configured!"
+   exit
+fi
+
+if [ ! -d "$obs_studio_build_path" ]; then
+   echo "Error! OBS-Studio was not properly configured!"
+   exit
+fi
+
 # Run LVK CMake configuration
 cmake '-DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo' \
       -DBUILD_OBS_PLUGIN="$build_plugin" \

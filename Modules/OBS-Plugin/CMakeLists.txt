@@ -56,7 +56,7 @@ set(OBS_REL_INCLUDE_PATH "/../libobs/")
 if(WIN32)
     set(OBS_REL_LIB_PATH "/install/bin/64bit/obs.lib")
 else()
-    set(OBS_REL_LIB_PATH "/install/lib")
+    set(OBS_REL_LIB_PATH "/install/lib/libobs.so")
 endif()
 
 # Check that the build path exists
