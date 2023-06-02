@@ -3,7 +3,7 @@ param(
 )
 
 # Create main paths
-$scripts_path = Get-Location
+$scripts_path = $PSScriptRoot
 $deps_path= Join-Path $scripts_path "/../Dependencies"
 
 # Create dependencies directory
@@ -36,8 +36,7 @@ if(-Not (Test-Path $opencv_build_path))
 Set-Location $opencv_build_path
 
 # Run CMake configuration
-cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
-      -DBUILD_SHARED_LIBS=OFF `
+cmake -DBUILD_SHARED_LIBS=OFF `
       -DCV_TRACE=OFF `
       -DWITH_OPENCL=ON `
       -DWITH_DIRECTX=ON `
@@ -97,8 +96,7 @@ Set-Location $obs_studio_build_path
 
 
 # Run CMake configuration
-cmake -DCMAKE_BUILD_TYPE=Debug;Release;RelWithDebInfo `
-      -DDepsPath="$obs_studio_deps_path" `
+cmake -DDepsPath="$obs_studio_deps_path" `
       -DQTDIR="" `
       -DDISABLE_UI=ON `
       -DENABLE_UI=OFF `
