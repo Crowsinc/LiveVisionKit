@@ -154,10 +154,9 @@ namespace lvk
 		const Time average_time = average();
 
 		Time total_deviation(0);
-		for(auto i = 0; i < m_History.size(); i++)
+		for(auto current_time : m_History)
 		{
-			const auto& current_time = m_History[i];
-			if(average_time > current_time)
+				if(average_time > current_time)
 				total_deviation += average_time - current_time;
 			else 
 				total_deviation += current_time - average_time;
