@@ -230,7 +230,7 @@ namespace clt
 
                 return m_Terminate;
             },
-            m_Configuration.debug_mode
+            m_Configuration.print_timings || m_DataLogger.has_value()
         );
 
         // Run loggers one last time to ensure we have the latest statistics displayed.

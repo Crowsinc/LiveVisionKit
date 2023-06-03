@@ -295,13 +295,6 @@ namespace clt
             }
         );
 
-        m_OptionParser.add_switch(
-            "-d",
-            "Runs all filters in debug mode, allowing for more "
-            "accurate timing data and special filter debug rendering.",
-            &debug_mode
-        );
-
         // Output Options
         m_OptionParser.add_variable<int>(
             "-r",

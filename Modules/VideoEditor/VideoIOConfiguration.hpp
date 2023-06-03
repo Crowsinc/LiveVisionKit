@@ -34,7 +34,6 @@ namespace clt
         // Input / Process Settings
         std::variant<std::monostate, std::filesystem::path, uint32_t> input_source;
         std::vector<std::shared_ptr<lvk::VideoFilter>> filter_chain;
-        bool debug_mode = false;
 
         // Output Settings
         std::optional<std::filesystem::path> output_target;
