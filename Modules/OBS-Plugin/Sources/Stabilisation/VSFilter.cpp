@@ -182,21 +182,21 @@ namespace lvk
             if(motion_quality == L(PROP_MOTION_QUALITY_3_TAG))
             {
                 stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_grid_shape = {128, 72};
+                stab_settings.feature_resolution = {128, 72};
                 stab_settings.motion_resolution = {32, 32};
                 stab_settings.detection_zones = {2, 1};
             }
             else if(motion_quality == L(PROP_MOTION_QUALITY_2_TAG))
             {
                 stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_grid_shape = {64, 36};
+                stab_settings.feature_resolution = {64, 36};
                 stab_settings.motion_resolution = {16, 16};
                 stab_settings.detection_zones = {2, 1};
             }
             else // Default to low quality
             {
                 stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_grid_shape = {32, 18};
+                stab_settings.feature_resolution = {32, 18};
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_zones = {1, 1};
             }

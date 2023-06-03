@@ -25,24 +25,24 @@
 namespace lvk
 {
 
-    struct GridDetectorSettings
+    struct FeatureDetectorSettings
     {
         cv::Size detect_resolution = {640, 360};
-        cv::Size feature_grid_shape = {128, 72};
+        cv::Size feature_resolution = {32, 18};
 
         cv::Size detection_zones = {2, 1};
         float detection_threshold = 0.3f;
-        float detection_density = 0.01f;
+        float detection_density = 1.5f;
     };
 
 
-	class GridDetector final : public Configurable<GridDetectorSettings>
+	class FeatureDetector final : public Configurable<FeatureDetectorSettings>
 	{
 	public:
 
-		explicit GridDetector(const GridDetectorSettings& settings = {});
+		explicit FeatureDetector(const FeatureDetectorSettings& settings = {});
 
-        void configure(const GridDetectorSettings& settings) override;
+        void configure(const FeatureDetectorSettings& settings) override;
 
 		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
 
@@ -56,8 +56,6 @@ namespace lvk
         cv::Size local_feature_size() const;
 
         cv::Size detection_zone_size() const;
-
-        const cv::Size& input_resolution() const;
 
 
 		float distribution_quality() const;

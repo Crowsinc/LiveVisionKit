@@ -37,16 +37,13 @@
 #include "Filters/DeblockingFilter.hpp"
 #include "Filters/StabilizationFilter.hpp"
 
-
 #include "Logging/Logger.hpp"
 #include "Logging/CSVLogger.hpp"
-
 
 #include "Math/WarpField.hpp"
 #include "Math/Homography.hpp"
 #include "Math/VirtualGrid.hpp"
 #include "Math/BoundingQuad.hpp"
-#include "Vision/PathSmoother.hpp"
 
 #include "Structures/SpatialMap.hpp"
 #include "Structures/StreamBuffer.hpp"
@@ -55,13 +52,12 @@
 #include "Timing/Stopwatch.hpp"
 #include "Timing/TickTimer.hpp"
 
-
 #include "Utility/Unique.hpp"
 #include "Utility/Configurable.hpp"
 
-
 #include "Vision/FrameTracker.hpp"
-#include "Vision/GridDetector.hpp"
+#include "Vision/PathSmoother.hpp"
+#include "Vision/FeatureDetector.hpp"
 #include "Vision/CameraCalibrator.hpp"
 
 

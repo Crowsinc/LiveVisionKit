@@ -145,10 +145,10 @@ target_sources(
 
         Vision/CameraCalibrator.cpp
         Vision/CameraCalibrator.hpp
+        Vision/FeatureDetector.cpp
+        Vision/FeatureDetector.hpp
         Vision/FrameTracker.cpp
         Vision/FrameTracker.hpp
-        Vision/GridDetector.cpp
-        Vision/GridDetector.hpp
         Vision/PathSmoother.cpp
         Vision/PathSmoother.hpp
 )

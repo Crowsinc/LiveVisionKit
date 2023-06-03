@@ -19,14 +19,14 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "GridDetector.hpp"
+#include "FeatureDetector.hpp"
 #include "Math/WarpField.hpp"
 #include "Utility/Configurable.hpp"
 
 namespace lvk
 {
 
-    struct FrameTrackerSettings : public GridDetectorSettings
+    struct FrameTrackerSettings : public FeatureDetectorSettings
     {
         cv::Size motion_resolution = {2, 2};
 
@@ -63,7 +63,7 @@ namespace lvk
         std::nullopt_t abort_tracking();
 
     private:
-        GridDetector m_FeatureDetector;
+        FeatureDetector m_FeatureDetector;
 		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 
 		cv::UsacParams m_USACParams;
