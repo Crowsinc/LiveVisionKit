@@ -91,7 +91,21 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    Time Stopwatch::wait_until(const Time& required_time)
+    bool Stopwatch::is_paused() const
+    {
+        return !m_Running && m_Memory.nanoseconds() > 0;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    bool Stopwatch::is_running() const
+    {
+        return m_Running;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Time Stopwatch::wait_until(const Time& target_elapsed_time)
     {
         if(!is_running()) start();
 
@@ -99,7 +113,7 @@ namespace lvk
         // We yield here because it is more power efficient than busy waiting.
         // We don't sleep because it is far too imprecise to get any consistency.
         Time elapsed_time = elapsed();
-        while(elapsed_time < required_time)
+        while(elapsed_time < target_elapsed_time)
         {
             std::this_thread::yield();
             elapsed_time = elapsed();
@@ -114,20 +128,6 @@ namespace lvk
     {
         if(trigger) cv::ocl::finish();
         return *this;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	bool Stopwatch::is_running() const
-	{
-		return m_Running;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    bool Stopwatch::is_paused() const
-    {
-        return !m_Running && m_Memory.nanoseconds() > 0;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -168,6 +168,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void Stopwatch::reset_history()
+    {
+        m_History.clear();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	const StreamBuffer<Time>& Stopwatch::history() const
 	{
 		return m_History;
@@ -175,9 +182,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void Stopwatch::reset_history()
+    void Stopwatch::set_history_size(const size_t history)
     {
-        m_History.clear();
+        LVK_ASSERT(history >= 1);
+
+        m_History.resize(history);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

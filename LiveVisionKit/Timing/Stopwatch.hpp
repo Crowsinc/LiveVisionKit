@@ -36,23 +36,29 @@ namespace lvk
 
 		Time restart();
 
-        Time wait_until(const Time& required_time);
-
-        Stopwatch& sync_gpu(const bool trigger = true);
-
-		bool is_running() const;
 
         bool is_paused() const;
 
+		bool is_running() const;
+
+
+        Time wait_until(const Time& target_elapsed_time);
+
+        Stopwatch& sync_gpu(const bool trigger = true);
+
+
 		Time elapsed() const;
-		
+
 		Time average() const;
-		
+
 		Time deviation() const;
+
+
+        void reset_history();
 
 		const StreamBuffer<Time>& history() const;
 
-        void reset_history();
+        void set_history_size(const size_t history);
 
 	private:
         bool m_Running = false;
