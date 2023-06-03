@@ -119,10 +119,10 @@ namespace lvk
 
 		if(m_TestMode)
 		{
-			m_Filter.process(frame, frame, true);
+            m_Filter.apply(frame, frame, true);
 			draw_debug_hud(frame.data);
 		}
-		else m_Filter.process(frame, frame);
+		else m_Filter.apply(frame, frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

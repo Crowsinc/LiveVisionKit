@@ -45,12 +45,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void DeblockingFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+    void DeblockingFilter::filter(Frame&& input, Frame& output)
 	{
         LVK_ASSERT(!input.is_empty());
 
@@ -101,10 +96,6 @@ namespace lvk
 
 		cv::resize(m_FloatBuffer, m_KeepBlendMap, filter_region.size(), 0, 0, cv::INTER_LINEAR);
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
-
-		// Set smoothing frame to magenta so that we can see all the detection levels.
-		if(debug)
-			m_SmoothFrame.setTo(yuv::MAGENTA);
 
 		// Adaptively blend original and smooth frames
 		cv::blendLinear(

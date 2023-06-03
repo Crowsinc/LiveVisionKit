@@ -31,43 +31,37 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     VideoFilter::VideoFilter(const std::string& filter_name)
-        : m_Alias(filter_name + " (" + std::to_string(this->uid()) + ")"),
-          m_FrameTimer(30)
+        : m_Alias(filter_name + " (" + std::to_string(this->uid()) + ")")
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::process(
-        const Frame& input,
-        Frame& output,
-        const bool debug
-    )
+    const std::string& VideoFilter::alias() const
     {
-        process(Frame(input), output, debug);
+        return m_Alias;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::process(
-        Frame&& input,
-        Frame& output,
-        const bool debug
-    )
+    void VideoFilter::apply(Frame&& input, Frame& output, const bool profile)
     {
-        m_FrameTimer.sync_gpu(debug).start();
-        filter(std::move(input), output, m_FrameTimer, debug);
-        m_FrameTimer.sync_gpu(debug).stop();
+        m_FrameTimer.sync_gpu(profile).start();
+        filter(std::move(input), output);
+        m_FrameTimer.sync_gpu(profile).stop();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::process(
-        cv::VideoCapture& input_stream,
-        const std::function<bool(VideoFilter&, Frame&)>& callback,
-        const bool debug
-    )
+    void VideoFilter::apply(const Frame& input, Frame& output, const bool profile)
     {
-        LVK_ASSERT(input_stream.isOpened());
+        apply(Frame(input), output, profile);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFilter::stream(cv::VideoCapture& input, const std::function<bool(Frame&)>& callback, const bool profile)
+    {
+        LVK_ASSERT(input.isOpened());
 
         const size_t max_buffer_frames = 15;
 
@@ -82,10 +76,10 @@ namespace lvk
         // This reads frames from the input stream and passes them off for filtering.
         auto input_thread = std::thread([&](){
             Frame read_frame;
-            while(input_stream.read(read_frame.data) && !terminate_input)
+            while(input.read(read_frame.data) && !terminate_input)
             {
                 // Set frame timestamp if supported, otherwise set it to zero.
-                const auto stream_position = std::max(0.0, input_stream.get(cv::CAP_PROP_POS_MSEC));
+                const auto stream_position = std::max(0.0, input.get(cv::CAP_PROP_POS_MSEC));
                 read_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());
 
                 // Push new frame onto the input queue
@@ -135,7 +129,7 @@ namespace lvk
                 }
 
                 // Process the frame
-                process(std::move(input_frame), filtered_frame, debug);
+                this->apply(std::move(input_frame), filtered_frame, profile);
                 if(filtered_frame.is_empty())
                     continue;
 
@@ -183,15 +177,13 @@ namespace lvk
             }
 
             // Send frame to the output
-            if(callback(*this, output_frame))
+            if(callback(output_frame))
             {
                 // User called for the processing to be terminated.
 
                 // To avoid complicating the multi-threading process we will simply
                 // terminate the input, then starve out the input and output queues
                 // to emulate reaching the end of the input stream.
-
-                // Terminate input and starve out the filter thread.
                 terminate_input = true;
                 {
                     std::unique_lock<std::mutex> queue_lock(input_mutex);
@@ -215,45 +207,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::render(
-        const Frame& input,
-        bool debug
-    )
+    void VideoFilter::set_timing_samples(const size_t samples)
     {
-        process(input, m_FrameBuffer, debug);
-        cv::imshow(alias(), m_FrameBuffer.data);
-    }
+        LVK_ASSERT(samples >= 1);
 
-//---------------------------------------------------------------------------------------------------------------------
-
-    void VideoFilter::render(
-        cv::VideoCapture& input_stream,
-        const uint32_t target_fps,
-        const bool debug
-    )
-    {
-        LVK_ASSERT(input_stream.isOpened());
-
-        TickTimer frame_timer;
-        Time target_frametime = Time::Timestep(
-            (target_fps == 0) ? input_stream.get(cv::CAP_PROP_FPS) : target_fps
-        );
-
-        frame_timer.start();
-        process(input_stream, [&](VideoFilter& filter, Frame& frame){
-            cv::imshow(filter.alias(), frame.data);
-
-            frame_timer.tick(target_frametime);
-
-            return cv::pollKey() == 27; // Esc
-        }, debug);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void VideoFilter::set_timing_samples(const uint32_t samples)
-    {
-        m_FrameTimer = Stopwatch(samples);
+        m_FrameTimer.set_history_size(samples);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -265,19 +223,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const std::string& VideoFilter::alias() const
-    {
-        return m_Alias;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void VideoFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+    void VideoFilter::filter(Frame&& input, Frame& output)
     {
         // Default filter is simply an identity operation
         output = std::move(input);

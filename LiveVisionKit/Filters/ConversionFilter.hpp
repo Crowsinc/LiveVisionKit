@@ -43,12 +43,7 @@ namespace lvk
 
     private:
 
-        void filter(
-            Frame&& input,
-            Frame& output,
-            Stopwatch& timer,
-            const bool debug
-        ) override;
+        void filter(Frame&& input, Frame& output) override;
 
     };
 

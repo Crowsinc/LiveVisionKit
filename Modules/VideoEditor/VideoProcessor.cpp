@@ -173,11 +173,9 @@ namespace clt
 
         // Run the processor filter
         m_Terminate = false;
-        m_Processor.process(
+        m_Processor.stream(
             m_InputStream,
-            [&, this](lvk::VideoFilter& filter, lvk::Frame& frame)
-            {
-
+            [&, this](lvk::Frame& frame) {
                 // Write output
                 if(m_Configuration.output_target.has_value())
                 {

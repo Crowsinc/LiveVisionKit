@@ -55,12 +55,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void CompositeFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+    void CompositeFilter::filter(Frame&& input, Frame& output)
     {
         LVK_ASSERT(!input.is_empty());
 
@@ -76,10 +71,8 @@ namespace lvk
                 if(filter_input.is_empty())
                     break;
 
-                m_Settings.filter_chain[i]->process(
-                    std::move(filter_input),
-                    filter_output,
-                    debug
+                m_Settings.filter_chain[i]->apply(
+                    std::move(filter_input), filter_output
                 );
 
                 // If we are saving all outputs, then we cannot move the output

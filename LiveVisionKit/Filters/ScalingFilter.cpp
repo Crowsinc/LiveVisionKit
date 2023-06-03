@@ -49,12 +49,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ScalingFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+    void ScalingFilter::filter(Frame&& input, Frame& output)
     {
         LVK_ASSERT(!input.is_empty());
 

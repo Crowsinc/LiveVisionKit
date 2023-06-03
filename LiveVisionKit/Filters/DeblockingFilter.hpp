@@ -41,12 +41,7 @@ namespace lvk
 
 	private:
 
-        void filter(
-            Frame&& input,
-            Frame& output,
-            Stopwatch& timer,
-            const bool debug
-        ) override;
+        void filter(Frame&& input, Frame& output) override;
 
 		cv::UMat m_SmoothFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_DetectionFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};

@@ -235,10 +235,10 @@ namespace lvk
 
 		if(m_TestMode)
 		{
-			m_Filter.process(std::move(buffer), buffer, true);
+            m_Filter.apply(std::move(buffer), buffer, true);
             draw_debug_hud(buffer.data);
 		}
-		else m_Filter.process(std::move(buffer), buffer);
+		else m_Filter.apply(std::move(buffer), buffer);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

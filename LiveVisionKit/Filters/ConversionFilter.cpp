@@ -43,12 +43,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ConversionFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+    void ConversionFilter::filter(Frame&& input, Frame& output)
     {
         LVK_ASSERT(!input.is_empty());
 

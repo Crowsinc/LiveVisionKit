@@ -28,6 +28,7 @@
 namespace lvk
 {
 
+    // NOTE: standard colour format is YUV.
 	class VideoFilter : public Unique<VideoFilter>
 	{
 	public:
@@ -36,57 +37,29 @@ namespace lvk
 
 		virtual ~VideoFilter() = default;
 
-        // NOTE: standard colour format is YUV.
-        void process(
-            const Frame& input,
-            Frame& output,
-            bool debug = false
-        );
+		const std::string& alias() const;
 
-        void process(
-            Frame&& input,
-            Frame& output,
-            bool debug = false
-        );
 
-        void process(
-            cv::VideoCapture& input_stream,
-            const std::function<bool(VideoFilter&, Frame&)>& callback,
-            const bool debug = false
-        );
+        void apply(Frame&& input, Frame& output, const bool profile = false);
 
-        void render(
-            const Frame& input,
-            bool debug = false
-        );
+        void apply(const Frame& input, Frame& output, const bool profile = false);
 
-        void render(
-            cv::VideoCapture& input_stream,
-            const uint32_t target_fps = 0,
-            const bool debug = false
-        );
+        void stream(cv::VideoCapture& input, const std::function<bool(Frame&)>& callback, const bool profile = false);
 
-        void set_timing_samples(const uint32_t samples);
+
+        void set_timing_samples(const size_t samples);
 
         const Stopwatch& timings() const;
 
-		const std::string& alias() const;
-
     protected:
 
-        virtual void filter(
-            Frame&& input,
-            Frame& output,
-            Stopwatch& timer,
-            const bool debug
-        );
+        virtual void filter(Frame&& input, Frame& output);
 
     private:
-        Frame m_FrameBuffer;
         Stopwatch m_FrameTimer;
 		const std::string m_Alias;
 	};
 
-    // Default VideoFilter is essentially an identity filter.
+    // Default VideoFilter is an identity filter.
     typedef VideoFilter IdentityFilter;
 }

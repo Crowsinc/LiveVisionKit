@@ -52,12 +52,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::filter(
-        Frame&& input,
-        Frame& output,
-        Stopwatch& timer,
-        const bool debug
-    )
+	void StabilizationFilter::filter(Frame&& input, Frame& output)
 	{
         LVK_ASSERT(!input.is_empty());
 
@@ -80,22 +75,6 @@ namespace lvk
         // Track the motion of the incoming frame.
         cv::extractChannel(input.data, m_TrackingFrame, 0);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
-
-        // If we're in debug, draw the motion trackers,
-        // ensuring we do not time the debug rendering.
-        if(debug)
-        {
-            timer.sync_gpu(debug).pause();
-
-            draw_points(
-                input.data,
-                m_FrameTracker.tracking_points(),
-                yuv::GREEN,
-                3,
-                cv::Size2f(input.size()) / cv::Size2f(m_FrameTracker.tracking_resolution()));
-
-            timer.sync_gpu(debug).start();
-        }
 
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
