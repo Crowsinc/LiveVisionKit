@@ -19,16 +19,11 @@
 
 #include "Directives.hpp"
 #include "Math/Homography.hpp"
-#include "Functions/Math.hpp"
 #include "Functions/Container.hpp"
 #include "Functions/Extensions.hpp"
 
 namespace lvk
 {
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	constexpr double GOOD_DISTRIBUTION_QUALITY = 0.6;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -132,12 +127,7 @@ namespace lvk
         // Detect tracking points in the previous frames. Note that this also
         // returns all the points that were propagated from the previous frame.
         m_FeatureDetector.detect(m_PrevFrame, m_TrackedPoints);
-        m_Uniformity = m_FeatureDetector.distribution_quality();
-
         if(m_TrackedPoints.size() < m_Settings.sample_size_threshold)
-            return abort_tracking();
-
-        if(m_Uniformity < m_Settings.uniformity_threshold)
             return abort_tracking();
 
 
@@ -165,8 +155,7 @@ namespace lvk
             m_TrackedPoints,
             m_MatchedPoints,
             m_InlierStatus,
-            m_USACParams,
-            m_Uniformity < GOOD_DISTRIBUTION_QUALITY
+            m_USACParams
         );
 
         // Filter outliers and propagate the inliers back to the detector.
@@ -177,10 +166,15 @@ namespace lvk
         const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
         const auto motion_samples = static_cast<float>(m_InlierStatus.size());
 
+        // Test scene stability across the whole frame.
         m_Stability = inlier_motions / motion_samples;
         if(m_Stability < m_Settings.stability_threshold)
             return abort_tracking();
 
+        // Test uniformity of inliers across the whole frame.
+        m_Uniformity = m_FeatureDetector.distribution_quality();
+        if(m_Uniformity < m_Settings.uniformity_threshold)
+            return abort_tracking();
 
         // Convert the global Homography into a motion field.
         WarpField motion_field(m_Settings.motion_resolution);
