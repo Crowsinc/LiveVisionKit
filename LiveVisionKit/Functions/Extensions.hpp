@@ -61,4 +61,17 @@ namespace lvk
 
     cv::Point operator-(const cv::Point& p, const cv::Size& s);
 
+    // cv::Scalar Operators
+    cv::Scalar operator*(const cv::Scalar& v1, const cv::Scalar& v2);
+
+    cv::Scalar operator/(const cv::Scalar& v1, const cv::Scalar& v2);
+
+    cv::Scalar operator/(const cv::Scalar& v1, const double v2);
+
+    cv::Scalar operator+(const cv::Scalar& v1, const double v2);
+
+    cv::Scalar operator-(const cv::Scalar& v1, const double v2);
+
+
+
 }
