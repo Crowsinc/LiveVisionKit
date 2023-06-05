@@ -135,76 +135,59 @@ namespace lvk
 
     void WarpField::undistort(const float tolerance)
     {
-        LVK_ASSERT_01(tolerance);
+        LVK_ASSERT(tolerance >= 0);
 
         // 2x2 fields have no distortion.
         if(m_Offsets.size() == MinimumSize)
             return;
 
-        // Linear regression formulae taken from..
+        // Undistort the field by finding a parallelogram of best fit and anchoring all
+        // offsets to be within a tolerance of that. This should result in a warp that
+        // is more affine. To find the parallelogram, the line of best fit will be found
+        // for all x and y offsets, which correspond to the y values of the vertical and
+        // horizontal parallel lines of the parallelogram. For each line, the x coordinate
+        // always corresponds to the respective grid coord.
+        //
+        // The linear regression formulae taken from:
         // https://www.tutorialspoint.com/regression-analysis-and-the-best-fitting-line-using-cplusplus
 
-        // NOTE: for the verticals we treat the y values as x, vice-versa to keep things
-        // consistent and avoid the failure case with vertical lines of infinite slope.
-        // That is, all offsets are treated as 'y' values and coord components are 'x'.
+        const cv::Scalar n(cols(), rows());
+        const cv::Scalar nt(rows(), cols());
+        const cv::Scalar N = n * nt;
 
-        const auto nc = static_cast<float>(cols());
-        const auto nr = static_cast<float>(rows());
+        // Simple sums can be calculated up front using series.
+        const auto x_sum = nt * (n * (n - 1.0)) / 2.0;
+        const auto x2_sum = nt * (n * (n + 1.0) * (2.0 * n + 1.0)) / 6.0;
 
-        // Simple sums can be calculated up front using series sums.
-        const float row_x_sum = static_cast<float>(nc * (nc - 1)) / 2.0f;
-        const float col_x_sum = static_cast<float>(nr * (nr - 1)) / 2.0f;
-        const float row_x2_sum = (nc * (nc + 1) * (2 * nc + 1)) / 6.0f;
-        const float col_x2_sum = (nr * (nr + 1) * (2 * nr + 1)) / 6.0f;
+        // Get the y sum directly from the offsets.
+        const auto y_sum = cv::sum(m_Offsets);
 
-        // Fit lines to each row and column of the offsets
-        using LineData = std::tuple<float, float>;
-        std::vector<LineData> col_lines(cols(), {0.0f, 0.0f});
-        std::vector<LineData> row_lines(rows(), {0.0f, 0.0f});
+        // Multiply the offsets by the coordinate grid to get the xy sum.
+        cv::Mat xy_offsets;
+        cv::multiply(m_Offsets, view_coord_grid(size()), xy_offsets);
+        const auto xy_sum = cv::sum(xy_offsets);
 
-        // Grab all sums which require the 'y' offset values from the field.
-        // We will temporarily store these in the column and row line data.
-        read([&](const cv::Point2f& offset, const cv::Point coord){
-            auto& [row_y_sum, row_xy_sum] = row_lines[coord.y];
-            auto& [col_y_sum, col_xy_sum] = col_lines[coord.x];
+        // Calculate the slope and intercepts of the lines.
+        auto slope = (N * xy_sum - x_sum * y_sum) / (N * x2_sum - x_sum * x_sum);
+        auto intercept = (y_sum - slope * x_sum) / N;
 
-            row_xy_sum += offset.y * static_cast<float>(coord.x);
-            col_xy_sum += offset.x * static_cast<float>(coord.y);
-            row_y_sum += offset.y;
-            col_y_sum += offset.x;
+        // Create the field anchor offsets using the lines.
+        cv::Mat anchors;
+        cv::multiply(view_coord_grid(size()), slope, anchors);
+        cv::add(anchors, intercept, anchors);
 
-        }, false);
-
-        // Convert row sums into slope and intercept values.
-        for(auto& [row_y_sum, row_xy_sum] : row_lines)
+        // Apply the tolerance to the anchor points.
+        if(tolerance >= 1.0f)
         {
-            const float slope = (nc * row_xy_sum - row_x_sum * row_y_sum)/(nc * row_x2_sum - row_x_sum * row_x_sum);
-            const float intercept = (row_y_sum - slope * row_x_sum) / nc;
-            row_y_sum = slope, row_xy_sum = intercept;
+            // TODO: replace with OCL clamp function.
+            write([&](cv::Point2f& offset, const cv::Point& coord){
+                const auto anchor = anchors.at<cv::Point2f>(coord);
+
+                offset.x = anchor.x + std::clamp(offset.x - anchor.x, -tolerance, tolerance);
+                offset.y = anchor.y + std::clamp(offset.y - anchor.y, -tolerance, tolerance);
+            });
         }
-
-        // Convert column sums into slope and intercept values.
-        for(auto& [col_y_sum, col_xy_sum] : col_lines)
-        {
-            const float slope = (nr * col_xy_sum - col_x_sum * col_y_sum)/(nr * col_x2_sum - col_x_sum * col_x_sum);
-            const float intercept = (col_y_sum - slope * col_x_sum) / nr;
-            col_y_sum = slope, col_xy_sum = intercept;
-        }
-
-        // Apply the fitted lines to the warp offsets, taking into account the tolerance.
-        write([&](cv::Point2f& offset, const cv::Point& coord){
-            auto& [row_slope, row_intercept] = row_lines[coord.y];
-            auto& [col_slope, col_intercept] = col_lines[coord.x];
-
-            const auto x = static_cast<float>(coord.x);
-            const auto y = static_cast<float>(coord.y);
-
-            const float rigid_x = y * col_slope + col_intercept;
-            const float rigid_y = x * row_slope + row_intercept;
-
-            offset.x = rigid_x + tolerance * (offset.x - rigid_x);
-            offset.y = rigid_y + tolerance * (offset.y - rigid_y);
-        });
+        else std::swap(anchors, m_Offsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
