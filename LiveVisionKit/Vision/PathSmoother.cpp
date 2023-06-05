@@ -103,15 +103,10 @@ namespace lvk
             m_Trace.combine(m_Path[i], *weight);
         }
 
+        // Find the corrective motion for smoothing.
         auto path_correction = m_Trace - position;
-
-        // Clamp path to the limits if we are hitting them.
-        if(max_drift_error == 1.0)
-            path_correction.clamp(limits);
-
-        // Undistort the output.
-        if(m_Settings.force_output_rigidity)
-            path_correction.undistort(m_Settings.rigidity_tolerance);
+        if(max_drift_error == 1.0) path_correction.clamp(limits);
+        if(m_Settings.force_spatial_stability) path_correction.undistort(m_Settings.instability_tolerance);
 
         return std::move(path_correction);
     }

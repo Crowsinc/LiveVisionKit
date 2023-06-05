@@ -32,8 +32,8 @@ namespace lvk
         // NOTE: frame delay is proportional to prediction frames
         size_t path_prediction_samples = 10;
 
-        bool force_output_rigidity = true;
-        float rigidity_tolerance = 0.2f;
+        bool force_spatial_stability = true;
+        float instability_tolerance = 5.0f;
     };
 
     class PathSmoother final : public Configurable<PathSmootherSettings>
