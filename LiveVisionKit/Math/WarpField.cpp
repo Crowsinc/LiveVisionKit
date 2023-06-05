@@ -137,10 +137,6 @@ namespace lvk
     {
         LVK_ASSERT(tolerance >= 0);
 
-        // 2x2 fields have no distortion.
-        if(m_Offsets.size() == MinimumSize)
-            return;
-
         // Undistort the field by finding a parallelogram of best fit and anchoring all
         // offsets to be within a tolerance of that. This should result in a warp that
         // is more affine. To find the parallelogram, the line of best fit will be found
