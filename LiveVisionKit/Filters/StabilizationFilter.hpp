@@ -53,6 +53,8 @@ namespace lvk
 
 		const cv::Rect& stable_region() const;
 
+        const std::vector<cv::Point2f>& tracking_points() const;
+
 	private:
 
         void filter(Frame&& input, Frame& output) override;

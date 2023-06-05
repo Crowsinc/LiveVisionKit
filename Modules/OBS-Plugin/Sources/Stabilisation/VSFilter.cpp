@@ -235,6 +235,15 @@ namespace lvk
 
 		if(m_TestMode)
 		{
+            // Draw tracking points
+            draw_points(
+                buffer.data,
+                m_Filter.tracking_points(),
+                yuv::GREEN,
+                10,
+                cv::Size2f(buffer.size()) / cv::Size2f(m_Filter.settings().detect_resolution)
+            );
+
             m_Filter.apply(std::move(buffer), buffer, true);
             draw_debug_hud(buffer.data);
 		}
