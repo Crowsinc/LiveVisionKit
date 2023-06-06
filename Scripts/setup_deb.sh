@@ -36,7 +36,7 @@ sudo apt install \
      libatlas-base-dev \
      libtbb2 \
      libtbb-dev \
-     libdc1394-22-dev
+     libdc1394-dev
 
 # Clone OpenCV
 opencv_version="4.7.0"
@@ -122,6 +122,7 @@ sudo apt install \
      libgles2-mesa \
      libgles2-mesa-dev \
      libpci-dev \
+     libxkbcommon-dev \
      python3-dev \
      swig
 
