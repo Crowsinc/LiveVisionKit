@@ -18,6 +18,7 @@
 #pragma once
 
 #include <vector>
+#include <optional>
 
 #include "VideoFilter.hpp"
 #include "Utility/Configurable.hpp"
