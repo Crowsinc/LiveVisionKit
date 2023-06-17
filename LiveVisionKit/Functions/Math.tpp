@@ -26,6 +26,22 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    inline T to_degrees(const T& radians)
+    {
+        return static_cast<T>(static_cast<double>(radians) * 180.0 / M_PI);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline T to_radians(const T& degrees)
+    {
+        return static_cast<T>(static_cast<double>(degrees) * M_PI / 180.0);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
     inline T round_multiple(const T& value, const T& base)
 	{

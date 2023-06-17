@@ -23,6 +23,13 @@ namespace lvk
 {
 
     template<typename T>
+    T to_degrees(const T& radians);
+
+    template<typename T>
+    T to_radians(const T& degrees);
+
+
+    template<typename T>
     T round_multiple(const T& value, const T& base);
 
     template<typename T>
