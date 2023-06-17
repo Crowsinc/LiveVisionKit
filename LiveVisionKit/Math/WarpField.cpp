@@ -498,18 +498,17 @@ namespace lvk
 
     void WarpField::rotate(const float degrees, const cv::Size2f& field_scale)
     {
+        const auto scaling = cv::Size2f(field_scale) / cv::Size2f(size());
         const auto center = cv::Point2f(m_Offsets.size() - 1) / 2;
 
-        // Rotate the field coord grid, then add its offset to the warp field.
-        cv::warpAffine(
-            view_field_coord_grid(field_scale),
-            m_ResultsBuffer,
-            cv::getRotationMatrix2D(center, degrees, 1.0f),
-            m_Offsets.size()
-        );
-
-        cv::subtract(m_ResultsBuffer, view_field_coord_grid(field_scale), m_ResultsBuffer);
-        cv::add(m_Offsets, m_ResultsBuffer , m_Offsets);
+        // Rotate the coordinate grid about the centre.
+        const float radians = to_radians(degrees);
+        const float cos = std::cos(radians), sin = std::sin(radians);
+        write([&](cv::Point2f& offset, const cv::Point& coord){
+            const cv::Point2f arm = coord - center;
+            offset.x += ((arm.x * cos - arm.y * sin) - arm.x) * scaling.width;
+            offset.y += ((arm.x * sin + arm.y * cos) - arm.y) * scaling.height;
+        });
     }
 
 //---------------------------------------------------------------------------------------------------------------------
