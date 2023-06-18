@@ -31,6 +31,9 @@ namespace lvk::log
 	template<typename... T>
 	void log_block(const int log_level, const std::string& format, T... args);
 
+    template<typename... T>
+    void log_settings(const int log_level, obs_source_t* context, const std::string& format, T... args);
+
 
 	template<typename... T>
 	void print(const std::string& format, T... args);
@@ -40,6 +43,9 @@ namespace lvk::log
 
 	template<typename... T>
 	void print_block(const std::string& format, T... args);
+
+    template<typename... T>
+    void print_settings(obs_source_t* context, const std::string& format, T... args);
 
 
 	template<typename... T>
@@ -51,6 +57,9 @@ namespace lvk::log
 	template<typename... T>
 	void warn_block(const std::string& format, T... args);
 
+    template<typename... T>
+    void warn_settings(obs_source_t* context, const std::string& format, T... args);
+
 
 	template<typename... T>
 	void error(const std::string& format, T... args);
@@ -60,6 +69,9 @@ namespace lvk::log
 
 	template<typename... T>
 	void error_block(const std::string& format, T... args);
+
+    template<typename... T>
+    void error_settings(obs_source_t* context, const std::string& format, T... args);
 
 }
 

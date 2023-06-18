@@ -51,6 +51,20 @@ namespace lvk::log
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename... T>
+	void log_settings(const int log_level, obs_source_t* context, const std::string& format, T... args)
+	{
+		log_block(
+			log_level,
+			"Updated \'%s\' (AKA %s): " + format,
+			obs_source_get_name(context),
+			obs_source_get_id(context),
+			args...
+		);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename... T>
 	void print(const std::string& format, T... args)
 	{
 		log(LOG_INFO, format.c_str(), args...);
@@ -70,6 +84,14 @@ namespace lvk::log
 	void print_block(const std::string& format, T... args)
 	{
 		log_block(LOG_INFO, format, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename... T>
+	void print_settings(obs_source_t* context, const std::string& format, T... args)
+	{
+		log_settings(LOG_INFO, context, format, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -99,6 +121,14 @@ namespace lvk::log
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename... T>
+	void warn_settings(obs_source_t* context, const std::string& format, T... args)
+	{
+		log_settings(LOG_WARNING, context, format, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename... T>
 	void error(const std::string& format, T... args)
 	{
 		log(LOG_ERROR, format, args...);
@@ -118,6 +148,14 @@ namespace lvk::log
 	void error_block(const std::string& format, T... args)
 	{
 		log_block(LOG_ERROR, format, args...);
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	template<typename... T>
+	void error_settings(obs_source_t* context, const std::string& format, T... args)
+	{
+		log_settings(LOG_ERROR, context, format, args...);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
