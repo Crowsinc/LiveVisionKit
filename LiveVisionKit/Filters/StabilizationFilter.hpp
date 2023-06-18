@@ -64,6 +64,7 @@ namespace lvk
 		PathSmoother m_PathSmoother;
 
         cv::Rect m_FrameMargins{0,0,0,0};
+        cv::Rect2f m_MotionLimits{0,0,0,0};
         StreamBuffer<Frame> m_FrameQueue{1};
         cv::UMat m_WarpFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
         cv::UMat m_TrackingFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};

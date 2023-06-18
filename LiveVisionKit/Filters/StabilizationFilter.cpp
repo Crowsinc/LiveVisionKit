@@ -46,6 +46,8 @@ namespace lvk
         m_FrameQueue.resize(m_PathSmoother.time_delay() + 1);
 
         m_NullMotion.resize(settings.motion_resolution);
+        m_MotionLimits = crop<float>(settings.motion_resolution - 1, settings.scene_margins);
+
         m_FrameTracker.configure(settings);
         m_Settings = settings;
     }
@@ -79,11 +81,8 @@ namespace lvk
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
 
-        m_FrameMargins = crop(m_FrameQueue.oldest().size(), m_Settings.scene_margins);
-        const cv::Size2f corrective_limits(m_FrameMargins.tl());
-
         // If the time delay is properly built up, start stabilizing frames
-        if(auto warp = m_PathSmoother.next(motion, corrective_limits); ready())
+        if(auto correction = m_PathSmoother.next(motion, m_MotionLimits.tl()); ready())
         {
             // Reference the next frame then skip the buffer by one.
             // This will shorten the queue without de-allocating.
@@ -92,10 +91,10 @@ namespace lvk
 
             // If we need to crop the frame to the scene margins,
             // combine the crop into the path correction warp field.
-            if(m_Settings.crop_to_margins)
-                warp.crop_in(m_FrameMargins, next_frame.size());
+            if(m_Settings.crop_to_margins) correction.crop_in(m_MotionLimits);
+            m_FrameMargins = crop(next_frame.size(), m_Settings.scene_margins);
 
-            warp.apply(next_frame.data, output.data);
+            correction.apply(next_frame.data, output.data);
             output.timestamp = next_frame.timestamp;
         }
         else output.release();

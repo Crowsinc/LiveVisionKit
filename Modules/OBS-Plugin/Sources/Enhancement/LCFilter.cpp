@@ -147,7 +147,7 @@ namespace lvk
 
             // Convert the correction map to a warp field.
             m_CorrectionField.set_to(std::move(correction_map), false);
-            m_CorrectionField.crop_in(view_region, frame.size());
+            m_CorrectionField.crop_in(view_region);
             m_FieldOutdated = false;
 		}
 	}
@@ -168,7 +168,7 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-            m_CorrectionField.apply(frame, m_CorrectedFrame, true);
+            m_CorrectionField.apply(frame, m_CorrectedFrame);
             std::swap(frame, m_CorrectedFrame);
 		}
 	}

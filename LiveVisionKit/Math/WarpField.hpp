@@ -63,9 +63,12 @@ namespace lvk
         void to_map(cv::UMat& dst) const;
 
 
+        void normalize(const cv::Size2f& motion_scale);
+
+
         void undistort(const float tolerance = 0.7f);
 
-        void apply(const cv::UMat& src, cv::UMat& dst, const bool high_quality = true) const;
+        void apply(const cv::UMat& src, cv::UMat& dst) const;
 
         void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
 
@@ -97,14 +100,14 @@ namespace lvk
 
         void set_to(const cv::Mat& warp_map, const bool as_offsets);
 
-        void set_to(const Homography& motion, const cv::Size2f& field_scale);
+        void set_to(const Homography& motion, const cv::Size2f& motion_scale);
 
 
-        void scale(const cv::Size2f& scaling_factor, const cv::Size2f& field_scale);
+        void scale(const cv::Size2f& scaling_factor);
 
-        void crop_in(const cv::Rect2f& region, const cv::Size2f& field_scale);
+        void crop_in(const cv::Rect2f& region);
 
-        void rotate(const float degrees, const cv::Size2f& field_scale);
+        void rotate(const float degrees);
 
 
         void clamp(const cv::Size2f& magnitude);
@@ -146,20 +149,12 @@ namespace lvk
 
     private:
 
-        static const cv::Mat view_coord_grid(const cv::Size& resolution);
-
-        static const cv::UMat view_coord_grid_gpu(const cv::Size& resolution);
-
-        const cv::Mat view_field_coord_grid(const cv::Size2f& field_scale) const;
+        static const cv::Mat view_field_grid(const cv::Size& resolution);
 
     private:
-        // Vector offset from dst coord to src coord.
-        cv::Mat m_Offsets;
+        // Vector offset from dst to src coord.
+        cv::Mat m_Field;
 
-        // Cache & Auxiliary Buffers
-        cv::Mat m_ResultsBuffer;
-        mutable cv::Mat m_FieldGridCache;
-        mutable cv::Size2f m_FieldGridCacheScale = {0, 0};
         mutable cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 

@@ -185,12 +185,6 @@ namespace lvk
         }
         else motion_field.set_to(*motion, tracking_resolution());
 
-
-        // We must scale the motion to match the original frame size.
-        const cv::Size2f frame_scale = next_frame.size();
-        const cv::Size2f tracking_scale = tracking_resolution();
-        motion_field *= frame_scale / tracking_scale;
-
         return std::move(motion_field);
 	}
 
