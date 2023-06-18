@@ -19,6 +19,7 @@
 
 #include "Utility/ScopedProfiler.hpp"
 #include "Sources/Tools/CCTool.hpp"
+#include "Utility/Logging.hpp"
 #include "Utility/Locale.hpp"
 
 #include <LiveVisionKit.hpp>
@@ -114,6 +115,15 @@ namespace lvk
 		}
 
         m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
+
+        // Print out settings
+        lvk::log::print_settings(
+            m_Context,
+            "\n    Profile: %s"
+            "\n    Test Mode: %s",
+            m_Profile.c_str(),
+            m_TestMode ? "Yes" : "No"
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

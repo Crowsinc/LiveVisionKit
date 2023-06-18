@@ -65,7 +65,6 @@ namespace lvk
 	{
 		obs_properties_t* properties = obs_properties_create();
 
-
         // Predictive Samples
 		obs_properties_add_int(
             properties,
@@ -214,6 +213,26 @@ namespace lvk
 			obs_data_set_int(settings, PROP_STREAM_DELAY_INFO, new_stream_delay);
 			obs_source_update_properties(m_Context);
 		}
+
+
+        // Print out settings
+        lvk::log::print_settings(
+            m_Context,
+            "\n    Predictive Frames: %d"
+            "\n    Stream Delay: %d"
+            "\n    Motion Quality: %s"
+            "\n    Crop Percentage: %.2f%%"
+            "\n    Auto-apply Crop: %s"
+            "\n    Disable Stabilization: %s"
+            "\n    Test Mode: %s",
+            m_Filter.settings().path_prediction_samples,
+            new_stream_delay,
+            obs_data_get_string(settings, PROP_MOTION_QUALITY),
+            m_Filter.settings().scene_margins * 100.0f,
+            m_Filter.settings().crop_to_margins ? "Yes" : "No",
+            m_Filter.settings().stabilize_output ? "No" : "Yes",
+            m_TestMode ? "Yes" : "No"
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

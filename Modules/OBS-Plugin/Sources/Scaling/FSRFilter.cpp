@@ -193,6 +193,21 @@ namespace lvk
 		m_TLCrop.height = static_cast<int>(obs_data_get_int(settings, PROP_CROP_TOP));
 		m_BRCrop.width = static_cast<int>(obs_data_get_int(settings, PROP_CROP_RIGHT));
 		m_BRCrop.height = static_cast<int>(obs_data_get_int(settings, PROP_CROP_BOTTOM));
+
+
+
+        // Print out settings
+        lvk::log::print_settings(
+            m_Context,
+            "\n    Output Pattern: %s"
+            "\n    Maintain Aspect Ratio: %s"
+            "\n    Crop TL: (%d, %d)"
+            "\n    Crop BR: (%d, %d)",
+            output_pattern.c_str(),
+            m_MaintainAspectRatio ? "Yes" : "No",
+            m_TLCrop.width, m_TLCrop.height,
+            m_BRCrop.width, m_BRCrop.height
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

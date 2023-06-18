@@ -66,6 +66,13 @@ namespace lvk
 		LVK_ASSERT(settings != nullptr);
 
 		m_Sharpness = static_cast<float>(obs_data_get_double(settings, PROP_SHARPNESS));
+
+        // Print out settings
+        lvk::log::print_settings(
+            m_Context,
+            "\n    Sharpness: %.2f",
+            m_Sharpness
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

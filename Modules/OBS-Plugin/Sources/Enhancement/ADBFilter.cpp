@@ -17,10 +17,9 @@
 
 #include "ADBFilter.hpp"
 
-#include <util/platform.h>
-#include <functional>
 
 #include "Utility/ScopedProfiler.hpp"
+#include "Utility/Logging.hpp"
 #include "Utility/Locale.hpp"
 
 namespace lvk
@@ -97,6 +96,15 @@ namespace lvk
 		m_Filter.reconfigure([&](DeblockingFilterSettings& settings) {
 			settings.detection_levels = std::max<uint32_t>(strength, 1);
 		});
+
+        // Print out settings
+        lvk::log::print_settings(
+            m_Context,
+            "\n    Strength: %d"
+            "\n    Test Mode: %s",
+            strength,
+            m_TestMode ? "Yes" : "No"
+        );
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
