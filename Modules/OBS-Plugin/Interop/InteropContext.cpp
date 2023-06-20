@@ -190,7 +190,8 @@ namespace lvk::ocl
 					// NOTE: this constructor does not invoke OpenGL texture creation.
 					volatile cv::ogl::Texture2D test;
 
-					s_Supported = device.isExtensionSupported("cl_khr_gl_sharing");
+                    // NOTE: This is disabled due to lack of driver support,
+					s_Supported = false; // device.isExtensionSupported("cl_khr_gl_sharing");
 #endif
 				}
 				catch (const std::exception& e) 
