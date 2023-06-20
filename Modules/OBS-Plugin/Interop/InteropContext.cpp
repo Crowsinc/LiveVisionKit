@@ -69,7 +69,7 @@ namespace lvk::ocl
 				cv::ogl::ocl::initializeContextFromGL();
 #endif
 			}
-			catch (const std::exception& e)
+			catch(...)
 			{
 				s_TestPassed = false;
 			}
@@ -111,7 +111,7 @@ namespace lvk::ocl
 				Export(cv_texture, obs_texture);
 				Import(obs_texture, cv_texture);
 			}
-			catch (const std::exception& e)
+			catch(...)
 			{
 				s_TestPassed = false;
 			}
