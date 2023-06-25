@@ -20,7 +20,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Utility/Configurable.hpp"
-#include "Structures/SpatialMap.hpp"
+#include "Data/SpatialMap.hpp"
 
 namespace lvk
 {

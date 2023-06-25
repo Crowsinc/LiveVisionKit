@@ -17,7 +17,7 @@
 #pragma once
 
 #include "Time.hpp"
-#include "Structures/StreamBuffer.hpp"
+#include "Data/StreamBuffer.hpp"
 
 namespace lvk
 {

@@ -45,8 +45,8 @@
 #include "Math/VirtualGrid.hpp"
 #include "Math/BoundingQuad.hpp"
 
-#include "Structures/SpatialMap.hpp"
-#include "Structures/StreamBuffer.hpp"
+#include "Data/SpatialMap.hpp"
+#include "Data/StreamBuffer.hpp"
 
 #include "Timing/Time.hpp"
 #include "Timing/Stopwatch.hpp"

@@ -22,7 +22,7 @@
 #include "Math/WarpField.hpp"
 #include "Filters/VideoFrame.hpp"
 #include "Utility/Configurable.hpp"
-#include "Structures/StreamBuffer.hpp"
+#include "Data/StreamBuffer.hpp"
 
 namespace lvk
 {

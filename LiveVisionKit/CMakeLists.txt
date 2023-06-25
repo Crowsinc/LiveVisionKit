@@ -124,12 +124,12 @@ target_sources(
         Math/VirtualGrid.hpp
         Math/VirtualGrid.cpp
 
-        Structures/StreamBuffer.hpp
-        Structures/StreamBuffer.tpp
-        Structures/SpatialMap.hpp
-        Structures/SpatialMap.tpp
-        Structures/Iterators.hpp
-        Structures/Iterators.tpp
+        Data/StreamBuffer.hpp
+        Data/StreamBuffer.tpp
+        Data/SpatialMap.hpp
+        Data/SpatialMap.tpp
+        Data/Iterators.hpp
+        Data/Iterators.tpp
 
         Timing/Stopwatch.cpp
         Timing/Stopwatch.hpp
