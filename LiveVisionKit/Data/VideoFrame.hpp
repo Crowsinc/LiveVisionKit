@@ -63,6 +63,8 @@ namespace lvk
         void copyTo(cv::OutputArray dst, cv::InputArray mask) const; /* override */
 
 
+        bool has_known_format() const;
+
         void reformat(const Format new_format);
 
         void reformatTo(VideoFrame& dst, const Format new_format) const;

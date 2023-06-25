@@ -134,6 +134,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    bool VideoFrame::has_known_format() const
+    {
+        return format != UNKNOWN;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     void VideoFrame::reformat(const VideoFrame::Format new_format)
     {
         LVK_ASSERT(new_format != UNKNOWN);
