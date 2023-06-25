@@ -45,11 +45,11 @@ namespace lvk
 
     void ConversionFilter::filter(Frame&& input, Frame& output)
     {
-        LVK_ASSERT(!input.is_empty());
+        LVK_ASSERT(!input.empty());
 
         cv::cvtColor(
-            input.data,
-            input.data,
+            input,
+            input,
             m_Settings.conversion_code,
             static_cast<int>(m_Settings.output_channels.value_or(0))
         );

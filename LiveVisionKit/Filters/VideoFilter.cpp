@@ -76,7 +76,7 @@ namespace lvk
         // This reads frames from the input stream and passes them off for filtering.
         auto input_thread = std::thread([&](){
             Frame read_frame;
-            while(input.read(read_frame.data) && !terminate_input)
+            while(input.read(read_frame) && !terminate_input)
             {
                 // Set frame timestamp if supported, otherwise set it to zero.
                 const auto stream_position = std::max(0.0, input.get(cv::CAP_PROP_POS_MSEC));
@@ -130,7 +130,7 @@ namespace lvk
 
                 // Process the frame
                 this->apply(std::move(input_frame), filtered_frame, profile);
-                if(filtered_frame.is_empty())
+                if(filtered_frame.empty())
                     continue;
 
                 // Push processed frame onto the output queue

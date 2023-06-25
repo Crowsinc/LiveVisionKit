@@ -256,7 +256,7 @@ namespace lvk
 		{
             // Draw tracking points
             draw_points(
-                buffer.data,
+                buffer,
                 m_Filter.tracking_points(),
                 yuv::GREEN,
                 10,
@@ -264,7 +264,7 @@ namespace lvk
             );
 
             m_Filter.apply(std::move(buffer), buffer, true);
-            draw_debug_hud(buffer.data);
+            draw_debug_hud(buffer);
 		}
 		else m_Filter.apply(std::move(buffer), buffer);
 	}

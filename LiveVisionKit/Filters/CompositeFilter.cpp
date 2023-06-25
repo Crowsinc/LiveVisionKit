@@ -57,7 +57,7 @@ namespace lvk
 
     void CompositeFilter::filter(Frame&& input, Frame& output)
     {
-        LVK_ASSERT(!input.is_empty());
+        LVK_ASSERT(!input.empty());
 
         Frame& prev_filter_output = input;
         for(size_t i = 0; i < m_Settings.filter_chain.size(); i++)
@@ -68,7 +68,7 @@ namespace lvk
                 Frame& filter_output = m_FilterOutputs[i];
 
                 // Exit the chain if a filter input is empty
-                if(filter_input.is_empty())
+                if(filter_input.empty())
                     break;
 
                 m_Settings.filter_chain[i]->apply(

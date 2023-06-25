@@ -47,7 +47,7 @@ namespace lvk
 
     void DeblockingFilter::filter(Frame&& input, Frame& output)
 	{
-        LVK_ASSERT(!input.is_empty());
+        LVK_ASSERT(!input.empty());
 
 		// NOTE: De-blocking is achieved by adaptively blending a median smoothed
 		// frame with the original. Filtering occurs on a downscaled frame to boost
@@ -68,7 +68,7 @@ namespace lvk
 		// Resolutions such as 1920x1080 may not be evenly divisible by macroblocks.
 		// We ignore areas containing partial blocks by applying the filter on only
 		// the region of the frame which consists of only full macroblocks.
-		cv::UMat filter_region = input.data(macroblock_region);
+		cv::UMat filter_region = input(macroblock_region);
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;

@@ -21,8 +21,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 
-#include "VideoFrame.hpp"
 #include "Utility/Unique.hpp"
+#include "Data/VideoFrame.hpp"
 #include "Timing/Stopwatch.hpp"
 
 namespace lvk

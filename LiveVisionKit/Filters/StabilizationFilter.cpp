@@ -56,7 +56,7 @@ namespace lvk
 
 	void StabilizationFilter::filter(Frame&& input, Frame& output)
 	{
-        LVK_ASSERT(!input.is_empty());
+        LVK_ASSERT(!input.empty());
 
         // If we aren't stabilizing the output, use an optimized filter routine that
         // only upkeeps the delay. Note that the path smoothing is reset whenever the
@@ -75,7 +75,7 @@ namespace lvk
         }
 
         // Track the motion of the incoming frame.
-        cv::extractChannel(input.data, m_TrackingFrame, 0);
+        cv::extractChannel(input, m_TrackingFrame, 0);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
 
         // Push the tracked frame onto the queue to be stabilized later.
@@ -94,7 +94,7 @@ namespace lvk
             if(m_Settings.crop_to_margins) correction.crop_in(m_MotionLimits);
             m_FrameMargins = crop(next_frame.size(), m_Settings.scene_margins);
 
-            correction.apply(next_frame.data, output.data);
+            correction.apply(next_frame, output);
             output.timestamp = next_frame.timestamp;
         }
         else output.release();

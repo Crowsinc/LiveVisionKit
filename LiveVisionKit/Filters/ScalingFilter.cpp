@@ -51,10 +51,10 @@ namespace lvk
 
     void ScalingFilter::filter(Frame&& input, Frame& output)
     {
-        LVK_ASSERT(!input.is_empty());
+        LVK_ASSERT(!input.empty());
 
-        lvk::upscale(input.data, output.data, m_Settings.output_size, m_Settings.yuv_input);
-        lvk::sharpen(output.data, output.data, m_Settings.sharpness);
+        lvk::upscale(input, output, m_Settings.output_size, m_Settings.yuv_input);
+        lvk::sharpen(output, output, m_Settings.sharpness);
         output.timestamp = input.timestamp;
     }
 

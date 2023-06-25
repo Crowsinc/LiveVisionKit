@@ -187,13 +187,13 @@ namespace clt
                             return true;
                     }
 
-                    m_OutputStream.write(frame.data);
+                    m_OutputStream.write(frame);
                 }
 
                 // Display output
                 if(m_Configuration.render_output)
                 {
-                    cv::imshow(RENDER_WINDOW_NAME, frame.data);
+                    cv::imshow(RENDER_WINDOW_NAME, frame);
 
                     // Close display if escape is pressed, also note that
                     // the poll event is required to update the window.

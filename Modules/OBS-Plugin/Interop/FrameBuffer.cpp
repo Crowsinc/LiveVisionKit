@@ -82,7 +82,7 @@ namespace lvk
 
 		if(m_FrameIngest)
 		{
-			m_FrameIngest->upload(obs_frame, data);
+			m_FrameIngest->upload(obs_frame, *this);
 			timestamp = obs_frame->timestamp;
 			return true;
 		}
@@ -101,7 +101,7 @@ namespace lvk
 
 		if(m_FrameIngest)
 		{
-			m_FrameIngest->download(data, obs_frame);
+			m_FrameIngest->download(*this, obs_frame);
 			timestamp = obs_frame->timestamp;
 			return true;
 		}
@@ -158,8 +158,8 @@ namespace lvk
 		}
 
 		// Convert from RGBA to YUV
-		cv::cvtColor(m_ConversionBuffer, data, cv::COLOR_RGBA2RGB);
-		cv::cvtColor(data, data, cv::COLOR_RGB2YUV);
+		cv::cvtColor(m_ConversionBuffer, *this, cv::COLOR_RGBA2RGB);
+		cv::cvtColor(*this, *this, cv::COLOR_RGB2YUV);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -168,16 +168,16 @@ namespace lvk
 	{
 		LVK_ASSERT(texture != nullptr);
 		LVK_ASSERT(gs_texture_get_color_format(texture) == GS_RGBA);
-		LVK_ASSERT(gs_texture_get_width(texture) == data.cols);
-		LVK_ASSERT(gs_texture_get_height(texture) == data.rows);
+		LVK_ASSERT(gs_texture_get_width(texture) == cols);
+		LVK_ASSERT(gs_texture_get_height(texture) == rows);
         LVK_PROFILE;
 
 		// Convert from YUV to RGBA
-		cv::cvtColor(data, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
+		cv::cvtColor(*this, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
 
 		if(lvk::ocl::InteropContext::Available())
 		{
-			prepare_interop_buffer(data.cols, data.rows);
+			prepare_interop_buffer(cols, rows);
 			
 			lvk::ocl::InteropContext::Export(m_ConversionBuffer, m_InteropBuffer);
 			gs_copy_texture(texture, m_InteropBuffer);
@@ -186,8 +186,8 @@ namespace lvk
 		{
 			prepare_texture(
 				m_WriteBuffer,
-				data.cols,
-				data.rows,
+				cols,
+				rows,
 				GS_RGBA,
 				GS_DYNAMIC
 			);
@@ -196,8 +196,8 @@ namespace lvk
 			gs_texture_map(m_WriteBuffer, &m_MappedData, &linesize);
 		
 			m_ConversionBuffer.copyTo(cv::Mat(
-				data.rows,
-				data.cols,
+				rows,
+				cols,
 				CV_8UC4,
 				m_MappedData,
 				linesize

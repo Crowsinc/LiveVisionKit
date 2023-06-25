@@ -20,9 +20,8 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/WarpField.hpp"
-#include "Filters/VideoFrame.hpp"
-#include "Utility/Configurable.hpp"
 #include "Data/StreamBuffer.hpp"
+#include "Utility/Configurable.hpp"
 
 namespace lvk
 {

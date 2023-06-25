@@ -198,7 +198,7 @@ namespace lvk
 		obs_source_frame* output_frame = nullptr;
 
         // If there is no output buffer, then we are just building delay.
-        if(output_buffer.is_empty())
+        if(output_buffer.empty())
         {
             m_AsyncFrameQueue.emplace_back(input_frame, 0);
             return nullptr;
@@ -304,7 +304,7 @@ namespace lvk
             // outdated frame. This shouldn't occur during normal operation.
 			if(!acquire_render(buffer))
 			{
-				buffer.data.release();
+				buffer.release();
 				obs_source_skip_video_filter(m_Context);
 
 				log::warn(
@@ -317,20 +317,20 @@ namespace lvk
 
 		// Here we are travelling back down the filter chain so 
 		// perform filtering on the buffer's captured frame, if any. 
-		if(!buffer.is_empty())
+		if(!buffer.empty())
 		{
 			m_TickTimer.tick();
 			filter(buffer);
 
 			// Frame was captured by the filter (probably to introduce delay).
-			if(buffer.is_empty())
+			if(buffer.empty())
 				return;
 
 			// If this is the last filter in the vision filter chain,
 			// then render out the buffer for the non-vision filters. 
 			if(is_chain_end = is_vision_filter_chain_end(); is_chain_end)
 			{
-				prepare_render_buffer(buffer.width(), buffer.height());
+				prepare_render_buffer(buffer.width, buffer.height);
 				buffer.export_texture(m_RenderBuffer);
 				hybrid_render(m_RenderBuffer);
 			}
@@ -513,7 +513,7 @@ namespace lvk
 
 	void VisionFilter::filter(FrameBuffer& buffer)
 	{
-		filter(buffer.data);
+		filter(static_cast<cv::UMat&>(buffer));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

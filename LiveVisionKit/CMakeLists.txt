@@ -107,8 +107,6 @@ target_sources(
         Filters/ScalingFilter.hpp
         Filters/VideoFilter.cpp
         Filters/VideoFilter.hpp
-        Filters/VideoFrame.cpp
-        Filters/VideoFrame.hpp
 
         Logging/CSVLogger.cpp
         Logging/CSVLogger.hpp
@@ -128,6 +126,8 @@ target_sources(
         Data/StreamBuffer.tpp
         Data/SpatialMap.hpp
         Data/SpatialMap.tpp
+        Data/VideoFrame.cpp
+        Data/VideoFrame.hpp
         Data/Iterators.hpp
         Data/Iterators.tpp
 
