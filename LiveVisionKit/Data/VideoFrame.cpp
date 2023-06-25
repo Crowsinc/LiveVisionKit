@@ -134,6 +134,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    VideoFrame VideoFrame::operator()(const cv::Rect& roi) const /* override */
+    {
+        return VideoFrame(
+            std::move(cv::UMat::operator()(roi)),
+            timestamp,
+            format
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     bool VideoFrame::has_known_format() const
     {
         return format != UNKNOWN;

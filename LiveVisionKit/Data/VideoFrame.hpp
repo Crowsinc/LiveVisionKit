@@ -63,6 +63,10 @@ namespace lvk
         void copyTo(cv::OutputArray dst, cv::InputArray mask) const; /* override */
 
 
+        // TODO: add more ROI overrides.
+        VideoFrame operator()(const cv::Rect& roi) const; /* override */
+
+
         bool has_known_format() const;
 
         void reformat(const Format new_format);
