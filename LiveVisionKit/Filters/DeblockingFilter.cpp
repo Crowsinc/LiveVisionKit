@@ -68,7 +68,7 @@ namespace lvk
 		// Resolutions such as 1920x1080 may not be evenly divisible by macroblocks.
 		// We ignore areas containing partial blocks by applying the filter on only
 		// the region of the frame which consists of only full macroblocks.
-		cv::UMat filter_region = input(macroblock_region);
+		auto filter_region = input(macroblock_region);
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
@@ -77,7 +77,7 @@ namespace lvk
 		cv::resize(m_DeblockBuffer, m_SmoothFrame, macroblock_region.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Generate reference frame
-		cv::extractChannel(filter_region, m_DetectionFrame, 0);
+        filter_region.reformatTo(m_DetectionFrame, VideoFrame::GRAY);
 		cv::resize(m_DetectionFrame, m_BlockGrid, macroblock_extent, 0, 0, cv::INTER_AREA);
 		cv::resize(m_BlockGrid, m_ReferenceFrame, m_DetectionFrame.size(), 0, 0, cv::INTER_NEAREST);
 		cv::absdiff(m_DetectionFrame, m_ReferenceFrame, m_DetectionFrame);

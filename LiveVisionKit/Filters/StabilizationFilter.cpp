@@ -56,6 +56,7 @@ namespace lvk
 
 	void StabilizationFilter::filter(Frame&& input, Frame& output)
 	{
+        LVK_ASSERT(input.has_known_format());
         LVK_ASSERT(!input.empty());
 
         // If we aren't stabilizing the output, use an optimized filter routine that
@@ -75,7 +76,7 @@ namespace lvk
         }
 
         // Track the motion of the incoming frame.
-        cv::extractChannel(input, m_TrackingFrame, 0);
+        input.reformatTo(m_TrackingFrame, VideoFrame::GRAY);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
 
         // Push the tracked frame onto the queue to be stabilized later.

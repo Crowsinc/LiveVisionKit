@@ -78,6 +78,9 @@ namespace lvk
             Frame read_frame;
             while(input.read(read_frame) && !terminate_input)
             {
+                // Assume the input frame is BGR
+                read_frame.format = VideoFrame::BGR;
+
                 // Set frame timestamp if supported, otherwise set it to zero.
                 const auto stream_position = std::max(0.0, input.get(cv::CAP_PROP_POS_MSEC));
                 read_frame.timestamp = static_cast<uint64_t>(Time::Milliseconds(stream_position).nanoseconds());

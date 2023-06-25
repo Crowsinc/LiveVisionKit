@@ -84,6 +84,7 @@ namespace lvk
 		{
 			m_FrameIngest->upload(obs_frame, *this);
 			timestamp = obs_frame->timestamp;
+            format = VideoFrame::YUV;
 			return true;
 		}
 		else return false;
@@ -103,6 +104,7 @@ namespace lvk
 		{
 			m_FrameIngest->download(*this, obs_frame);
 			timestamp = obs_frame->timestamp;
+            format = VideoFrame::YUV;
 			return true;
 		}
 		else return false;
@@ -157,9 +159,9 @@ namespace lvk
 			gs_stagesurface_unmap(m_ReadBuffer);
 		}
 
-		// Convert from RGBA to YUV
+		// Convert from RGBA to RGB
 		cv::cvtColor(m_ConversionBuffer, *this, cv::COLOR_RGBA2RGB);
-		cv::cvtColor(*this, *this, cv::COLOR_RGB2YUV);
+        format = VideoFrame::RGB;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -172,8 +174,8 @@ namespace lvk
 		LVK_ASSERT(gs_texture_get_height(texture) == rows);
         LVK_PROFILE;
 
-		// Convert from YUV to RGBA
-		cv::cvtColor(*this, m_ConversionBuffer, cv::COLOR_YUV2RGB, 4);
+		// Convert from RGB to RGBA
+		cv::cvtColor(*this, m_ConversionBuffer, cv::COLOR_RGB2RGBA);
 
 		if(lvk::ocl::InteropContext::Available())
 		{
