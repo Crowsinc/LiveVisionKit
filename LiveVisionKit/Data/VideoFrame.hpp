@@ -39,9 +39,9 @@ namespace lvk
 
         explicit VideoFrame(const uint64_t timestamp);
 
-        VideoFrame(const cv::UMat& frame, const uint64_t timestamp, const Format format = UNKNOWN);
+        VideoFrame(const cv::UMat& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN);
 
-        VideoFrame(cv::UMat&& frame, const uint64_t timestamp, const Format format = UNKNOWN) noexcept;
+        VideoFrame(cv::UMat&& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN) noexcept;
 
 
         virtual ~VideoFrame() = default;
