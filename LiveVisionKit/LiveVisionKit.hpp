@@ -45,6 +45,7 @@
 #include "Math/VirtualGrid.hpp"
 #include "Math/BoundingQuad.hpp"
 
+#include "Data/VideoFrame.hpp"
 #include "Data/SpatialMap.hpp"
 #include "Data/StreamBuffer.hpp"
 
