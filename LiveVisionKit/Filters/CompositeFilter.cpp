@@ -55,17 +55,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void CompositeFilter::filter(Frame&& input, Frame& output)
+    void CompositeFilter::filter(VideoFrame&& input, VideoFrame& output)
     {
         LVK_ASSERT(!input.empty());
 
-        Frame& prev_filter_output = input;
+        VideoFrame& prev_filter_output = input;
         for(size_t i = 0; i < m_Settings.filter_chain.size(); i++)
         {
             if(is_filter_enabled(i))
             {
-                Frame& filter_input = prev_filter_output;
-                Frame& filter_output = m_FilterOutputs[i];
+                VideoFrame& filter_input = prev_filter_output;
+                VideoFrame& filter_output = m_FilterOutputs[i];
 
                 // Exit the chain if a filter input is empty
                 if(filter_input.empty())
@@ -112,7 +112,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const Frame& CompositeFilter::outputs(const size_t index)
+    const VideoFrame& CompositeFilter::outputs(const size_t index)
     {
         LVK_ASSERT(index < m_FilterOutputs.size());
 

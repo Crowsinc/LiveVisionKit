@@ -40,9 +40,9 @@ namespace lvk
 		const std::string& alias() const;
 
 
-        void apply(Frame&& input, Frame& output, const bool profile = false);
+        void apply(VideoFrame&& input, VideoFrame& output, const bool profile = false);
 
-        void apply(const Frame& input, Frame& output, const bool profile = false);
+        void apply(const VideoFrame& input, VideoFrame& output, const bool profile = false);
 
         void stream(cv::VideoCapture& input, const std::function<bool(Frame&)>& callback, const bool profile = false);
 
@@ -53,7 +53,7 @@ namespace lvk
 
     protected:
 
-        virtual void filter(Frame&& input, Frame& output);
+        virtual void filter(VideoFrame&& input, VideoFrame& output);
 
     private:
         Stopwatch m_FrameTimer;

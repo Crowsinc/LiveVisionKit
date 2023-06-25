@@ -43,7 +43,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::apply(Frame&& input, Frame& output, const bool profile)
+    void VideoFilter::apply(VideoFrame&& input, VideoFrame& output, const bool profile)
     {
         m_FrameTimer.sync_gpu(profile).start();
         filter(std::move(input), output);
@@ -52,7 +52,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::apply(const Frame& input, Frame& output, const bool profile)
+    void VideoFilter::apply(const VideoFrame& input, VideoFrame& output, const bool profile)
     {
         apply(Frame(input), output, profile);
     }
@@ -226,7 +226,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void VideoFilter::filter(Frame&& input, Frame& output)
+    void VideoFilter::filter(VideoFrame&& input, VideoFrame& output)
     {
         // Default filter is simply an identity operation
         output = std::move(input);

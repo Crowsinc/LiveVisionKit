@@ -54,7 +54,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void StabilizationFilter::filter(Frame&& input, Frame& output)
+	void StabilizationFilter::filter(VideoFrame&& input, VideoFrame& output)
 	{
         LVK_ASSERT(input.has_known_format());
         LVK_ASSERT(!input.empty());

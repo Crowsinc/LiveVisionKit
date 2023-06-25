@@ -52,7 +52,7 @@ namespace lvk
 
         const std::vector<Frame>& outputs() const;
 
-        const Frame& outputs(const size_t index);
+        const VideoFrame& outputs(const size_t index);
 
         bool is_filter_enabled(const size_t index);
 
@@ -66,7 +66,7 @@ namespace lvk
 
     private:
 
-        void filter(Frame&& input, Frame& output) override;
+        void filter(VideoFrame&& input, VideoFrame& output) override;
 
         std::vector<bool> m_FilterRunState;
         std::vector<Frame> m_FilterOutputs;

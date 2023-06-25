@@ -41,7 +41,7 @@ namespace lvk
 
 	private:
 
-        void filter(Frame&& input, Frame& output) override;
+        void filter(VideoFrame&& input, VideoFrame& output) override;
 
 		VideoFrame m_SmoothFrame, m_DetectionFrame, m_ReferenceFrame;
 		cv::UMat m_BlockMask{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};

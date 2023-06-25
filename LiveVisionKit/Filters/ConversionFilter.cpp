@@ -43,7 +43,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ConversionFilter::filter(Frame&& input, Frame& output)
+    void ConversionFilter::filter(VideoFrame&& input, VideoFrame& output)
     {
         LVK_ASSERT(!input.empty());
 

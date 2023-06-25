@@ -42,7 +42,7 @@ namespace lvk
 
     private:
 
-        void filter(Frame&& input, Frame& output) override;
+        void filter(VideoFrame&& input, VideoFrame& output) override;
 
     };
 

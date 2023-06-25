@@ -49,7 +49,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void ScalingFilter::filter(Frame&& input, Frame& output)
+    void ScalingFilter::filter(VideoFrame&& input, VideoFrame& output)
     {
         LVK_ASSERT(!input.empty());
 

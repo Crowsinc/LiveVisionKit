@@ -45,7 +45,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void DeblockingFilter::filter(Frame&& input, Frame& output)
+    void DeblockingFilter::filter(VideoFrame&& input, VideoFrame& output)
 	{
         LVK_ASSERT(!input.empty());
 
