@@ -70,21 +70,11 @@ namespace clt
 
         // Configure the filter
         m_Processor.reconfigure([&](lvk::CompositeFilterSettings& settings){
-            // Add BGR to YUV conversion as LVK filters run on a YUV standard
-            settings.filter_chain.emplace_back(
-                new lvk::ConversionFilter(lvk::ConversionFilterSettings{.conversion_code=cv::COLOR_BGR2YUV})
-            );
-
             for(auto& filter : m_Configuration.filter_chain)
             {
                 filter->set_timing_samples(FILTER_TIMING_SAMPLES);
                 settings.filter_chain.push_back(filter);
             }
-
-            // Convert back to BGR OpenCV standard for output
-            settings.filter_chain.emplace_back(
-                new lvk::ConversionFilter(lvk::ConversionFilterSettings{.conversion_code=cv::COLOR_YUV2BGR})
-            );
         });
 
         // Load data logger
