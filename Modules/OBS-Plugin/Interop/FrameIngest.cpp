@@ -734,7 +734,7 @@ namespace lvk
         // uploading the alpha plane, which is not used in LVK.
         upload_planes(
             *src,
-            (format() == VIDEO_FORMAT_Y800) ? 1 : 3
+            (obs_format() == VIDEO_FORMAT_Y800) ? 1 : 3
         ).copyTo(dst);
 	}
 	
