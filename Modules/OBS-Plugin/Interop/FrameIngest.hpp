@@ -28,8 +28,9 @@ namespace lvk
 	class FrameIngest
 	{
 	public:
-		
-		static std::unique_ptr<FrameIngest> Select(video_format format); // TODO: make this extendable.
+
+        // TODO: make this extendable.
+		static std::unique_ptr<FrameIngest> Select(video_format format);
 
 		virtual ~FrameIngest() = default;
 
@@ -37,7 +38,9 @@ namespace lvk
 
 		void download_ocl_frame(const VideoFrame& src, obs_source_frame* dst);
 
-		video_format format(); // TODO: clean this up
+        VideoFrame::Format ocl_format() const;
+
+        video_format obs_format() const;
 
     protected:
 
