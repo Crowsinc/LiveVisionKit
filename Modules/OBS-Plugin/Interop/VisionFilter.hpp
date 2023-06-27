@@ -24,7 +24,7 @@
 #include <mutex>
 #include <deque>
 
-#include "FrameBuffer.hpp"
+#include "OBSFrame.hpp"
 
 namespace lvk
 {
@@ -43,9 +43,7 @@ namespace lvk
 		
 	protected:
 
-		virtual void filter(FrameBuffer& buffer);
-
-		virtual void filter(cv::UMat& frame);
+		virtual void filter(OBSFrame& frame) = 0;
 
 		virtual void hybrid_render(gs_texture_t* frame);
 
@@ -57,7 +55,7 @@ namespace lvk
 
 		struct SourceCache
 		{
-			FrameBuffer frame_buffer;
+			OBSFrame frame_buffer;
 			uint32_t refs;
 
 			SourceCache();
@@ -73,11 +71,11 @@ namespace lvk
 
 		void release_resources();
 
-		bool acquire_render(FrameBuffer& buffer);
+		bool acquire_render(OBSFrame& buffer);
 
 		void prepare_render_buffer(const uint32_t width, const uint32_t height);
 
-		obs_source_frame* match_async_frame(FrameBuffer& output_buffer, obs_source_frame* input_frame);
+		obs_source_frame* match_async_frame(OBSFrame& output_buffer, obs_source_frame* input_frame);
 
 	private:
 		static std::unordered_map<const obs_source_t*, std::reference_wrapper<VisionFilter>> s_Filters;

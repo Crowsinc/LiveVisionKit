@@ -40,9 +40,9 @@ namespace lvk
 
 	private:
 
-        void filter(FrameBuffer& frame) override;
+        void filter(OBSFrame& frame) override;
 
-		void draw_debug_hud(cv::UMat& frame);
+		void draw_debug_hud(OBSFrame& frame);
 
 	private:
 

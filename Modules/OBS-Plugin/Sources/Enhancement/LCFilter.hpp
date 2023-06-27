@@ -40,9 +40,9 @@ namespace lvk
 
 	private:
 
-		void prepare_undistort_maps(cv::UMat& frame);
+		void prepare_undistort_maps(OBSFrame& frame);
 
-		void filter(cv::UMat& frame) override;
+		void filter(OBSFrame& frame) override;
 
 	private:
 		obs_source_t* m_Context = nullptr;
@@ -52,9 +52,9 @@ namespace lvk
 		std::string m_Profile;
 		CameraParameters m_Parameters;
 
-        cv::UMat m_CorrectedFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-        WarpField m_CorrectionField{WarpField::MinimumSize};
         bool m_FieldOutdated = true;
+        WarpField m_CorrectionField{WarpField::MinimumSize};
+        OBSFrame m_CorrectedFrame;
 	};
 
 }

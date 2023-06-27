@@ -83,9 +83,9 @@ namespace lvk
 
 		std::tuple<std::string, cv::Scalar> generate_calibration_status() const;
 
-		void draw_calibration_hud(cv::UMat& frame) const;
+		void draw_calibration_hud(OBSFrame& frame) const;
 
-		void filter(cv::UMat& frame) override;
+		void filter(OBSFrame& frame) override;
 
 	private:
 

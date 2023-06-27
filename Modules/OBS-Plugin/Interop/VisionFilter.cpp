@@ -152,7 +152,7 @@ namespace lvk
 		// disable this filter and pass the given frame down the filter chain.
 		if(is_vision_filter_chain_start())
 		{
-			if(!buffer.try_upload_frame(input_frame))
+			if(!buffer.from_obs_frame(input_frame))
 			{
 				log::error(
 					"\'%s\' was applied on an unsupported video stream (%s), disabling the filter...",
@@ -176,7 +176,7 @@ namespace lvk
 		// frame buffer back into the OBS frame for the non-vision filter.
 		if(is_vision_filter_chain_end())
 		{
-			if(!buffer.try_download_frame(output_frame))
+			if(!buffer.to_obs_frame(output_frame))
 			{
 				log::error(
 					"\'%s\' tried to download its frame buffer to an unsupported video stream! (%s)",
@@ -191,7 +191,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	obs_source_frame* VisionFilter::match_async_frame(FrameBuffer& output_buffer, obs_source_frame* input_frame)
+	obs_source_frame* VisionFilter::match_async_frame(OBSFrame& output_buffer, obs_source_frame* input_frame)
 	{
         LVK_PROFILE;
 
@@ -291,7 +291,7 @@ namespace lvk
 			return;
 		}
 
-		FrameBuffer& buffer = fetch_cache().frame_buffer;
+		OBSFrame& buffer = fetch_cache().frame_buffer;
 		bool is_chain_start = false, is_chain_end = false;
 
 		// Render to the frame buffer if we are at the start of a new chain,
@@ -331,7 +331,7 @@ namespace lvk
 			if(is_chain_end = is_vision_filter_chain_end(); is_chain_end)
 			{
 				prepare_render_buffer(buffer.width, buffer.height);
-				buffer.export_texture(m_RenderBuffer);
+				buffer.to_obs_texture(m_RenderBuffer);
 				hybrid_render(m_RenderBuffer);
 			}
 		}
@@ -460,7 +460,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool VisionFilter::acquire_render(FrameBuffer& buffer)
+	bool VisionFilter::acquire_render(OBSFrame& buffer)
 	{
         LVK_PROFILE;
 
@@ -474,7 +474,7 @@ namespace lvk
 		prepare_render_buffer(source_width, source_height);
 		if(DefaultEffect::Acquire(m_Context, m_RenderBuffer))
 		{
-			buffer.import_texture(m_RenderBuffer);
+			buffer.from_obs_texture(m_RenderBuffer);
 			buffer.timestamp = os_gettime_ns();
 			return true;
 		}
@@ -508,17 +508,6 @@ namespace lvk
 	{
 		return m_TickTimer.delta();
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VisionFilter::filter(FrameBuffer& buffer)
-	{
-		filter(static_cast<cv::UMat&>(buffer));
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void VisionFilter::filter(cv::UMat& frame) {}
 
 //---------------------------------------------------------------------------------------------------------------------
 

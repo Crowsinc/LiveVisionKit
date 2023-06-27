@@ -128,7 +128,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void LCFilter::prepare_undistort_maps(cv::UMat& frame)
+	void LCFilter::prepare_undistort_maps(OBSFrame& frame)
 	{
 		// Update undistort map if it is outdated or missing
 		if(m_FieldOutdated || m_CorrectionField.size() != frame.size())
@@ -164,7 +164,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void LCFilter::filter(cv::UMat& frame)
+	void LCFilter::filter(OBSFrame& frame)
 	{
         LVK_PROFILE;
 

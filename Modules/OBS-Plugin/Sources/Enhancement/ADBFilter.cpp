@@ -121,7 +121,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADBFilter::filter(FrameBuffer& frame)
+	void ADBFilter::filter(OBSFrame& frame)
 	{
         LVK_PROFILE;
 
@@ -135,7 +135,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void ADBFilter::draw_debug_hud(cv::UMat& frame)
+	void ADBFilter::draw_debug_hud(OBSFrame& frame)
 	{
         LVK_PROFILE;
 

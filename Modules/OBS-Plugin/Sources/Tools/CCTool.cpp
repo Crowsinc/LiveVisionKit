@@ -401,7 +401,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void CCTool::draw_calibration_hud(cv::UMat& frame) const
+	void CCTool::draw_calibration_hud(OBSFrame& frame) const
 	{
 		//TODO: Use C++20 fmt as soon as GCC supports it.
 
@@ -444,7 +444,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void CCTool::filter(cv::UMat& frame)
+	void CCTool::filter(OBSFrame& frame)
 	{
         LVK_PROFILE;
 

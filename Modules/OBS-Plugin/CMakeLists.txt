@@ -207,8 +207,8 @@ target_sources(
         Effects/OBSEffect.hpp
         Effects/OBSEffect.tpp
 
-        Interop/FrameBuffer.cpp
-        Interop/FrameBuffer.hpp
+        Interop/OBSFrame.cpp
+        Interop/OBSFrame.hpp
         Interop/FrameIngest.cpp
         Interop/FrameIngest.hpp
         Interop/InteropContext.cpp

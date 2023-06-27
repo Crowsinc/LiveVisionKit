@@ -26,39 +26,46 @@
 namespace lvk
 {
 
-	struct FrameBuffer : public Frame
+	struct OBSFrame : public Frame
 	{
-		FrameBuffer();
+        OBSFrame();
 
-		~FrameBuffer() override;
+        OBSFrame(const OBSFrame& frame);
 
-		FrameBuffer(FrameBuffer&& buffer) noexcept;
+        OBSFrame(OBSFrame&& frame) noexcept;
 
-		FrameBuffer& operator=(FrameBuffer&& buffer) noexcept;
+        ~OBSFrame() override;
 
-		bool try_upload_frame(obs_source_frame* obs_frame);
 
-		bool try_download_frame(obs_source_frame* obs_frame);
+        OBSFrame& operator=(const OBSFrame& frame);
 
-		void import_texture(gs_texture_t* texture);
+        OBSFrame& operator=(OBSFrame&& frame) noexcept;
 
-		void export_texture(gs_texture_t* texture);
+
+        bool to_obs_frame(obs_source_frame* frame) const;
+
+        bool from_obs_frame(const obs_source_frame* frame);
+
+
+        void to_obs_texture(gs_texture_t* texture) const;
+
+        void from_obs_texture(gs_texture_t* texture);
 
 	private:
 
-		void prepare_interop_buffer(const uint32_t width, const uint32_t height);
+		void prepare_interop_texture(const uint32_t width, const uint32_t height) const;
 
 	private:
 
 		// Frame upload/download
-		std::unique_ptr<FrameIngest> m_FrameIngest;
+		mutable std::unique_ptr<FrameIngest> m_FrameIngest;
 
 		// Texture import/export
-		gs_texture_t* m_InteropBuffer = nullptr;
-		gs_stagesurf_t* m_ReadBuffer = nullptr;
-		gs_texture_t* m_WriteBuffer = nullptr;
-		uint8_t* m_MappedData = nullptr;
-		cv::UMat m_ConversionBuffer;
+        mutable VideoFrame m_FormatBuffer, m_InteropBuffer;
+        mutable gs_texture_t* m_InteropTexture = nullptr;
+		mutable gs_stagesurf_t* m_ReadBuffer = nullptr;
+		mutable gs_texture_t* m_WriteBuffer = nullptr;
+		mutable uint8_t* m_MappedData = nullptr;
 	};
 
 }

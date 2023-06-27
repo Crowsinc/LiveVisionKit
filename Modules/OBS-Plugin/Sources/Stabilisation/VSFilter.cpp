@@ -248,7 +248,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::filter(FrameBuffer& buffer)
+	void VSFilter::filter(OBSFrame& buffer)
 	{
         LVK_PROFILE;
 
@@ -271,7 +271,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::draw_debug_hud(cv::UMat& frame)
+	void VSFilter::draw_debug_hud(OBSFrame& frame)
 	{
         LVK_PROFILE;
 
