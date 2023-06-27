@@ -250,4 +250,15 @@ namespace lvk
     }
 
 //---------------------------------------------------------------------------------------------------------------------
+
+    void VideoFrame::viewAsFormat(VideoFrame& view, const Format new_format) const
+    {
+        if(new_format != format)
+        {
+            reformatTo(view, new_format);
+        }
+        else view = *this;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
 }

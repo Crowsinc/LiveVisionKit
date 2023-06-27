@@ -21,6 +21,7 @@
 
 namespace lvk
 {
+    // NOTE: use camelCase to match the cv::UMat API.
     struct VideoFrame : public cv::UMat
     {
         enum Format {BGR, RGB, YUV, GRAY, UNKNOWN};
@@ -39,9 +40,9 @@ namespace lvk
 
         explicit VideoFrame(const uint64_t timestamp);
 
-        VideoFrame(const cv::UMat& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN);
+        explicit VideoFrame(const cv::UMat& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN);
 
-        VideoFrame(cv::UMat&& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN) noexcept;
+        explicit VideoFrame(cv::UMat&& frame, const uint64_t timestamp = 0, const Format format = UNKNOWN) noexcept;
 
 
         virtual ~VideoFrame() = default;
@@ -63,7 +64,6 @@ namespace lvk
         void copyTo(cv::OutputArray dst, cv::InputArray mask) const; /* override */
 
 
-        // TODO: add more ROI overrides.
         VideoFrame operator()(const cv::Rect& roi) const; /* override */
 
 
@@ -72,6 +72,10 @@ namespace lvk
         void reformat(const Format new_format);
 
         void reformatTo(VideoFrame& dst, const Format new_format) const;
+
+        // NOTE: Ownership of the view is undefined and should not be modified.
+        void viewAsFormat(VideoFrame& view, const Format new_format) const;
+
     };
 
     typedef VideoFrame Frame;
