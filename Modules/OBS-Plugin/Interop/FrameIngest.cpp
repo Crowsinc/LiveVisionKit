@@ -78,12 +78,42 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	FrameIngest::FrameIngest(video_format format)
-		: m_Format(format) 
+	FrameIngest::FrameIngest(const video_format obs_format, const VideoFrame::Format ocl_format)
+		: m_OBSFormat(obs_format),
+          m_OCLFormat(ocl_format)
 	{
-		LVK_ASSERT(format != VIDEO_FORMAT_NONE);
+        LVK_ASSERT(m_OBSFormat != VIDEO_FORMAT_NONE);
+        LVK_ASSERT(m_OCLFormat != VideoFrame::UNKNOWN);
 	}
-	
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::upload_obs_frame(const obs_source_frame* src, VideoFrame& dst)
+    {
+        LVK_ASSERT(test_obs_frame(src) && src->format == m_OBSFormat);
+
+        to_ocl(src, dst);
+
+        // Update Metadata.
+        dst.timestamp = src->timestamp;
+        dst.format = m_OCLFormat;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::download_ocl_frame(const VideoFrame& src, obs_source_frame* dst)
+    {
+        LVK_ASSERT(test_obs_frame(dst) && dst->format == m_OBSFormat);
+        LVK_ASSERT(src.has_known_format());
+
+        // Attempt to convert the source to the expected format before downloading.
+        src.viewAsFormat(m_FormatConversionBuffer, m_OCLFormat);
+        to_obs(m_FormatConversionBuffer, dst);
+
+        // Update Metadata.
+        dst->timestamp = src.timestamp;
+    }
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	video_format FrameIngest::format()
@@ -105,14 +135,30 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameIngest::fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value)
-	{
-		LVK_ASSERT(plane < MAX_AV_PLANES);
-		LVK_ASSERT(test_obs_frame(&dst));
-		LVK_ASSERT(dst.data[plane] != nullptr);
+    void FrameIngest::split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3)
+    {
+        LVK_ASSERT(src.type() == CV_8UC3);
+        LVK_ASSERT(!src.empty());
 
-		std::memset(dst.data[plane], value, static_cast<size_t>(dst.width) * dst.height);
-	}
+        p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        p3.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        cv::split(src, std::vector<cv::UMat>{p1, p2, p3});
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2)
+    {
+        LVK_ASSERT(!src.empty());
+        LVK_ASSERT(src.type() == CV_8UC2);
+
+        p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
+        cv::split(src, std::vector<cv::UMat>{p1, p2});
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -142,30 +188,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FrameIngest::split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3)
-	{
-		LVK_ASSERT(src.type() == CV_8UC3);
-		LVK_ASSERT(!src.empty());
+    void FrameIngest::fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value)
+    {
+        LVK_ASSERT(plane < MAX_AV_PLANES);
+        LVK_ASSERT(test_obs_frame(&dst));
+        LVK_ASSERT(dst.data[plane] != nullptr);
 
-		p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		p3.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		cv::split(src, std::vector<cv::UMat>{p1, p2, p3});
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FrameIngest::split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2)
-	{
-		LVK_ASSERT(!src.empty());
-		LVK_ASSERT(src.type() == CV_8UC2);
-
-		p1.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-		p2.create(src.size(), CV_8UC1, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-
-		cv::split(src, std::vector<cv::UMat>{p1, p2});
-	}
+        std::memset(dst.data[plane], value, static_cast<size_t>(dst.width) * dst.height);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -184,6 +214,112 @@ namespace lvk
             channels
         );
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::download_planes(
+        const cv::UMat& plane_0,
+        obs_source_frame& dst,
+        uint64_t plane_offset
+    )
+    {
+        LVK_ASSERT(!plane_0.empty());
+        LVK_ASSERT(dst.data[0] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
+        LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
+        LVK_PROFILE;
+
+        const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
+        const int export_offset = static_cast<int>(dst.data[plane_offset] - dst.data[0]);
+
+        plane_0.reshape(1, 1).copyTo(cv::Mat(export_offset, export_length, CV_8UC1, dst.data[0]));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::download_planes(
+        const cv::UMat& plane_0,
+        const cv::UMat& plane_1,
+        obs_source_frame& dst
+    )
+    {
+        LVK_ASSERT(!plane_0.empty())
+        LVK_ASSERT(!plane_1.empty());
+        LVK_ASSERT(dst.data[0] != nullptr);
+        LVK_ASSERT(dst.data[1] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
+        LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
+        LVK_ASSERT_RANGE(plane_1.cols, 1, dst.width);
+        LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
+        LVK_PROFILE;
+
+        // NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
+        // are all stored in one contiguous span of memory starting at src.data[0].
+        // We must conserve the padding which exists between planes in memory.
+
+        const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
+        const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
+
+        const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
+        const int export_length = plane_1_offset + plane_1_length;
+
+        m_ExportBuffer.create(1, export_length, CV_8UC1);
+
+        plane_0.reshape(1, 1).copyTo(m_ExportBuffer.colRange(0, plane_0_length));
+        plane_1.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
+
+        m_ExportBuffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameIngest::download_planes(
+        const cv::UMat& plane_0,
+        const cv::UMat& plane_1,
+        const cv::UMat& plane_2,
+        obs_source_frame& dst
+    )
+    {
+        LVK_ASSERT(!plane_0.empty());
+        LVK_ASSERT(!plane_1.empty());
+        LVK_ASSERT(!plane_2.empty());
+        LVK_ASSERT(dst.data[0] != nullptr);
+        LVK_ASSERT(dst.data[1] != nullptr);
+        LVK_ASSERT(dst.data[2] != nullptr);
+        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
+        LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
+        LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
+        LVK_ASSERT_RANGE(plane_1.cols, 1, dst.width);
+        LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
+        LVK_ASSERT_RANGE(plane_2.cols, 1, dst.width)
+        LVK_ASSERT_RANGE(plane_2.rows, 1, dst.height);
+        LVK_PROFILE;
+
+        // NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
+        // are all stored in one contiguous span of memory starting at src.data[0].
+        // We must conserve the padding which exists between planes in memory.
+
+        const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
+        const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
+        const int plane_2_length = static_cast<int>(plane_2.total() * plane_2.elemSize());
+
+        const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
+        const int plane_2_offset = static_cast<int>(dst.data[2] - dst.data[0]);
+        const int export_length = plane_2_offset + plane_2_length;
+
+        m_ExportBuffer.create(1, export_length, CV_8UC1);
+
+        plane_0.reshape(1, 1).copyTo(m_ExportBuffer.colRange(0, plane_0_length));
+        plane_1.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
+        plane_2.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_2_offset, plane_2_offset + plane_2_length));
+
+        m_ExportBuffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -334,113 +470,9 @@ namespace lvk
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-	
-	void FrameIngest::download_planes(
-		const cv::UMat& plane_0,
-		obs_source_frame& dst
-	)
-	{
-		LVK_ASSERT(!plane_0.empty());
-        LVK_ASSERT(dst.data[0] != nullptr);
-        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
-        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
-        LVK_PROFILE;
-
-		const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
-
-		plane_0.reshape(1, 1).copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FrameIngest::download_planes(
-		const cv::UMat& plane_0,
-		const cv::UMat& plane_1,
-		obs_source_frame& dst
-	)
-	{
-		LVK_ASSERT(!plane_0.empty());
-		LVK_ASSERT(!plane_1.empty());
-		LVK_ASSERT(dst.data[0] != nullptr);
-		LVK_ASSERT(dst.data[1] != nullptr);
-        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
-        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
-		LVK_ASSERT_RANGE(plane_1.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
-        LVK_PROFILE;
-
-		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
-		// are all stored in one contiguous span of memory starting at src.data[0].
-		// We must conserve the padding which exists between planes in memory.
-
-		const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
-		const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
-
-		const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
-		const int export_length = plane_1_offset + plane_1_length;
-
-		m_ExportBuffer.create(1, export_length, CV_8UC1);
-
-		plane_0.reshape(1, 1).copyTo(m_ExportBuffer.colRange(0, plane_0_length));
-		plane_1.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
-
-		m_ExportBuffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-	
-	void FrameIngest::download_planes(
-		const cv::UMat& plane_0,
-		const cv::UMat& plane_1,
-		const cv::UMat& plane_2,
-		obs_source_frame& dst
-	)
-	{
-		LVK_ASSERT(!plane_0.empty());
-		LVK_ASSERT(!plane_1.empty());
-		LVK_ASSERT(!plane_2.empty());
-		LVK_ASSERT(dst.data[0] != nullptr);
-		LVK_ASSERT(dst.data[1] != nullptr);
-		LVK_ASSERT(dst.data[2] != nullptr);
-        LVK_ASSERT(dst.width <= MAX_TEXTURE_SIZE);
-        LVK_ASSERT(dst.height <= MAX_TEXTURE_SIZE);
-		LVK_ASSERT_RANGE(plane_0.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_0.rows, 1, dst.height);
-		LVK_ASSERT_RANGE(plane_1.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_1.rows, 1, dst.height);
-		LVK_ASSERT_RANGE(plane_2.cols, 1, dst.width);
-		LVK_ASSERT_RANGE(plane_2.rows, 1, dst.height);
-        LVK_PROFILE;
-
-		// NOTE: Downloads are done in bulk by utilising the fact that the OBS planes
-		// are all stored in one contiguous span of memory starting at src.data[0].
-		// We must conserve the padding which exists between planes in memory.
-
-		const int plane_0_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
-		const int plane_1_length = static_cast<int>(plane_1.total() * plane_1.elemSize());
-		const int plane_2_length = static_cast<int>(plane_2.total() * plane_2.elemSize());
-
-		const int plane_1_offset = static_cast<int>(dst.data[1] - dst.data[0]);
-		const int plane_2_offset = static_cast<int>(dst.data[2] - dst.data[0]);
-		const int export_length = plane_2_offset + plane_2_length;
-
-		m_ExportBuffer.create(1, export_length, CV_8UC1);
-
-		plane_0.reshape(1, 1).copyTo(m_ExportBuffer.colRange(0, plane_0_length));
-		plane_1.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_1_offset, plane_1_offset + plane_1_length));
-		plane_2.reshape(1, 1).copyTo(m_ExportBuffer.colRange(plane_2_offset, plane_2_offset + plane_2_length));
-
-		m_ExportBuffer.copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
 
 	I4XXIngest::I4XXIngest(video_format i4xx_format)
-		: FrameIngest(i4xx_format),
+		: FrameIngest(i4xx_format, VideoFrame::YUV),
 		  m_ChromaScaling(
 			 any_of(i4xx_format, VIDEO_FORMAT_YUVA, VIDEO_FORMAT_I444) ? 1.0f : 0.5f,
 			 any_of(i4xx_format, VIDEO_FORMAT_I40A, VIDEO_FORMAT_I420) ? 0.5f : 1.0f
@@ -455,22 +487,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void I4XXIngest::upload(const obs_source_frame* src, cv::UMat& dst)
+	void I4XXIngest::to_ocl(const obs_source_frame* src, VideoFrame& dst)
 	{
-		LVK_ASSERT(test_obs_frame(src));
         LVK_PROFILE;
 
         auto& frame = *src;
 		
-		const cv::Size frame_size(
-			static_cast<int>(src->width),
-			static_cast<int>(src->height)
-		);
-
-		const cv::Size chroma_size(
-			static_cast<int>(m_ChromaScaling.width * static_cast<float>(frame_size.width)),
-			static_cast<int>(m_ChromaScaling.height * static_cast<float>(frame_size.height))
-		);
+		const cv::Size frame_size(static_cast<int>(src->width), static_cast<int>(src->height));
+        const cv::Size chroma_size = m_ChromaScaling * cv::Size2f(frame_size);
 
 		auto [y_roi, u_roi, v_roi] = upload_planes(
 			frame,
@@ -495,9 +519,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void I4XXIngest::download(const cv::UMat& src, obs_source_frame* dst)
-	{
-		LVK_ASSERT(test_obs_frame(dst));
+	void I4XXIngest::to_obs(const VideoFrame &src, obs_source_frame* dst)
+    {
         LVK_PROFILE;
 
         auto& frame = *dst;
@@ -532,20 +555,18 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	NV12Ingest::NV12Ingest()
-		: FrameIngest(VIDEO_FORMAT_NV12)
+		: FrameIngest(VIDEO_FORMAT_NV12, VideoFrame::YUV)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void NV12Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
-	{
-		LVK_ASSERT(test_obs_frame(src));
+	void NV12Ingest::to_ocl(const obs_source_frame* src, VideoFrame& dst) {
         LVK_PROFILE;
 
 		auto& frame = *src;
 
 		const cv::Size frame_size(static_cast<int>(frame.width), static_cast<int>(frame.height));
-		const cv::Size chroma_size = frame_size/2;
+		const cv::Size chroma_size = frame_size / 2;
 
 		auto [y_roi, uv_roi] = upload_planes(
 			frame,
@@ -560,9 +581,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void NV12Ingest::download(const cv::UMat& src, obs_source_frame* dst)
+	void NV12Ingest::to_obs(const VideoFrame& src, obs_source_frame* dst)
 	{
-		LVK_ASSERT(test_obs_frame(dst));
         LVK_PROFILE;
 
 		auto& frame = *dst;
@@ -580,7 +600,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	P422Ingest::P422Ingest(video_format packed_422_format)
-		: FrameIngest(packed_422_format),
+		: FrameIngest(packed_422_format, VideoFrame::YUV),
 		  m_YFirst(packed_422_format != VIDEO_FORMAT_UYVY),
 		  m_UFirst(packed_422_format != VIDEO_FORMAT_YVYU)
 	{
@@ -589,9 +609,8 @@ namespace lvk
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void P422Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
+	void P422Ingest::to_ocl(const obs_source_frame* src, VideoFrame& dst)
 	{
-		LVK_ASSERT(test_obs_frame(src));
         LVK_PROFILE;
 
         auto& frame = *src;
@@ -615,9 +634,8 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void P422Ingest::download(const cv::UMat& src, obs_source_frame* dst)
+	void P422Ingest::to_obs(const VideoFrame& src, obs_source_frame* dst)
 	{
-		LVK_ASSERT(test_obs_frame(dst));
         LVK_PROFILE;
 
 		auto& frame = *dst;
@@ -647,14 +665,13 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	P444Ingest::P444Ingest()
-		: FrameIngest(VIDEO_FORMAT_AYUV)
+		: FrameIngest(VIDEO_FORMAT_AYUV, VideoFrame::YUV)
 	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void P444Ingest::upload(const obs_source_frame* src, cv::UMat& dst)
+	void P444Ingest::to_ocl(const obs_source_frame* src, VideoFrame& dst)
 	{
-		LVK_ASSERT(test_obs_frame(src));
         LVK_PROFILE;
 
 		auto& frame = *src;
@@ -667,101 +684,96 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void P444Ingest::download(const cv::UMat& src, obs_source_frame* dst)
+	void P444Ingest::to_obs(const VideoFrame& src, obs_source_frame* dst)
 	{
-		LVK_ASSERT(test_obs_frame(dst));
         LVK_PROFILE;
 
 		auto& frame = *dst;
 
-		// NOTE: To preserve the frame's alpha we need to import the frame and 
-		// mix the original alpha channel back in. This is slow, don't use AYUV.
-		// TODO: provide a more efficient option
-		cv::UMat dst_roi = upload_planes(frame, 4);
-
-		m_MixBuffer.create(src.size(), CV_8UC4);
-		cv::mixChannels({{src, dst_roi}}, std::vector<cv::UMat>{m_MixBuffer}, {3,0,  0,1,  1,2,  2,3});
-
-		download_planes(m_MixBuffer, frame);
+        // Insert YUV planes after the A plane.
+		download_planes(src, frame, 1);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
-
-	DirectIngest::DirectIngest(video_format uncompressed_format)
-		: FrameIngest(uncompressed_format)
+    DirectIngest::DirectIngest(const video_format uncompressed_format)
+		: FrameIngest(uncompressed_format, match_obs_format(uncompressed_format)),
+          m_Components(format_components(uncompressed_format)),
+          m_StripAlpha(format_has_alpha(uncompressed_format))
 	{
-		switch(uncompressed_format)
-		{
-			case video_format::VIDEO_FORMAT_Y800:
-				m_Components = 1;
-				m_SteppedConversion = true;
-				m_ForwardStepConversion = cv::COLOR_GRAY2BGR;
-				m_ForwardConversion = cv::COLOR_BGR2YUV;
-				m_BackwardStepConversion = cv::COLOR_YUV2BGR;
-				m_BackwardConversion = cv::COLOR_BGR2GRAY;
-				break;
-			case video_format::VIDEO_FORMAT_RGBA:
-				m_Components = 4;
-				m_SteppedConversion = true;
-				m_ForwardStepConversion = cv::COLOR_RGBA2RGB;
-				m_ForwardConversion = cv::COLOR_RGB2YUV;
-				m_BackwardStepConversion = cv::COLOR_YUV2RGB;
-				m_BackwardConversion = cv::COLOR_RGB2RGBA;
-				break;
-			case video_format::VIDEO_FORMAT_BGRX:
-			case video_format::VIDEO_FORMAT_BGRA:
-				m_Components = 4;
-				m_SteppedConversion = true;
-				m_ForwardStepConversion = cv::COLOR_BGRA2BGR;
-				m_ForwardConversion = cv::COLOR_BGR2YUV;
-				m_BackwardStepConversion = cv::COLOR_YUV2BGR;
-				m_BackwardConversion = cv::COLOR_BGR2BGRA;
-				break;
-			case video_format::VIDEO_FORMAT_BGR3:
-				m_Components = 3;
-				m_SteppedConversion = false;
-				m_ForwardConversion = cv::COLOR_BGR2YUV;
-				m_BackwardConversion = cv::COLOR_YUV2BGR;
-				break;
-			default:
-				LVK_ASSERT(false && "format not supported");
-		}
-	}
+        LVK_ASSERT(uncompressed_format != VIDEO_FORMAT_NONE);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    VideoFrame::Format DirectIngest::match_obs_format(const video_format obs_format)
+    {
+        switch(obs_format)
+        {
+            case video_format::VIDEO_FORMAT_Y800: return VideoFrame::GRAY;
+            case video_format::VIDEO_FORMAT_RGBA: return VideoFrame::RGB;
+            case video_format::VIDEO_FORMAT_BGRX:
+            case video_format::VIDEO_FORMAT_BGRA:
+            case video_format::VIDEO_FORMAT_BGR3: return VideoFrame::BGR;
+            default: LVK_ASSERT(false && "format not supported");
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    bool DirectIngest::format_has_alpha(const video_format obs_format)
+    {
+        switch(obs_format)
+        {
+            case video_format::VIDEO_FORMAT_Y800:
+            case video_format::VIDEO_FORMAT_BGR3: return false;
+
+            case video_format::VIDEO_FORMAT_BGRX:
+            case video_format::VIDEO_FORMAT_RGBA:
+            case video_format::VIDEO_FORMAT_BGRA: return true;
+            default: LVK_ASSERT(false && "format not supported");
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    int DirectIngest::format_components(const video_format obs_format)
+    {
+        switch(obs_format)
+        {
+            case video_format::VIDEO_FORMAT_Y800: return 1;
+            case video_format::VIDEO_FORMAT_BGR3: return 3;
+
+            case video_format::VIDEO_FORMAT_BGRX:
+            case video_format::VIDEO_FORMAT_RGBA:
+            case video_format::VIDEO_FORMAT_BGRA: return 4;
+            default: LVK_ASSERT(false && "format not supported");
+        }
+    }
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void DirectIngest::upload(const obs_source_frame* src, cv::UMat& dst)
+	void DirectIngest::to_ocl(const obs_source_frame* src, VideoFrame& dst)
 	{
-		LVK_ASSERT(test_obs_frame(src));
         LVK_PROFILE;
 
 		auto& frame = *src;
 
-		if(m_SteppedConversion)
-		{
-			cv::cvtColor(upload_planes(frame, m_Components), m_ConversionBuffer, m_ForwardStepConversion);
-			cv::cvtColor(m_ConversionBuffer, dst, m_ForwardConversion);
-		}
-		else cv::cvtColor(upload_planes(frame, m_Components), dst, m_ForwardConversion);
+        auto data = upload_planes(frame, m_Components);
+        if(m_StripAlpha)cv::cvtColor(data, dst, cv::COLOR_BGRA2BGR);
+        else data.copyTo(dst);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
 
-	void DirectIngest::download(const cv::UMat& src, obs_source_frame* dst)
+	void DirectIngest::to_obs(const VideoFrame& src, obs_source_frame* dst)
 	{
-		LVK_ASSERT(test_obs_frame(dst));
         LVK_PROFILE;
 
 		auto& frame = *dst;
 
-		if(m_SteppedConversion)
-		{
-			cv::cvtColor(src, m_StepConversionBuffer, m_BackwardStepConversion);
-			cv::cvtColor(m_StepConversionBuffer, m_ConversionBuffer, m_BackwardConversion);
-		}
-		else cv::cvtColor(src, m_ConversionBuffer, m_BackwardConversion);
-
-		download_planes(m_ConversionBuffer, frame);
+        // NOTE: All supported formats have the alpha plane as the final component.
+        // Src formats have no alpha, so we directly upload into the first three components.
+        download_planes(src, frame);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------

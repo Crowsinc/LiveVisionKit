@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <obs-module.h>
+#include <LiveVisionKit.hpp>
 #include <opencv2/opencv.hpp>
 
 namespace lvk
@@ -28,23 +29,63 @@ namespace lvk
 	{
 	public:
 		
-		static std::unique_ptr<FrameIngest> Select(video_format format);
+		static std::unique_ptr<FrameIngest> Select(video_format format); // TODO: make this extendable.
 
 		virtual ~FrameIngest() = default;
 
-		// Uploads the src obs_source_frame to the dst YUV UMat on the GPU
-		virtual void upload(const obs_source_frame* src, cv::UMat& dst) = 0;
+		void upload_obs_frame(const obs_source_frame* src, VideoFrame& dst);
 
-		// Downloads the src YUV UMat to the dst obs_source_frame, preserving any existing alpha channels
-		virtual void download(const cv::UMat& src, obs_source_frame* dst) = 0;
+		void download_ocl_frame(const VideoFrame& src, obs_source_frame* dst);
 
-		video_format format();
+		video_format format(); // TODO: clean this up
+
+    protected:
+
+        FrameIngest(const video_format obs_format, const VideoFrame::Format ocl_format);
+
+        virtual void to_ocl(const obs_source_frame* src, VideoFrame& dst) = 0;
+
+        virtual void to_obs(const VideoFrame& src, obs_source_frame* dst) = 0;
 
 	protected:
 
-		explicit FrameIngest(video_format format);
+        static bool test_obs_frame(const obs_source_frame* frame);
 
-		// NOTE: returns ROI to internal buffers
+
+        static void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2);
+
+        static void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3);
+
+
+        static void merge_planes(const cv::UMat& p1, const cv::UMat& p2, cv::UMat& dst);
+
+        static void merge_planes(const cv::UMat& p1, const cv::UMat& p2, const cv::UMat& p3, cv::UMat& dst);
+
+
+        static void fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value);
+
+
+        void download_planes(
+            const cv::UMat& plane_0,
+            obs_source_frame& dst,
+            uint64_t plane_offset = 0
+        );
+
+        void download_planes(
+            const cv::UMat& plane_0,
+            const cv::UMat& plane_1,
+            obs_source_frame& dst
+        );
+
+        void download_planes(
+            const cv::UMat& plane_0,
+            const cv::UMat& plane_1,
+            const cv::UMat& plane_2,
+            obs_source_frame& dst
+        );
+
+
+        // NOTE: returns ROI to internal buffers
 		cv::UMat upload_planes(
 			const obs_source_frame& src,
 			const uint32_t channels
@@ -77,39 +118,11 @@ namespace lvk
 			const uint32_t plane_2_channels
 		);
 
-		void download_planes(
-			const cv::UMat& plane_0,
-			obs_source_frame& dst
-		);
-		
-		void download_planes(
-			const cv::UMat& plane_0,
-			const cv::UMat& plane_1,
-			obs_source_frame& dst
-		);
-		
-		void download_planes(
-			const cv::UMat& plane_0,
-			const cv::UMat& plane_1,
-			const cv::UMat& plane_2,
-			obs_source_frame& dst
-		);
-
-		static void fill_plane(obs_source_frame& dst, const uint32_t plane, const uint8_t value);
-
-		static void merge_planes(const cv::UMat& p1, const cv::UMat& p2, const cv::UMat& p3, cv::UMat& dst);
-
-		static void merge_planes(const cv::UMat& p1, const cv::UMat& p2, cv::UMat& dst);
-
-		static void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2, cv::UMat& p3);
-
-		static void split_planes(const cv::UMat& src, cv::UMat& p1, cv::UMat& p2);
-
-		static bool test_obs_frame(const obs_source_frame* frame);
-
 	private:
-		video_format m_Format = VIDEO_FORMAT_NONE;
-	
+		video_format m_OBSFormat = VIDEO_FORMAT_NONE;
+	    VideoFrame::Format m_OCLFormat = VideoFrame::UNKNOWN;
+
+        VideoFrame m_FormatConversionBuffer;
 		cv::UMat m_ImportBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_ExportBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
@@ -122,9 +135,11 @@ namespace lvk
 
 		explicit I4XXIngest(video_format i4xx_format);
 
-		void upload(const obs_source_frame* src, cv::UMat& dst) override;
+    protected:
+
+		void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
 	
-		void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
 
 	private:
 		cv::Size2f m_ChromaScaling;
@@ -141,9 +156,11 @@ namespace lvk
 
 		NV12Ingest();
 
-        void upload(const obs_source_frame* src, cv::UMat& dst) override;
+    protected:
+
+        void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
 		
-		void download(const cv::UMat& src, obs_source_frame* dst) override;
+		void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
 
 	private:
 		// NOTE: We assume this will automatically initialize on the GPU
@@ -157,9 +174,11 @@ namespace lvk
 
 		explicit P422Ingest(video_format packed_422_format);
 
-		void upload(const obs_source_frame* src, cv::UMat& dst) override;
-		
-		void download(const cv::UMat& src, obs_source_frame* dst) override;
+    protected:
+
+        void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
+
+        void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
 	
 	private:
 		bool m_YFirst, m_UFirst;
@@ -175,13 +194,12 @@ namespace lvk
 
 		P444Ingest();
 
-		void upload(const obs_source_frame* src, cv::UMat& dst) override;
-		
-		void download(const cv::UMat& src, obs_source_frame* dst) override;
+    protected:
 
-	private:
-		// NOTE: We assume this will automatically initialize on the GPU
-		cv::UMat m_MixBuffer;
+        void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
+
+        void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
+
 	};
 
 	// Uncompressed formats
@@ -189,21 +207,26 @@ namespace lvk
 	{
 	public:
 
-		explicit DirectIngest(video_format uncompressed_format);
+		explicit DirectIngest(const video_format uncompressed_format);
 
-		void upload(const obs_source_frame* src, cv::UMat& dst) override;
+    protected:
 
-		void download(const cv::UMat& src, obs_source_frame* dst) override;
+        void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
 
-	private:
-		int m_Components;
-		bool m_SteppedConversion;
-		cv::ColorConversionCodes m_ForwardConversion, m_ForwardStepConversion;
-		cv::ColorConversionCodes m_BackwardConversion, m_BackwardStepConversion;
+        void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
 
-		// NOTE: We assume this will automatically initialize on the GPU
-		cv::UMat m_ConversionBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-        cv::UMat m_StepConversionBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+    private:
+
+        static VideoFrame::Format match_obs_format(const video_format obs_format);
+
+        static bool format_has_alpha(const video_format obs_format);
+
+        static int format_components(const video_format obs_format);
+
+    private:
+        const int m_Components = 0;
+        const bool m_StripAlpha = false;
+        cv::UMat m_StripBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }
