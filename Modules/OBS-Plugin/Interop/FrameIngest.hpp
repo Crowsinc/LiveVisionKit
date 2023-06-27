@@ -218,15 +218,6 @@ namespace lvk
     private:
 
         static VideoFrame::Format match_obs_format(const video_format obs_format);
-
-        static bool format_has_alpha(const video_format obs_format);
-
-        static int format_components(const video_format obs_format);
-
-    private:
-        const int m_Components = 0;
-        const bool m_StripAlpha = false;
-        cv::UMat m_StripBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

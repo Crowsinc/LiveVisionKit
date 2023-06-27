@@ -696,9 +696,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
     DirectIngest::DirectIngest(const video_format uncompressed_format)
-		: FrameIngest(uncompressed_format, match_obs_format(uncompressed_format)),
-          m_Components(format_components(uncompressed_format)),
-          m_StripAlpha(format_has_alpha(uncompressed_format))
+		: FrameIngest(uncompressed_format, match_obs_format(uncompressed_format))
 	{
         LVK_ASSERT(uncompressed_format != VIDEO_FORMAT_NONE);
     }
@@ -720,47 +718,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool DirectIngest::format_has_alpha(const video_format obs_format)
-    {
-        switch(obs_format)
-        {
-            case video_format::VIDEO_FORMAT_Y800:
-            case video_format::VIDEO_FORMAT_BGR3: return false;
-
-            case video_format::VIDEO_FORMAT_BGRX:
-            case video_format::VIDEO_FORMAT_RGBA:
-            case video_format::VIDEO_FORMAT_BGRA: return true;
-            default: LVK_ASSERT(false && "format not supported");
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    int DirectIngest::format_components(const video_format obs_format)
-    {
-        switch(obs_format)
-        {
-            case video_format::VIDEO_FORMAT_Y800: return 1;
-            case video_format::VIDEO_FORMAT_BGR3: return 3;
-
-            case video_format::VIDEO_FORMAT_BGRX:
-            case video_format::VIDEO_FORMAT_RGBA:
-            case video_format::VIDEO_FORMAT_BGRA: return 4;
-            default: LVK_ASSERT(false && "format not supported");
-        }
-    }
-	
-//---------------------------------------------------------------------------------------------------------------------
-
 	void DirectIngest::to_ocl(const obs_source_frame* src, VideoFrame& dst)
 	{
         LVK_PROFILE;
 
-		auto& frame = *src;
-
-        auto data = upload_planes(frame, m_Components);
-        if(m_StripAlpha)cv::cvtColor(data, dst, cv::COLOR_BGRA2BGR);
-        else data.copyTo(dst);
+        // NOTE: We treat 4-component formats such as BGRA as
+        // 3-component instead in order to avoid unnecessarily
+        // uploading the alpha plane, which is not used in LVK.
+        upload_planes(
+            *src,
+            (format() == VIDEO_FORMAT_Y800) ? 1 : 3
+        ).copyTo(dst);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
@@ -769,11 +737,9 @@ namespace lvk
 	{
         LVK_PROFILE;
 
-		auto& frame = *dst;
-
         // NOTE: All supported formats have the alpha plane as the final component.
         // Src formats have no alpha, so we directly upload into the first three components.
-        download_planes(src, frame);
+        download_planes(src, *dst);
 	}
 	
 //---------------------------------------------------------------------------------------------------------------------
