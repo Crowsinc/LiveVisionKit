@@ -37,6 +37,7 @@ Set-Location $opencv_build_path
 
 # Run CMake configuration
 cmake -DBUILD_SHARED_LIBS=OFF `
+      -DENABLE_LTO=ON `
       -DCV_TRACE=OFF `
       -DWITH_OPENCL=ON `
       -DWITH_DIRECTX=ON `
