@@ -18,7 +18,6 @@
 #include "OBSFrame.hpp"
 
 #include "InteropContext.hpp"
-#include "Utility/Graphics.hpp"
 #include "Utility/ScopedProfiler.hpp"
 
 namespace lvk
@@ -32,6 +31,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    // Only copy the frame data over.
     OBSFrame::OBSFrame(const OBSFrame& frame)
         : VideoFrame(frame)
     {}
@@ -40,9 +40,12 @@ namespace lvk
 
     OBSFrame::OBSFrame(OBSFrame&& frame) noexcept
         : VideoFrame(std::move(frame)),
-          m_FrameIngest(std::move(frame.m_FrameIngest))
+          m_FrameIngest(std::move(frame.m_FrameIngest)),
+          m_WriteBuffer(std::move(frame.m_WriteBuffer)),
+          m_ReadBuffer(std::move(frame.m_ReadBuffer)),
+          m_ExportTexture(frame.m_ExportTexture)
     {
-        // TODO: add the rest of the move operations up here
+        frame.m_ExportTexture = nullptr;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -51,22 +54,10 @@ namespace lvk
 	{
 		obs_enter_graphics();
 
-		if(m_ReadBuffer != nullptr)
+		if(m_ExportTexture != nullptr)
 		{
-			gs_stagesurface_destroy(m_ReadBuffer);
-			m_ReadBuffer = nullptr;
-		}
-
-		if(m_WriteBuffer != nullptr)
-		{
-			gs_texture_destroy(m_WriteBuffer);
-			m_WriteBuffer = nullptr;
-		}
-
-		if(m_InteropTexture != nullptr)
-		{
-			gs_texture_destroy(m_InteropTexture);
-            m_InteropTexture = nullptr;
+			gs_texture_destroy(m_ExportTexture);
+            m_ExportTexture = nullptr;
 		}
 
 		obs_leave_graphics();
@@ -76,7 +67,9 @@ namespace lvk
 
     OBSFrame& OBSFrame::operator=(const OBSFrame& frame)
     {
-        // TODO: implement
+        // Only copy the frame data over.
+        Frame::operator=(frame);
+
         return *this;
     }
 
@@ -84,8 +77,14 @@ namespace lvk
 
     OBSFrame& OBSFrame::operator=(OBSFrame&& buffer) noexcept
 	{
-        // TODO: implement properly
+        m_FrameIngest = std::move(buffer.m_FrameIngest);
+        m_WriteBuffer = std::move(buffer.m_WriteBuffer);
+        m_ReadBuffer = std::move(buffer.m_ReadBuffer);
+        m_ExportTexture = buffer.m_ExportTexture;
+        buffer.m_ExportTexture = nullptr;
+
 		Frame::operator=(std::move(buffer));
+
 	    return *this;
     }
 
@@ -125,7 +124,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-
     void OBSFrame::to_obs_texture(gs_texture* texture) const
     {
         LVK_ASSERT(texture != nullptr);
@@ -134,42 +132,52 @@ namespace lvk
         LVK_ASSERT(gs_texture_get_width(texture) == cols);
         LVK_PROFILE;
 
-        // Ensure the frame is in RGBA format
-        // TODO: add direct RGBA format to the VideoFrame API.
-        this->viewAsFormat(m_FormatBuffer, VideoFrame::RGB);
-        cv::cvtColor(m_FormatBuffer, m_InteropBuffer, cv::COLOR_RGB2RGBA);
-
         if(lvk::ocl::InteropContext::Available())
         {
             prepare_interop_texture(cols, rows);
 
-            lvk::ocl::InteropContext::Export(m_InteropBuffer, m_InteropTexture);
-            gs_copy_texture(texture, m_InteropTexture);
+            // NOTE: We perform a copy here to handle sRGB textures on DirectX11.
+            viewAsFormat(m_ExportBuffer, VideoFrame::RGBA);
+            lvk::ocl::InteropContext::Export(m_ExportBuffer, m_ExportTexture);
+            gs_copy_texture(texture, m_ExportTexture);
         }
         else
         {
             prepare_texture(
-                m_WriteBuffer,
-                cols,
-                rows,
+                m_ExportTexture,
+                cols,rows,
                 GS_RGBA,
                 GS_DYNAMIC
             );
 
-            uint32_t linesize = 0;
-            gs_texture_map(m_WriteBuffer, &m_MappedData, &linesize);
+            uint8_t* mapped_ptr = m_WriteBuffer.map(m_ExportTexture);
 
-            m_InteropBuffer.copyTo(cv::Mat(
+            if(m_WriteBuffer.requires_rgba())
+            {
+                // Upload as RGBA
+                viewAsFormat(m_ExportBuffer, VideoFrame::RGBA);
+                m_ExportBuffer.copyTo(cv::Mat(
                     rows,
                     cols,
                     CV_8UC4,
-                    m_MappedData,
-                    linesize
-            ));
+                    mapped_ptr
+                ));
+            }
+            else
+            {
+                // Upload as RGB
+                viewAsFormat(m_ExportBuffer, VideoFrame::RGB);
+                m_ExportBuffer.copyTo(cv::Mat(
+                    rows,
+                    cols,
+                    CV_8UC3,
+                    mapped_ptr
+                ));
+            }
 
-            gs_texture_unmap(m_WriteBuffer);
+            m_WriteBuffer.flush();
 
-            gs_copy_texture(texture, m_WriteBuffer);
+            gs_copy_texture(texture, m_ExportTexture);
         }
     }
 
@@ -181,64 +189,63 @@ namespace lvk
 		LVK_ASSERT(gs_texture_get_color_format(texture) == GS_RGBA);
         LVK_PROFILE;
 
-		const uint32_t texture_width = gs_texture_get_width(texture);
-		const uint32_t texture_height = gs_texture_get_height(texture);
+		const int texture_width = static_cast<int>(gs_texture_get_width(texture));
+		const int texture_height = static_cast<int>(gs_texture_get_height(texture));
 
 		if(lvk::ocl::InteropContext::Available())
 		{
 			prepare_interop_texture(texture_width, texture_height);
 
-			// NOTE: sRGB is implicitly handled by the GS_RGBA format.
-			// OpenGL supports interop through GS_RGBA, but DirectX11
-			// does not. So for DirectX11 to handle sRGB filters, we must
-			// render to GS_RGBA then copy to the GS_RGBA_UNORM buffer.
-			// The copy automatically handles sRGB conversions.
+            // NOTE: We perform a copy here to handle sRGB textures on DirectX11.
+			gs_copy_texture(m_ExportTexture, texture);
+			lvk::ocl::InteropContext::Import(m_ExportTexture, *this);
 
-			gs_copy_texture(m_InteropTexture, texture);
-			
-			lvk::ocl::InteropContext::Import(m_InteropTexture, m_InteropBuffer);
+            format = VideoFrame::RGBA;
 		}
 		else
 		{
-			prepare_staging_surface(
-				m_ReadBuffer,
-				texture_width,
-				texture_height,
-				GS_RGBA
-			);
+            uint8_t* mapped_ptr = m_ReadBuffer.map(texture);
 
-			uint32_t line_size = 0;
-			gs_stage_texture(m_ReadBuffer, texture);
-			gs_stagesurface_map(m_ReadBuffer, &m_MappedData, &line_size);
-			
-			cv::Mat(
-                static_cast<int>(texture_height),
-                static_cast<int>(texture_width),
-                CV_8UC4,
-                m_MappedData,
-                line_size
-			).copyTo(m_InteropBuffer);
-			
-			gs_stagesurface_unmap(m_ReadBuffer);
+            if(m_ReadBuffer.requires_rgba())
+            {
+                // Copy as RGBA
+                cv::Mat(
+                    texture_height, texture_width,
+                    CV_8UC4,
+                    mapped_ptr
+                ).copyTo(*this);
+                format = VideoFrame::RGBA;
+            }
+            else
+            {
+                // Copy as RGB
+                cv::Mat(
+                    texture_height, texture_width,
+                    CV_8UC3,
+                    mapped_ptr
+                ).copyTo(*this);
+                format = VideoFrame::RGB;
+            }
+
+            m_ReadBuffer.flush();
 		}
 
-		// Convert from RGBA to RGB
-		cv::cvtColor(m_InteropBuffer, *this, cv::COLOR_RGBA2RGB);
-        format = VideoFrame::RGB;
+        // Ensure output is in RGB.
+        reformat(VideoFrame::RGB);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void OBSFrame::prepare_interop_texture(const uint32_t width, const uint32_t height) const
+	void OBSFrame::prepare_interop_texture(const int width, const int height) const
 	{
 		prepare_texture(
-			m_InteropTexture,
-			width,
-			height,
+                m_ExportTexture,
+                width,
+                height,
 #ifdef _WIN32 
 			GS_RGBA_UNORM, // DirectX
 #else
-			GS_RGBA, // OpenGL
+                GS_RGBA, // OpenGL
 #endif
 			GS_SHARED_TEX | GS_RENDER_TARGET
 		);

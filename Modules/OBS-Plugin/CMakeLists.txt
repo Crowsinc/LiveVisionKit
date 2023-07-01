@@ -73,6 +73,7 @@ else()
     message(STATUS "${MI}Found OBS-Studio: YES")
 endif()
 
+
 # Include all dependencies
 target_include_directories(
     ${PROJECT_NAME}
@@ -225,4 +226,8 @@ target_sources(
         Utility/OBSDispatch.tpp
         Utility/ScopedProfiler.hpp
         Utility/ScopedProfiler.cpp
+
+        Utility/3rdParty/glad.h
+        Utility/3rdParty/glad.c
+        Utility/3rdParty/khrplatform.h
 )

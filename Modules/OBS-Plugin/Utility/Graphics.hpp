@@ -19,6 +19,7 @@
 
 #include <obs-module.h>
 
+// Helper Functions
 namespace lvk
 {
 
@@ -38,3 +39,73 @@ namespace lvk
 	);
 
 }
+
+// Transparent Classes
+namespace lvk
+{
+    // TODO: Make these a less of a hack.
+
+    struct RGBTextureWriteBuffer
+    {
+        RGBTextureWriteBuffer() = default;
+
+        RGBTextureWriteBuffer(RGBTextureWriteBuffer&& other) noexcept;
+
+        RGBTextureWriteBuffer(const RGBTextureWriteBuffer& other) = delete;
+
+        ~RGBTextureWriteBuffer();
+
+
+        RGBTextureWriteBuffer& operator=(RGBTextureWriteBuffer&& other) noexcept;
+
+
+        uint8_t* map(gs_texture_t* target);
+
+        void flush();
+
+        static bool requires_rgba();
+
+    private:
+
+        static bool use_custom_buffers();
+
+        uint64_t m_BufferSize = 0;
+        uint32_t m_BufferObject = 0;
+        uint8_t* m_MappedData = nullptr;
+        gs_texture_t* m_Target = nullptr;
+    };
+
+    struct RGBTextureReadBuffer
+    {
+        RGBTextureReadBuffer() = default;
+
+        RGBTextureReadBuffer(RGBTextureReadBuffer&& other) noexcept;
+
+        RGBTextureReadBuffer(const RGBTextureReadBuffer& other) = delete;
+
+        ~RGBTextureReadBuffer();
+
+
+        RGBTextureReadBuffer& operator=(RGBTextureReadBuffer&& other) noexcept;
+
+
+        uint8_t* map(gs_texture_t* target);
+
+        void flush();
+
+        static bool requires_rgba();
+
+    private:
+
+        static bool use_custom_buffers();
+
+        uint64_t m_BufferSize = 0;
+        uint32_t m_BufferObject = 0;
+        uint8_t* m_MappedData = nullptr;
+        gs_stagesurf_t* m_StagingSurface = nullptr;
+    };
+
+}
+
+
+

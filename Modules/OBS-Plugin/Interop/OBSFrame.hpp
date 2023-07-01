@@ -22,6 +22,7 @@
 #include <obs-module.h>
 
 #include "FrameIngest.hpp"
+#include "Utility/Graphics.hpp"
 
 namespace lvk
 {
@@ -53,7 +54,7 @@ namespace lvk
 
 	private:
 
-		void prepare_interop_texture(const uint32_t width, const uint32_t height) const;
+		void prepare_interop_texture(const int width, const int height) const;
 
 	private:
 
@@ -61,11 +62,10 @@ namespace lvk
 		mutable std::unique_ptr<FrameIngest> m_FrameIngest;
 
 		// Texture import/export
-        mutable VideoFrame m_FormatBuffer, m_InteropBuffer;
-        mutable gs_texture_t* m_InteropTexture = nullptr;
-		mutable gs_stagesurf_t* m_ReadBuffer = nullptr;
-		mutable gs_texture_t* m_WriteBuffer = nullptr;
-		mutable uint8_t* m_MappedData = nullptr;
+        mutable VideoFrame m_ExportBuffer;
+        mutable gs_texture_t* m_ExportTexture = nullptr;
+        mutable lvk::RGBTextureReadBuffer m_ReadBuffer;
+        mutable lvk::RGBTextureWriteBuffer m_WriteBuffer;
 	};
 
 }
