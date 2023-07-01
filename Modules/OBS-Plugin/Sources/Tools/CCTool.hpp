@@ -81,7 +81,7 @@ namespace lvk
 
 		uint32_t remaining_captures() const;
 
-		std::tuple<std::string, cv::Scalar> generate_calibration_status() const;
+		std::tuple<std::string, cv::Scalar> generate_calibration_status(const VideoFrame::Format format) const;
 
 		void draw_calibration_hud(OBSFrame& frame) const;
 

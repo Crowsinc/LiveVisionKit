@@ -248,7 +248,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VSFilter::filter(OBSFrame& buffer)
+	void VSFilter::filter(OBSFrame& frame)
 	{
         LVK_PROFILE;
 
@@ -256,17 +256,17 @@ namespace lvk
 		{
             // Draw tracking points
             draw_points(
-                buffer,
+                frame,
                 m_Filter.tracking_points(),
-                yuv::GREEN,
+                col::GREEN[frame.format],
                 10,
-                cv::Size2f(buffer.size()) / cv::Size2f(m_Filter.settings().detect_resolution)
+                cv::Size2f(frame.size()) / cv::Size2f(m_Filter.settings().detect_resolution)
             );
 
-            m_Filter.apply(std::move(buffer), buffer, true);
-            draw_debug_hud(buffer);
+            m_Filter.apply(std::move(frame), frame, true);
+            draw_debug_hud(frame);
 		}
-		else m_Filter.apply(std::move(buffer), buffer);
+		else m_Filter.apply(std::move(frame), frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -283,9 +283,9 @@ namespace lvk
 			frame,
             cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			crop_region.tl() + cv::Point(5, 40),
-			frame_time_ms < TIMING_THRESHOLD_MS ? yuv::GREEN : yuv::RED
+			frame_time_ms < TIMING_THRESHOLD_MS ? col::GREEN[frame.format] : col::RED[frame.format]
 		);
-		draw_rect(frame, crop_region, yuv::MAGENTA);
+		draw_rect(frame, crop_region, col::MAGENTA[frame.format]);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

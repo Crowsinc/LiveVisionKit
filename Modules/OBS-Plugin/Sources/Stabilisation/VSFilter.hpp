@@ -40,7 +40,7 @@ namespace lvk
 
 	private:
 
-        void filter(OBSFrame& buffer) override;
+        void filter(OBSFrame& frame) override;
 
 		void draw_debug_hud(OBSFrame& frame);
 

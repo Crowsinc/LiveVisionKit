@@ -146,7 +146,7 @@ namespace lvk
 			frame,
             cv::format("%.2fms (%.2fms)", frame_time_ms, deviation_ms),
 			cv::Point(5, 40),
-			frame_time_ms < TIMING_THRESHOLD_MS ? yuv::GREEN : yuv::RED
+			frame_time_ms < TIMING_THRESHOLD_MS ? col::GREEN[frame.format] : col::RED[frame.format]
 		);
 	}
 

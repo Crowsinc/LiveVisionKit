@@ -20,6 +20,15 @@
 #include <opencv2/opencv.hpp>
 
 // COLOUR CONSTANTS
+namespace lvk::rgb
+{
+	const cv::Scalar BLACK(0, 0, 0);
+	const cv::Scalar WHITE(255, 255, 255);
+	const cv::Scalar MAGENTA(255, 0, 255);
+	const cv::Scalar GREEN(0, 255, 0);
+	const cv::Scalar BLUE(0, 0, 255);
+	const cv::Scalar RED(255, 0, 0);
+}
 namespace lvk::bgr
 {
     const cv::Scalar BLACK(0, 0, 0);
@@ -38,7 +47,29 @@ namespace lvk::yuv
     const cv::Scalar BLUE(29, 255, 107);
     const cv::Scalar RED(76, 84, 255);
 }
+namespace lvk::gray
+{
+	// Taken from the Y plane of the YUV colours.
+	const cv::Scalar BLACK(0);
+	const cv::Scalar WHITE(255);
+	const cv::Scalar MAGENTA(105);
+	const cv::Scalar GREEN(149);
+	const cv::Scalar BLUE(29);
+	const cv::Scalar RED(76);
+}
 
+// COLOURS INDEXED BY FORMAT
+// TODO: find a better way to implement this
+namespace lvk::col
+{
+	// Formats: BGR, BGRA, RGB, RGBA, YUV, GRAY
+	const cv::Scalar BLACK[] = {bgr::BLACK, bgr::BLACK, rgb::BLACK, rgb::BLACK, yuv::BLACK, gray::BLACK};
+	const cv::Scalar WHITE[] = {bgr::WHITE, bgr::WHITE, rgb::WHITE, rgb::WHITE, yuv::WHITE, gray::WHITE};
+	const cv::Scalar MAGENTA[] = {bgr::MAGENTA, bgr::MAGENTA, rgb::MAGENTA, rgb::MAGENTA, yuv::MAGENTA, gray::MAGENTA};
+	const cv::Scalar GREEN[] = {bgr::GREEN, bgr::GREEN, rgb::GREEN, rgb::GREEN, yuv::GREEN, gray::GREEN};
+	const cv::Scalar BLUE[] = {bgr::BLUE, bgr::BLUE, rgb::BLUE, rgb::BLUE, yuv::BLUE, gray::BLUE};
+	const cv::Scalar RED[] = {bgr::RED, bgr::RED, rgb::RED, rgb::RED, yuv::RED, gray::RED};
+}
 
 // DRAWING FUNCTIONS
 namespace lvk

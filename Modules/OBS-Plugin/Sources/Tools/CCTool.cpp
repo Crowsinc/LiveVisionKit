@@ -379,24 +379,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	std::tuple<std::string, cv::Scalar> CCTool::generate_calibration_status() const
+	std::tuple<std::string, cv::Scalar> CCTool::generate_calibration_status(const VideoFrame::Format format) const
 	{
 		if(m_CalibrationSuccess)
-			return {std::string(L("cct.hud.status.successful")), yuv::GREEN};
+			return {std::string(L("cct.hud.status.successful")), col::GREEN[format]};
 
 		if(m_CalibrationFail)
-			return {std::string(L("cct.hud.status.failed")), yuv::RED};
+			return {std::string(L("cct.hud.status.failed")), col::RED[format]};
 
 		if(m_ProfileName.empty())
-			return {std::string(L("cct.hud.status.profile-empty")), yuv::RED};
+			return {std::string(L("cct.hud.status.profile-empty")), col::RED[format]};
 
 		if(remaining_captures() > 0)
-			return {std::string(L("cct.hud.status.more-captures")), yuv::RED};
+			return {std::string(L("cct.hud.status.more-captures")), col::RED[format]};
 
 		if(remaining_captures() == 0)
-			return {std::string(L("cct.hud.status.ready")), yuv::MAGENTA};
+			return {std::string(L("cct.hud.status.ready")), col::MAGENTA[format]};
 
-		return {L("cct.hud.status.unknown"), yuv::RED};
+		return {L("cct.hud.status.unknown"), col::RED[format]};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -413,7 +413,7 @@ namespace lvk
 			frame,
 			L("cct.hud.profile") + separator + m_ProfileName,
 			text_origin,
-            yuv::MAGENTA
+            col::MAGENTA[frame.format]
 		);
 		text_origin += text_offset;
 
@@ -421,7 +421,7 @@ namespace lvk
 			frame,
 			L("cct.hud.square-size") + separator + std::to_string(m_SquareSize) + "mm",
 			text_origin,
-            yuv::MAGENTA
+            col::MAGENTA[frame.format]
 		);
 		text_origin += text_offset;
 
@@ -429,11 +429,11 @@ namespace lvk
 			frame,
 			L("cct.hud.remaining") + separator + std::to_string(remaining_captures()),
 			text_origin,
-            yuv::MAGENTA
+            col::MAGENTA[frame.format]
 		);
 		text_origin += text_offset;
 
-		const auto& [status_text, status_color] = generate_calibration_status();
+		const auto& [status_text, status_color] = generate_calibration_status(frame.format);
         draw_text(
 			frame,
 			L("cct.hud.status") + separator + status_text,

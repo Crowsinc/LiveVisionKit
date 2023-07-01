@@ -171,7 +171,7 @@ namespace lvk
         if(m_TestMode)
         {
             // Draw grid so that the correction warp is visible.
-            lvk::draw_grid(frame, PROP_TEST_MODE_GRID, lvk::yuv::MAGENTA, 3);
+            lvk::draw_grid(frame, PROP_TEST_MODE_GRID, col::MAGENTA[frame.format], 3);
         }
 
 		if(m_ProfileSelected)
