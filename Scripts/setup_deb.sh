@@ -39,7 +39,7 @@ sudo apt install \
      libdc1394-dev
 
 # Clone OpenCV
-opencv_version="4.7.0"
+opencv_version="4.8.0"
 opencv_path="${deps_path}/opencv"
 if [ ! -d "$opencv_path" ]; then
     cd "$deps_path"

@@ -13,7 +13,7 @@ if(-Not (Test-Path $deps_path))
 }
 
 # Clone OpenCV
-$opencv_version = "4.7.0"
+$opencv_version = "4.8.0"
 $opencv_path = Join-Path $deps_path "/opencv"
 if(-Not (Test-Path $opencv_path))
 {
