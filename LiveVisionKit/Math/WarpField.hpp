@@ -22,6 +22,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "Math/Homography.hpp"
+#include "Data/VideoFrame.hpp"
 #include "Functions/Drawing.hpp"
 
 namespace lvk
@@ -69,6 +70,8 @@ namespace lvk
         void undistort(const float tolerance = 0.7f);
 
         void apply(const cv::UMat& src, cv::UMat& dst) const;
+
+        void apply(const VideoFrame& src, VideoFrame& dst) const;
 
         void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
 

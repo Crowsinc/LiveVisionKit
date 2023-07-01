@@ -243,6 +243,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void WarpField::apply(const VideoFrame& src, VideoFrame& dst) const
+    {
+        // TODO: create specialized apply function for video frames.
+        apply(static_cast<cv::UMat>(src), dst);
+
+        // Update metadata.
+        dst.timestamp = src.timestamp;
+        dst.format = src.format;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     // TODO: optimize this
     void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
     {
