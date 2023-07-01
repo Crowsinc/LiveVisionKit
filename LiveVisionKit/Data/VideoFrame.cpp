@@ -180,6 +180,9 @@ namespace lvk
             return;
         }
 
+        // Helper Buffers.
+        thread_local cv::UMat step_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+
         // Convert the old format into the new format.
         switch(format)
         {
@@ -191,7 +194,28 @@ namespace lvk
                     case Format::GRAY: cv::cvtColor(*this, dst, cv::COLOR_BGR2GRAY); break;
                     case Format::RGB: cv::cvtColor(*this, dst, cv::COLOR_BGR2RGB); break;
                     case Format::YUV: cv::cvtColor(*this, dst, cv::COLOR_BGR2YUV); break;
+                    case Format::RGBA: cv::cvtColor(*this, dst, cv::COLOR_BGR2RGBA); break;
+                    case Format::BGRA: cv::cvtColor(*this, dst, cv::COLOR_BGR2BGRA); break;
                     default: LVK_ASSERT("Unsupported BGR conversion" && false);
+                }
+                break;
+            }
+            case Format::BGRA:
+            {
+                // BGRA to ...
+                switch(new_format)
+                {
+                    case Format::GRAY: cv::cvtColor(*this, dst, cv::COLOR_BGRA2GRAY); break;
+                    case Format::RGB: cv::cvtColor(*this, dst, cv::COLOR_BGRA2RGB); break;
+                    case Format::BGR: cv::cvtColor(*this, dst, cv::COLOR_BGRA2BGR); break;
+                    case Format::RGBA: cv::cvtColor(*this, dst, cv::COLOR_BGRA2RGBA); break;
+                    case Format::YUV:
+                    {
+                        cv::cvtColor(*this, step_buffer, cv::COLOR_BGRA2BGR);
+                        cv::cvtColor(step_buffer, dst, cv::COLOR_BGR2YUV);
+                        break;
+                    }
+                    default: LVK_ASSERT("Unsupported BGRA conversion" && false);
                 }
                 break;
             }
@@ -203,7 +227,28 @@ namespace lvk
                     case Format::GRAY: cv::cvtColor(*this, dst, cv::COLOR_RGB2GRAY); break;
                     case Format::BGR: cv::cvtColor(*this, dst, cv::COLOR_RGB2BGR); break;
                     case Format::YUV: cv::cvtColor(*this, dst, cv::COLOR_RGB2YUV); break;
+                    case Format::RGBA: cv::cvtColor(*this, dst, cv::COLOR_RGB2RGBA); break;
+                    case Format::BGRA: cv::cvtColor(*this, dst, cv::COLOR_RGB2BGRA); break;
                     default: LVK_ASSERT("Unsupported RGB conversion" && false);
+                }
+                break;
+            }
+            case Format::RGBA:
+            {
+                // RGBA to ...
+                switch(new_format)
+                {
+                    case Format::GRAY: cv::cvtColor(*this, dst, cv::COLOR_RGBA2GRAY); break;
+                    case Format::BGR: cv::cvtColor(*this, dst, cv::COLOR_RGBA2BGR); break;
+                    case Format::RGB: cv::cvtColor(*this, dst, cv::COLOR_RGBA2RGB); break;
+                    case Format::BGRA: cv::cvtColor(*this, dst, cv::COLOR_RGBA2BGRA); break;
+                    case Format::YUV:
+                    {
+                        cv::cvtColor(*this, step_buffer, cv::COLOR_RGBA2RGB);
+                        cv::cvtColor(step_buffer, dst, cv::COLOR_RGB2YUV);
+                        break;
+                    }
+                    default: LVK_ASSERT("Unsupported RGBA conversion" && false);
                 }
                 break;
             }
@@ -214,7 +259,9 @@ namespace lvk
                 {
                     case Format::GRAY: cv::extractChannel(*this, dst, 0); break;
                     case Format::BGR: cv::cvtColor(*this, dst, cv::COLOR_YUV2BGR); break;
+                    case Format::BGRA: cv::cvtColor(*this, step_buffer, cv::COLOR_YUV2BGR, 4); break;
                     case Format::RGB: cv::cvtColor(*this, dst, cv::COLOR_YUV2RGB); break;
+                    case Format::RGBA: cv::cvtColor(*this, step_buffer, cv::COLOR_YUV2RGB, 4); break;
                     default: LVK_ASSERT("Unsupported YUV conversion" && false);
                 }
                 break;
@@ -226,13 +273,21 @@ namespace lvk
                 {
                     case Format::RGB: cv::cvtColor(*this, dst, cv::COLOR_GRAY2RGB); break;
                     case Format::BGR: cv::cvtColor(*this, dst, cv::COLOR_GRAY2BGR); break;
+                    case Format::RGBA: cv::cvtColor(*this, dst, cv::COLOR_GRAY2RGBA); break;
+                    case Format::BGRA: cv::cvtColor(*this, dst, cv::COLOR_GRAY2BGRA); break;
                     case Format::YUV:
                     {
-                        // The Y plane is equal to OpenCV's grayscale format. The other planes are zero.
-                        thread_local cv::UMat zero_buffer(cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
-                        if(zero_buffer.empty() || zero_buffer.size() != size())
+                        // Y = gray plane, U = zero plane, V = zero plane
+                        thread_local cv::UMat zero_buffer;
+                        if(zero_buffer.cols < cols || zero_buffer.rows < rows)
                         {
-                            zero_buffer = zeros(size(), type());
+                            // TODO: replace with a sized cache buffer construct
+                            // Cache the zero buffer in case the operation happens a lot.
+                            zero_buffer = zeros(
+                                std::max(rows, zero_buffer.rows),
+                                std::max(cols, zero_buffer.cols),
+                                type(), cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
+                            );
                         }
                         cv::merge(std::vector<cv::UMat>{*this, zero_buffer, zero_buffer}, dst);
                         break;

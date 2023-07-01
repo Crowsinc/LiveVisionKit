@@ -24,7 +24,7 @@ namespace lvk
     // NOTE: use camelCase to match the cv::UMat API.
     struct VideoFrame : public cv::UMat
     {
-        enum Format {BGR, RGB, YUV, GRAY, UNKNOWN};
+        enum Format {BGR, BGRA, RGB, RGBA, YUV, GRAY, UNKNOWN};
 
         uint64_t timestamp = 0;
         Format format = UNKNOWN;
