@@ -81,7 +81,11 @@ bool obs_module_load()
 
 	// Detect LVK capabilities
 	const bool has_opencl = cv::ocl::haveOpenCL();
+#ifdef _WIN32
 	const bool has_interop = lvk::ocl::InteropContext::Supported();
+#else
+    const bool has_interop = false; // Disabled due to driver support.
+#endif
 	const bool has_fsr_effect = lvk::FSREffect::IsCompiled();
 	const bool has_cas_effect = lvk::CASEffect::IsCompiled();
 	
