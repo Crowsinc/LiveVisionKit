@@ -246,7 +246,7 @@ namespace lvk
 #ifndef _WIN32
 		return init_glad() && GLAD_GL_ARB_buffer_storage;
 #else
-		return false
+		return false;
 #endif
 	}
 
@@ -406,7 +406,7 @@ namespace lvk
 #ifndef _WIN32
 		return init_glad() && GLAD_GL_ARB_buffer_storage;
 #else
-		return false
+		return false;
 #endif
 	}
 
