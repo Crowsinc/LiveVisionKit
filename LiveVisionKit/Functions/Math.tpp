@@ -18,6 +18,7 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include <numbers>
 
 #include "Directives.hpp"
 
@@ -29,7 +30,7 @@ namespace lvk
     template<typename T>
     inline T to_degrees(const T& radians)
     {
-        return static_cast<T>(static_cast<double>(radians) * 180.0 / M_PI);
+        return static_cast<T>(static_cast<double>(radians) * 180.0 / std::numbers::pi);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -37,7 +38,7 @@ namespace lvk
     template<typename T>
     inline T to_radians(const T& degrees)
     {
-        return static_cast<T>(static_cast<double>(degrees) * M_PI / 180.0);
+        return static_cast<T>(static_cast<double>(degrees) * std::numbers::pi / 180.0);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
