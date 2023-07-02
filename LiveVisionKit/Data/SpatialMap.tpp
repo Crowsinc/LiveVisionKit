@@ -151,6 +151,14 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
+    inline size_t SpatialMap<T>::area() const
+    {
+        return static_cast<size_t>(cols() * rows());
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
     inline int SpatialMap<T>::rows() const
     {
         return m_VirtualGrid.rows();

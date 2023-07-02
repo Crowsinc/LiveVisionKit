@@ -61,6 +61,8 @@ namespace lvk
 
         size_t size() const;
 
+        size_t area() const;
+
         int rows() const;
 
         int cols() const;
