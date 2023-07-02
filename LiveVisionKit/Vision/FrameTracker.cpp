@@ -139,7 +139,7 @@ namespace lvk
 			m_MatchedPoints,
 			m_MatchStatus,
 			cv::noArray(),
-			cv::Size(7, 7)
+			cv::Size(9, 9)
 		);
 
 		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
