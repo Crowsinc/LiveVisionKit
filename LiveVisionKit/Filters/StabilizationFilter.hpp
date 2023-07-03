@@ -30,6 +30,7 @@ namespace lvk
         float scene_margins = 0.1f;
         bool crop_to_margins = false;
 		bool stabilize_output = true;
+        bool draw_tracking_points = false;
 	};
 
 

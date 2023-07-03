@@ -79,6 +79,18 @@ namespace lvk
         input.reformatTo(m_TrackingFrame, VideoFrame::GRAY);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
 
+        // Draw the tracking points if the option is set.
+        if(m_Settings.draw_tracking_points)
+        {
+            draw_points(
+                input,
+                m_FrameTracker.tracking_points(),
+                col::GREEN[input.format],
+                7,
+                cv::Size2f(input.size()) / cv::Size2f(m_Settings.detection_resolution)
+            );
+        }
+
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
 
