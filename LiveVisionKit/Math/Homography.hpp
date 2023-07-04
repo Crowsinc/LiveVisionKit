@@ -31,18 +31,18 @@ namespace lvk
 
 		static Homography Identity();
 
-        static Homography WrapMatrix(cv::Mat& matrix);
-
         static Homography FromAffineMatrix(const cv::Mat& affine);
 
 
 		Homography();
 
-		explicit Homography(const cv::Mat& matrix);
+        Homography(const Homography& other);
 
         Homography(Homography&& other) noexcept;
 
-        Homography(const Homography& other);
+        explicit Homography(const cv::Mat& matrix);
+
+        explicit Homography(cv::Mat&& matrix) noexcept;
 
 
         void set_zero();
@@ -84,6 +84,8 @@ namespace lvk
 
         Homography& operator=(const cv::Mat& other);
 
+        Homography& operator=(cv::Mat&& other) noexcept;
+
         Homography& operator=(const Homography& other);
 
         Homography& operator=(Homography&& other) noexcept;
@@ -106,8 +108,6 @@ namespace lvk
 		void operator/=(const double scaling);
 
 	private:
-        explicit Homography(cv::Mat& data);
-
 		cv::Mat m_Matrix;
 	};
 

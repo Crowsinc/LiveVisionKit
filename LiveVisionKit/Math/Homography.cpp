@@ -34,20 +34,7 @@ namespace lvk
 
 	Homography Homography::Zero()
 	{
-        cv::Mat data = cv::Mat::zeros(3, 3, CV_64FC1);
-		return WrapMatrix(data);
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	Homography Homography::WrapMatrix(cv::Mat& matrix)
-	{
-        LVK_ASSERT(matrix.cols == 3);
-        LVK_ASSERT(matrix.rows == 3);
-        LVK_ASSERT(matrix.type() == CV_64FC1);
-
-        // Use private matrix 'move' constructor
-        return Homography(matrix);
+        return Homography(std::move(cv::Mat::zeros(3, 3, CV_64FC1)));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -75,6 +62,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    Homography::Homography(const Homography& other)
+            : Homography(other.m_Matrix)
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    Homography::Homography(Homography&& other) noexcept
+            : m_Matrix(std::move(other.m_Matrix))
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	Homography::Homography(const cv::Mat& matrix)
 		: m_Matrix(matrix.clone())
 	{
@@ -85,26 +84,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    // This is a private matrix 'move' constructor.
-    Homography::Homography(cv::Mat& data)
-        : m_Matrix(data)
+    Homography::Homography(cv::Mat&& matrix) noexcept
+        : m_Matrix(std::move(matrix))
     {
-        LVK_ASSERT(data.cols == 3);
-        LVK_ASSERT(data.rows == 3);
-        LVK_ASSERT(data.type() == CV_64FC1);
+        LVK_ASSERT(m_Matrix.cols == 3);
+        LVK_ASSERT(m_Matrix.rows == 3);
+        LVK_ASSERT(m_Matrix.type() == CV_64FC1);
     }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	Homography::Homography(const Homography& other)
-		: Homography(other.m_Matrix)
-	{}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	Homography::Homography(Homography&& other) noexcept
-		: m_Matrix(std::move(other.m_Matrix))
-	{}
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -254,6 +240,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    Homography& Homography::operator=(cv::Mat&& other) noexcept
+    {
+        m_Matrix = std::move(other);
+        return *this;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     Homography& Homography::operator=(const Homography& other)
 	{
 		m_Matrix = other.m_Matrix.clone();
@@ -333,7 +327,7 @@ namespace lvk
 	Homography operator+(const Homography& left, const Homography& right)
 	{
         cv::Mat result = left.data() + right.data();
-		return Homography::WrapMatrix(result);
+		return Homography(std::move(result));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -341,7 +335,7 @@ namespace lvk
 	Homography operator-(const Homography& left, const Homography& right)
 	{
         cv::Mat result = left.data() - right.data();
-        return Homography::WrapMatrix(result);
+        return Homography(std::move(result));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -350,7 +344,7 @@ namespace lvk
 	{
         // This is matrix multiplication
         cv::Mat result = left.data() * right.data();
-        return Homography::WrapMatrix(result);
+        return Homography(std::move(result));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -358,7 +352,7 @@ namespace lvk
 	Homography operator*(const Homography& homography, const double scaling)
 	{
 		cv::Mat result = homography.data() * scaling;
-		return Homography::WrapMatrix(result);
+        return Homography(std::move(result));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -368,7 +362,7 @@ namespace lvk
 		LVK_ASSERT(scaling != 0.0);
 
         cv::Mat result = homography.data() / scaling;
-        return Homography::WrapMatrix(result);
+        return Homography(std::move(result));
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
