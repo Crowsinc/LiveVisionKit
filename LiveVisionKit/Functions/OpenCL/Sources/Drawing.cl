@@ -63,4 +63,40 @@ __kernel void points(
 
 //----------------------------------------------------------------------------------------------------------------------
 
+__kernel void crosses(
+    __global uchar* pts, int pts_step, int pts_offset, int pts_rows, int pts_cols,
+    __global uchar* dst, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+    int cross_size, int cross_thickness, uchar4 point_colour
+)
+{
+    // Exit early if out of bounds (for uneven sizes) 
+    if(get_global_id(0) >= pts_rows) return;
+
+    int pts_index = 8 * get_global_id(0) + pts_offset;
+    int2 coord = as_int2(vload8(0, pts + pts_index));
+
+    int x = max(coord.x - cross_size, 0);
+    int y = max(coord.y - cross_size, 0);
+    int max_x = min(coord.x + cross_size + 1, dst_cols - cross_thickness);
+    int max_y = min(coord.y + cross_size + 1, dst_rows - cross_thickness);
+
+    // Draw a diagonal cross
+    for(int i = 1; x < max_x && y < max_y; i++)
+    {
+        for(int dx = 0; dx < cross_thickness; dx++)
+        {
+            int forward_index = y * dst_step + (3 * (x + dx)) + dst_offset;
+            vstore3(point_colour.xyz, 0, dst + forward_index);
+
+            int backward_index = y * dst_step + (3 * (max_x - i + dx)) + dst_offset;
+            vstore3(point_colour.xyz, 0, dst + backward_index);
+        }
+
+        x++;
+        y++;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 // )"

@@ -99,6 +99,16 @@ namespace lvk
         const cv::Size2f& coord_scaling = {1, 1}
     );
 
+    template<typename T>
+    void draw_crosses(
+        cv::UMat& dst,
+        const std::vector<cv::Point_<T>>& points,
+        const cv::Scalar& color,
+        const int32_t cross_size = 10,
+        const int32_t cross_thickness = 3,
+        const cv::Size2f& coord_scaling = {1, 1}
+    );
+
 	template<typename T>
 	void draw_text(
 		cv::UMat& dst,

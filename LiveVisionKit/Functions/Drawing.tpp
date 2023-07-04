@@ -132,6 +132,59 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    inline void draw_crosses(
+        cv::UMat& dst,
+        const std::vector<cv::Point_<T>>& points,
+        const cv::Scalar& color,
+        const int32_t cross_size,
+        const int32_t cross_thickness,
+        const cv::Size2f& coord_scaling
+    )
+    {
+        LVK_ASSERT(coord_scaling.width >= 0 && coord_scaling.height >= 0);
+        LVK_ASSERT(dst.type() == CV_8UC3);
+        LVK_ASSERT(cross_thickness >= 1);
+        LVK_ASSERT(cross_size >= 1);
+        LVK_ASSERT(!dst.empty());
+
+        if(points.empty())
+            return;
+
+        // Create FSR RCAS kernel
+        static auto program = ocl::load_program("draw", ocl::src::drawing_source);
+        thread_local cv::ocl::Kernel kernel("crosses", program);
+        LVK_ASSERT(!program.empty() && !kernel.empty());
+
+        // Upload and scale points to 32bit int image coords.
+        thread_local cv::UMat staging_buffer, points_buffer;
+        cv::Mat(points, false).copyTo(staging_buffer);
+        cv::multiply(staging_buffer, cv::Scalar(coord_scaling.width, coord_scaling.height), points_buffer, 1, CV_32S);
+
+        // Find optimal work sizes for the 1D points buffer.
+        size_t global_work_size[3], local_work_size[3];
+        ocl::optimal_groups(points_buffer, global_work_size, local_work_size);
+
+        // Run the kernel in async mode.
+        kernel.args(
+            cv::ocl::KernelArg::ReadOnly(points_buffer),
+            cv::ocl::KernelArg::WriteOnly(dst),
+            (cross_size + 1) / 2,
+            cross_thickness,
+            cv::Vec4b{
+                static_cast<uint8_t>(color[0]),
+                static_cast<uint8_t>(color[1]),
+                static_cast<uint8_t>(color[2]),
+                0 // NOTE: 4th component is unused
+            }
+        ).run_(1, global_work_size, local_work_size, false);
+
+        // Create next kernel while the last one runs.
+        kernel.create("crosses", program);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
 	inline void draw_text(
 		cv::UMat& dst,
