@@ -24,55 +24,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<Homography> Homography::Estimate(
-        const std::vector<cv::Point2f>& tracked_points,
-        const std::vector<cv::Point2f>& matched_points,
-        std::vector<uint8_t>& inlier_status,
-        cv::UsacParams sampling_method,
-        bool force_affine
-    )
-    {
-        LVK_ASSERT(tracked_points.size() == matched_points.size());
-
-        // We need at least 4 point correspondences to estimate
-        if(tracked_points.size() < 4)
-            return std::nullopt;
-
-        cv::Mat estimate;
-        if(force_affine)
-        {
-            // NOTE: we don't actually use the USAC based affine
-            // estimator because it introduces too much skew.
-            // Instead, we use the rigid transform estimator
-            // and propagate any relevant usac params to it.
-            estimate = cv::estimateAffinePartial2D(
-                tracked_points,
-                matched_points,
-                inlier_status,
-                (sampling_method.score == cv::SCORE_METHOD_LMEDS) ? cv::LMEDS : cv::RANSAC,
-                sampling_method.threshold,
-                sampling_method.maxIterations,
-                sampling_method.confidence,
-                sampling_method.loIterations
-            );
-
-            return FromAffineMatrix(estimate);
-        }
-        else
-        {
-            estimate = cv::findHomography(
-                tracked_points,
-                matched_points,
-                inlier_status,
-                sampling_method
-            );
-
-            return WrapMatrix(estimate);
-        }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
 	Homography Homography::Identity()
 	{
 		// NOTE: A default-initialised homography is identity

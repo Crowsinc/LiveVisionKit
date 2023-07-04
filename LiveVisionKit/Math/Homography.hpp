@@ -27,14 +27,6 @@ namespace lvk
 	{
 	public:
 
-        static std::optional<Homography> Estimate(
-            const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points,
-            std::vector<uint8_t>& inlier_status,
-            cv::UsacParams sampling_method,
-            bool force_affine = false
-        );
-
 		static Homography Zero();
 
 		static Homography Identity();
