@@ -77,7 +77,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T, typename P, typename R>
-    CircularIterator<T,P,R> CircularIterator<T,P,R>::operator++(int) const
+    const CircularIterator<T,P,R> CircularIterator<T,P,R>::operator++(int) const
     {
         CircularIterator<T,P,R> copy = (*this);
         ++(*this);
@@ -107,7 +107,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T, typename P, typename R>
-    CircularIterator<T,P,R> CircularIterator<T,P,R>::operator--(int) const
+    const CircularIterator<T,P,R> CircularIterator<T,P,R>::operator--(int) const
     {
         CircularIterator<T,P,R> copy = (*this);
         --(*this);

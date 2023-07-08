@@ -43,10 +43,10 @@ namespace lvk
 
         // Configure the path smoother and our auxiliary frame queue.
         m_PathSmoother.configure(settings);
+        m_NullMotion.resize(settings.motion_resolution);
         m_FrameQueue.resize(m_PathSmoother.time_delay() + 1);
 
-        m_NullMotion.resize(settings.motion_resolution);
-        m_MotionLimits = crop<float>(settings.motion_resolution - 1, settings.scene_margins);
+        m_MotionLimits = crop<float>({1.0f, 1.0f}, settings.scene_margins);
 
         m_FrameTracker.configure(settings);
         m_Settings = settings;
@@ -60,7 +60,7 @@ namespace lvk
         LVK_ASSERT(!input.empty());
 
         // If we aren't stabilizing the output, use an optimized filter routine that
-        // only upkeeps the delay. Note that the path smoothing is reset whenever the
+        // only up-keeps the delay. Note that the path smoothing is reset whenever the
         // output stabilization is turned off, so we do not need to advance the path.
         if(!m_Settings.stabilize_output)
         {
@@ -70,6 +70,12 @@ namespace lvk
                 // Swap out the frames to avoid unnecessary allocations.
                 std::swap(output, m_FrameQueue.oldest());
                 m_FrameQueue.skip(1);
+
+                // TODO: temporary (or not??) (make this another commit)
+                WarpField zoom(m_Settings.motion_resolution);
+                zoom.crop_in(m_MotionLimits);
+                zoom.apply(output, m_WarpFrame);
+                std::swap(output, m_WarpFrame);
             }
             else output.release();
             return;
@@ -82,12 +88,10 @@ namespace lvk
         // Draw the tracking points if the option is set.
         if(m_Settings.draw_tracking_points)
         {
-            draw_points(
+            m_FrameTracker.draw_trackers(
                 input,
-                m_FrameTracker.tracking_points(),
                 col::GREEN[input.format],
-                7,
-                cv::Size2f(input.size()) / cv::Size2f(m_Settings.detection_resolution)
+                7, 10
             );
         }
 
@@ -102,13 +106,11 @@ namespace lvk
             auto& next_frame = m_FrameQueue.oldest();
             m_FrameQueue.skip();
 
-            // If we need to crop the frame to the scene margins,
-            // combine the crop into the path correction warp field.
+            // Crop the frame to the scene margins if needed.
             if(m_Settings.crop_to_margins) correction.crop_in(m_MotionLimits);
             m_FrameMargins = crop(next_frame.size(), m_Settings.scene_margins);
 
             correction.apply(next_frame, output);
-            output.timestamp = next_frame.timestamp;
         }
         else output.release();
 	}

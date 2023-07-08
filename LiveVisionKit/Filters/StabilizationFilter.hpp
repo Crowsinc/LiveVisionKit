@@ -64,8 +64,8 @@ namespace lvk
 		FrameTracker m_FrameTracker;
 		PathSmoother m_PathSmoother;
 
-        cv::Rect m_FrameMargins{0,0,0,0};
-        cv::Rect2f m_MotionLimits{0,0,0,0};
+        cv::Rect m_FrameMargins{};
+        cv::Rect2f m_MotionLimits{};
         StreamBuffer<Frame> m_FrameQueue{1};
         VideoFrame m_WarpFrame, m_TrackingFrame;
 

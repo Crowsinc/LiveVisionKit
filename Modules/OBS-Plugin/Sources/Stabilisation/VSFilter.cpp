@@ -37,10 +37,9 @@ namespace lvk
 	constexpr auto PROP_STREAM_DELAY_INFO_MAX = 60000;
 	constexpr auto PROP_STREAM_DELAY_INFO_MIN = 0;
 
-    constexpr auto PROP_MOTION_QUALITY = "MOTION_QUALITY";
-    constexpr auto PROP_MOTION_QUALITY_1_TAG = "vs.motion.1";
-    constexpr auto PROP_MOTION_QUALITY_2_TAG = "vs.motion.2";
-    constexpr auto PROP_MOTION_QUALITY_3_TAG = "vs.motion.3";
+    constexpr auto PROP_SUBSYSTEM = "MOTION_QUALITY";
+    constexpr auto PROP_SUBSYSTEM_HOMOG = "vs.subsystem.1";
+    constexpr auto PROP_SUBSYSTEM_FIELD = "vs.subsystem.2";
 
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
@@ -90,14 +89,13 @@ namespace lvk
         // Motion Quality Selection
         property = obs_properties_add_list(
             properties,
-            PROP_MOTION_QUALITY,
-            L("vs.motion"),
+            PROP_SUBSYSTEM,
+            L("vs.subsystem"),
             obs_combo_type::OBS_COMBO_TYPE_LIST,
             obs_combo_format::OBS_COMBO_FORMAT_STRING
         );
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_1_TAG), L(PROP_MOTION_QUALITY_1_TAG));
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_2_TAG), L(PROP_MOTION_QUALITY_2_TAG));
-        obs_property_list_add_string(property, L(PROP_MOTION_QUALITY_3_TAG), L(PROP_MOTION_QUALITY_3_TAG));
+        obs_property_list_add_string(property, L(PROP_SUBSYSTEM_HOMOG), L(PROP_SUBSYSTEM_HOMOG));
+        obs_property_list_add_string(property, L(PROP_SUBSYSTEM_FIELD), L(PROP_SUBSYSTEM_FIELD));
 
         // Crop Slider
 		property = obs_properties_add_int_slider(
@@ -155,6 +153,7 @@ namespace lvk
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, PROP_STAB_DISABLED_DEFAULT);
         obs_data_set_default_bool(settings, PROP_APPLY_CROP, PROP_APPLY_CROP_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
+        obs_data_set_default_string(settings, PROP_SUBSYSTEM, PROP_SUBSYSTEM_FIELD);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -175,29 +174,28 @@ namespace lvk
             stab_settings.crop_to_margins = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
 			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+            stab_settings.draw_tracking_points = m_TestMode;
 
             // Configure motion quality
-            const std::string motion_quality = obs_data_get_string(settings, PROP_MOTION_QUALITY);
-            if(motion_quality == L(PROP_MOTION_QUALITY_3_TAG))
+            const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
+            if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
-                stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_resolution = {128, 72};
-                stab_settings.motion_resolution = {32, 32};
-                stab_settings.detection_zones = {2, 1};
+                stab_settings.detection_resolution = {640, 360};
+                stab_settings.motion_resolution = {16, 16}; // 32x32
+                stab_settings.detection_regions = {4, 4};
+
+                stab_settings.max_feature_density = 0.15f;
+                stab_settings.min_feature_density = 0.03f;
             }
-            else if(motion_quality == L(PROP_MOTION_QUALITY_2_TAG))
+            else
             {
-                stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_resolution = {64, 36};
-                stab_settings.motion_resolution = {16, 16};
-                stab_settings.detection_zones = {2, 1};
-            }
-            else // Default to low quality
-            {
-                stab_settings.detect_resolution = {640, 360};
-                stab_settings.feature_resolution = {32, 18};
+                stab_settings.detection_resolution = {640, 360};
+
                 stab_settings.motion_resolution = {2, 2};
-                stab_settings.detection_zones = {1, 1};
+                stab_settings.detection_regions = {2, 1};
+
+                stab_settings.max_feature_density = 0.15f;
+                stab_settings.min_feature_density = 0.03f;
             }
 		});
 
@@ -220,14 +218,14 @@ namespace lvk
             m_Context,
             "\n    Predictive Frames: %d"
             "\n    Stream Delay: %d"
-            "\n    Motion Quality: %s"
+            "\n    Subsystem: %s"
             "\n    Crop Percentage: %.2f%%"
             "\n    Auto-apply Crop: %s"
             "\n    Disable Stabilization: %s"
             "\n    Test Mode: %s",
             m_Filter.settings().path_prediction_samples,
             new_stream_delay,
-            obs_data_get_string(settings, PROP_MOTION_QUALITY),
+            obs_data_get_string(settings, PROP_SUBSYSTEM),
             m_Filter.settings().scene_margins * 100.0f,
             m_Filter.settings().crop_to_margins ? "Yes" : "No",
             m_Filter.settings().stabilize_output ? "No" : "Yes",
@@ -252,21 +250,12 @@ namespace lvk
 	{
         LVK_PROFILE;
 
-		if(m_TestMode)
-		{
-            // Draw tracking points
-            draw_points(
-                frame,
-                m_Filter.tracking_points(),
-                col::GREEN[frame.format],
-                10,
-                cv::Size2f(frame.size()) / cv::Size2f(m_Filter.settings().detect_resolution)
-            );
-
+        if(m_TestMode)
+        {
             m_Filter.apply(std::move(frame), frame, true);
             draw_debug_hud(frame);
-		}
-		else m_Filter.apply(std::move(frame), frame);
+        }
+        else m_Filter.apply(std::move(frame), frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -22,9 +22,6 @@
 namespace lvk
 {
 
-
-
-
     template<typename T, typename P, typename R>
     struct CircularIterator
     {
@@ -44,10 +41,10 @@ namespace lvk
         reference operator*() const;
 
         CircularIterator& operator++();
-        CircularIterator operator++(int) const;
+        const CircularIterator operator++(int) const;
 
         CircularIterator& operator--();
-        CircularIterator operator--(int) const;
+        const CircularIterator operator--(int) const;
 
         bool operator==(const CircularIterator&) const;
         bool operator!=(const CircularIterator&) const;
