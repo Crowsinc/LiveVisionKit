@@ -43,10 +43,16 @@ namespace lvk
 
         // Configure the path smoother and our auxiliary frame queue.
         m_PathSmoother.configure(settings);
-        m_NullMotion.resize(settings.motion_resolution);
         m_FrameQueue.resize(m_PathSmoother.time_delay() + 1);
 
-        m_MotionLimits = crop<float>({1.0f, 1.0f}, settings.scene_margins);
+        // Resize and reset cached motion fields.
+        m_NullMotion.resize(settings.motion_resolution);
+        m_CropMotion = WarpField(settings.motion_resolution);
+
+        // Update motion limits and crop margins.
+        const cv::Rect2f motion_margins = crop<float>({1, 1}, settings.scene_margins);
+        m_MotionLimits = motion_margins.tl();
+        m_CropMotion.crop_in(motion_margins);
 
         m_FrameTracker.configure(settings);
         m_Settings = settings;
@@ -71,11 +77,12 @@ namespace lvk
                 std::swap(output, m_FrameQueue.oldest());
                 m_FrameQueue.skip(1);
 
-                // TODO: temporary (or not??) (make this another commit)
-                WarpField zoom(m_Settings.motion_resolution);
-                zoom.crop_in(m_MotionLimits);
-                zoom.apply(output, m_WarpFrame);
-                std::swap(output, m_WarpFrame);
+                // Apply crop to the output
+                if(m_Settings.crop_to_margins)
+                {
+                    m_CropMotion.apply(output, m_WarpFrame);
+                    std::swap(output, m_WarpFrame);
+                }
             }
             else output.release();
             return;
@@ -99,7 +106,7 @@ namespace lvk
         m_FrameQueue.push(std::move(input));
 
         // If the time delay is properly built up, start stabilizing frames
-        if(auto correction = m_PathSmoother.next(motion, m_MotionLimits.tl()); ready())
+        if(auto correction = m_PathSmoother.next(motion, m_MotionLimits); ready())
         {
             // Reference the next frame then skip the buffer by one.
             // This will shorten the queue without de-allocating.
@@ -107,7 +114,7 @@ namespace lvk
             m_FrameQueue.skip();
 
             // Crop the frame to the scene margins if needed.
-            if(m_Settings.crop_to_margins) correction.crop_in(m_MotionLimits);
+            if(m_Settings.crop_to_margins) correction += m_CropMotion;
             m_FrameMargins = crop(next_frame.size(), m_Settings.scene_margins);
 
             correction.apply(next_frame, output);

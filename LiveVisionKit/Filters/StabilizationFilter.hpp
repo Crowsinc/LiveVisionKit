@@ -65,10 +65,11 @@ namespace lvk
 		PathSmoother m_PathSmoother;
 
         cv::Rect m_FrameMargins{};
-        cv::Rect2f m_MotionLimits{};
+        cv::Size2f m_MotionLimits{};
         StreamBuffer<Frame> m_FrameQueue{1};
         VideoFrame m_WarpFrame, m_TrackingFrame;
 
+        WarpField m_CropMotion{WarpField::MinimumSize};
         WarpField m_NullMotion{WarpField::MinimumSize};
 	};
 
