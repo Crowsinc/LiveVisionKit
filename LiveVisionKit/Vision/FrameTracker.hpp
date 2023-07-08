@@ -58,22 +58,27 @@ namespace lvk
 
 		const std::vector<cv::Point2f>& tracking_points() const;
 
+        void draw_trackers(cv::UMat& dst, const cv::Scalar& color, const int size = 10, const int thickness = 3);
+
     private:
 
         std::nullopt_t abort_tracking();
 
     private:
         FeatureDetector m_FeatureDetector;
-		std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
+        std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 
-		cv::UsacParams m_USACParams;
-		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
-		float m_Stability = 0.0f, m_Uniformity = 0.0f;
+        cv::Rect2f m_TrackingRegion;
+		std::vector<uint8_t> m_MatchStatus;
+        cv::Ptr<cv::SparsePyrLKOpticalFlow> m_OpticalTracker = nullptr;
 
-		cv::Mat m_FilterKernel;
-		bool m_FirstFrame = true;
-		cv::UMat m_PrevFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-        cv::UMat m_NextFrame{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        bool m_PastFrameLoaded = false;
+        cv::UMat m_PreviousFrame, m_CurrentFrame;
+
+        cv::UsacParams m_USACParams;
+        std::vector<uchar> m_InlierStatus;
+        float m_Stability = 0.0f, m_Uniformity = 0.0f;
+
 	};
 
 }

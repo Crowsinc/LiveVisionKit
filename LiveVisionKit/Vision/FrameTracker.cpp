@@ -27,16 +27,35 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    // NOTE: if you set the window size to less than 9x9, OpenCV will
+    // run it on the CPU, leading to a large increase in CPU usage in
+    // exchange for it running much faster than the GPU version.
+    const cv::Size OPTICAL_TRACKER_WIN_SIZE = {11, 11};
+    constexpr auto OPTICAL_TRACKER_PYR_LEVELS = 3;
+
+    constexpr float HOMOGRAPHY_UNIFORMITY_THRESHOLD = 0.5f;
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	FrameTracker::FrameTracker(const FrameTrackerSettings& settings)
+        : m_OpticalTracker(cv::SparsePyrLKOpticalFlow::create(
+              OPTICAL_TRACKER_WIN_SIZE, OPTICAL_TRACKER_PYR_LEVELS,
+              cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 0.01),
+              cv::OPTFLOW_USE_INITIAL_FLOW // NOTE: we do not clear matched point state.
+          ))
 	{
         configure(settings);
 
-		// Light sharpening kernel
-		m_FilterKernel = cv::Mat({3, 3}, {
-			0.0f, -0.5f,  0.0f,
-		   -0.5f,  3.0f, -0.5f,
-			0.0f, -0.5f,  0.0f
-		});
+        // Set USAC params for accurate Homography estimation
+        m_USACParams.threshold = 5;
+        m_USACParams.confidence = 0.99;
+        m_USACParams.loIterations = 10;
+        m_USACParams.loSampleSize = 20;
+        m_USACParams.maxIterations = 50;
+        m_USACParams.sampler = cv::SAMPLING_UNIFORM;
+        m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
+        m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
+        m_USACParams.final_polisher = cv::MAGSAC;
 
 		restart();
 	}
@@ -49,39 +68,17 @@ namespace lvk
         LVK_ASSERT_01(settings.uniformity_threshold);
         LVK_ASSERT_01(settings.stability_threshold);
 
-        m_FeatureDetector.configure(settings);
-        m_TrackedPoints.reserve(m_FeatureDetector.feature_capacity());
-        m_MatchedPoints.reserve(m_FeatureDetector.feature_capacity());
-        m_InlierStatus.reserve(m_FeatureDetector.feature_capacity());
-        m_MatchStatus.reserve(m_FeatureDetector.feature_capacity());
 
-        // If we are tracking motion with a resolution of 2x2 (Homography)
-        // then tighten up the homography estimation parameters for global
-        // motion. Otherwise, loosen them up to allow local motion through.
-        if(settings.motion_resolution == WarpField::MinimumSize)
-        {
-            // For accurate Homography estimation
-            m_USACParams.sampler = cv::SAMPLING_UNIFORM;
-            m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
-            m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
-            m_USACParams.maxIterations = 100;
-            m_USACParams.confidence = 0.99;
-            m_USACParams.loIterations = 10;
-            m_USACParams.loSampleSize = 20;
-            m_USACParams.threshold = 4;
-        }
-        else
-        {
-            // For major outlier rejection
-            m_USACParams.sampler = cv::SAMPLING_UNIFORM;
-            m_USACParams.score = cv::SCORE_METHOD_MSAC;
-            m_USACParams.loMethod = cv::LOCAL_OPTIM_INNER_LO;
-            m_USACParams.maxIterations = 100;
-            m_USACParams.confidence = 0.99;
-            m_USACParams.loIterations = 10;
-            m_USACParams.loSampleSize = 20;
-            m_USACParams.threshold = 20;
-        }
+        m_FeatureDetector.configure(settings);
+        m_MatchStatus.reserve(m_FeatureDetector.max_feature_capacity());
+        m_InlierStatus.reserve(m_FeatureDetector.max_feature_capacity());
+        m_TrackedPoints.reserve(m_FeatureDetector.max_feature_capacity());
+        m_MatchedPoints.reserve(m_FeatureDetector.max_feature_capacity());
+        m_TrackingRegion = cv::Rect2f({0,0}, settings.detection_resolution);
+
+        // We need to restart the tracker if the detection resolution has changed.
+        if(settings.detection_resolution != m_Settings.detection_resolution)
+            restart();
 
         m_Settings = settings;
     }
@@ -90,102 +87,119 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
-        m_Uniformity = 0.0f;
-        m_Stability = 0.0f;
-
-		m_FirstFrame = true;
         m_FeatureDetector.reset();
+        m_TrackedPoints.clear();
+        m_MatchedPoints.clear();
+        m_Uniformity = 1.0f;
+        m_Stability = 1.0f;
+
+        // Clear the past frame
+        m_PastFrameLoaded = false;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     std::optional<WarpField> FrameTracker::track(const cv::UMat& next_frame)
 	{
-		LVK_ASSERT(!next_frame.empty());
-		LVK_ASSERT(next_frame.type() == CV_8UC1);
+		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
-        // Reset the state to track the next frame
-        m_TrackedPoints.clear();
-        m_MatchedPoints.clear();
+        // Advance time and import the next frame.
+        std::swap(m_PreviousFrame, m_CurrentFrame);
+        cv::resize(next_frame, m_CurrentFrame, m_Settings.detection_resolution, 0, 0, cv::INTER_AREA);
 
-        // Move the last tracked frame to the previous frame.
-        std::swap(m_PrevFrame, m_NextFrame);
-
-        // Import the next frame for tracking by scaling it to the tracking resolution.
-        // We also enhance its sharpness to counteract the loss in quality from scaling.
-        cv::resize(next_frame, m_NextFrame, tracking_resolution(), 0, 0, cv::INTER_AREA);
-        cv::filter2D(m_NextFrame, m_NextFrame, m_NextFrame.type(), m_FilterKernel);
-
-        // We need at least two frames for tracking, so exit early on the first frame.
-        if(m_FirstFrame)
+        // We need at least two frames for tracking.
+        if(!m_PastFrameLoaded)
         {
-            m_FirstFrame = false;
+            m_PastFrameLoaded = true;
             return std::nullopt;
         }
+        m_TrackedPoints.clear();
 
-
-        // Detect tracking points in the previous frames. Note that this also
-        // returns all the points that were propagated from the previous frame.
-        m_FeatureDetector.detect(m_PrevFrame, m_TrackedPoints);
+        // Detect new tracking points in the previous frame.
+        m_Uniformity = m_FeatureDetector.detect(m_CurrentFrame, m_TrackedPoints);
         if(m_TrackedPoints.size() < m_Settings.sample_size_threshold)
             return abort_tracking();
 
+        // Test the uniformity of the tracking points.
+        if(m_Uniformity < m_Settings.uniformity_threshold)
+            return abort_tracking();
 
-		// Match tracking points
-		cv::calcOpticalFlowPyrLK(
-			m_PrevFrame,
-			m_NextFrame,
-			m_TrackedPoints,
-			m_MatchedPoints,
-			m_MatchStatus,
-			cv::noArray(),
-			cv::Size(9, 9)
-		);
+        // If we detected more points, then reset the initial flow guess.
+        if(m_MatchedPoints.size() != m_TrackedPoints.size())
+            m_MatchedPoints = m_TrackedPoints;
 
-		fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
+		// Match tracking points.
+        m_OpticalTracker->calc(
+            m_PreviousFrame,
+            m_CurrentFrame,
+            m_TrackedPoints,
+            m_MatchedPoints,
+            m_MatchStatus
+        );
+
+        // Filter out any points that weren't matched or are out of bounds.
+        for(int i = static_cast<int>(m_MatchStatus.size()) - 1; i >= 0; i--)
+        {
+            if(!m_MatchStatus[i] || !m_TrackingRegion.contains(m_MatchedPoints[i]))
+            {
+                fast_erase(m_TrackedPoints, i);
+                fast_erase(m_MatchedPoints, i);
+            }
+        }
         if(m_MatchedPoints.size() < m_Settings.sample_size_threshold)
             return abort_tracking();
 
 
-        // NOTE: We force estimation of an affine homography if we have a low
-        // tracking point distribution. This is to avoid perspectivity-based
-        // distortions due to dominant local motions being applied globally.
-        std::optional<Homography> motion;
-        motion = Homography::Estimate(
-            m_TrackedPoints,
-            m_MatchedPoints,
-            m_InlierStatus,
-            m_USACParams
-        );
+        // Estimate the global motion of the frame
+        Homography global_motion;
+        if(m_Uniformity < HOMOGRAPHY_UNIFORMITY_THRESHOLD)
+        {
+            global_motion = Homography::FromAffineMatrix(cv::estimateAffinePartial2D(
+                m_TrackedPoints, m_MatchedPoints, m_InlierStatus,
+                cv::RANSAC,
+                m_USACParams.threshold,
+                m_USACParams.maxIterations,
+                m_USACParams.confidence,
+                m_USACParams.loIterations
+            ));
+        }
+        else
+        {
+            global_motion = cv::findHomography(
+                m_TrackedPoints,
+                m_MatchedPoints,
+                m_InlierStatus,
+                m_USACParams
+            );
+        }
 
-        // Filter outliers and propagate the inliers back to the detector.
-        fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
+
+        // Filter and propagate the inliers to the detector.
+        fast_filter(m_MatchedPoints, m_TrackedPoints, m_InlierStatus);
         m_FeatureDetector.propagate(m_MatchedPoints);
 
-        // NOTE: Scene stability is measured by the inlier ratio.
-        const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
         const auto motion_samples = static_cast<float>(m_InlierStatus.size());
+        const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
 
-        // Test scene stability across the whole frame.
+        // Calculate the inlier ratio and test that its sufficient.
         m_Stability = inlier_motions / motion_samples;
         if(m_Stability < m_Settings.stability_threshold)
             return abort_tracking();
 
-        // Test uniformity of inliers across the whole frame.
-        m_Uniformity = m_FeatureDetector.distribution_quality();
-        if(m_Uniformity < m_Settings.uniformity_threshold)
-            return abort_tracking();
-
-        // Convert the global Homography into a motion field.
-        WarpField motion_field(m_Settings.motion_resolution);
+        // If our motion resolution is greater than 2x2, create a vector field.
+        WarpField local_motion(m_Settings.motion_resolution);
         if(m_Settings.motion_resolution != WarpField::MinimumSize)
         {
-            const cv::Rect2f region({0,0}, tracking_resolution());
-            motion_field.fit_points(region, m_TrackedPoints, m_MatchedPoints, motion);
+            local_motion.fit_points(
+                m_TrackingRegion,
+                global_motion,
+                m_TrackedPoints,
+                m_MatchedPoints
+            );
         }
-        else motion_field.set_to(*motion, tracking_resolution());
+        else local_motion.set_to(global_motion, m_Settings.detection_resolution);
 
-        return std::move(motion_field);
+        return std::move(local_motion);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -193,6 +207,7 @@ namespace lvk
     std::nullopt_t FrameTracker::abort_tracking()
     {
         restart();
+
         return std::nullopt;
     }
 
@@ -221,7 +236,7 @@ namespace lvk
 
     const cv::Size& FrameTracker::tracking_resolution() const
     {
-        return m_Settings.detect_resolution;
+        return m_Settings.detection_resolution;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -230,6 +245,22 @@ namespace lvk
 	{
 		return m_MatchedPoints;
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void FrameTracker::draw_trackers(cv::UMat& dst, const cv::Scalar& colour, const int size, const int thickness)
+    {
+        LVK_ASSERT(thickness > 0);
+        LVK_ASSERT(size > 0);
+
+        draw_crosses(
+            dst,
+            m_MatchedPoints,
+            colour,
+            size, 4,
+            cv::Size2f(dst.size()) / cv::Size2f(m_Settings.detection_resolution)
+        );
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
