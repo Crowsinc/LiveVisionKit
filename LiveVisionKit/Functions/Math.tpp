@@ -59,6 +59,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T, typename V>
+    inline T ratio_of(const V& numerator, const V& denominator)
+    {
+        return static_cast<T>(numerator) / static_cast<T>(denominator);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     inline size_t index_2d(size_t x, size_t y, size_t row_length)
     {
         LVK_ASSERT(row_length > 0);

@@ -36,6 +36,10 @@ namespace lvk
 	T round_even(const T& value);
 
 
+    template<typename T, typename V>
+    T ratio_of(const V& numerator, const V& denominator);
+
+
     size_t index_2d(size_t x, size_t y, size_t row_length);
 
     cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length);
