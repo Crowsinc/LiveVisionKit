@@ -106,7 +106,6 @@ namespace lvk
         // Find the corrective motion for smoothing.
         auto path_correction = m_Trace - position;
         if(max_drift_error == 1.0) path_correction.clamp(limits);
-        if(m_Settings.force_spatial_stability) path_correction.undistort(m_Settings.instability_tolerance);
 
         return std::move(path_correction);
     }
@@ -134,6 +133,7 @@ namespace lvk
 
         // Pre-fill the path to avoid edge cases.
         m_Path.pad_back(WarpField::MinimumSize);
+        m_Trace = m_Path.centre();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
