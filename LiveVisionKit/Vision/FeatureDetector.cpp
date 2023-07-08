@@ -25,19 +25,20 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr int FAST_MIN_THRESHOLD = 10;
+	constexpr int FAST_MIN_THRESHOLD = 25;
 	constexpr int FAST_MAX_THRESHOLD = 250;
 	constexpr int FAST_THRESHOLD_STEP = 5.0f;
     constexpr int FAST_FEATURE_TOLERANCE = 150;
 
-
 //---------------------------------------------------------------------------------------------------------------------
 	
 	FeatureDetector::FeatureDetector(const FeatureDetectorSettings& settings)
-        : m_FeatureGrid(settings.feature_resolution),
-          m_DetectionZones(settings.detection_zones),
-          m_MinimumFeatureLoad(0),  // Set by configure()
-          m_FASTFeatureTarget(0)    // Set by configure()
+        : m_DetectionRegions(settings.detection_regions),
+          m_SuppressionGrid({1,1}), // Set by configure()
+          m_FASTDetector(cv::FastFeatureDetector::create(
+              FAST_MIN_THRESHOLD, true,
+              cv::FastFeatureDetector::TYPE_9_16
+          ))
 	{
         configure(settings);
 	}
@@ -46,152 +47,142 @@ namespace lvk
 
     void FeatureDetector::configure(const FeatureDetectorSettings& settings)
     {
-        LVK_ASSERT(settings.detect_resolution.width > 0);
-        LVK_ASSERT(settings.detect_resolution.height > 0);
-        LVK_ASSERT(settings.detection_density > 1.0f);
-        LVK_ASSERT_01(settings.detection_threshold);
-
-        // Grids must be smaller or equal to resolution
-        LVK_ASSERT(settings.feature_resolution.width <= settings.detect_resolution.width);
-        LVK_ASSERT(settings.feature_resolution.height <= settings.detect_resolution.height);
-        LVK_ASSERT(settings.detection_zones.width <= settings.detect_resolution.width);
-        LVK_ASSERT(settings.detection_zones.height <= settings.detect_resolution.height);
-
-        // Grids must evenly divide the resolution
-        LVK_ASSERT(settings.detect_resolution.height % settings.detection_zones.height == 0);
-        LVK_ASSERT(settings.detect_resolution.width % settings.detection_zones.width == 0);
-        LVK_ASSERT(settings.detect_resolution.height % settings.feature_resolution.height == 0);
-        LVK_ASSERT(settings.detect_resolution.width % settings.feature_resolution.width == 0);
+        LVK_ASSERT(settings.detection_regions.width > 0 && settings.detection_regions.height > 0);
+        LVK_ASSERT(settings.detection_regions.height <= settings.detection_resolution.height);
+        LVK_ASSERT(settings.detection_regions.width <= settings.detection_resolution.width);
+        LVK_ASSERT(settings.min_feature_density <= settings.max_feature_density);
+        LVK_ASSERT(settings.min_feature_density > 0.0f);
+        LVK_ASSERT(settings.accumulation_rate > 0.0f);
+        LVK_ASSERT_01(settings.max_feature_density);
+        LVK_ASSERT_01(settings.min_feature_density);
 
         m_Settings = settings;
 
-        const cv::Rect input_region({0,0}, settings.detect_resolution);
-        const auto detect_zones = static_cast<float>(settings.detection_zones.area());
-        const auto feature_blocks = static_cast<float>(settings.feature_resolution.area());
+        const cv::Rect input_region({0,0}, settings.detection_resolution);
 
-        m_MinimumFeatureLoad = static_cast<size_t>((feature_blocks * settings.detection_threshold) / detect_zones);
-        m_FASTFeatureTarget = static_cast<size_t>((feature_blocks * settings.detection_density) / detect_zones);
+        // Create suppression grid
+        m_SuppressionGrid.clear();
+        m_SuppressionGrid.reshape(cv::Size2f(settings.detection_resolution) * settings.max_feature_density);
+        m_SuppressionGrid.align(input_region);
+
+        // Create FAST detection zones
+        m_DetectionRegions.clear();
+        m_DetectionRegions.reshape(m_Settings.detection_regions);
+        m_DetectionRegions.align(input_region);
+
+        const auto max_regions = static_cast<float>(m_DetectionRegions.area());
+        const auto max_region_features = static_cast<float>(m_SuppressionGrid.area()) / max_regions;
+        const auto density_ratio = settings.min_feature_density / settings.max_feature_density;
+
+        // Calculate min, max, and target feature loads for each detection zone.
+        m_MinimumFeatureLoad = static_cast<size_t>(max_region_features * density_ratio);
+        m_FASTFeatureTarget = static_cast<size_t>(settings.accumulation_rate * max_region_features);
+
+        // Initialize resources
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
-
-        m_FeatureGrid.clear();
-        m_FeatureGrid.reshape(m_Settings.feature_resolution);
-        m_FeatureGrid.align(input_region);
-
-        m_DetectionZones.clear();
-        m_DetectionZones.reshape(m_Settings.detection_zones);
-        m_DetectionZones.align(input_region);
-
-        construct_detection_zones();
+        construct_detection_regions();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FeatureDetector::construct_detection_zones()
+	void FeatureDetector::construct_detection_regions()
 	{
-        m_DetectionZones.align({{0,0}, m_Settings.detect_resolution});
-        const cv::Size2f detection_zone_size = m_DetectionZones.key_size();
+        m_DetectionRegions.clear();
 
-        m_DetectionZones.clear();
-		for(size_t r = 0; r < m_DetectionZones.rows(); r++)
+        // Construct the detection region grid
+        const cv::Size2f region_size = m_DetectionRegions.key_size();
+		for(size_t r = 0; r < m_DetectionRegions.rows(); r++)
 		{
-			for(size_t c = 0; c < m_DetectionZones.cols(); c++)
+			for(size_t c = 0; c < m_DetectionRegions.cols(); c++)
 			{
-                DetectZone zone;
-                zone.bounds = cv::Rect2f(
-                    static_cast<float>(c) * detection_zone_size.width,
-                    static_cast<float>(r) * detection_zone_size.height,
-                    detection_zone_size.width,
-                    detection_zone_size.height
+                FASTRegion region;
+                region.bounds = cv::Rect2f(
+                    static_cast<float>(c) * region_size.width,
+                    static_cast<float>(r) * region_size.height,
+                    region_size.width,
+                    region_size.height
 				);
-				zone.fast_threshold = FAST_MIN_THRESHOLD;
-				zone.propagations = 0;
+                region.threshold = FAST_MIN_THRESHOLD;
+                region.points = 0;
 
-                m_DetectionZones.place_at({c, r}, zone);
+                m_DetectionRegions.place_at({c, r}, region);
 			}
 		}
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FeatureDetector::detect(cv::UMat& frame, std::vector<cv::Point2f>& points)
+	float FeatureDetector::detect(cv::InputArray frame, std::vector<cv::Point2f>& points)
 	{
-		LVK_ASSERT(frame.size() == m_Settings.detect_resolution);
+		LVK_ASSERT(frame.size() == m_Settings.detection_resolution);
+        LVK_ASSERT(frame.isMat() || frame.isUMat());
 		LVK_ASSERT(frame.type() == CV_8UC1);
 
+
 		// Detect new features in the detection zones
-		for(auto& [coord, detection_zone] : m_DetectionZones)
+		for(auto& [coord, region] : m_DetectionRegions)
 		{
-            auto& [bounds, fast_threshold, propagations] = detection_zone;
+            auto& [bounds, threshold, features] = region;
 
-			if(propagations <= m_MinimumFeatureLoad)
+			if(m_Settings.force_detection || features <= m_MinimumFeatureLoad)
 			{
-				m_FASTFeatureBuffer.clear();
+                m_FASTFeatureBuffer.clear();
 
-				cv::FAST(
-					frame(bounds),
-					m_FASTFeatureBuffer,
-					fast_threshold,
-					true
-				);
+                // Detect features in this region.
+                m_FASTDetector->setThreshold(threshold);
+                if(frame.isMat())
+                    m_FASTDetector->detect(frame.getMat()(bounds), m_FASTFeatureBuffer);
+                else
+                    m_FASTDetector->detect(frame.getUMat()(bounds), m_FASTFeatureBuffer);
 
-                // Sift features into the feature grid.
-				process_features(m_FASTFeatureBuffer, bounds.tl());
+                // Process the features into the suppression grid for non-maximal suppression.
+                std::for_each(m_FASTFeatureBuffer.begin(), m_FASTFeatureBuffer.end(), [&](cv::KeyPoint& feature)
+                {
+                    // Update local region coordinate to global coordinate.
+                    feature.pt += bounds.tl();
 
-				// Dynamically adjust feature threshold to try meet the feature target next time
+                    const auto& key = m_SuppressionGrid.key_of(feature.pt);
+                    const auto& maximal_feature = m_SuppressionGrid.at_or(key, feature);
+
+                    // NOTE: propagations are given a size of 0.0f, we do not overwrite them.
+                    if(maximal_feature.size != 0.0f && maximal_feature.response <= feature.response)
+                        m_SuppressionGrid.emplace_at(key, feature);
+                });
+
+				// Dynamically adjust FAST threshold to try meet the feature target next time
 				if(m_FASTFeatureBuffer.size() > m_FASTFeatureTarget + FAST_FEATURE_TOLERANCE)
-					fast_threshold = step(fast_threshold, FAST_MAX_THRESHOLD, FAST_THRESHOLD_STEP);
+					threshold = step(threshold, FAST_MAX_THRESHOLD, FAST_THRESHOLD_STEP);
 				else if(m_FASTFeatureBuffer.size() < m_FASTFeatureTarget - FAST_FEATURE_TOLERANCE)
-					fast_threshold = step(fast_threshold, FAST_MIN_THRESHOLD, FAST_THRESHOLD_STEP);
+                    threshold = step(threshold, FAST_MIN_THRESHOLD, FAST_THRESHOLD_STEP);
+
             }
+            features = 0; // Reset region
 		}
 
-		extract_features(points);
+        // Extract all the feature points from the suppression grid.
+        for(const auto& [key, feature] : m_SuppressionGrid)
+        {
+            points.push_back(feature.pt);
+        }
+
+        // Calculate the distribution quality of the points and clear the grid.
+        float quality = m_SuppressionGrid.distribution_quality();
+        m_SuppressionGrid.clear();
+
+        return quality;
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FeatureDetector::process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset)
-	{
-		// Process features into the feature grid, keeping only the best for each block.
-		for(cv::KeyPoint feature : features)
-		{
-            LVK_ASSERT(m_FeatureGrid.within_bounds(feature.pt));
-
-			feature.pt.x += offset.x;
-			feature.pt.y += offset.y;
-
-			auto& [curr_feature, propagated] = m_FeatureGrid[feature.pt];
-			if(!propagated && curr_feature.response < feature.response)
-                curr_feature = feature;
-		}
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	void FeatureDetector::extract_features(std::vector<cv::Point2f>& feature_points) const
-	{
-		for(const auto& [coord, block] : m_FeatureGrid)
-            feature_points.push_back(block.feature.pt);
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
 	void FeatureDetector::propagate(const std::vector<cv::Point2f>& points)
 	{
-		reset();
-
-		// Add the propagated points onto the feature grid.
 		for(const auto& point : points)
 		{
 			// Silently ignore points which are out of bounds.
-			if(const auto& key = m_FeatureGrid.try_key_of(point); key.has_value())
+			if(const auto& key = m_SuppressionGrid.try_key_of(point); key.has_value())
 			{
-                // Ignore point if one has already been propagated to the same point.
-                if(m_FeatureGrid.contains(*key))
-                    continue;
-
-				m_FeatureGrid.emplace_at(*key, cv::KeyPoint(point, 1), true);
-                m_DetectionZones[point].propagations++;
+                m_SuppressionGrid.emplace_at(*key, point, 0.0f); // size = 0.0f
+                m_DetectionRegions[point].points++;
 			}
 		}
 	}
@@ -200,45 +191,23 @@ namespace lvk
 
 	void FeatureDetector::reset()
 	{
-		for(auto& [coord, zone] : m_DetectionZones)
-			zone.propagations = 0;
-
-        m_FeatureGrid.clear();
+        m_SuppressionGrid.clear();
+		for(auto& [coord, region] : m_DetectionRegions)
+            region.points = 0;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    size_t FeatureDetector::feature_capacity() const
+    size_t FeatureDetector::max_feature_capacity() const
     {
-        return m_FeatureGrid.capacity();
+        return m_SuppressionGrid.area();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	cv::Size FeatureDetector::local_feature_size() const
+	size_t FeatureDetector::min_feature_capacity() const
 	{
-		return cv::Size(m_FeatureGrid.key_size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	cv::Size FeatureDetector::detection_zone_size() const
-	{
-		return cv::Size(m_DetectionZones.key_size());
-	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    float FeatureDetector::distribution_quality() const
-    {
-        return m_FeatureGrid.distribution_quality();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	cv::Point2f FeatureDetector::distribution_centroid() const
-	{
-		return m_FeatureGrid.distribution_centroid<float>();
+        return m_MinimumFeatureLoad * m_DetectionRegions.area();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

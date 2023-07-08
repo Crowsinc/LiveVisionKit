@@ -27,12 +27,13 @@ namespace lvk
 
     struct FeatureDetectorSettings
     {
-        cv::Size detect_resolution = {640, 360};
-        cv::Size feature_resolution = {32, 18};
+        cv::Size detection_resolution = {256, 256};
+        cv::Size detection_regions = {2, 2};
+        bool force_detection = false;
 
-        cv::Size detection_zones = {2, 1};
-        float detection_threshold = 0.3f;
-        float detection_density = 1.5f;
+        float max_feature_density = 0.20f;
+        float min_feature_density = 0.05f;
+        float accumulation_rate = 2.0f;
     };
 
 
@@ -44,51 +45,35 @@ namespace lvk
 
         void configure(const FeatureDetectorSettings& settings) override;
 
-		void detect(cv::UMat& frame, std::vector<cv::Point2f>& points);
+        float detect(cv::InputArray frame, std::vector<cv::Point2f>& points);
 
 		void propagate(const std::vector<cv::Point2f>& points);
 
 		void reset();
 
 
-        size_t feature_capacity() const;
+        size_t max_feature_capacity() const;
 
-        cv::Size local_feature_size() const;
-
-        cv::Size detection_zone_size() const;
-
-
-		float distribution_quality() const;
-
-		cv::Point2f distribution_centroid() const;
+        size_t min_feature_capacity() const;
 
 	private:
 
-		struct DetectZone
+		struct FASTRegion
 		{
             cv::Rect2f bounds;
-            int fast_threshold = 0;
-            size_t propagations = 0;
+            int threshold = 0;
+            size_t points = 0;
 		};
 
-		struct FeatureBlock
-		{
-			cv::KeyPoint feature;
-			bool propagated = false;
-		};
-
-		void construct_detection_zones();
-
-        void process_features(const std::vector<cv::KeyPoint>& features, const cv::Point2f& offset);
-
-		void extract_features(std::vector<cv::Point2f>& feature_points) const;
+		void construct_detection_regions();
 
 	private:
-        SpatialMap<FeatureBlock> m_FeatureGrid;
-        SpatialMap<DetectZone> m_DetectionZones;
+        SpatialMap<FASTRegion> m_DetectionRegions;
+        SpatialMap<cv::KeyPoint> m_SuppressionGrid;
 
-		size_t m_FASTFeatureTarget, m_MinimumFeatureLoad;
-		std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
+        std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
+        size_t m_FASTFeatureTarget = 0, m_MinimumFeatureLoad = 0;
+        cv::Ptr<cv::FastFeatureDetector> m_FASTDetector = nullptr;
 	};
 
 }
