@@ -30,10 +30,9 @@ namespace lvk
     {
         cv::Size motion_resolution = {2, 2};
 
-        // Motion Estimation Constraints
-        float stability_threshold = 0.3f;
-        float uniformity_threshold = 0.1f;
-        size_t sample_size_threshold = 40;
+        // Robustness Constraints
+        float min_motion_quality = 0.3f;
+        size_t min_motion_samples = 100;
     };
 
 	class FrameTracker final : public Configurable<FrameTrackerSettings>
@@ -50,7 +49,7 @@ namespace lvk
 
         float scene_stability() const;
 
-        float scene_uniformity() const;
+        float tracking_quality() const;
 
         const cv::Size& motion_resolution() const;
 
@@ -65,6 +64,9 @@ namespace lvk
         std::nullopt_t abort_tracking();
 
     private:
+        bool m_FrameInitialized = false;
+        cv::UMat m_PreviousFrame, m_CurrentFrame;
+
         FeatureDetector m_FeatureDetector;
         std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 
@@ -72,13 +74,9 @@ namespace lvk
 		std::vector<uint8_t> m_MatchStatus;
         cv::Ptr<cv::SparsePyrLKOpticalFlow> m_OpticalTracker = nullptr;
 
-        bool m_PastFrameLoaded = false;
-        cv::UMat m_PreviousFrame, m_CurrentFrame;
-
         cv::UsacParams m_USACParams;
         std::vector<uchar> m_InlierStatus;
-        float m_Stability = 0.0f, m_Uniformity = 0.0f;
-
+        float m_TrackingQuality = 0.0f, m_SceneStability = 0.0f;
 	};
 
 }
