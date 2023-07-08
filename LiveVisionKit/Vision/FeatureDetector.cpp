@@ -33,8 +33,8 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 	
 	FeatureDetector::FeatureDetector(const FeatureDetectorSettings& settings)
-        : m_DetectionRegions(settings.detection_regions),
-          m_SuppressionGrid({1,1}), // Set by configure()
+        : m_DetectionRegions({1,1}), // Set by configure()
+          m_SuppressionGrid({1,1}),  // Set by configure()
           m_FASTDetector(cv::FastFeatureDetector::create(
               FAST_MIN_THRESHOLD, true,
               cv::FastFeatureDetector::TYPE_9_16
@@ -56,19 +56,16 @@ namespace lvk
         LVK_ASSERT_01(settings.max_feature_density);
         LVK_ASSERT_01(settings.min_feature_density);
 
-        m_Settings = settings;
-
-        const cv::Rect input_region({0,0}, settings.detection_resolution);
+        const cv::Rect2f input_region({0,0}, settings.detection_resolution);
 
         // Create suppression grid
-        m_SuppressionGrid.clear();
         m_SuppressionGrid.reshape(cv::Size2f(settings.detection_resolution) * settings.max_feature_density);
         m_SuppressionGrid.align(input_region);
 
         // Create FAST detection zones
-        m_DetectionRegions.clear();
-        m_DetectionRegions.reshape(m_Settings.detection_regions);
+        m_DetectionRegions.reshape(settings.detection_regions);
         m_DetectionRegions.align(input_region);
+        construct_detection_regions();
 
         const auto max_regions = static_cast<float>(m_DetectionRegions.area());
         const auto max_region_features = static_cast<float>(m_SuppressionGrid.area()) / max_regions;
@@ -77,10 +74,9 @@ namespace lvk
         // Calculate min, max, and target feature loads for each detection zone.
         m_MinimumFeatureLoad = static_cast<size_t>(max_region_features * density_ratio);
         m_FASTFeatureTarget = static_cast<size_t>(settings.accumulation_rate * max_region_features);
-
-        // Initialize resources
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
-        construct_detection_regions();
+
+        m_Settings = settings;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -117,7 +113,6 @@ namespace lvk
 		LVK_ASSERT(frame.size() == m_Settings.detection_resolution);
         LVK_ASSERT(frame.isMat() || frame.isUMat());
 		LVK_ASSERT(frame.type() == CV_8UC1);
-
 
 		// Detect new features in the detection zones
 		for(auto& [coord, region] : m_DetectionRegions)
@@ -181,7 +176,8 @@ namespace lvk
 			// Silently ignore points which are out of bounds.
 			if(const auto& key = m_SuppressionGrid.try_key_of(point); key.has_value())
 			{
-                m_SuppressionGrid.emplace_at(*key, point, 0.0f); // size = 0.0f
+                // NOTE: propagated points are given a size of zero.
+                m_SuppressionGrid.emplace_at(*key, point, 0.0f);
                 m_DetectionRegions[point].points++;
 			}
 		}
