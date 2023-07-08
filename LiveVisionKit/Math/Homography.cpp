@@ -24,17 +24,19 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography Homography::Identity()
+	const Homography& Homography::Identity()
 	{
 		// NOTE: A default-initialised homography is identity
-		return Homography();
+        thread_local const Homography identity;
+		return identity;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	Homography Homography::Zero()
+	const Homography& Homography::Zero()
 	{
-        return Homography(std::move(cv::Mat::zeros(3, 3, CV_64FC1)));
+        thread_local const Homography zero(cv::Mat::zeros(3, 3, CV_64FC1));
+        return zero;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

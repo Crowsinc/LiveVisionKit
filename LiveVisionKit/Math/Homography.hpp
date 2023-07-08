@@ -27,9 +27,9 @@ namespace lvk
 	{
 	public:
 
-		static Homography Zero();
+		static const Homography& Zero();
 
-		static Homography Identity();
+        static const Homography& Identity();
 
         static Homography FromAffineMatrix(const cv::Mat& affine);
 
