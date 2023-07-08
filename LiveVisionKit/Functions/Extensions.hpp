@@ -51,6 +51,14 @@ namespace lvk
 
     cv::Point2f operator-(const cv::Point2f& p, const cv::Size2f& s);
 
+    cv::Point2f operator*(const cv::Point2f& p, const cv::Scalar& s);
+
+    cv::Point2f operator/(const cv::Point2f& p, const cv::Scalar& s);
+
+    cv::Point2f operator+(const cv::Point2f& p, const cv::Scalar& s);
+
+    cv::Point2f operator-(const cv::Point2f& p, const cv::Scalar& s);
+
 
     // cv::Point Operators
     cv::Point operator*(const cv::Point& p, const cv::Size& s);
@@ -60,6 +68,7 @@ namespace lvk
     cv::Point operator+(const cv::Point& p, const cv::Size& s);
 
     cv::Point operator-(const cv::Point& p, const cv::Size& s);
+
 
     // cv::Scalar Operators
     cv::Scalar operator*(const cv::Scalar& v1, const cv::Scalar& v2);
@@ -71,7 +80,5 @@ namespace lvk
     cv::Scalar operator+(const cv::Scalar& v1, const double v2);
 
     cv::Scalar operator-(const cv::Scalar& v1, const double v2);
-
-
 
 }
