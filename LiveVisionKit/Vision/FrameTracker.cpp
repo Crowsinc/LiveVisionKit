@@ -87,13 +87,11 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
-        m_FeatureDetector.reset();
+        m_Stability = 0.0f;
+        m_Uniformity = 0.0f;
         m_TrackedPoints.clear();
         m_MatchedPoints.clear();
-        m_Uniformity = 1.0f;
-        m_Stability = 1.0f;
-
-        // Clear the past frame
+        m_FeatureDetector.reset();
         m_PastFrameLoaded = false;
 	}
 
@@ -102,6 +100,11 @@ namespace lvk
     std::optional<WarpField> FrameTracker::track(const cv::UMat& next_frame)
 	{
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
+
+        // Reset tracking state
+        m_TrackedPoints.clear();
+        m_Uniformity = 0.0f;
+        m_Stability = 0.0f;
 
         // Advance time and import the next frame.
         std::swap(m_PreviousFrame, m_CurrentFrame);
@@ -113,7 +116,6 @@ namespace lvk
             m_PastFrameLoaded = true;
             return std::nullopt;
         }
-        m_TrackedPoints.clear();
 
         // Detect new tracking points in the previous frame.
         m_Uniformity = m_FeatureDetector.detect(m_CurrentFrame, m_TrackedPoints);
@@ -176,7 +178,6 @@ namespace lvk
 
         // Filter and propagate the inliers to the detector.
         fast_filter(m_MatchedPoints, m_TrackedPoints, m_InlierStatus);
-        m_FeatureDetector.propagate(m_MatchedPoints);
 
         const auto motion_samples = static_cast<float>(m_InlierStatus.size());
         const auto inlier_motions = static_cast<float>(m_MatchedPoints.size());
@@ -185,6 +186,10 @@ namespace lvk
         m_Stability = inlier_motions / motion_samples;
         if(m_Stability < m_Settings.stability_threshold)
             return abort_tracking();
+
+
+        // Propagate the inliers to the next detector pass.
+        m_FeatureDetector.propagate(m_MatchedPoints);
 
         // If our motion resolution is greater than 2x2, create a vector field.
         WarpField local_motion(m_Settings.motion_resolution);
@@ -206,8 +211,7 @@ namespace lvk
 
     std::nullopt_t FrameTracker::abort_tracking()
     {
-        restart();
-
+        m_MatchedPoints.clear();
         return std::nullopt;
     }
 
