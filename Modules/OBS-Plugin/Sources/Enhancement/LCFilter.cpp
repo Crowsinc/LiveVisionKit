@@ -155,9 +155,15 @@ namespace lvk
 				cv::noArray()
 			);
 
+            // Normalize the view region
+            cv::Rect2f norm_view_region(
+                cv::Point2f(view_region.tl()) / cv::Size2f(correction_map.size()),
+                cv::Size2f(view_region.size()) / cv::Size2f(correction_map.size())
+            );
+
             // Convert the correction map to a warp field.
-            m_CorrectionField.set_to(std::move(correction_map), false);
-            m_CorrectionField.crop_in(view_region);
+            m_CorrectionField.set_to(std::move(correction_map), false, false);
+            m_CorrectionField.crop_in(norm_view_region);
             m_FieldOutdated = false;
 		}
 	}
