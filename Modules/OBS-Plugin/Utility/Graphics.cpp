@@ -356,6 +356,10 @@ namespace lvk
 				(void*)0
 			);
 
+            // TODO: this isn't very efficient, but we
+            // need a synchronization point somewhere here.
+            glFinish();
+
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		}
@@ -383,7 +387,7 @@ namespace lvk
 #ifndef _WIN32
 		if(use_custom_buffers())
 		{
-			// Do nothing.
+            // Do nothing..
 		}
 		else
 #endif
