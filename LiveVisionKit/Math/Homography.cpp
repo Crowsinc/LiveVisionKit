@@ -65,13 +65,13 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     Homography::Homography(const Homography& other)
-            : Homography(other.m_Matrix)
+        : Homography(other.m_Matrix)
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
     Homography::Homography(Homography&& other) noexcept
-            : m_Matrix(std::move(other.m_Matrix))
+        : m_Matrix(std::move(other.m_Matrix))
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
