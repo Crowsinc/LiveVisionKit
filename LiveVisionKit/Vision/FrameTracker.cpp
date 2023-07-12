@@ -19,6 +19,7 @@
 
 #include "Directives.hpp"
 #include "Math/Homography.hpp"
+#include "Timing/Stopwatch.hpp"
 #include "Functions/Container.hpp"
 #include "Functions/Extensions.hpp"
 
@@ -37,8 +38,10 @@ namespace lvk
     constexpr auto USAC_MAX_ITERS = 50;
     constexpr auto USAC_THRESHOLD = 5.0f;
 
+    constexpr auto LOCAL_MOTION_LIMIT = 0.05f;
     constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
+
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -60,13 +63,11 @@ namespace lvk
         m_USACParams.maxIterations = USAC_MAX_ITERS;
         m_USACParams.sampler = cv::SAMPLING_UNIFORM;
         m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
-
+        m_USACParams.final_polisher = cv::MAGSAC;
+        m_USACParams.final_polisher_iterations = 5;
         m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
         m_USACParams.loIterations = 10;
         m_USACParams.loSampleSize = 20;
-
-        m_USACParams.final_polisher = cv::MAGSAC;
-        m_USACParams.final_polisher_iterations = 5;
 
 		restart();
 	}
@@ -133,7 +134,7 @@ namespace lvk
         // Detect tracking points in the current frame.
         const auto sample_distribution = m_FeatureDetector.detect(m_CurrentFrame, m_TrackedPoints);
         if(m_TrackedPoints.size() < m_Settings.min_motion_samples)
-            return abort_tracking();
+            return std::nullopt;
 
         // Create initial guesses for matched points.
         if(m_MatchedPoints.size() != m_TrackedPoints.size())
@@ -148,28 +149,20 @@ namespace lvk
             m_MatchedPoints,
             m_MatchStatus
         );
-
-        // Filter out any points that weren't matched or are out of bounds.
-        for(int i = static_cast<int>(m_MatchStatus.size()) - 1; i >= 0; i--)
-        {
-            if(!m_MatchStatus[i] || !m_TrackingRegion.contains(m_MatchedPoints[i]))
-            {
-                fast_erase(m_TrackedPoints, i);
-                fast_erase(m_MatchedPoints, i);
-            }
-        }
+        fast_filter(m_TrackedPoints, m_MatchedPoints, m_MatchStatus);
         const auto samples = m_MatchedPoints.size();
 
 
-        // Calculate quality using match rate and distribution.
+        // Define tracking quality from the match rate and sample distribution.
         m_TrackingQuality = ratio_of<float>(samples, m_MatchStatus.size()) * sample_distribution;
         if(m_TrackingQuality < m_Settings.min_motion_quality || samples < m_Settings.min_motion_samples)
-            return abort_tracking();
+        {
+            m_MatchedPoints.clear();
+            return std::nullopt;
+        }
 
 
-        // Estimate the global motion of the frame. If we don't have a
-        // high enough sample distribution, then fall back to an affine
-        // homography to avoid creating perspectivity-based distortions.
+        // Estimate the global motion of the frame.
         Homography global_motion;
         if(sample_distribution > HOMOGRAPHY_DISTRIBUTION_THRESHOLD)
         {
@@ -182,6 +175,8 @@ namespace lvk
         }
         else
         {
+            // If the points aren't well distributed, fall back to an affine
+            // homography to avoid creating perspectivity-based distortions.
             global_motion = Homography::FromAffineMatrix(
                 cv::estimateAffinePartial2D(
                     m_TrackedPoints,
@@ -195,42 +190,93 @@ namespace lvk
         }
 
 
-        // Filter out any outliers and propagate the inliers.
-        fast_filter(m_MatchedPoints, m_TrackedPoints, m_InlierStatus);
-        m_FeatureDetector.propagate(m_MatchedPoints);
-
-
-        // Define scene stability from the inlier ratio. Low scene stability
-        // indicates a lot of noise or moving objects. A sudden low spike in
-        // scene stability often indicates a discontinuity between the frames.
-        m_SceneStability = ratio_of<float>(m_MatchedPoints.size(), samples);
+        // Scene stability is defined as the inlier ratio of global motion.
+        // A sudden low spike in stability often indicates a discontinuity.
+        m_SceneStability = ratio_of<uchar>(m_InlierStatus, 1);
         if(m_SceneStability < STABILITY_CONTINUITY_THRESHOLD)
-            return abort_tracking();
-
-
-        // TODO: replace with a new algorithm.
-        // If our motion resolution is greater than 2x2, create a vector field.
-        WarpField local_motion(m_Settings.motion_resolution);
-        if(m_Settings.motion_resolution != WarpField::MinimumSize)
         {
-            local_motion.fit_points(
-                m_TrackingRegion,
-                global_motion,
-                m_TrackedPoints,
-                m_MatchedPoints
-            );
+            m_MatchedPoints.clear();
+            return std::nullopt;
         }
-        else local_motion.set_to(global_motion, m_Settings.detection_resolution);
 
-        return std::move(local_motion);
+
+        if(m_Settings.motion_resolution == WarpField::MinimumSize)
+        {
+            // Filter inliers so we're left with only background points,
+            // then propagate them so that they're re-used in the detector.
+            fast_filter(m_MatchedPoints, m_InlierStatus);
+            m_FeatureDetector.propagate(m_MatchedPoints);
+
+            return WarpField(global_motion, m_Settings.detection_resolution);
+        }
+        else
+        {
+            // Propagate all points to the detector.
+            m_FeatureDetector.propagate(m_MatchedPoints);
+
+            return estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints);
+        }
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::nullopt_t FrameTracker::abort_tracking()
+    // TODO: outlier detection and rejection. 
+    WarpField FrameTracker::estimate_local_motions(
+        const cv::Rect2f& region,
+        const Homography& global_transform,
+        const std::vector<cv::Point2f>& tracked_points,
+        const std::vector<cv::Point2f>& matched_points
+    )
     {
-        m_MatchedPoints.clear();
-        return std::nullopt;
+        // Initialize frame motion to the global transform (e.g. background motion).
+        WarpField frame_motion(global_transform, m_Settings.detection_resolution, m_Settings.motion_resolution);
+        cv::Mat& global_field = frame_motion.offsets();
+
+        const cv::Size2f field_norm_factor = 1.0f / region.size();
+        const cv::Size2f field_size = m_Settings.motion_resolution;
+        const cv::Size2f vertex_area = region.size() / (field_size - 1.0f);
+
+        // Form a motion accumulation grid with cells are centered on the field points.
+        const VirtualGrid grid(field_size, {region.tl() * (vertex_area / 2.0f), field_size * vertex_area});
+        cv::Mat accumulator(m_Settings.motion_resolution, CV_32FC3, cv::Scalar::zeros());
+
+        // Accumulate all the local motion residuals using the grid.
+        for(size_t i = 0; i < tracked_points.size(); i++)
+        {
+            const cv::Point2f& src_point = tracked_points[i];
+            const cv::Point2f& dst_point = matched_points[i];
+
+            if(const auto coord = grid.key_of(dst_point); grid.test_point(dst_point))
+            {
+                const auto local_motion = (src_point - dst_point) * field_norm_factor;
+                const auto global_motion = global_field.at<cv::Point2f>(coord);
+                const auto residual_motion = local_motion - global_motion;
+
+                if(residual_motion.dot(residual_motion) < LOCAL_MOTION_LIMIT * LOCAL_MOTION_LIMIT)
+                {
+                    auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord);
+                    dx += residual_motion.x;
+                    dy += residual_motion.y;
+                    count += 1.0f;
+                }
+            }
+        }
+
+        // Spread out the accumulated residuals using an un-normalized box filter.
+        cv::boxFilter(accumulator, accumulator, -1, {3, 3}, {-1,-1}, false, cv::BORDER_REFLECT_101);
+
+        // Flatten out accumulated motions into average local residuals.
+        cv::Mat residuals(m_Settings.motion_resolution, CV_32FC2);
+        residuals.forEach<cv::Point2f>([&](cv::Point2f& residual, const int coord[]){
+            const auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord[0], coord[1]);
+            residual = (count > 0.0f) ? cv::Point2f(dx, dy) / count : cv::Point2f(0, 0);
+        });
+
+        // Spatially smooth and combine the residuals.
+        cv::medianBlur(residuals, residuals, 3);
+        global_field += residuals;
+
+        return frame_motion;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

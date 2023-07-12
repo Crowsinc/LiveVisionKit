@@ -61,7 +61,12 @@ namespace lvk
 
     private:
 
-        std::nullopt_t abort_tracking();
+        WarpField estimate_local_motions(
+            const cv::Rect2f& region,
+            const Homography& global_transform,
+            const std::vector<cv::Point2f>& tracked_points,
+            const std::vector<cv::Point2f>& matched_points
+        );
 
     private:
         bool m_FrameInitialized = false;
