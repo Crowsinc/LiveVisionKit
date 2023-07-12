@@ -35,15 +35,17 @@ namespace lvk
         inline static const cv::Size MinimumSize = {2,2};
 
 
-        explicit WarpField(const cv::Size& size);
+        WarpField(const cv::Size& size);
+
+        WarpField(const WarpField& other);
+
+        WarpField(WarpField&& other) noexcept;
 
         WarpField(cv::Mat&& warp_map, const bool as_offsets, const bool normalized);
 
         WarpField(const cv::Mat& warp_map, const bool as_offsets, const bool normalized);
 
-        WarpField(WarpField&& other) noexcept;
-
-        WarpField(const WarpField& other);
+        WarpField(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size = MinimumSize);
 
 
         void resize(const cv::Size& new_size);
@@ -62,7 +64,6 @@ namespace lvk
         void to_map(cv::Mat& dst) const;
 
         void to_map(cv::UMat& dst) const;
-
 
         void normalize(const cv::Size2f& motion_scale);
 
@@ -86,13 +87,6 @@ namespace lvk
             const bool parallel = true
         );
 
-        // TODO:
-        void fit_points(
-            const cv::Rect2f& region,
-            const Homography& global_motion,
-            const std::vector<cv::Point2f>& origin_points,
-            const std::vector<cv::Point2f>& warped_points
-        );
 
         void set_identity();
 
@@ -103,7 +97,6 @@ namespace lvk
         void set_to(cv::Mat&& warp_map, const bool as_offsets, const bool normalized);
 
         void set_to(const cv::Mat& warp_map, const bool as_offsets, const bool normalized);
-
 
 
         void scale(const cv::Size2f& scaling_factor);

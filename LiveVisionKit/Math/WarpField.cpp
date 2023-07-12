@@ -22,8 +22,6 @@
 
 #include "Functions/Extensions.hpp"
 #include "Functions/Drawing.hpp"
-#include "Timing/Stopwatch.hpp"
-#include "Data/SpatialMap.hpp"
 #include "Functions/Image.hpp"
 #include "Functions/Math.hpp"
 #include "Directives.hpp"
@@ -43,6 +41,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    WarpField::WarpField(const WarpField& other)
+        : m_Field(other.m_Field.clone())
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    WarpField::WarpField(WarpField&& other) noexcept
+        : m_Field(std::move(other.m_Field))
+    {}
+
+//---------------------------------------------------------------------------------------------------------------------
+
     WarpField::WarpField(cv::Mat&& warp_map, const bool as_offsets, const bool normalized)
     {
         set_to(std::move(warp_map), as_offsets, normalized);
@@ -57,15 +67,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(WarpField&& other) noexcept
-        : m_Field(std::move(other.m_Field))
-    {}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField::WarpField(const WarpField& other)
-        : m_Field(other.m_Field.clone())
-    {}
+    WarpField::WarpField(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size)
+        : m_Field(size, CV_32FC2)
+    {
+        set_to(motion, motion_scale);
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -78,7 +84,7 @@ namespace lvk
             return;
 
         cv::Mat new_field;
-        cv::resize(m_Field, new_field, new_size, 0, 0, cv::INTER_LINEAR);
+        cv::resize(m_Field, new_field, new_size, 0, 0, cv::INTER_LINEAR_EXACT);
         m_Field = std::move(new_field);
     }
 
@@ -343,77 +349,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::fit_points(
-        const cv::Rect2f& region,
-        const Homography& global_motion,
-        const std::vector<cv::Point2f>& origin_points,
-        const std::vector<cv::Point2f>& warped_points
-    )
-    {
-        LVK_ASSERT(origin_points.size() == warped_points.size());
-
-        cv::Mat motions(WarpField::MinimumSize, CV_32FC2);
-        VirtualGrid submotion_grid(WarpField::MinimumSize);
-        float submotion_weight = 0.7f;
-
-        // Pre-fill the initial warps using the motion hint.
-        const cv::Point2f tl = region.tl(), br = region.br();
-        const cv::Point2f tr(br.x, tl.y), bl(tl.x, br.y);
-
-        const auto global_warp = global_motion.invert();
-        motions.at<cv::Point2f>(0, 0) = (global_warp * tl) - tl;
-        motions.at<cv::Point2f>(0, 1) = (global_warp * tr) - tr;
-        motions.at<cv::Point2f>(1, 0) = (global_warp * bl) - bl;
-        motions.at<cv::Point2f>(1, 1) = (global_warp * br) - br;
-
-        // NOTE: we force the first iteration of the algorithm for 2x2 fields.
-        bool force_accumulation = m_Field.size() == WarpField::MinimumSize;
-
-        // Sub-accumulate the motions until we reach the right field size.
-        while(motions.size() != m_Field.size() || force_accumulation)
-        {
-            force_accumulation = false;
-
-            // Expand the submotions grid to be 2x larger.
-            submotion_grid.resize({
-                std::min(motions.cols * 2, m_Field.cols),
-                std::min(motions.rows * 2, m_Field.rows)
-            });
-
-            // Align the grid so that the cells are centered on the field coords.
-            const cv::Size2f grid_size = submotion_grid.size();
-            const auto cell_size = region.size() / (grid_size - 1.0f);
-            submotion_grid.align(cv::Rect2f(region.tl() * (cell_size / 2.0f), grid_size * cell_size));
-
-            // Interpolate the current motions field into the larger submotions field.
-            cv::Mat submotions(submotion_grid.size(), CV_32FC2);
-            cv::resize(motions, submotions, submotions.size(), 0, 0, cv::INTER_LINEAR);
-
-            // Re-accumulate all the motions into the new submotions grid.
-            for(size_t i = 0; i < origin_points.size(); i++)
-            {
-                const cv::Point2f& origin_point = origin_points[i];
-                const cv::Point2f& warped_point = warped_points[i];
-                auto warp_motion = origin_point - warped_point;
-
-                // Update the motion estimate for the cell we reside in.
-                auto& motion_estimate = submotions.at<cv::Point2f>(submotion_grid.key_of(warped_point));
-                motion_estimate.x += submotion_weight * (warp_motion.x - motion_estimate.x);
-                motion_estimate.y += submotion_weight * (warp_motion.y - motion_estimate.y);
-            }
-
-            // Spatially blur the submotions to remove noise.
-            cv::medianBlur(submotions, motions, 3);
-
-            submotion_weight /= 2.0f;
-        }
-
-        m_Field = std::move(motions);
-        normalize(region.size());
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     void WarpField::set_identity()
     {
         m_Field.setTo(cv::Scalar(0.0f, 0.0f));
@@ -431,8 +366,8 @@ namespace lvk
 
     void WarpField::set_to(const Homography& motion, const cv::Size2f& motion_scale)
     {
-        const cv::Point2f coord_scaling = motion_scale / cv::Size2f(size() - 1);
-        const cv::Size2f norm_factor = 1.0f / motion_scale;
+        const auto coord_scaling = motion_scale / cv::Size2f(size() - 1);
+        const auto norm_factor = 1.0f / motion_scale;
 
         const Homography inverse_warp = motion.invert();
         write([&](cv::Point2f& offset, const cv::Point& coord){
