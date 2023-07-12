@@ -40,6 +40,10 @@ namespace lvk
 	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert = false);
 
 
+    template<typename T>
+    float ratio_of(const std::vector<T>& data, const T& value);
+
+
     template<typename iterator>
     auto max(const iterator begin, const iterator end);
 

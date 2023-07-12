@@ -89,6 +89,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    inline float ratio_of(const std::vector<T>& data, const T& value)
+    {
+        return static_cast<float>(std::count(data.begin(), data.end(), value)) / static_cast<float>(data.size());
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     // This is just a shortcut function
     template<typename iterator>
     inline auto max(const iterator begin, const iterator end)
