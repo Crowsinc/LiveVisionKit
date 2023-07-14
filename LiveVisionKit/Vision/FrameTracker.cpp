@@ -19,7 +19,6 @@
 
 #include "Directives.hpp"
 #include "Math/Homography.hpp"
-#include "Timing/Stopwatch.hpp"
 #include "Functions/Container.hpp"
 #include "Functions/Extensions.hpp"
 
@@ -38,10 +37,8 @@ namespace lvk
     constexpr auto USAC_MAX_ITERS = 50;
     constexpr auto USAC_THRESHOLD = 5.0f;
 
-    constexpr auto LOCAL_MOTION_LIMIT = 0.05f;
     constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
-
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -77,6 +74,7 @@ namespace lvk
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
         LVK_ASSERT(settings.min_motion_samples >= 4);
+        LVK_ASSERT_01(settings.max_motion_variance);
         LVK_ASSERT_01(settings.min_motion_quality);
 
         m_FeatureDetector.configure(settings);
@@ -200,32 +198,33 @@ namespace lvk
         }
 
 
-        if(m_Settings.motion_resolution == WarpField::MinimumSize)
-        {
-            // Filter inliers so we're left with only background points,
-            // then propagate them so that they're re-used in the detector.
-            fast_filter(m_MatchedPoints, m_InlierStatus);
-            m_FeatureDetector.propagate(m_MatchedPoints);
+        WarpField motion = should_use_homography() ? WarpField(global_motion, m_Settings.detection_resolution)
+            : estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
 
-            return WarpField(global_motion, m_Settings.detection_resolution);
-        }
-        else
-        {
-            // Propagate all points to the detector.
-            m_FeatureDetector.propagate(m_MatchedPoints);
 
-            return estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints);
-        }
+        // Filter inliers so we're left with only high quality points,
+        // then propagate them so that they're re-used in the detector.
+        fast_filter(m_MatchedPoints, m_InlierStatus);
+        m_FeatureDetector.propagate(m_MatchedPoints);
+
+        return motion;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    // TODO: outlier detection and rejection. 
+    bool FrameTracker::should_use_homography() const
+    {
+        return m_Settings.motion_resolution == WarpField::MinimumSize;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     WarpField FrameTracker::estimate_local_motions(
         const cv::Rect2f& region,
         const Homography& global_transform,
         const std::vector<cv::Point2f>& tracked_points,
-        const std::vector<cv::Point2f>& matched_points
+        const std::vector<cv::Point2f>& matched_points,
+        std::vector<uint8_t>& inlier_status
     )
     {
         // Initialize frame motion to the global transform (e.g. background motion).
@@ -241,10 +240,12 @@ namespace lvk
         cv::Mat accumulator(m_Settings.motion_resolution, CV_32FC3, cv::Scalar::zeros());
 
         // Accumulate all the local motion residuals using the grid.
+        inlier_status.resize(tracked_points.size());
         for(size_t i = 0; i < tracked_points.size(); i++)
         {
             const cv::Point2f& src_point = tracked_points[i];
             const cv::Point2f& dst_point = matched_points[i];
+            uint8_t& inlier = inlier_status[i] = 0;
 
             if(const auto coord = grid.key_of(dst_point); grid.test_point(dst_point))
             {
@@ -252,12 +253,13 @@ namespace lvk
                 const auto global_motion = global_field.at<cv::Point2f>(coord);
                 const auto residual_motion = local_motion - global_motion;
 
-                if(residual_motion.dot(residual_motion) < LOCAL_MOTION_LIMIT * LOCAL_MOTION_LIMIT)
+                if(residual_motion.dot(residual_motion) < std::pow(m_Settings.max_motion_variance, 2))
                 {
                     auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord);
                     dx += residual_motion.x;
                     dy += residual_motion.y;
                     count += 1.0f;
+                    inlier = 1;
                 }
             }
         }
@@ -273,7 +275,7 @@ namespace lvk
         });
 
         // Spatially smooth and combine the residuals.
-        cv::medianBlur(residuals, residuals, 3);
+        cv::medianBlur(residuals, residuals, 5);
         global_field += residuals;
 
         return frame_motion;

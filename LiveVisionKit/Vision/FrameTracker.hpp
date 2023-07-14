@@ -31,7 +31,8 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
 
         // Robustness Constraints
-        float min_motion_quality = 0.3f;
+        float max_motion_variance = 0.05f;
+        float min_motion_quality = 0.25f;
         size_t min_motion_samples = 100;
     };
 
@@ -61,11 +62,14 @@ namespace lvk
 
     private:
 
+        bool should_use_homography() const;
+
         WarpField estimate_local_motions(
             const cv::Rect2f& region,
             const Homography& global_transform,
             const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points
+            const std::vector<cv::Point2f>& matched_points,
+            std::vector<uint8_t>& inlier_status
         );
 
     private:
