@@ -40,6 +40,8 @@ namespace lvk
     constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
 
+    constexpr auto LOCAL_SAMPLE_TARGET = 5.0f;
+
 //---------------------------------------------------------------------------------------------------------------------
 
 	FrameTracker::FrameTracker(const FrameTrackerSettings& settings)
@@ -58,8 +60,8 @@ namespace lvk
         m_USACParams.confidence = 0.99;
         m_USACParams.threshold = USAC_THRESHOLD;
         m_USACParams.maxIterations = USAC_MAX_ITERS;
-        m_USACParams.sampler = cv::SAMPLING_UNIFORM;
         m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
+        m_USACParams.score = cv::SCORE_METHOD_LMEDS;
         m_USACParams.final_polisher = cv::MAGSAC;
         m_USACParams.final_polisher_iterations = 5;
         m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
@@ -73,8 +75,8 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
+        LVK_ASSERT(settings.max_motion_variance >= 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
-        LVK_ASSERT_01(settings.max_motion_variance);
         LVK_ASSERT_01(settings.min_motion_quality);
 
         m_FeatureDetector.configure(settings);
@@ -219,6 +221,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+
     WarpField FrameTracker::estimate_local_motions(
         const cv::Rect2f& region,
         const Homography& global_transform,
@@ -253,7 +256,11 @@ namespace lvk
                 const auto global_motion = global_field.at<cv::Point2f>(coord);
                 const auto residual_motion = local_motion - global_motion;
 
-                if(residual_motion.dot(residual_motion) < std::pow(m_Settings.max_motion_variance, 2))
+                const auto global_magnitude = global_motion.dot(global_motion);
+                const auto residual_magnitude = residual_motion.dot(residual_motion);
+
+                // Ensure that residual motions are similar to the global motion.
+                if(residual_magnitude / global_magnitude < m_Settings.max_motion_variance)
                 {
                     auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord);
                     dx += residual_motion.x;
@@ -271,11 +278,18 @@ namespace lvk
         cv::Mat residuals(m_Settings.motion_resolution, CV_32FC2);
         residuals.forEach<cv::Point2f>([&](cv::Point2f& residual, const int coord[]){
             const auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord[0], coord[1]);
-            residual = (count > 0.0f) ? cv::Point2f(dx, dy) / count : cv::Point2f(0, 0);
+            residual.x = dx; residual.y = dy;
+
+            // Average the residual, weighted by the number of samples.
+            if(count > 0.0f)
+            {
+                const float weight = std::exp(0.4f * (count - LOCAL_SAMPLE_TARGET));
+                residual *= std::min(weight, 1.0f) / count;
+            }
         });
 
         // Spatially smooth and combine the residuals.
-        cv::medianBlur(residuals, residuals, 5);
+        cv::medianBlur(residuals, residuals, 3);
         global_field += residuals;
 
         return frame_motion;
