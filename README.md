@@ -1,8 +1,8 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![LVK Discord](https://badgen.net/discord/online-members/8azsNh6rsX)](https://discord.gg/8azsNh6rsX)
 [![Releases](https://img.shields.io/github/downloads/Crowsinc/LiveVisionKit/total)](https://github.com/Crowsinc/LiveVisionKit/releases/latest)
-![Windows](https://svgshare.com/i/ZhY.svg)
-![Linux](https://svgshare.com/i/Zhy.svg)
+![Windows](https://img.shields.io/badge/Windows-%20)
+![Linux](https://img.shields.io/badge/Linux-%20)
 
 ---------------
 ![LiveVisionKit](/Assets/LiveVisionKit_Logo.png)
