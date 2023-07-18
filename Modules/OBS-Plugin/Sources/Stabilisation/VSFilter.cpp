@@ -40,6 +40,7 @@ namespace lvk
     constexpr auto PROP_SUBSYSTEM = "MOTION_QUALITY";
     constexpr auto PROP_SUBSYSTEM_HOMOG = "vs.subsystem.1";
     constexpr auto PROP_SUBSYSTEM_FIELD = "vs.subsystem.2";
+    constexpr auto PROP_SUBSYSTEM_DEFAULT = PROP_SUBSYSTEM_HOMOG;
 
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
@@ -151,9 +152,9 @@ namespace lvk
 		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, PROP_CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, PROP_STAB_DISABLED_DEFAULT);
+        obs_data_set_default_string(settings, PROP_SUBSYSTEM, PROP_SUBSYSTEM_DEFAULT);
         obs_data_set_default_bool(settings, PROP_APPLY_CROP, PROP_APPLY_CROP_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
-        obs_data_set_default_string(settings, PROP_SUBSYSTEM, PROP_SUBSYSTEM_FIELD);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -180,22 +181,23 @@ namespace lvk
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
-                stab_settings.detection_resolution = {640, 360};
-                stab_settings.motion_resolution = {16, 16}; // 32x32
-                stab_settings.detection_regions = {4, 4};
+                stab_settings.detection_resolution = {512, 256};
+                stab_settings.motion_resolution = {16, 16};
+                stab_settings.detection_regions = {2, 2};
 
                 stab_settings.max_feature_density = 0.15f;
                 stab_settings.min_feature_density = 0.03f;
+                stab_settings.accumulation_rate = 2.0f;
             }
             else
             {
-                stab_settings.detection_resolution = {640, 360};
-
+                stab_settings.detection_resolution = {512, 256};
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
 
-                stab_settings.max_feature_density = 0.15f;
-                stab_settings.min_feature_density = 0.03f;
+                stab_settings.max_feature_density = 0.10f;
+                stab_settings.min_feature_density = 0.02f;
+                stab_settings.accumulation_rate = 3.0f;
             }
 		});
 
