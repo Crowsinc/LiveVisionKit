@@ -72,6 +72,13 @@ namespace lvk
 	bool between_strict(const T& value, const T& min, const T& max);
 
 
+    template<typename T>
+    bool within(const T& value, const T& target, const T& tolerance);
+
+    template<typename T>
+    bool within_strict(const T& value, const T& target, const T& tolerance);
+
+
 	template<typename T>
 	T exp_moving_average(const T average, const T new_sample, const float smoothing_factor);
 

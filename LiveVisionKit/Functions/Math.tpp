@@ -163,6 +163,22 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    inline bool within(const T& value, const T& target, const T& tolerance)
+    {
+        return (value >= target - tolerance) && (value <= target + tolerance);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline bool within_strict(const T& value, const T& target, const T& tolerance)
+    {
+        return (value > target - tolerance) && (value < target + tolerance);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
     inline T exp_moving_average(const T average, const T new_sample, const float smoothing_factor)
 	{
