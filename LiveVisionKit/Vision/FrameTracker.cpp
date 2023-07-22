@@ -35,7 +35,6 @@ namespace lvk
     constexpr auto OPTICAL_TRACKER_MAX_ITERS = 5;
 
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
-    constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
     constexpr auto USAC_NOISE_TOLERANCE = 5.0f;
     constexpr auto USAC_MAX_ITERS = 50;
 
@@ -99,7 +98,6 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
-        m_SceneStability = 0.0f;
         m_TrackingQuality = 0.0f;
         m_TrackedPoints.clear();
         m_MatchedPoints.clear();
@@ -115,7 +113,6 @@ namespace lvk
 
         // Reset tracking state
         m_TrackedPoints.clear();
-        m_SceneStability = 0.0f;
         m_TrackingQuality = 0.0f;
 
         // Advance time and import the next frame.
@@ -188,11 +185,8 @@ namespace lvk
             );
         }
 
-        // Scene stability is defined as the inlier ratio of global motion.
-        m_SceneStability = ratio_of<uchar>(m_InlierStatus, 1);
-
-        // A sudden low spike in stability often indicates a discontinuity.
-        if(m_Settings.discontinuity_detection && m_SceneStability < STABILITY_CONTINUITY_THRESHOLD)
+        // A sudden low spike in global inlier ratio often indicates a discontinuity.
+        if(ratio_of<uchar>(m_InlierStatus, 1) < m_Settings.continuity_threshold)
         {
             m_MatchedPoints.clear();
             return std::nullopt;
@@ -217,7 +211,6 @@ namespace lvk
     }
 
 //---------------------------------------------------------------------------------------------------------------------
-
 
     WarpField FrameTracker::estimate_local_motions(
         const cv::Rect2f& region,
@@ -292,13 +285,6 @@ namespace lvk
 
         return frame_motion;
     }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    float FrameTracker::scene_stability() const
-	{
-		return m_SceneStability;
-	}
 
 //---------------------------------------------------------------------------------------------------------------------
 

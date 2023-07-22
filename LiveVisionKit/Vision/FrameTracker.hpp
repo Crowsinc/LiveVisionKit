@@ -35,9 +35,9 @@ namespace lvk
         float max_local_variance = 0.25f;
 
         // Robustness Constraints
-        bool discontinuity_detection = true;
-        float min_motion_quality = 0.25f;
         size_t min_motion_samples = 100;
+        float min_motion_quality = 0.25f;
+        float continuity_threshold = 0.3f;
     };
 
 	class FrameTracker final : public Configurable<FrameTrackerSettings>
@@ -51,8 +51,6 @@ namespace lvk
 		std::optional<WarpField> track(const cv::UMat& next_frame);
 
 		void restart();
-
-        float scene_stability() const;
 
         float tracking_quality() const;
 
@@ -83,13 +81,13 @@ namespace lvk
         FeatureDetector m_FeatureDetector;
         std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 
+        float m_TrackingQuality;
         cv::Rect2f m_TrackingRegion;
 		std::vector<uint8_t> m_MatchStatus;
         cv::Ptr<cv::SparsePyrLKOpticalFlow> m_OpticalTracker = nullptr;
 
         cv::UsacParams m_USACParams;
         std::vector<uchar> m_InlierStatus;
-        float m_TrackingQuality = 0.0f, m_SceneStability = 0.0f;
 	};
 
 }
