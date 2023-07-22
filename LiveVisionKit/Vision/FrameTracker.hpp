@@ -35,6 +35,7 @@ namespace lvk
         float max_local_variance = 0.25f;
 
         // Robustness Constraints
+        bool discontinuity_detection = true;
         float min_motion_quality = 0.25f;
         size_t min_motion_samples = 100;
     };

@@ -188,20 +188,18 @@ namespace lvk
             );
         }
 
-
         // Scene stability is defined as the inlier ratio of global motion.
-        // A sudden low spike in stability often indicates a discontinuity.
         m_SceneStability = ratio_of<uchar>(m_InlierStatus, 1);
-        if(m_SceneStability < STABILITY_CONTINUITY_THRESHOLD)
+
+        // A sudden low spike in stability often indicates a discontinuity.
+        if(m_Settings.discontinuity_detection && m_SceneStability < STABILITY_CONTINUITY_THRESHOLD)
         {
             m_MatchedPoints.clear();
             return std::nullopt;
         }
 
-
         WarpField motion = should_use_homography() ? WarpField(global_motion, m_Settings.detection_resolution)
             : estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
-
 
         // Filter inliers so we're left with only high quality points,
         // then propagate them so that they're re-used in the detector.
