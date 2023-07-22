@@ -43,6 +43,17 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    inline T angle_of(const cv::Point_<T>& v, const cv::Point_<T>& ref)
+    {
+        return std::atan2(
+            ref.x * v.y - ref.y  * v.x,
+            ref.x * v.x + ref.y  * v.y
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
     inline T round_multiple(const T& value, const T& base)
 	{

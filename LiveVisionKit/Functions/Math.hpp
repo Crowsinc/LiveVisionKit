@@ -28,6 +28,9 @@ namespace lvk
     template<typename T>
     T to_radians(const T& degrees);
 
+    template<typename T>
+    T angle_of(const cv::Point_<T>& v, const cv::Point_<T>& ref = {1, 0});
+
 
     template<typename T>
     T round_multiple(const T& value, const T& base);
