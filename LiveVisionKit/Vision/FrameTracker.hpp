@@ -30,8 +30,11 @@ namespace lvk
     {
         cv::Size motion_resolution = {2, 2};
 
+        // Local Motion Constraints
+        float max_local_increase = 1.5f;
+        float max_local_variance = 0.25f;
+
         // Robustness Constraints
-        float max_motion_variance = 1.50f;
         float min_motion_quality = 0.25f;
         size_t min_motion_samples = 100;
     };

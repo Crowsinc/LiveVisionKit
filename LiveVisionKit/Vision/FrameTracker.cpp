@@ -34,13 +34,10 @@ namespace lvk
     constexpr auto OPTICAL_TRACKER_PYR_LEVELS = 3;
     constexpr auto OPTICAL_TRACKER_MAX_ITERS = 5;
 
-    constexpr auto USAC_MAX_ITERS = 50;
-    constexpr auto USAC_THRESHOLD = 5.0f;
-
-    constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
-
-    constexpr auto LOCAL_SAMPLE_TARGET = 5.0f;
+    constexpr auto STABILITY_CONTINUITY_THRESHOLD = 0.3f;
+    constexpr auto USAC_NOISE_TOLERANCE = 5.0f;
+    constexpr auto USAC_MAX_ITERS = 50;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -58,7 +55,7 @@ namespace lvk
 
         // Set USAC params for accurate Homography estimation
         m_USACParams.confidence = 0.99;
-        m_USACParams.threshold = USAC_THRESHOLD;
+        m_USACParams.threshold = USAC_NOISE_TOLERANCE;
         m_USACParams.maxIterations = USAC_MAX_ITERS;
         m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
         m_USACParams.score = cv::SCORE_METHOD_LMEDS;
@@ -75,9 +72,10 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
-        LVK_ASSERT(settings.max_motion_variance >= 0.0f);
+        LVK_ASSERT(settings.max_local_increase > 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
         LVK_ASSERT_01(settings.min_motion_quality);
+        LVK_ASSERT_01(settings.max_local_variance);
 
         m_FeatureDetector.configure(settings);
         m_MatchStatus.reserve(m_FeatureDetector.max_feature_capacity());
@@ -125,11 +123,12 @@ namespace lvk
         cv::resize(next_frame, m_CurrentFrame, m_Settings.detection_resolution, 0, 0, cv::INTER_AREA);
 
         // We need at least two frames for tracking.
-        if(!m_FrameInitialized)
+        if(!m_FrameInitialized || m_CurrentFrame.size() != m_PreviousFrame.size())
         {
             m_FrameInitialized = true;
             return std::nullopt;
         }
+
 
         // Detect tracking points in the current frame.
         const auto sample_distribution = m_FeatureDetector.detect(m_CurrentFrame, m_TrackedPoints);
@@ -183,7 +182,7 @@ namespace lvk
                     m_MatchedPoints,
                     m_InlierStatus,
                     cv::RANSAC,
-                    USAC_THRESHOLD,
+                    USAC_NOISE_TOLERANCE,
                     USAC_MAX_ITERS
                 )
             );
@@ -230,41 +229,45 @@ namespace lvk
         std::vector<uint8_t>& inlier_status
     )
     {
+        LVK_ASSERT(tracked_points.size() == matched_points.size());
+        LVK_ASSERT(inlier_status.size() == tracked_points.size());
+
         // Initialize frame motion to the global transform (e.g. background motion).
         WarpField frame_motion(global_transform, m_Settings.detection_resolution, m_Settings.motion_resolution);
         cv::Mat& global_field = frame_motion.offsets();
 
-        const cv::Size2f field_norm_factor = 1.0f / region.size();
+        // Create a motion accumulation grid whose cells are centered on the field points.
         const cv::Size2f field_size = m_Settings.motion_resolution;
         const cv::Size2f vertex_area = region.size() / (field_size - 1.0f);
-
-        // Form a motion accumulation grid with cells are centered on the field points.
         const VirtualGrid grid(field_size, {region.tl() * (vertex_area / 2.0f), field_size * vertex_area});
-        cv::Mat accumulator(m_Settings.motion_resolution, CV_32FC3, cv::Scalar::zeros());
+
+        const auto local_norm_factor = 1.0f / region.size();
+        const auto local_angle_limit = m_Settings.max_local_variance * std::numbers::pi;
 
         // Accumulate all the local motion residuals using the grid.
-        inlier_status.resize(tracked_points.size());
+        cv::Mat accumulator(m_Settings.motion_resolution, CV_32FC3, cv::Scalar::zeros());
         for(size_t i = 0; i < tracked_points.size(); i++)
         {
             const cv::Point2f& src_point = tracked_points[i];
             const cv::Point2f& dst_point = matched_points[i];
-            uint8_t& inlier = inlier_status[i] = 0;
 
             if(const auto coord = grid.key_of(dst_point); grid.test_point(dst_point))
             {
-                const auto local_motion = (src_point - dst_point) * field_norm_factor;
                 const auto global_motion = global_field.at<cv::Point2f>(coord);
-                const auto residual_motion = local_motion - global_motion;
+                const auto local_motion = (src_point - dst_point) * local_norm_factor;
+                const auto l1 = local_motion.dot(local_motion), l2 = global_motion.dot(global_motion);
 
-                const auto global_magnitude = global_motion.dot(global_motion);
-                const auto residual_magnitude = residual_motion.dot(residual_motion);
+                // Only consider local motions that are similar to the global motion in both
+                // magnitude and direction. Motions which arise from parallax or depth changes
+                // should have similar direction, while foreground motions may vary drastically.
+                const bool similar_direction = std::abs(angle_of(local_motion, global_motion)) <= local_angle_limit;
+                const bool similar_magnitude = l1 <= m_Settings.max_local_increase * l2;
 
-                // Ensure that residual motions are similar to the global motion.
-                if(residual_magnitude / global_magnitude < m_Settings.max_motion_variance)
+                if(uint8_t& inlier = inlier_status[i]; similar_direction && similar_magnitude)
                 {
                     auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord);
-                    dx += residual_motion.x;
-                    dy += residual_motion.y;
+                    dx += local_motion.x - global_motion.x;
+                    dy += local_motion.y - global_motion.y;
                     count += 1.0f;
                     inlier = 1;
                 }
@@ -278,14 +281,11 @@ namespace lvk
         cv::Mat residuals(m_Settings.motion_resolution, CV_32FC2);
         residuals.forEach<cv::Point2f>([&](cv::Point2f& residual, const int coord[]){
             const auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord[0], coord[1]);
-            residual.x = dx; residual.y = dy;
 
-            // Average the residual, weighted by the number of samples.
-            if(count > 0.0f)
-            {
-                const float weight = std::exp(0.4f * (count - LOCAL_SAMPLE_TARGET));
-                residual *= std::min(weight, 1.0f) / count;
-            }
+            // NOTE: clamp count to 1 and above to avoid dividing by zero.
+            const auto weight = 1.0f / std::max(count, 1.0f);
+            residual.x = dx * weight;
+            residual.y = dy * weight;
         });
 
         // Spatially smooth and combine the residuals.
