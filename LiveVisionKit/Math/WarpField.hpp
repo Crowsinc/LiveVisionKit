@@ -61,6 +61,15 @@ namespace lvk
 
         const cv::Mat& offsets() const;
 
+        operator cv::Mat&();
+
+        operator const cv::Mat&() const;
+
+        operator cv::_InputOutputArray();
+
+        operator cv::_InputArray() const;
+
+
         void to_map(cv::Mat& dst) const;
 
         void to_map(cv::UMat& dst) const;
