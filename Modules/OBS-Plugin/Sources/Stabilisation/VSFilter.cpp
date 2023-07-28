@@ -171,8 +171,10 @@ namespace lvk
         m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
-			stab_settings.scene_margins = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE))/100.0f;
-            stab_settings.crop_to_margins = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
+            const auto crop = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE));
+
+            stab_settings.path_correction_limits = cv::Size2f{crop, crop} / 100.0f;
+            stab_settings.crop_to_stable_region = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
 			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
             stab_settings.draw_tracking_points = m_TestMode;
@@ -219,17 +221,17 @@ namespace lvk
         lvk::log::print_settings(
             m_Context,
             "\n    Predictive Frames: %d"
-            "\n    Stream Delay: %d"
+            "\n    Stream Delay: %dms"
             "\n    Subsystem: %s"
-            "\n    Crop Percentage: %.2f%%"
+            "\n    Crop Percentage: %.0f%%"
             "\n    Auto-apply Crop: %s"
             "\n    Disable Stabilization: %s"
             "\n    Test Mode: %s",
             m_Filter.settings().path_prediction_samples,
             new_stream_delay,
             obs_data_get_string(settings, PROP_SUBSYSTEM),
-            m_Filter.settings().scene_margins * 100.0f,
-            m_Filter.settings().crop_to_margins ? "Yes" : "No",
+            m_Filter.settings().path_correction_limits.width * 100.0f,
+            m_Filter.settings().crop_to_stable_region ? "Yes" : "No",
             m_Filter.settings().stabilize_output ? "No" : "Yes",
             m_TestMode ? "Yes" : "No"
         );

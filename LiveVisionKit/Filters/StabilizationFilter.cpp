@@ -36,26 +36,24 @@ namespace lvk
 
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
-        // Reset the tracking when disabling the stabilization otherwise we will have
-        // a discontinuity in the tracking once we start up again with a brand new scene.
+        m_NullMotion.resize(settings.motion_resolution);
+
+        // We need to reset the context when disabling the stabilization
+        // otherwise we'll have a discontinuity when start tracking again.
         if(m_Settings.stabilize_output && !settings.stabilize_output)
             reset_context();
 
+        m_Settings = settings;
+
+        // Link up the motion resolutions.
+        static_cast<PathSmootherSettings&>(m_Settings).motion_resolution = settings.motion_resolution;
+        static_cast<FrameTrackerSettings&>(m_Settings).motion_resolution = settings.motion_resolution;
+
         // Configure the path smoother and our auxiliary frame queue.
-        m_PathSmoother.configure(settings);
+        m_PathSmoother.configure(m_Settings);
         m_FrameQueue.resize(m_PathSmoother.time_delay() + 1);
 
-        // Resize and reset cached motion fields.
-        m_NullMotion.resize(settings.motion_resolution);
-        m_CropMotion = WarpField(settings.motion_resolution);
-
-        // Update motion limits and crop margins.
-        const cv::Rect2f motion_margins = crop<float>({1, 1}, settings.scene_margins);
-        m_MotionLimits = motion_margins.tl();
-        m_CropMotion.crop_in(motion_margins);
-
-        m_FrameTracker.configure(settings);
-        m_Settings = settings;
+        m_FrameTracker.configure(m_Settings);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -78,9 +76,9 @@ namespace lvk
                 m_FrameQueue.skip(1);
 
                 // Apply crop to the output
-                if(m_Settings.crop_to_margins)
+                if(m_Settings.crop_to_stable_region)
                 {
-                    m_CropMotion.apply(output, m_WarpFrame);
+                    m_PathSmoother.scene_crop().apply(output, m_WarpFrame);
                     std::swap(output, m_WarpFrame);
                 }
             }
@@ -105,18 +103,18 @@ namespace lvk
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
 
-        // If the time delay is properly built up, start stabilizing frames
-        if(auto correction = m_PathSmoother.next(motion, m_MotionLimits); ready())
+        // If the time delay is built up, start stabilizing frames
+        if(auto correction = m_PathSmoother.next(motion); ready())
         {
             // Reference the next frame then skip the buffer by one.
             // This will shorten the queue without de-allocating.
             auto& next_frame = m_FrameQueue.oldest();
             m_FrameQueue.skip();
 
-            // Crop the frame to the scene margins if needed.
-            if(m_Settings.crop_to_margins) correction += m_CropMotion;
-            m_FrameMargins = crop(next_frame.size(), m_Settings.scene_margins);
-
+            if(m_Settings.crop_to_stable_region)
+            {
+                correction += m_PathSmoother.scene_crop();
+            }
             correction.apply(next_frame, output);
         }
         else output.release();
@@ -154,16 +152,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    float StabilizationFilter::scene_stability() const
-    {
-        return m_FrameTracker.scene_stability();
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-	const cv::Rect& StabilizationFilter::stable_region() const
+	cv::Rect StabilizationFilter::stable_region() const
 	{
-		return m_FrameMargins;
+        const auto& margins = m_PathSmoother.scene_margins();
+        const auto& frame_size = cv::Size2f(m_FrameQueue.oldest().size());
+
+        return {margins.tl() * frame_size, margins.size() * frame_size};
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

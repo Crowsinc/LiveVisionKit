@@ -27,10 +27,10 @@ namespace lvk
 
 	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathSmootherSettings
 	{
-        float scene_margins = 0.1f;
-        bool crop_to_margins = false;
-		bool stabilize_output = true;
+        cv::Size motion_resolution = {2, 2};
+        bool crop_to_stable_region = false;
         bool draw_tracking_points = false;
+		bool stabilize_output = true;
 	};
 
 
@@ -50,9 +50,7 @@ namespace lvk
 
         size_t frame_delay() const;
 
-		float scene_stability() const;
-
-		const cv::Rect& stable_region() const;
+		cv::Rect stable_region() const;
 
         const std::vector<cv::Point2f>& tracking_points() const;
 
@@ -64,12 +62,8 @@ namespace lvk
 		FrameTracker m_FrameTracker;
 		PathSmoother m_PathSmoother;
 
-        cv::Rect m_FrameMargins{};
-        cv::Size2f m_MotionLimits{};
         StreamBuffer<Frame> m_FrameQueue{1};
         VideoFrame m_WarpFrame, m_TrackingFrame;
-
-        WarpField m_CropMotion{WarpField::MinimumSize};
         WarpField m_NullMotion{WarpField::MinimumSize};
 	};
 

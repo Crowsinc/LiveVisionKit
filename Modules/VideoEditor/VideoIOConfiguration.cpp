@@ -413,15 +413,18 @@ namespace clt
             {"vs", "stab"},
             "A video stabilization filter used to smoothen percieved camera motions.",
             [](clt::OptionsParser& config_parser, lvk::StabilizationFilterSettings& config){
-                config_parser.add_variable(
+                config_parser.add_variable<float>(
                     {".crop_prop", ".cp"},
                     "Used to percentage crop and movement area allowed for stabilization",
-                    &config.scene_margins
+                    [&](const float proportion){
+                        config.path_correction_limits.width = proportion;
+                        config.path_correction_limits.height = proportion;
+                    }
                 );
                 config_parser.add_switch(
                     {".crop_out", ".co"},
                     "Specifies that the output should be automatically cropped",
-                    &config.crop_to_margins
+                    &config.crop_to_stable_region
                 );
                 config_parser.add_variable(
                     {".smoothing", ".s"},

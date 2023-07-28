@@ -28,8 +28,15 @@ namespace lvk
 
     struct PathSmootherSettings
     {
-        // NOTE: frame delay is proportional to prediction frames
+        cv::Size motion_resolution = {2, 2};
+
+        // NOTE: introduces time delay.
         size_t path_prediction_samples = 10;
+        cv::Size2f path_correction_limits = {0.1f, 0.1f};
+
+        float max_smoothing_range = 10.0f;
+        float min_smoothing_sigma = 3.0f;
+        float response_rate = 0.08f;
     };
 
     class PathSmoother final : public Configurable<PathSmootherSettings>
@@ -40,22 +47,25 @@ namespace lvk
 
         void configure(const PathSmootherSettings& settings) override;
 
-        WarpField next(const WarpField& motion, const cv::Size2f& limits);
-
-        WarpField position() const;
-
-        size_t time_delay() const;
+        WarpField next(const WarpField& motion);
 
         void restart();
 
-    private:
+        size_t time_delay() const;
 
-        void resize_fields(const cv::Size& new_size);
+        const WarpField& scene_crop() const;
+
+        const cv::Rect2f& scene_margins() const;
 
     private:
-        double m_SmoothingFactor = 0.0;
-        StreamBuffer<WarpField> m_Path{1};
+        double m_SmoothingFactor = 0.0f;
+        StreamBuffer<WarpField> m_Trajectory{1};
         WarpField m_Trace{WarpField::MinimumSize};
+        WarpField m_Position{WarpField::MinimumSize};
+
+        cv::Rect2f m_SceneMargins{0,0,0,0};
+        WarpField m_SceneCrop{WarpField::MinimumSize};
     };
+
 
 }
