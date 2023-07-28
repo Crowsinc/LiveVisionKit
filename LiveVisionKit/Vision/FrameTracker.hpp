@@ -35,9 +35,9 @@ namespace lvk
         float max_local_variance = 0.25f;
 
         // Robustness Constraints
-        size_t min_motion_samples = 100;
-        float min_motion_quality = 0.25f;
-        float continuity_threshold = 0.3f;
+        size_t min_motion_samples = 75;
+        float min_motion_quality = 0.20f;
+        float continuity_threshold = 0.30f;
     };
 
 	class FrameTracker final : public Configurable<FrameTrackerSettings>
