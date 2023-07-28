@@ -71,6 +71,8 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
+        LVK_ASSERT(settings.motion_resolution.height >= WarpField::MinimumSize.height);
+        LVK_ASSERT(settings.motion_resolution.width >= WarpField::MinimumSize.width);
         LVK_ASSERT(settings.max_local_increase > 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
         LVK_ASSERT_01(settings.min_motion_quality);
