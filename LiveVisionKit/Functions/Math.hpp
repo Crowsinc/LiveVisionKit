@@ -90,6 +90,9 @@ namespace lvk
 
 
     template<typename T>
+    cv::Rect_<T> crop(const cv::Size_<T>& region, const float x_proportion, const float y_proportion);
+
+    template<typename T>
     cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion);
 
 }

@@ -211,17 +211,25 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     template<typename T>
-    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion)
+    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const float x_proportion, const float y_proportion)
     {
-        const T total_horz_crop = region.width * proportion;
-        const T total_vert_crop = region.height * proportion;
+        const T total_horz_crop = region.width * x_proportion;
+        const T total_vert_crop = region.height * y_proportion;
 
         return cv::Rect_<T>(
-            total_horz_crop / 2,
-            total_vert_crop / 2,
-            region.width - total_horz_crop,
-            region.height - total_vert_crop
+                total_horz_crop / 2,
+                total_vert_crop / 2,
+                region.width - total_horz_crop,
+                region.height - total_vert_crop
         );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion)
+    {
+        return crop(region, proportion, proportion);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
