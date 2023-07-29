@@ -90,16 +90,6 @@ namespace lvk
         input.reformatTo(m_TrackingFrame, VideoFrame::GRAY);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
 
-        // Draw the tracking points if the option is set.
-        if(m_Settings.draw_tracking_points)
-        {
-            m_FrameTracker.draw_trackers(
-                input,
-                col::GREEN[input.format],
-                7, 10
-            );
-        }
-
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
 
@@ -145,6 +135,18 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void StabilizationFilter::draw_trackers()
+    {
+        auto& frame = m_FrameQueue.newest();
+        m_FrameTracker.draw_trackers(
+            frame,
+            col::GREEN[frame.format],
+            7, 10
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     size_t StabilizationFilter::frame_delay() const
     {
         return m_PathSmoother.time_delay();
@@ -159,13 +161,6 @@ namespace lvk
 
         return {margins.tl() * frame_size, margins.size() * frame_size};
 	}
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    const std::vector<cv::Point2f>& StabilizationFilter::tracking_points() const
-    {
-        return m_FrameTracker.tracking_points();
-    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

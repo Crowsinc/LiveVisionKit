@@ -29,7 +29,6 @@ namespace lvk
 	{
         cv::Size motion_resolution = {2, 2};
         bool crop_to_stable_region = false;
-        bool draw_tracking_points = false;
 		bool stabilize_output = true;
 	};
 
@@ -48,11 +47,11 @@ namespace lvk
 
 		void reset_context();
 
+        void draw_trackers();
+
         size_t frame_delay() const;
 
 		cv::Rect stable_region() const;
-
-        const std::vector<cv::Point2f>& tracking_points() const;
 
 	private:
 

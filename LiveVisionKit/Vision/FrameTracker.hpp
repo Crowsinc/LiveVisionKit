@@ -60,7 +60,7 @@ namespace lvk
 
 		const std::vector<cv::Point2f>& tracking_points() const;
 
-        void draw_trackers(cv::UMat& dst, const cv::Scalar& color, const int size = 10, const int thickness = 3);
+        void draw_trackers(cv::UMat& dst, const cv::Scalar& color, const int size = 10, const int thickness = 3) const;
 
     private:
 

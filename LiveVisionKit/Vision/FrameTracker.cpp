@@ -318,7 +318,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void FrameTracker::draw_trackers(cv::UMat& dst, const cv::Scalar& colour, const int size, const int thickness)
+    void FrameTracker::draw_trackers(cv::UMat& dst, const cv::Scalar& colour, const int size, const int thickness) const
     {
         LVK_ASSERT(thickness > 0);
         LVK_ASSERT(size > 0);

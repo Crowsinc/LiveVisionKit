@@ -177,7 +177,6 @@ namespace lvk
             stab_settings.crop_to_stable_region = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
 			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
-            stab_settings.draw_tracking_points = m_TestMode;
 
             // Configure motion quality
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
@@ -257,6 +256,7 @@ namespace lvk
         if(m_TestMode)
         {
             m_Filter.apply(std::move(frame), frame, true);
+            m_Filter.draw_trackers();
             draw_debug_hud(frame);
         }
         else m_Filter.apply(std::move(frame), frame);
