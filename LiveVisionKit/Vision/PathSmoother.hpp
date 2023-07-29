@@ -35,7 +35,7 @@ namespace lvk
         cv::Size2f path_correction_limits = {0.1f, 0.1f};
 
         float max_smoothing_range = 10.0f;
-        float min_smoothing_sigma = 3.0f;
+        float min_smoothing_factor = 3.0f;
         float response_rate = 0.08f;
     };
 

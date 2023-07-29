@@ -39,8 +39,8 @@ namespace lvk
         LVK_ASSERT_01(settings.path_correction_limits.height);
         LVK_ASSERT_01(settings.path_correction_limits.width);
         LVK_ASSERT(settings.path_prediction_samples > 0);
+        LVK_ASSERT(settings.min_smoothing_factor > 0.0f);
         LVK_ASSERT(settings.max_smoothing_range > 0.0f);
-        LVK_ASSERT(settings.min_smoothing_sigma > 0.0f);
         LVK_ASSERT_01(settings.response_rate);
 
         m_Settings = settings;
@@ -101,7 +101,7 @@ namespace lvk
         // to bring the trace back towards the path.
         m_SmoothingFactor = exp_moving_average(
             m_SmoothingFactor,
-            m_Settings.max_smoothing_range * (1.0 - max_drift_error) + m_Settings.min_smoothing_sigma,
+            m_Settings.max_smoothing_range * (1.0 - max_drift_error) + m_Settings.min_smoothing_factor,
             m_Settings.response_rate
         );
         const cv::Mat smoothing_filter = cv::getGaussianKernel(
