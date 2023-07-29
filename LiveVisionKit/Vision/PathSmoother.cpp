@@ -104,11 +104,11 @@ namespace lvk
         );
 
         // Apply the filter to get the current smooth trace position.
-        float weight = 1.0f; // TODO:
+        float weight = 1.0f;
         m_Trace = m_Trajectory.oldest();
         for(size_t i = 1; i < m_Trajectory.size(); i++)
         {
-            weight -= smoothing_filter.at<float>(i - 1);
+            weight -= smoothing_filter.at<float>(static_cast<int>(i) - 1);
             m_Trace.combine(m_Trajectory[i], weight);
         }
 
@@ -123,10 +123,8 @@ namespace lvk
 
     void PathSmoother::restart()
     {
-        m_Trajectory.clear();
-
-        // Pre-fill the path to avoid edge cases.
-        m_Trajectory.pad_back(m_Settings.motion_resolution);
+        // Trajectory should always be full, so we can just clear it.
+        for(auto& motion : m_Trajectory) motion.set_identity();
         m_Position.set_identity();
         m_Trace.set_identity();
     }
