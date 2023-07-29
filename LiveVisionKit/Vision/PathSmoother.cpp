@@ -50,14 +50,21 @@ namespace lvk
         // and is symmetrical with the center element, representing the current position
         // in time. To achieve predictive smoothing the trajectory is implicitly delayed.
         m_Trajectory.resize(2 * settings.path_prediction_samples + 1);
-        m_Trajectory.pad_front(settings.motion_resolution);
 
-        // Re-create all motion fields with the new resolution.
         if(m_Position.size() != settings.motion_resolution)
         {
-            m_Position.resize(settings.motion_resolution);
-            m_Trace.resize(settings.motion_resolution);
-            restart();
+            m_Trajectory.clear();
+
+            // Re-create all motion fields with the new resolution.
+            m_Trajectory.pad_back(settings.motion_resolution);
+            m_Position = WarpField(settings.motion_resolution);
+            m_Trace = WarpField(settings.motion_resolution);
+        }
+        else
+        {
+            // NOTE: Trajectory is always kept full to avoid edge cases. We also
+            // always pad from the front so that the existing data stays current.
+            m_Trajectory.pad_front(settings.motion_resolution);
         }
 
         m_SceneMargins = crop<float>({1,1}, settings.path_correction_limits);
