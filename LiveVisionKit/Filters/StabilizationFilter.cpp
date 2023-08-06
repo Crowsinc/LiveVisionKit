@@ -87,7 +87,7 @@ namespace lvk
         }
 
         // Track the motion of the incoming frame.
-        input.reformatTo(m_TrackingFrame, VideoFrame::GRAY);
+        input.viewAsFormat(m_TrackingFrame, VideoFrame::GRAY);
         const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
 
         // Push the tracked frame onto the queue to be stabilized later.
