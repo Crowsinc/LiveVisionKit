@@ -78,8 +78,10 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    inline size_t index_2d(size_t x, size_t y, size_t row_length)
+    template<typename T>
+    inline T index_2d(T x, T y, T row_length)
     {
+        static_assert(std::is_integral_v<T>);
         LVK_ASSERT(row_length > 0);
 
         return y * row_length + x;
@@ -87,9 +89,12 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    inline cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length)
+    template<typename T>
+    inline cv::Point_<T> inv_index_2d(T index, T row_length)
     {
-        return cv::Point_<size_t>(
+        static_assert(std::is_integral_v<T>);
+
+        return cv::Point_<T>(
             index % row_length,
             index / row_length
         );

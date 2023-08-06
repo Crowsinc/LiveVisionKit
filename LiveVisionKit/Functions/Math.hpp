@@ -43,9 +43,11 @@ namespace lvk
     T ratio_of(const V& numerator, const V& denominator);
 
 
-    size_t index_2d(size_t x, size_t y, size_t row_length);
+    template<typename T>
+    T index_2d(T x, T y, T row_length);
 
-    cv::Point_<size_t> inv_index_2d(size_t index, size_t row_length);
+    template<typename T>
+    cv::Point_<T> inv_index_2d(T index, T row_length);
 
 
 	template<typename T>
