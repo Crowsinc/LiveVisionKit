@@ -24,6 +24,7 @@
 #include "Functions/Drawing.hpp"
 #include "Functions/Image.hpp"
 #include "Functions/Math.hpp"
+#include "VirtualGrid.hpp"
 #include "Directives.hpp"
 
 namespace lvk
@@ -524,26 +525,10 @@ namespace lvk
         {
             // Combine the resolutions maximally to avoid always throwing out the
             // cache for non-square resolutions which are rotations of each other.
-            coord_grid.create(
-                std::max(resolution.height, coord_grid.rows),
-                std::max(resolution.width, coord_grid.cols),
-                CV_32FC2
-            );
-
-            // Create row and column vectors with the respective coord x and y values.
-            // Then use a nearest neighbour resize operation to bring them up to size.
-            cv::Mat row_values(1, coord_grid.cols, CV_32FC1);
-            for(int i = 0; i < coord_grid.cols; i++)
-                row_values.at<float>(0, i) = static_cast<float>(i);
-
-            cv::Mat col_values(coord_grid.rows, 1, CV_32FC1);
-            for(int i = 0; i < coord_grid.rows; i++)
-                col_values.at<float>(i, 0) = static_cast<float>(i);
-
-            cv::Mat x_plane, y_plane;
-            cv::resize(row_values, x_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
-            cv::resize(col_values, y_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
-            cv::merge(std::vector{x_plane, y_plane}, coord_grid);
+            coord_grid = VirtualGrid({
+                 std::max(resolution.height, coord_grid.rows),
+                 std::max(resolution.width, coord_grid.cols)
+            }).make_grid();
         }
 
         return coord_grid(cv::Rect({0,0}, resolution));
