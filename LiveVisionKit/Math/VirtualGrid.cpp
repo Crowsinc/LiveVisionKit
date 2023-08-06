@@ -113,6 +113,39 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    cv::Mat VirtualGrid::make_grid() const
+    {
+        cv::Mat coord_grid(m_Resolution, CV_32FC2);
+
+        // Create row and column vectors with the respective coord x and y values.
+        // Then use a nearest neighbour resize operation to bring them up to size.
+        cv::Mat row_values(1, coord_grid.cols, CV_32FC1);
+        for(int i = 0; i < coord_grid.cols; i++)
+            row_values.at<float>(0, i) = static_cast<float>(i);
+
+        cv::Mat col_values(coord_grid.rows, 1, CV_32FC1);
+        for(int i = 0; i < coord_grid.rows; i++)
+            col_values.at<float>(i, 0) = static_cast<float>(i);
+
+        cv::Mat x_plane, y_plane;
+        cv::resize(row_values, x_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
+        cv::resize(col_values, y_plane, coord_grid.size(), 0, 0, cv::INTER_NEAREST_EXACT);
+        cv::merge(std::vector{x_plane, y_plane}, coord_grid);
+
+        return coord_grid;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Mat VirtualGrid::make_aligned_grid() const
+    {
+        auto grid = make_grid();
+        cv::multiply(grid, cv::Scalar(m_KeySize.width, m_KeySize.height), grid);
+        return grid;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     bool VirtualGrid::test_key(const SpatialKey& key) const
     {
         return key.x < m_Resolution.width && key.y < m_Resolution.height;
@@ -124,14 +157,14 @@ namespace lvk
     {
         LVK_ASSERT(test_key(key));
 
-        return index_2d(key.x, key.y, m_Resolution.width);
+        return index_2d<size_t>(key.x, key.y, m_Resolution.width);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     SpatialKey VirtualGrid::index_to_key(const size_t index) const
     {
-        return inv_index_2d(index, m_Resolution.width);
+        return inv_index_2d<size_t>(index, m_Resolution.width);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -162,4 +195,45 @@ namespace lvk
     }
 
 //---------------------------------------------------------------------------------------------------------------------
+
+    void VirtualGrid::for_each(
+        const std::function<void(const int index, const cv::Point& coord)>& operation
+    ) const
+    {
+        // TODO: add parallel option.
+        int index = 0;
+        for(int r = 0; r < m_Resolution.height; r++)
+        {
+            for(int c = 0; c < m_Resolution.width; c++)
+            {
+                operation(
+                    index++,
+                    cv::Point(c, r)
+                );
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void VirtualGrid::for_each_aligned(
+        const std::function<void(const int index, const cv::Point2f& coord)>& operation
+    ) const
+    {
+        // TODO: add parallel option.
+        int index = 0;
+        for(int r = 0; r < m_Resolution.height; r++)
+        {
+            for(int c = 0; c < m_Resolution.width; c++)
+            {
+                operation(
+                    index++,
+                    cv::Point2f(static_cast<float>(c) * m_KeySize.width, static_cast<float>(r) * m_KeySize.height)
+                );
+            }
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 }

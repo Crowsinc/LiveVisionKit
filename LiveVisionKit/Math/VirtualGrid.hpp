@@ -54,6 +54,11 @@ namespace lvk
         const cv::Size2f& key_size() const;
 
 
+        cv::Mat make_grid() const;
+
+        cv::Mat make_aligned_grid() const;
+
+
         bool test_key(const SpatialKey& key) const;
 
         size_t key_to_index(const SpatialKey& key) const;
@@ -66,6 +71,11 @@ namespace lvk
         SpatialKey key_of(const cv::Point2f& point) const;
 
         std::optional<SpatialKey> try_key_of(const cv::Point2f& point) const;
+
+
+        void for_each(const std::function<void(const int index, const cv::Point& coord)>& operation) const;
+
+        void for_each_aligned(const std::function<void(const int index, const cv::Point2f& coord)>& operation) const;
 
     private:
         cv::Size m_Resolution;
