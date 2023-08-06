@@ -458,7 +458,7 @@ namespace lvk
 
 			m_ImageSize = frame.size();
 
-			if(m_Calibrator.feed(frame, true))
+			if(m_Calibrator.feed_and_draw(frame))
 			{
 				// Hold the frame with the corners drawn on for user feedback
 				frame.copyTo(m_HoldFrame);

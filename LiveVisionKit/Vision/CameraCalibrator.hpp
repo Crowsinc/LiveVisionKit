@@ -19,6 +19,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "Data/VideoFrame.hpp"
+
 namespace lvk
 {
 
@@ -34,8 +36,9 @@ namespace lvk
 
         explicit CameraCalibrator(const cv::Size& pattern_size) ;
 
-		// Expects YUV frame
-		bool feed(cv::UMat& frame, const bool draw_corners = false);
+		bool feed(const VideoFrame& frame);
+
+        bool feed_and_draw(VideoFrame& frame);
 
 		CameraParameters calibrate(const uint32_t square_size = 1) const;
 
@@ -48,7 +51,7 @@ namespace lvk
 		const cv::Size m_PatternSize;
 
 		cv::Size m_ImageSize;
-		cv::UMat m_DetectionFrame;
+		VideoFrame m_DetectionFrame;
 		std::vector<std::vector<cv::Point2f>> m_ImagePoints;
 
 	};

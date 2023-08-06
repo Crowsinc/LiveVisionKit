@@ -35,41 +35,47 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	bool CameraCalibrator::
-    feed(cv::UMat& frame, const bool draw_corners)
+    bool CameraCalibrator::feed(const VideoFrame& frame)
+    {
+        if(m_ImageSize.empty())
+            m_ImageSize = frame.size();
+
+        LVK_ASSERT(frame.size() == m_ImageSize);
+
+        // Extract grayscale frame for detection.
+        frame.viewAsFormat(m_DetectionFrame, VideoFrame::GRAY);
+
+        std::vector<cv::Point2f> corners;
+        const bool found = cv::findChessboardCorners(
+            m_DetectionFrame,
+            m_PatternSize,
+            corners,
+            cv::CALIB_CB_ADAPTIVE_THRESH
+        );
+
+        if(found)
+        {
+            cv::cornerSubPix(
+                m_DetectionFrame,
+                corners,
+                cv::Size(11,11),
+                cv::Size(-1,-1),
+                cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001)
+            );
+
+            m_ImagePoints.emplace_back(corners);
+        }
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool CameraCalibrator::feed_and_draw(VideoFrame& frame)
 	{
-		if(m_ImageSize.empty())
-			m_ImageSize = frame.size();
-
-		LVK_ASSERT(frame.size() == m_ImageSize);
-
-		// Extract Y plane for detection.
-		cv::extractChannel(frame, m_DetectionFrame, 0);
-
-		std::vector<cv::Point2f> corners;
-		const bool found = cv::findChessboardCorners(
-			m_DetectionFrame,
-			m_PatternSize,
-			corners,
-			cv::CALIB_CB_ADAPTIVE_THRESH
-		);
-
+        const bool found = feed(frame);
 		if(found)
-		{
-			cv::cornerSubPix(
-				m_DetectionFrame,
-				corners,
-				cv::Size(11,11),
-				cv::Size(-1,-1),
-				cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001)
-			);
-
-			m_ImagePoints.emplace_back(corners);
-		}
-
-		if(draw_corners)
-			cv::drawChessboardCorners(frame, m_PatternSize, corners, found);
-
+        {
+            cv::drawChessboardCorners(frame, m_PatternSize, m_ImagePoints.back(), found);
+        }
 		return found;
 	}
 
