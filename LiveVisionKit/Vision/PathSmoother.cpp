@@ -65,6 +65,11 @@ namespace lvk
             // NOTE: Trajectory is always kept full to avoid edge cases. We also
             // always pad from the front so that the existing data stays current.
             m_Trajectory.pad_front(settings.motion_resolution);
+
+            // Reset the position in case the trajectory changed.
+            m_Position = m_Trajectory.oldest();
+            for(size_t i = 1; i <= m_Trajectory.centre_index(); i++)
+                m_Position += m_Trajectory[i];
         }
 
         m_SceneMargins = crop<float>({1,1}, settings.path_correction_limits);
