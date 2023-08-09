@@ -69,12 +69,13 @@ namespace lvk::col
 	const cv::Scalar GREEN[] = {bgr::GREEN, bgr::GREEN, rgb::GREEN, rgb::GREEN, yuv::GREEN, gray::GREEN};
 	const cv::Scalar BLUE[] = {bgr::BLUE, bgr::BLUE, rgb::BLUE, rgb::BLUE, yuv::BLUE, gray::BLUE};
 	const cv::Scalar RED[] = {bgr::RED, bgr::RED, rgb::RED, rgb::RED, yuv::RED, gray::RED};
+
+	cv::Scalar rgb2yuv(const cv::Scalar& rgb);
 }
 
 // DRAWING FUNCTIONS
 namespace lvk
 {
-
     template<typename T>
     void draw_rect(
         cv::UMat& dst,
