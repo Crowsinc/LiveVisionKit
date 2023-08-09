@@ -79,9 +79,7 @@ namespace lvk
 
         void undistort(const float tolerance = 0.7f);
 
-        void apply(const cv::UMat& src, cv::UMat& dst) const;
-
-        void apply(const VideoFrame& src, VideoFrame& dst) const;
+        void apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background = {0,0,0}) const;
 
         void draw(cv::UMat& dst, const cv::Scalar& color = yuv::MAGENTA, const int thickness = 2) const;
 

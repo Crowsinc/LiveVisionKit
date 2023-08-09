@@ -234,7 +234,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::apply(const cv::UMat& src, cv::UMat& dst) const
+    void WarpField::apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background) const
     {
         const cv::Scalar motion_scaling(src.cols, src.rows);
 
@@ -243,7 +243,7 @@ namespace lvk
             // If our field is larger than 2x2 then scale up the field and remap the input.
             cv::resize(m_Field, m_WarpMap, src.size(), 0, 0, cv::INTER_LINEAR_EXACT);
             cv::multiply(m_WarpMap, motion_scaling, m_WarpMap);
-            lvk::remap(src, dst, m_WarpMap, true /* assume yuv */);
+            lvk::remap(src, dst, m_WarpMap, background);
         }
         else
         {
@@ -251,15 +251,15 @@ namespace lvk
             const auto w = static_cast<float>(src.cols);
             const auto h = static_cast<float>(src.rows);
             const std::array<cv::Point2f, 4> destination = {
-                cv::Point2f(0, 0), cv::Point2f(w, 0),
-                cv::Point2f(0, h), cv::Point2f(w, h)
+                    cv::Point2f(0, 0), cv::Point2f(w, 0),
+                    cv::Point2f(0, h), cv::Point2f(w, h)
             };
 
             const std::array<cv::Point2f, 4> source = {
-                destination[0] + m_Field.at<cv::Point2f>(0, 0) * motion_scaling,
-                destination[1] + m_Field.at<cv::Point2f>(0, 1) * motion_scaling,
-                destination[2] + m_Field.at<cv::Point2f>(1, 0) * motion_scaling,
-                destination[3] + m_Field.at<cv::Point2f>(1, 1) * motion_scaling
+                    destination[0] + m_Field.at<cv::Point2f>(0, 0) * motion_scaling,
+                    destination[1] + m_Field.at<cv::Point2f>(0, 1) * motion_scaling,
+                    destination[2] + m_Field.at<cv::Point2f>(1, 0) * motion_scaling,
+                    destination[3] + m_Field.at<cv::Point2f>(1, 1) * motion_scaling
             };
 
             cv::warpPerspective(
@@ -268,17 +268,10 @@ namespace lvk
                 cv::getPerspectiveTransform(destination.data(), source.data()),
                 src.size(),
                 cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
-                cv::BORDER_CONSTANT
+                cv::BORDER_CONSTANT,
+                background
             );
         }
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    void WarpField::apply(const VideoFrame& src, VideoFrame& dst) const
-    {
-        // TODO: create specialized apply function for video frames.
-        apply(static_cast<cv::UMat>(src), dst);
 
         // Update metadata.
         dst.timestamp = src.timestamp;
