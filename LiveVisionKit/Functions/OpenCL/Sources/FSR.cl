@@ -363,6 +363,7 @@ __kernel void easu_remap(
     __global uchar* src, int src_step, int src_offset, int src_rows, int src_cols,
     __global uchar* dst, int dst_step, int dst_offset, int4 dst_bounds,
     __global uchar* map, int map_step, int map_offset
+    uchar3 background_colour
 )
 {
     // Swizzle the threads for potentially better cache use.
@@ -383,7 +384,7 @@ __kernel void easu_remap(
     sub_pixel -= floor(sub_pixel);
 
     // Nest the border conditions on the src to help load balance and minimize branches.
-    uchar3 dst_pixel = (uchar3)(0, 0, 0);
+    uchar3 dst_pixel = background_colour;
     if(src_coord.x < 1 || src_coord.y < 1 || src_coord.x >= src_cols - 4 || src_coord.y >= src_rows - 4)
     {
         // If we are still within the overall src bounds use nearest neighbour. 

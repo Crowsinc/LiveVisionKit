@@ -25,14 +25,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    // TODO: properly handle bounds to avoid loss of content?
-    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv)
+    void remap(const VideoFrame& src, VideoFrame& dst, const cv::UMat& offset_map, const cv::Scalar& background)
     {
         LVK_ASSERT(offset_map.type() == CV_32FC2);
         LVK_ASSERT(src.cols > 0 && src.rows > 0);
         LVK_ASSERT(src.type() == CV_8UC3);
         LVK_ASSERT(!offset_map.empty());
         LVK_ASSERT(!src.empty());
+
+        const bool yuv = src.format == VideoFrame::YUV;
 
         // FSR program has yuv and bgr versions for different luma calculations.
         static auto program_yuv = ocl::load_program("fsr", ocl::src::fsr_source, "-D YUV_INPUT");
@@ -65,7 +66,12 @@ namespace lvk
             cv::ocl::KernelArg::ReadOnly(src),
             cv::ocl::KernelArg::WriteOnlyNoSize(dst),
             cv::Vec4i{dst_offset.x, dst_offset.y, dst.cols, dst.rows},
-            cv::ocl::KernelArg::ReadOnlyNoSize(offset_map)
+            cv::ocl::KernelArg::ReadOnlyNoSize(offset_map),
+            cv::Vec3b{
+                static_cast<uint8_t>(background[0]),
+                static_cast<uint8_t>(background[1]),
+                static_cast<uint8_t>(background[2])
+            }
         ).run_(2, global_work_size, local_work_size, false);
 
         // Create next kernel while the last one runs.
