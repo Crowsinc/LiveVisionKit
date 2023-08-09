@@ -67,11 +67,12 @@ namespace lvk
             cv::ocl::KernelArg::WriteOnlyNoSize(dst),
             cv::Vec4i{dst_offset.x, dst_offset.y, dst.cols, dst.rows},
             cv::ocl::KernelArg::ReadOnlyNoSize(offset_map),
-            cv::Vec3b{
+            cv::Vec4b(
                 static_cast<uint8_t>(background[0]),
                 static_cast<uint8_t>(background[1]),
-                static_cast<uint8_t>(background[2])
-            }
+                static_cast<uint8_t>(background[2]),
+                0 // NOTE: 4th component is unused
+            )
         ).run_(2, global_work_size, local_work_size, false);
 
         // Create next kernel while the last one runs.
