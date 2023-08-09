@@ -165,6 +165,7 @@ namespace lvk
 			}
 		}
 
+		m_FrameFormat = buffer.format;
 		m_TickTimer.tick();
 		filter(buffer);
 
@@ -319,6 +320,7 @@ namespace lvk
 		// perform filtering on the buffer's captured frame, if any. 
 		if(!buffer.empty())
 		{
+			m_FrameFormat = buffer.format;
 			m_TickTimer.tick();
 			filter(buffer);
 
@@ -500,6 +502,20 @@ namespace lvk
 	{
 		obs_source_set_enabled(m_Context, false);
 		release_resources();
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	VideoFrame::Format VisionFilter::format() const
+	{
+		return m_FrameFormat;
+	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	bool VisionFilter::is_asynchronous() const
+	{
+		return m_Asynchronous;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -194,13 +194,10 @@ namespace lvk
 			stab_settings.background_colour[0] = static_cast<float>(colour & 0xff);
 			stab_settings.background_colour[1] = static_cast<float>((colour >> 8) & 0xff);
 			stab_settings.background_colour[2] = static_cast<float>((colour >> 16) & 0xff);
-			if(format() == VideoFrame::YUV)
-			{
-				// Convert the colour to YUV.
+
+			// Convert the colour to YUV if asynchronous filter.
+			if(format() == VideoFrame::YUV || is_asynchronous())
 				stab_settings.background_colour = col::rgb2yuv(stab_settings.background_colour);
-			}
-
-
 
             // Configure motion quality
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);

@@ -47,8 +47,12 @@ namespace lvk
 
 		virtual void hybrid_render(gs_texture_t* frame);
 
+		VideoFrame::Format format() const;
+
+		bool is_asynchronous() const;
+
 		Time delta_time() const;
-	
+
 		void disable();
 
 	private:
@@ -89,6 +93,7 @@ namespace lvk
 		bool m_Asynchronous, m_HybridRender;
 		TickTimer m_TickTimer;
 
+		VideoFrame::Format m_FrameFormat;
 		gs_texture_t* m_RenderBuffer = nullptr;
 		std::deque<std::pair<obs_source_frame*, size_t>> m_AsyncFrameQueue;
 	};
