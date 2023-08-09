@@ -27,8 +27,15 @@ __kernel void grid(
     int2 coord = (int2)(get_global_id(0), get_global_id(1));
     int index = coord.y * dst_step + (3 * coord.x) + dst_offset; 
 
-    if(coord.x < dst_cols && coord.y < dst_rows && (fmod(coord.x, cell_width) < line_thickness || fmod(coord.y, cell_height) < line_thickness))
-        vstore3(line_colour.xyz, 0, dst + index); 
+    if(coord.x < dst_cols && coord.y < dst_rows && (
+            fmod(coord.x, cell_width) < line_thickness
+         || fmod(coord.y, cell_height) < line_thickness
+         || fmod(coord.x, cell_width) > cell_width - line_thickness - 1
+         || fmod(coord.y, cell_height) > cell_height - line_thickness - 1
+    ))
+    {
+        vstore3(line_colour.xyz, 0, dst + index);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
