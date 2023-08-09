@@ -147,6 +147,19 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    void StabilizationFilter::draw_motion_mesh()
+    {
+        auto& frame = m_FrameQueue.newest();
+        draw_grid(
+            frame,
+            m_Settings.motion_resolution - cv::Size{1,1},
+            col::BLUE[frame.format],
+            1
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
     size_t StabilizationFilter::frame_delay() const
     {
         return m_PathSmoother.time_delay();

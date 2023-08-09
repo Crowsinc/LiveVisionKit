@@ -49,6 +49,8 @@ namespace lvk
 
         void draw_trackers();
 
+        void draw_motion_mesh();
+
         size_t frame_delay() const;
 
 		cv::Rect stable_region() const;

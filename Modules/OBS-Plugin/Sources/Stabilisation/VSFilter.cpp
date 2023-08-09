@@ -256,6 +256,7 @@ namespace lvk
         if(m_TestMode)
         {
             m_Filter.apply(std::move(frame), frame, true);
+            m_Filter.draw_motion_mesh();
             m_Filter.draw_trackers();
             draw_debug_hud(frame);
         }
