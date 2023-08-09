@@ -97,6 +97,10 @@ namespace lvk
     template<typename T>
     cv::Rect_<T> crop(const cv::Size_<T>& region, const float proportion);
 
+
+    template<typename T>
+    cv::Scalar barycentric_rect(const cv::Rect_<T>& rect, const cv::Point_<T>& point);
+
 }
 
 #include "Math.tpp"

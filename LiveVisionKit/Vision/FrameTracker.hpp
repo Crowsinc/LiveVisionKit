@@ -70,8 +70,7 @@ namespace lvk
             const cv::Rect2f& region,
             const Homography& global_transform,
             const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points,
-            std::vector<uint8_t>& inlier_status
+            const std::vector<cv::Point2f>& matched_points
         );
 
     private:
