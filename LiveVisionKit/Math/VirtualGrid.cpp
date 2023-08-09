@@ -19,6 +19,7 @@
 
 #include "Directives.hpp"
 #include "Functions/Math.hpp"
+#include "Functions/Extensions.hpp"
 
 namespace lvk
 {
@@ -192,6 +193,20 @@ namespace lvk
             return key_of(point);
         else
             return std::nullopt;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Point2f VirtualGrid::key_to_point(const SpatialKey& key) const
+    {
+        return cv::Point2f(key) * m_KeySize;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Point2f VirtualGrid::index_to_point(const size_t index) const
+    {
+        return key_to_point(index_to_key(index));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
