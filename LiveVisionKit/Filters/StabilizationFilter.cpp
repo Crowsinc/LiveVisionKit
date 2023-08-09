@@ -105,7 +105,7 @@ namespace lvk
             {
                 correction += m_PathSmoother.scene_crop();
             }
-            correction.apply(next_frame, output);
+            correction.apply(next_frame, output, m_Settings.background_colour);
         }
         else output.release();
 	}
