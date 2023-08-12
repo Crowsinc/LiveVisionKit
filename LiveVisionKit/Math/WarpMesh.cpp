@@ -15,7 +15,7 @@
 //     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //     **********************************************************************
 
-#include "WarpField.hpp"
+#include "WarpMesh.hpp"
 
 #include <opencv2/core/ocl.hpp>
 #include <array>
@@ -31,7 +31,7 @@ namespace lvk
 {
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const cv::Size& size)
+    WarpMesh::WarpMesh(const cv::Size& size)
         : m_MeshOffsets(size, CV_32FC2)
     {
         LVK_ASSERT(size.height >= MinimumSize.height);
@@ -42,33 +42,33 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const WarpField& other)
+    WarpMesh::WarpMesh(const WarpMesh& other)
         : m_MeshOffsets(other.m_MeshOffsets.clone())
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(WarpField&& other) noexcept
+    WarpMesh::WarpMesh(WarpMesh&& other) noexcept
         : m_MeshOffsets(std::move(other.m_MeshOffsets))
     {}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(cv::Mat&& warp_map, const bool as_offsets, const bool normalized)
+    WarpMesh::WarpMesh(cv::Mat&& warp_map, const bool as_offsets, const bool normalized)
     {
         set_to(std::move(warp_map), as_offsets, normalized);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const cv::Mat& warp_map, const bool as_offsets, const bool normalized)
+    WarpMesh::WarpMesh(const cv::Mat& warp_map, const bool as_offsets, const bool normalized)
     {
         set_to(warp_map, as_offsets, normalized);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::WarpField(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size)
+    WarpMesh::WarpMesh(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size)
         : m_MeshOffsets(size, CV_32FC2)
     {
         set_to(motion, motion_scale);
@@ -76,7 +76,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::resize(const cv::Size& new_size)
+    void WarpMesh::resize(const cv::Size& new_size)
     {
         LVK_ASSERT(new_size.height >= MinimumSize.height);
         LVK_ASSERT(new_size.width >= MinimumSize.width);
@@ -91,84 +91,84 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    cv::Size WarpField::size() const
+    cv::Size WarpMesh::size() const
     {
         return m_MeshOffsets.size();
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    int WarpField::cols() const
+    int WarpMesh::cols() const
     {
         return m_MeshOffsets.cols;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    int WarpField::rows() const
+    int WarpMesh::rows() const
     {
         return m_MeshOffsets.rows;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    cv::Mat& WarpField::offsets()
+    cv::Mat& WarpMesh::offsets()
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const cv::Mat& WarpField::offsets() const
+    const cv::Mat& WarpMesh::offsets() const
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::operator cv::Mat&()
+    WarpMesh::operator cv::Mat&()
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::operator const cv::Mat&() const
+    WarpMesh::operator const cv::Mat&() const
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::operator cv::_InputOutputArray()
+    WarpMesh::operator cv::_InputOutputArray()
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField::operator cv::_InputArray() const
+    WarpMesh::operator cv::_InputArray() const
     {
         return m_MeshOffsets;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::to_map(cv::Mat& dst) const
+    void WarpMesh::to_map(cv::Mat& dst) const
     {
         cv::add(m_MeshOffsets, view_identity_mesh(m_MeshOffsets.size()), dst);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::to_map(cv::UMat& dst) const
+    void WarpMesh::to_map(cv::UMat& dst) const
     {
         cv::add(m_MeshOffsets, view_identity_mesh(m_MeshOffsets.size()), dst);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::normalize(const cv::Size2f& motion_scale)
+    void WarpMesh::normalize(const cv::Size2f& motion_scale)
     {
         const cv::Scalar norm_factor(
             1.0f / motion_scale.width,
@@ -180,7 +180,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::undistort(const float tolerance)
+    void WarpMesh::undistort(const float tolerance)
     {
         LVK_ASSERT(tolerance >= 0);
 
@@ -234,7 +234,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background) const
+    void WarpMesh::apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background) const
     {
         const cv::Scalar motion_scaling(src.cols, src.rows);
 
@@ -281,7 +281,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
     // TODO: optimize this
-    void WarpField::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
+    void WarpMesh::draw(cv::UMat& dst, const cv::Scalar& color, const int thickness) const
     {
         LVK_ASSERT(thickness > 0);
         LVK_ASSERT(!dst.empty());
@@ -317,7 +317,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::read(
+    void WarpMesh::read(
         const std::function<void(const cv::Point2f&, const cv::Point&)>& operation,
         const bool parallel
     ) const
@@ -344,7 +344,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::write(
+    void WarpMesh::write(
         const std::function<void(cv::Point2f&, const cv::Point&)>& operation,
         const bool parallel
     )
@@ -371,14 +371,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_identity()
+    void WarpMesh::set_identity()
     {
         m_MeshOffsets.setTo(cv::Scalar(0.0f, 0.0f));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_to(const cv::Point2f& motion)
+    void WarpMesh::set_to(const cv::Point2f& motion)
     {
         // NOTE: we invert the motion as the warp is specified backwards.
         m_MeshOffsets.setTo(cv::Scalar(-motion.x, -motion.y));
@@ -386,7 +386,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_to(const Homography& motion, const cv::Size2f& motion_scale)
+    void WarpMesh::set_to(const Homography& motion, const cv::Size2f& motion_scale)
     {
         const auto coord_scaling = motion_scale / cv::Size2f(size() - 1);
         const auto norm_factor = 1.0f / motion_scale;
@@ -399,7 +399,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_to(cv::Mat&& warp_map, const bool as_offsets, const bool normalized)
+    void WarpMesh::set_to(cv::Mat&& warp_map, const bool as_offsets, const bool normalized)
     {
         LVK_ASSERT(warp_map.type() == CV_32FC2);
 
@@ -410,7 +410,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::set_to(const cv::Mat& warp_map, const bool as_offsets, const bool normalized)
+    void WarpMesh::set_to(const cv::Mat& warp_map, const bool as_offsets, const bool normalized)
     {
         LVK_ASSERT(warp_map.type() == CV_32FC2);
 
@@ -422,7 +422,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 
-    void WarpField::scale(const cv::Size2f& scaling_factor)
+    void WarpMesh::scale(const cv::Size2f& scaling_factor)
     {
         const auto coord_scaling = ((1.0f / scaling_factor) - 1.0f) / cv::Size2f(size() - 1);
         write([&](cv::Point2f& offset, const cv::Point& coord){
@@ -432,7 +432,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::crop_in(const cv::Rect2f& region)
+    void WarpMesh::crop_in(const cv::Rect2f& region)
     {
         LVK_ASSERT_RANGE(region.width, 0, cols());
         LVK_ASSERT_RANGE(region.height, 0, rows());
@@ -447,7 +447,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::rotate(const float degrees)
+    void WarpMesh::rotate(const float degrees)
     {
         const float radians = to_radians(degrees);
         const float cos = std::cos(radians), sin = std::sin(radians);
@@ -464,7 +464,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::clamp(const cv::Size2f& magnitude)
+    void WarpMesh::clamp(const cv::Size2f& magnitude)
     {
         write([&](cv::Point2f& offset, const cv::Point& coord){
             offset.x = std::clamp(offset.x, -magnitude.width, magnitude.width);
@@ -474,7 +474,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::clamp(const cv::Size2f& min, const cv::Size2f& max)
+    void WarpMesh::clamp(const cv::Size2f& min, const cv::Size2f& max)
     {
         write([&](cv::Point2f& offset, const cv::Point& coord){
             offset.x = std::clamp(offset.x, min.width, max.width);
@@ -484,29 +484,29 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::blend(const float field_weight, const WarpField& field)
+    void WarpMesh::blend(const float mesh_weight, const WarpMesh& mesh)
     {
-        cv::addWeighted(m_MeshOffsets, (1.0f - field_weight), field.m_MeshOffsets, field_weight, 0.0, m_MeshOffsets);
+        cv::addWeighted(m_MeshOffsets, (1.0f - mesh_weight), mesh.m_MeshOffsets, mesh_weight, 0.0, m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::blend(const float weight_1, const float weight_2, const WarpField& field)
+    void WarpMesh::blend(const float weight_1, const float weight_2, const WarpMesh& mesh)
     {
-        cv::addWeighted(m_MeshOffsets, weight_1, field.m_MeshOffsets, weight_2, 0.0, m_MeshOffsets);
+        cv::addWeighted(m_MeshOffsets, weight_1, mesh.m_MeshOffsets, weight_2, 0.0, m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::combine(const WarpField& field, const float scaling)
+    void WarpMesh::combine(const WarpMesh& mesh, const float scaling)
     {
-        cv::scaleAdd(field.m_MeshOffsets, scaling, m_MeshOffsets, m_MeshOffsets);
+        cv::scaleAdd(mesh.m_MeshOffsets, scaling, m_MeshOffsets, m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
     // NOTE: This returns a view into a shared cache, do not modify the value.
-    const cv::Mat WarpField::view_identity_mesh(const cv::Size& resolution)
+    const cv::Mat WarpMesh::view_identity_mesh(const cv::Size& resolution)
     {
         // Since this is a repeated operation that often results in the same output,
         // we cache a copy of the grid in thread storage and return a view onto it.
@@ -528,7 +528,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField& WarpField::operator=(WarpField&& other) noexcept
+    WarpMesh& WarpMesh::operator=(WarpMesh&& other) noexcept
     {
         m_MeshOffsets = std::move(other.m_MeshOffsets);
 
@@ -537,7 +537,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField& WarpField::operator=(const WarpField& other)
+    WarpMesh& WarpMesh::operator=(const WarpMesh& other)
     {
         other.m_MeshOffsets.copyTo(m_MeshOffsets);
 
@@ -546,7 +546,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator+=(const WarpField& other)
+    void WarpMesh::operator+=(const WarpMesh& other)
     {
         LVK_ASSERT(size() == other.size());
 
@@ -555,7 +555,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator-=(const WarpField& other)
+    void WarpMesh::operator-=(const WarpMesh& other)
     {
         LVK_ASSERT(size() == other.size());
 
@@ -564,35 +564,35 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator*=(const WarpField& other)
+    void WarpMesh::operator*=(const WarpMesh& other)
     {
         cv::multiply(m_MeshOffsets, other.m_MeshOffsets, m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator+=(const cv::Point2f& offset)
+    void WarpMesh::operator+=(const cv::Point2f& offset)
     {
         cv::add(m_MeshOffsets, cv::Scalar(offset.x, offset.y), m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator-=(const cv::Point2f& offset)
+    void WarpMesh::operator-=(const cv::Point2f& offset)
     {
         cv::subtract(m_MeshOffsets, cv::Scalar(offset.x, offset.y), m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator*=(const cv::Size2f& scaling)
+    void WarpMesh::operator*=(const cv::Size2f& scaling)
     {
         cv::multiply(m_MeshOffsets, cv::Scalar(scaling.width, scaling.height), m_MeshOffsets);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator/=(const cv::Size2f& scaling)
+    void WarpMesh::operator/=(const cv::Size2f& scaling)
     {
         LVK_ASSERT(scaling.width != 0.0f && scaling.height != 0.0f);
 
@@ -601,14 +601,14 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator*=(const float scaling)
+    void WarpMesh::operator*=(const float scaling)
     {
         m_MeshOffsets *= scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpField::operator/=(const float scaling)
+    void WarpMesh::operator/=(const float scaling)
     {
         LVK_ASSERT(scaling != 0.0f);
 
@@ -617,113 +617,113 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator+(const WarpField& left, const WarpField& right)
+    WarpMesh operator+(const WarpMesh& left, const WarpMesh& right)
     {
         LVK_ASSERT(left.size() == right.size());
 
         cv::Mat result = left.offsets() + right.offsets();
-        return WarpField(std::move(result), true, true);
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator-(const WarpField& left, const WarpField& right)
+    WarpMesh operator-(const WarpMesh& left, const WarpMesh& right)
     {
         LVK_ASSERT(left.size() == right.size());
 
         cv::Mat result = left.offsets() - right.offsets();
-        return WarpField(std::move(result), true, true);
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const WarpField& left, const WarpField& right)
+    WarpMesh operator*(const WarpMesh& left, const WarpMesh& right)
     {
-        WarpField result(left);
+        WarpMesh result(left);
         result *= right;
         return result;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator+(const WarpField& left, const cv::Point2f& right)
+    WarpMesh operator+(const WarpMesh& left, const cv::Point2f& right)
     {
         cv::Mat result = left.offsets() + cv::Scalar(right.x, right.y);
-        return WarpField(std::move(result), true, true);
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator-(const WarpField& left, const cv::Point2f& right)
+    WarpMesh operator-(const WarpMesh& left, const cv::Point2f& right)
     {
         cv::Mat result = left.offsets() - cv::Scalar(right.x, right.y);
-        return WarpField(std::move(result), true, true);
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const WarpField& field, const cv::Size2f& scaling)
+    WarpMesh operator*(const WarpMesh& mesh, const cv::Size2f& scaling)
     {
-        WarpField result(field);
+        WarpMesh result(mesh);
         result *= scaling;
         return result;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const cv::Size2f& scaling, const WarpField& field)
+    WarpMesh operator*(const cv::Size2f& scaling, const WarpMesh& mesh)
     {
-        return field * scaling;
+        return mesh * scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const WarpField& field, const cv::Size2f& scaling)
+    WarpMesh operator/(const WarpMesh& mesh, const cv::Size2f& scaling)
     {
         LVK_ASSERT(scaling.height != 0.0f && scaling.height != 0.0f);
 
-        WarpField result(field);
+        WarpMesh result(mesh);
         result /= scaling;
         return result;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const cv::Size2f& scaling, const WarpField& field)
+    WarpMesh operator/(const cv::Size2f& scaling, const WarpMesh& mesh)
     {
-        return field / scaling;
+        return mesh / scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const WarpField& field, const float scaling)
+    WarpMesh operator*(const WarpMesh& mesh, const float scaling)
     {
-        cv::Mat result = field.offsets() * scaling;
-        return WarpField(std::move(result), true, true);
+        cv::Mat result = mesh.offsets() * scaling;
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator*(const float scaling, const WarpField& field)
+    WarpMesh operator*(const float scaling, const WarpMesh& mesh)
     {
-        return field * scaling;
+        return mesh * scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const WarpField& field, const float scaling)
+    WarpMesh operator/(const WarpMesh& mesh, const float scaling)
     {
         LVK_ASSERT(scaling != 0.0f);
 
-        cv::Mat result = field.offsets() / scaling;
-        return WarpField(std::move(result), true, true);
+        cv::Mat result = mesh.offsets() / scaling;
+        return WarpMesh(std::move(result), true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField operator/(const float scaling, const WarpField& field)
+    WarpMesh operator/(const float scaling, const WarpMesh& mesh)
     {
-        return field / scaling;
+        return mesh / scaling;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

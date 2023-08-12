@@ -108,8 +108,8 @@ namespace lvk
 				m_Parameters = *parameters;
 				m_Profile = profile;
 
-				// Reset the undistort field to load in new profiles
-                m_FieldOutdated = true;
+				// Reset the correction mesh to load in new profiles
+                m_MeshOutdated = true;
 			}
 			else m_ProfileSelected = false;
 		}
@@ -131,7 +131,7 @@ namespace lvk
 	void LCFilter::prepare_undistort_maps(OBSFrame& frame)
 	{
 		// Update undistort map if it is outdated or missing
-		if(m_FieldOutdated || m_CorrectionField.size() != frame.size())
+		if(m_MeshOutdated || m_CorrectionMesh.size() != frame.size())
 		{
             cv::Rect view_region;
 			cv::Mat optimal_camera_matrix = cv::getOptimalNewCameraMatrix(
@@ -162,9 +162,9 @@ namespace lvk
             );
 
             // Convert the correction map to a warp field.
-            m_CorrectionField.set_to(std::move(correction_map), false, false);
-            m_CorrectionField.crop_in(norm_view_region);
-            m_FieldOutdated = false;
+            m_CorrectionMesh.set_to(std::move(correction_map), false, false);
+            m_CorrectionMesh.crop_in(norm_view_region);
+            m_MeshOutdated = false;
 		}
 	}
 
@@ -184,7 +184,7 @@ namespace lvk
 		{
 			prepare_undistort_maps(frame);
 
-            m_CorrectionField.apply(frame, m_CorrectedFrame);
+            m_CorrectionMesh.apply(frame, m_CorrectedFrame);
             std::swap(frame, m_CorrectedFrame);
 		}
 	}

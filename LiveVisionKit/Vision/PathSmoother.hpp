@@ -19,7 +19,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Math/WarpField.hpp"
+#include "Math/WarpMesh.hpp"
 #include "Data/StreamBuffer.hpp"
 #include "Utility/Configurable.hpp"
 
@@ -47,24 +47,24 @@ namespace lvk
 
         void configure(const PathSmootherSettings& settings) override;
 
-        WarpField next(const WarpField& motion);
+        WarpMesh next(const WarpMesh& motion);
 
         void restart();
 
         size_t time_delay() const;
 
-        const WarpField& scene_crop() const;
+        const WarpMesh& scene_crop() const;
 
         const cv::Rect2f& scene_margins() const;
 
     private:
         double m_SmoothingFactor = 0.0f;
-        StreamBuffer<WarpField> m_Trajectory{1};
-        WarpField m_Trace{WarpField::MinimumSize};
-        WarpField m_Position{WarpField::MinimumSize};
+        StreamBuffer<WarpMesh> m_Trajectory{1};
+        WarpMesh m_Trace{WarpMesh::MinimumSize};
+        WarpMesh m_Position{WarpMesh::MinimumSize};
 
         cv::Rect2f m_SceneMargins{0,0,0,0};
-        WarpField m_SceneCrop{WarpField::MinimumSize};
+        WarpMesh m_SceneCrop{WarpMesh::MinimumSize};
     };
 
 

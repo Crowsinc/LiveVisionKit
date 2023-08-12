@@ -34,8 +34,8 @@ namespace lvk
 
     void PathSmoother::configure(const PathSmootherSettings& settings)
     {
-        LVK_ASSERT(settings.motion_resolution.height >= WarpField::MinimumSize.height);
-        LVK_ASSERT(settings.motion_resolution.width >= WarpField::MinimumSize.width);
+        LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
+        LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
         LVK_ASSERT_01(settings.path_correction_limits.height);
         LVK_ASSERT_01(settings.path_correction_limits.width);
         LVK_ASSERT(settings.path_prediction_samples > 0);
@@ -57,8 +57,8 @@ namespace lvk
 
             // Re-create all motion fields with the new resolution.
             m_Trajectory.pad_back(settings.motion_resolution);
-            m_Position = WarpField(settings.motion_resolution);
-            m_Trace = WarpField(settings.motion_resolution);
+            m_Position = WarpMesh(settings.motion_resolution);
+            m_Trace = WarpMesh(settings.motion_resolution);
         }
         else
         {
@@ -73,13 +73,13 @@ namespace lvk
         }
 
         m_SceneMargins = crop<float>({1,1}, settings.path_correction_limits);
-        m_SceneCrop = WarpField(settings.motion_resolution);
+        m_SceneCrop = WarpMesh(settings.motion_resolution);
         m_SceneCrop.crop_in(m_SceneMargins);
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathSmoother::next(const WarpField& motion)
+    WarpMesh PathSmoother::next(const WarpMesh& motion)
     {
         LVK_ASSERT(motion.size() == m_Settings.motion_resolution);
 
@@ -150,7 +150,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const WarpField& PathSmoother::scene_crop() const
+    const WarpMesh& PathSmoother::scene_crop() const
     {
         return m_SceneCrop;
     }

@@ -74,8 +74,8 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
-        LVK_ASSERT(settings.motion_resolution.height >= WarpField::MinimumSize.height);
-        LVK_ASSERT(settings.motion_resolution.width >= WarpField::MinimumSize.width);
+        LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
+        LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
         LVK_ASSERT(settings.local_smoothing > 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
         LVK_ASSERT_01(settings.min_motion_quality);
@@ -111,7 +111,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<WarpField> FrameTracker::track(const cv::UMat& next_frame)
+    std::optional<WarpMesh> FrameTracker::track(const cv::UMat& next_frame)
 	{
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
@@ -204,12 +204,12 @@ namespace lvk
         if(m_Settings.track_local_motions)
             return estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints);
         else
-            return WarpField(global_motion, m_Settings.detection_resolution, m_Settings.motion_resolution);
+            return WarpMesh(global_motion, m_Settings.detection_resolution, m_Settings.motion_resolution);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField FrameTracker::estimate_local_motions(
+    WarpMesh FrameTracker::estimate_local_motions(
         const cv::Rect2f& region,
         const Homography& global_transform,
         const std::vector<cv::Point2f>& tracked_points,
@@ -374,7 +374,7 @@ namespace lvk
             auto& vertex = mesh.at<cv::Point2f>(index);
             vertex = (aligned_coord - vertex) / region.size();
         });
-        return WarpField(mesh, true, true);
+        return WarpMesh(mesh, true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

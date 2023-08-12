@@ -20,7 +20,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "FeatureDetector.hpp"
-#include "Math/WarpField.hpp"
+#include "Math/WarpMesh.hpp"
 #include "Utility/Configurable.hpp"
 
 namespace lvk
@@ -48,7 +48,7 @@ namespace lvk
 
         void configure(const FrameTrackerSettings& settings) override;
 
-		std::optional<WarpField> track(const cv::UMat& next_frame);
+		std::optional<WarpMesh> track(const cv::UMat& next_frame);
 
 		void restart();
 
@@ -64,7 +64,7 @@ namespace lvk
 
     private:
 
-        WarpField estimate_local_motions(
+        WarpMesh estimate_local_motions(
             const cv::Rect2f& region,
             const Homography& global_transform,
             const std::vector<cv::Point2f>& tracked_points,
