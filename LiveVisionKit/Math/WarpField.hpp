@@ -154,11 +154,12 @@ namespace lvk
 
     private:
 
-        static const cv::Mat view_field_grid(const cv::Size& resolution);
+        static const cv::Mat view_identity_mesh(const cv::Size& resolution);
 
     private:
-        // Vector offset from dst to src coord.
-        cv::Mat m_Field;
+        // Offsets map mesh vertices from warped coord to identity coord.
+        // e.g. Mesh Offsets = Warped Mesh - Identity Grid.
+        cv::Mat m_MeshOffsets;
 
         mutable cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
