@@ -31,8 +31,8 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
 
         // Local Motion Constraints
-        float max_local_increase = 1.5f;
-        float max_local_variance = 0.25f;
+        bool track_local_motions = false;
+        float local_smoothing = 1.0f;
 
         // Robustness Constraints
         size_t min_motion_samples = 75;
@@ -63,8 +63,6 @@ namespace lvk
         void draw_trackers(cv::UMat& dst, const cv::Scalar& color, const int size = 10, const int thickness = 3) const;
 
     private:
-
-        bool should_use_homography() const;
 
         WarpField estimate_local_motions(
             const cv::Rect2f& region,

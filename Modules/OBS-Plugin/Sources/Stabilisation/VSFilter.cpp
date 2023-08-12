@@ -50,6 +50,9 @@ namespace lvk
     constexpr auto PROP_APPLY_CROP = "APPLY_CROP";
     constexpr auto PROP_APPLY_CROP_DEFAULT = true;
 
+	constexpr auto PROP_BACKGROUND_COLOUR = "BACKGROUND_COL";
+	constexpr auto PROP_BACKGROUND_COLOUR_DEFAULT = 0x000000;
+
 	constexpr auto PROP_STAB_DISABLED = "STAB_DISABLED";
 	constexpr auto PROP_STAB_DISABLED_DEFAULT = false;
 
@@ -116,6 +119,13 @@ namespace lvk
             L("vs.apply-crop")
         );
 
+		// Background Colour Wheel
+		obs_properties_add_color(
+			properties,
+			PROP_BACKGROUND_COLOUR,
+			L("vs.background-colour")
+		);
+
         // Runtime Controls
         obs_properties_t* controls = obs_properties_create();
         obs_properties_add_group(
@@ -150,6 +160,7 @@ namespace lvk
 		LVK_ASSERT(settings != nullptr);
 
 		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
+		obs_data_set_default_int(settings, PROP_BACKGROUND_COLOUR, PROP_BACKGROUND_COLOUR_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, PROP_CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, PROP_STAB_DISABLED_DEFAULT);
         obs_data_set_default_string(settings, PROP_SUBSYSTEM, PROP_SUBSYSTEM_DEFAULT);
@@ -178,10 +189,21 @@ namespace lvk
 			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 
+			// Decode the background colour in RGB.
+			uint32_t colour = obs_data_get_int(settings, PROP_BACKGROUND_COLOUR);
+			stab_settings.background_colour[0] = static_cast<float>(colour & 0xff);
+			stab_settings.background_colour[1] = static_cast<float>((colour >> 8) & 0xff);
+			stab_settings.background_colour[2] = static_cast<float>((colour >> 16) & 0xff);
+
+			// Convert the colour to YUV if asynchronous filter.
+			if(format() == VideoFrame::YUV || is_asynchronous())
+				stab_settings.background_colour = col::rgb2yuv(stab_settings.background_colour);
+
             // Configure motion quality
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
+                stab_settings.track_local_motions = true;
                 stab_settings.detection_resolution = {512, 256};
                 stab_settings.motion_resolution = {16, 16};
                 stab_settings.detection_regions = {2, 2};
@@ -192,6 +214,7 @@ namespace lvk
             }
             else
             {
+                stab_settings.track_local_motions = false;
                 stab_settings.detection_resolution = {512, 256};
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
