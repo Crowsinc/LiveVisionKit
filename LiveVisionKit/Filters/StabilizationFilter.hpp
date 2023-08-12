@@ -28,6 +28,8 @@ namespace lvk
 	struct StabilizationFilterSettings : public FrameTrackerSettings, public PathSmootherSettings
 	{
         cv::Size motion_resolution = {2, 2};
+
+		cv::Scalar background_colour = {255,0,255};
         bool crop_to_stable_region = false;
 		bool stabilize_output = true;
 	};

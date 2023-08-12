@@ -18,11 +18,12 @@
 #pragma once
 
 #include <opencv2/opencv.hpp>
+#include "Data/VideoFrame.hpp"
 
 namespace lvk
 {
 
-    void remap(const cv::UMat& src, cv::UMat& dst, const cv::UMat& offset_map, const bool yuv = true);
+    void remap(const VideoFrame& src, VideoFrame& dst, const cv::UMat& offset_map, const cv::Scalar& background);
 
     void upscale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size, const bool yuv = true);
 
