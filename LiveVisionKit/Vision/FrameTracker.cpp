@@ -56,8 +56,8 @@ namespace lvk
         m_USACParams.confidence = 0.99;
         m_USACParams.threshold = USAC_NOISE_TOLERANCE;
         m_USACParams.maxIterations = USAC_MAX_ITERS;
+        m_USACParams.sampler = cv::SAMPLING_UNIFORM;
         m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
-        m_USACParams.score = cv::SCORE_METHOD_LMEDS;
         m_USACParams.final_polisher = cv::MAGSAC;
         m_USACParams.final_polisher_iterations = 5;
         m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
