@@ -22,6 +22,9 @@
 #include "Functions/Container.hpp"
 #include "Functions/Extensions.hpp"
 
+#include "Eigen/Geometry"
+#include "Eigen/Sparse"
+
 namespace lvk
 {
 
@@ -35,7 +38,7 @@ namespace lvk
     constexpr auto OPTICAL_TRACKER_MAX_ITERS = 5;
 
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
-    constexpr auto USAC_NOISE_TOLERANCE = 5.0f;
+    constexpr auto USAC_NOISE_TOLERANCE = 10.0f;
     constexpr auto USAC_MAX_ITERS = 50;
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -71,12 +74,11 @@ namespace lvk
 
     void FrameTracker::configure(const FrameTrackerSettings& settings)
     {
-        LVK_ASSERT(settings.motion_resolution.height >= WarpField::MinimumSize.height);
-        LVK_ASSERT(settings.motion_resolution.width >= WarpField::MinimumSize.width);
-        LVK_ASSERT(settings.max_local_increase > 0.0f);
+        LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
+        LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
+        LVK_ASSERT(settings.local_smoothing > 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
         LVK_ASSERT_01(settings.min_motion_quality);
-        LVK_ASSERT_01(settings.max_local_variance);
 
         m_FeatureDetector.configure(settings);
         m_MatchStatus.reserve(m_FeatureDetector.max_feature_capacity());
@@ -109,7 +111,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    std::optional<WarpField> FrameTracker::track(const cv::UMat& next_frame)
+    std::optional<WarpMesh> FrameTracker::track(const cv::UMat& next_frame)
 	{
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
@@ -194,98 +196,185 @@ namespace lvk
             return std::nullopt;
         }
 
-        WarpField motion = should_use_homography() ? WarpField(global_motion, m_Settings.detection_resolution)
-            : estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
-
-        // Filter inliers so we're left with only high quality points,
+        // Filter outliers so we're left with only high quality points,
         // then propagate them so that they're re-used in the detector.
-        fast_filter(m_MatchedPoints, m_InlierStatus);
+        fast_filter(m_TrackedPoints, m_MatchedPoints, m_InlierStatus);
         m_FeatureDetector.propagate(m_MatchedPoints);
 
-        return motion;
+        if(m_Settings.track_local_motions)
+            return estimate_local_motions(m_TrackingRegion, global_motion, m_TrackedPoints, m_MatchedPoints);
+        else
+            return WarpMesh(global_motion, m_Settings.detection_resolution, m_Settings.motion_resolution);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    bool FrameTracker::should_use_homography() const
-    {
-        return m_Settings.motion_resolution == WarpField::MinimumSize;
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
-    WarpField FrameTracker::estimate_local_motions(
+    WarpMesh FrameTracker::estimate_local_motions(
         const cv::Rect2f& region,
         const Homography& global_transform,
         const std::vector<cv::Point2f>& tracked_points,
-        const std::vector<cv::Point2f>& matched_points,
-        std::vector<uint8_t>& inlier_status
+        const std::vector<cv::Point2f>& matched_points
     )
     {
         LVK_ASSERT(tracked_points.size() == matched_points.size());
-        LVK_ASSERT(inlier_status.size() == tracked_points.size());
 
-        // Initialize frame motion to the global transform (e.g. background motion).
-        WarpField frame_motion(global_transform, m_Settings.detection_resolution, m_Settings.motion_resolution);
-        cv::Mat& global_field = frame_motion.offsets();
+        const auto mesh_size = m_Settings.motion_resolution;
+        const auto grid_size = mesh_size - cv::Size(1, 1);
 
-        // Create a motion accumulation grid whose cells are centered on the field points.
-        const cv::Size2f field_size = m_Settings.motion_resolution;
-        const cv::Size2f vertex_area = region.size() / (field_size - 1.0f);
-        const VirtualGrid grid(field_size, {region.tl() * (vertex_area / 2.0f), field_size * vertex_area});
+        // Create a partitioned grid for the motion warp mesh.
+        const VirtualGrid mesh_grid(mesh_size, cv::Rect2f(
+            region.tl(), (cv::Size2f(mesh_size) / cv::Size2f(grid_size)) * region.size()
+        ));
 
-        const auto local_norm_factor = 1.0f / region.size();
-        const auto local_angle_limit = m_Settings.max_local_variance * std::numbers::pi;
+        // Initialize linear system to optimize the mesh
+        const auto constraints = 2 * matched_points.size() + 2 * mesh_size.area() + 4 * grid_size.area();
+        Eigen::SparseMatrix<float> A(static_cast<int>(constraints), 2 * mesh_size.area());
+        Eigen::VectorXf b = Eigen::VectorXf::Zero(A.rows());
 
-        // Accumulate all the local motion residuals using the grid.
-        cv::Mat accumulator(m_Settings.motion_resolution, CV_32FC3, cv::Scalar::zeros());
-        for(size_t i = 0; i < tracked_points.size(); i++)
+        int constraint_offset = 0;
+        std::vector<Eigen::Triplet<float>> sparse_values;
+        sparse_values.reserve(b.rows() + 8 * matched_points.size() + 20 * grid_size.area());
+
+        // Add global motion mesh constraints.
+        Eigen::VectorXf global_mesh(2 * mesh_size.area());
+        mesh_grid.for_each_aligned([&](const int index, const cv::Point2f& aligned_coord){
+            const auto global_mesh_coord = global_transform * aligned_coord;
+
+            const int x_index = 2 * index;
+            sparse_values.emplace_back(constraint_offset, x_index, 1.0f);
+            global_mesh(x_index) = global_mesh_coord.x;
+            b(constraint_offset) = global_mesh_coord.x;
+            constraint_offset++;
+
+            const int y_index = x_index + 1;
+            sparse_values.emplace_back(constraint_offset, y_index, 1.0f);
+            global_mesh(y_index) = global_mesh_coord.y;
+            b(constraint_offset) = global_mesh_coord.y;
+            constraint_offset++;
+        });
+
+        // Add local motion mesh constraints.
+        for(size_t i = 0; i < matched_points.size(); i++)
         {
             const cv::Point2f& src_point = tracked_points[i];
             const cv::Point2f& dst_point = matched_points[i];
 
-            if(const auto coord = grid.key_of(dst_point); grid.test_point(dst_point))
-            {
-                const auto global_motion = global_field.at<cv::Point2f>(coord);
-                const auto local_motion = (src_point - dst_point) * local_norm_factor;
-                const auto l1 = local_motion.dot(local_motion), l2 = global_motion.dot(global_motion);
+            // k00 ---- k10
+            //  |        |
+            //  |        |
+            // k01 ---- k11
 
-                // Only consider local motions that are similar to the global motion in both
-                // magnitude and direction. Motions which arise from parallax or depth changes
-                // should have similar direction, while foreground motions may vary drastically.
-                const bool similar_direction = std::abs(angle_of(local_motion, global_motion)) <= local_angle_limit;
-                const bool similar_magnitude = l1 <= m_Settings.max_local_increase * l2;
+            cv::Point k00 = mesh_grid.key_of(src_point);
+            k00.x = std::clamp(k00.x, 0, grid_size.width);
+            k00.y = std::clamp(k00.y, 0, grid_size.height);
+            const cv::Point k11 = k00 + 1;
 
-                if(uint8_t& inlier = inlier_status[i]; similar_direction && similar_magnitude)
-                {
-                    auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord);
-                    dx += local_motion.x - global_motion.x;
-                    dy += local_motion.y - global_motion.y;
-                    count += 1.0f;
-                    inlier = 1;
-                }
-            }
+            // Get indices of the mesh vertices
+            const int i00 = 2 * static_cast<int>(mesh_grid.key_to_index(k00));
+            const int i11 = 2 * static_cast<int>(mesh_grid.key_to_index(k11));
+            const int i10 = i00 + 2;
+            const int i01 = i11 - 2;
+
+            // Get barycentric weights of the src point in its cell,
+            // we want these weights to hold in the warped motion mesh.
+            cv::Scalar w = barycentric_rect(
+                {mesh_grid.key_to_point(k00), mesh_grid.key_to_point(k11)}, src_point
+            );
+
+            sparse_values.emplace_back(constraint_offset, i00, w[0]);
+            sparse_values.emplace_back(constraint_offset, i01, w[1]);
+            sparse_values.emplace_back(constraint_offset, i11, w[2]);
+            sparse_values.emplace_back(constraint_offset, i10, w[3]);
+            b(constraint_offset) = dst_point.x;
+            constraint_offset++;
+
+            sparse_values.emplace_back(constraint_offset, i00 + 1, w[0]);
+            sparse_values.emplace_back(constraint_offset, i01 + 1, w[1]);
+            sparse_values.emplace_back(constraint_offset, i11 + 1, w[2]);
+            sparse_values.emplace_back(constraint_offset, i10 + 1, w[3]);
+            b(constraint_offset) = dst_point.y;
+            constraint_offset++;
         }
 
-        // Spread out the accumulated residuals using an un-normalized box filter.
-        cv::boxFilter(accumulator, accumulator, -1, {3, 3}, {-1,-1}, false, cv::BORDER_REFLECT_101);
+        // Add mesh similarity error constraints.
+        mesh_grid.for_each([&](const int index, const cv::Point& coord) {
+            if(coord.x == mesh_size.width - 1 || coord.y == mesh_size.height - 1)
+                return;
 
-        // Flatten out accumulated motions into average local residuals.
-        cv::Mat residuals(m_Settings.motion_resolution, CV_32FC2);
-        residuals.forEach<cv::Point2f>([&](cv::Point2f& residual, const int coord[]){
-            const auto& [dx, dy, count] = accumulator.at<cv::Point3f>(coord[0], coord[1]);
+            // V00 ---- V10
+            //  |  .     |
+            //  |     .  |
+            // V01 ---- V11
+            //
+            // Upper Triangle Constraints
+            // 0 = x10 + u1(x11 - x10) + v1(y11 - y10) - x00
+            // 0 = y10 + u1(y11 - y10) + v1(x10 - x11) - y00
+            //
+            // Lower Triangle Constraints
+            // 0 = x01 + u2(x11 - x01) + v2(y11 - y01) - x00
+            // 0 = y01 + u2(y11 - y01) + v2(x01 - x11) - y00
 
-            // NOTE: clamp count to 1 and above to avoid dividing by zero.
-            const auto weight = 1.0f / std::max(count, 1.0f);
-            residual.x = dx * weight;
-            residual.y = dy * weight;
+            const int i00 = 2 * index, i10 = i00 + 2;
+            const int i01 = 2 * (index + mesh_size.width), i11 = i01 + 2;
+
+            const cv::Point2f V00(global_mesh(i00), global_mesh(i00 + 1));
+            const cv::Point2f V01(global_mesh(i01), global_mesh(i01 + 1));
+            const cv::Point2f V11(global_mesh(i11), global_mesh(i11 + 1));
+            const cv::Point2f V10(global_mesh(i10), global_mesh(i10 + 1));
+
+            const cv::Point2f V1 = V00 - V10, R1 = V11 - V10;
+            const cv::Point2f V2 = V00 - V01, R2 = V11 - V01;
+            const float l1 = 1.0f/R1.dot(R1), l2 = 1.0f/R2.dot(R2);
+
+            const float weight = m_Settings.local_smoothing;
+
+            const float u1 = (R1.x * V1.x + R1.y * V1.y) * l1 * weight;
+            const float v1 = (R1.y * V1.x - R1.x * V1.y) * l1 * weight;
+            const float u2 = (R2.x * V2.x + R2.y * V2.y) * l2 * weight;
+            const float v2 = (R2.y * V2.x - R2.x * V2.y) * l2 * weight;
+
+            // Upper Triangle
+            sparse_values.emplace_back(constraint_offset, i00, -weight);
+            sparse_values.emplace_back(constraint_offset, i01, weight - u2);
+            sparse_values.emplace_back(constraint_offset, i01 + 1, -v2);
+            sparse_values.emplace_back(constraint_offset, i11, u2);
+            sparse_values.emplace_back(constraint_offset, i11 + 1, v2);
+            constraint_offset++;
+            sparse_values.emplace_back(constraint_offset, i00 + 1, -weight);
+            sparse_values.emplace_back(constraint_offset, i01, v2);
+            sparse_values.emplace_back(constraint_offset, i01 + 1, weight - u2);
+            sparse_values.emplace_back(constraint_offset, i11, -v2);
+            sparse_values.emplace_back(constraint_offset, i11 + 1, u2);
+            constraint_offset++;
+
+            // Lower Triangle
+            sparse_values.emplace_back(constraint_offset, i00, -weight);
+            sparse_values.emplace_back(constraint_offset, i10, weight - u1);
+            sparse_values.emplace_back(constraint_offset, i10 + 1, -v1);
+            sparse_values.emplace_back(constraint_offset, i11, u1);
+            sparse_values.emplace_back(constraint_offset, i11 + 1, v1);
+            constraint_offset++;
+            sparse_values.emplace_back(constraint_offset, i00 + 1, -weight);
+            sparse_values.emplace_back(constraint_offset, i10, v1);
+            sparse_values.emplace_back(constraint_offset, i10 + 1, weight - u1);
+            sparse_values.emplace_back(constraint_offset, i11, -v1);
+            sparse_values.emplace_back(constraint_offset, i11 + 1, u1);
+            constraint_offset++;
         });
 
-        // Spatially smooth and combine the residuals.
-        cv::medianBlur(residuals, residuals, 3);
-        global_field += residuals;
+        A.setFromTriplets(sparse_values.begin(), sparse_values.end());
 
-        return frame_motion;
+        // Solve the system to get the optimal motion mesh.
+        Eigen::LeastSquaresConjugateGradient<Eigen::SparseMatrix<float>> solver(A);
+        Eigen::VectorXf results = solver.solveWithGuess(b, global_mesh);
+
+        // Convert to WarpMesh
+        cv::Mat mesh(m_Settings.motion_resolution, CV_32FC2, results.data());
+        mesh_grid.for_each_aligned([&](const int index, const cv::Point2f& aligned_coord){
+            auto& vertex = mesh.at<cv::Point2f>(index);
+            vertex = (aligned_coord - vertex) / region.size();
+        });
+        return WarpMesh(mesh, true, true);
     }
 
 //---------------------------------------------------------------------------------------------------------------------

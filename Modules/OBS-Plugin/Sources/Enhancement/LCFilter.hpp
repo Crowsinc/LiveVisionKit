@@ -52,9 +52,9 @@ namespace lvk
 		std::string m_Profile;
 		CameraParameters m_Parameters;
 
-        bool m_FieldOutdated = true;
-        WarpField m_CorrectionField{WarpField::MinimumSize};
         OBSFrame m_CorrectedFrame;
+        WarpMesh m_CorrectionMesh{WarpMesh::MinimumSize};
+        bool m_MeshOutdated = true;
 	};
 
 }

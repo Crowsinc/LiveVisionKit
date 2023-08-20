@@ -72,6 +72,12 @@ namespace lvk
 
         std::optional<SpatialKey> try_key_of(const cv::Point2f& point) const;
 
+        // TODO: rename these
+        cv::Point2f key_to_point(const SpatialKey& key) const;
+
+        cv::Point2f index_to_point(const size_t index) const;
+
+
 
         void for_each(const std::function<void(const int index, const cv::Point& coord)>& operation) const;
 

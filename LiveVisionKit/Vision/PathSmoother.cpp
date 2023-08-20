@@ -18,6 +18,7 @@
 #include "PathSmoother.hpp"
 
 #include "Functions/Math.hpp"
+#include "Functions/Logic.hpp"
 #include "Logging/CSVLogger.hpp"
 
 namespace lvk
@@ -34,52 +35,52 @@ namespace lvk
 
     void PathSmoother::configure(const PathSmootherSettings& settings)
     {
-        LVK_ASSERT(settings.motion_resolution.height >= WarpField::MinimumSize.height);
-        LVK_ASSERT(settings.motion_resolution.width >= WarpField::MinimumSize.width);
-        LVK_ASSERT_01(settings.path_correction_limits.height);
-        LVK_ASSERT_01(settings.path_correction_limits.width);
-        LVK_ASSERT(settings.path_prediction_samples > 0);
-        LVK_ASSERT(settings.min_smoothing_factor > 0.0f);
-        LVK_ASSERT(settings.max_smoothing_range > 0.0f);
+        LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
+        LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
+        LVK_ASSERT(settings.predictive_samples > 0);
+        LVK_ASSERT(settings.smoothing_steps > 0.0f);
+        LVK_ASSERT_01(settings.corrective_limit);
         LVK_ASSERT_01(settings.response_rate);
 
-        m_Settings = settings;
-
-        // The trajectory is held in a circular buffer representing a windowed view on the
-        // full path. The size of the window is based on the number of predictive samples
-        // and is symmetrical with the center element, representing the current position
-        // in time. To achieve predictive smoothing the trajectory is implicitly delayed.
-        m_Trajectory.resize(2 * settings.path_prediction_samples + 1);
-
+        // Update motion resolution.
         if(m_Position.size() != settings.motion_resolution)
         {
-            m_Trajectory.clear();
-
-            // Re-create all motion fields with the new resolution.
-            m_Trajectory.pad_back(settings.motion_resolution);
-            m_Position = WarpField(settings.motion_resolution);
-            m_Trace = WarpField(settings.motion_resolution);
+            m_Trajectory.fill(settings.motion_resolution);
+            m_Trace = WarpMesh(settings.motion_resolution);
+            m_Position = WarpMesh(settings.motion_resolution);
         }
-        else
+
+        // Update trajectory sizing.
+        if(const auto window_size = 2 * settings.predictive_samples + 1; m_Trajectory.size() != window_size)
         {
-            // NOTE: Trajectory is always kept full to avoid edge cases. We also
-            // always pad from the front so that the existing data stays current.
+            // The trajectory is held in a circular buffer representing a windowed view on the
+            // full path. The size of the window is based on the number of predictive samples
+            // and is symmetrical with the center element, representing the current position.
+            // When resizing, always pad the front to avoid invalid time-shifts in the data.
+            m_Trajectory.resize(2 * settings.predictive_samples + 1);
             m_Trajectory.pad_front(settings.motion_resolution);
 
-            // Reset the position in case the trajectory changed.
+            // Reset the current position tracker.
             m_Position = m_Trajectory.oldest();
             for(size_t i = 1; i <= m_Trajectory.centre_index(); i++)
+            {
                 m_Position += m_Trajectory[i];
+            }
+
+            // Adjust the base factor to stay consistent with different sample counts.
+            m_BaseSmoothingFactor = static_cast<double>(m_Trajectory.capacity()) / 12.0;
         }
 
-        m_SceneMargins = crop<float>({1,1}, settings.path_correction_limits);
-        m_SceneCrop = WarpField(settings.motion_resolution);
+        m_SceneMargins = crop<float>({1,1}, settings.corrective_limit);
+        m_SceneCrop = WarpMesh(settings.motion_resolution);
         m_SceneCrop.crop_in(m_SceneMargins);
+
+        m_Settings = settings;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    WarpField PathSmoother::next(const WarpField& motion)
+    WarpMesh PathSmoother::next(const WarpMesh& motion)
     {
         LVK_ASSERT(motion.size() == m_Settings.motion_resolution);
 
@@ -88,45 +89,46 @@ namespace lvk
         m_Trajectory.push(motion);
         m_Position += m_Trajectory.centre();
 
-
-        // Determine how much our smoothed path trace has drifted away from the path,
-        // as a percentage of the corrective limits (1.0+ => out of scene bounds).
-        cv::absdiff(m_Trace, m_Position, m_Trace);
-        m_Trace /= m_SceneMargins.tl();
-
-        double min_drift_error, max_drift_error;
-        cv::minMaxIdx(m_Trace, &min_drift_error, &max_drift_error);
-        max_drift_error = std::min(max_drift_error, 1.0);
-
-
-        // Adapt the smoothing factor based on the max drift error. If the trace
-        // is close to the original path, the smoothing coefficient is raised to
-        // maximise the smoothing applied. If the trace starts drifting away from
-        // the path and closer to the corrective limits, the smoothing is lowered
-        // to bring the trace back towards the path.
-        m_SmoothingFactor = exp_moving_average(
-            m_SmoothingFactor,
-            m_Settings.max_smoothing_range * (1.0 - max_drift_error) + m_Settings.min_smoothing_factor,
-            m_Settings.response_rate
-        );
-        const cv::Mat smoothing_filter = cv::getGaussianKernel(
+        // Generate adaptive smoothing filter.
+        const cv::Mat filter = cv::getGaussianKernel(
             static_cast<int>(m_Trajectory.capacity()),
-            m_SmoothingFactor,
+            m_BaseSmoothingFactor + m_SmoothingFactor,
             CV_32F
         );
 
-        // Apply the filter to get the current smooth trace position.
+        // Apply the filter to get smooth path correction.
         float weight = 1.0f;
         m_Trace = m_Trajectory.oldest();
         for(size_t i = 1; i < m_Trajectory.size(); i++)
         {
-            weight -= smoothing_filter.at<float>(static_cast<int>(i) - 1);
+            weight -= filter.at<float>(static_cast<int>(i) - 1);
             m_Trace.combine(m_Trajectory[i], weight);
         }
-
-        // Find the corrective motion for smoothing.
         auto path_correction = m_Trace - m_Position;
-        path_correction.clamp(m_SceneMargins.tl());
+
+        // Determine how much our smoothed path trace has drifted away from the path,
+        // as a percentage of the corrective limits (1.0+ => out of scene bounds).
+        float max_drift_error = 0.0f;
+        path_correction.read([&](const cv::Point2f& drift, const cv::Point& coord){
+            const auto x_drift = std::abs(drift.x) / m_SceneMargins.x;
+            const auto y_drift = std::abs(drift.y) / m_SceneMargins.y;
+            max_drift_error = std::max(max_drift_error, x_drift);
+            max_drift_error = std::max(max_drift_error, y_drift);
+        }, false);
+
+        // Clamp drift within the corrective limits
+        if(max_drift_error > 1.0f)
+        {
+            path_correction.clamp(m_SceneMargins.tl());
+            max_drift_error = 1.0f;
+        }
+
+        // Adapt the smoothing factor to target a drift of 0.5.
+        m_SmoothingFactor = exp_moving_average(
+            m_SmoothingFactor,
+            hysteresis<double>(max_drift_error, 0.3, m_Settings.smoothing_steps, 0.7, 0.0),
+            m_Settings.response_rate
+        );
 
         return std::move(path_correction);
     }
@@ -145,12 +147,12 @@ namespace lvk
 
     size_t PathSmoother::time_delay() const
     {
-        return m_Settings.path_prediction_samples;
+        return m_Settings.predictive_samples;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    const WarpField& PathSmoother::scene_crop() const
+    const WarpMesh& PathSmoother::scene_crop() const
     {
         return m_SceneCrop;
     }

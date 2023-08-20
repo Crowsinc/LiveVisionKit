@@ -182,11 +182,9 @@ namespace lvk
         m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
 		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
-            const auto crop = static_cast<float>(obs_data_get_int(settings, PROP_CROP_PERCENTAGE));
-
-            stab_settings.path_correction_limits = cv::Size2f{crop, crop} / 100.0f;
             stab_settings.crop_to_stable_region = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
-			stab_settings.path_prediction_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
+            stab_settings.corrective_limit = (float)obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
+			stab_settings.predictive_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
 
 			// Decode the background colour in RGB.
@@ -203,6 +201,7 @@ namespace lvk
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
+                stab_settings.track_local_motions = true;
                 stab_settings.detection_resolution = {512, 256};
                 stab_settings.motion_resolution = {16, 16};
                 stab_settings.detection_regions = {2, 2};
@@ -213,6 +212,7 @@ namespace lvk
             }
             else
             {
+                stab_settings.track_local_motions = false;
                 stab_settings.detection_resolution = {512, 256};
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
@@ -247,10 +247,10 @@ namespace lvk
             "\n    Auto-apply Crop: %s"
             "\n    Disable Stabilization: %s"
             "\n    Test Mode: %s",
-            m_Filter.settings().path_prediction_samples,
+            m_Filter.settings().predictive_samples,
             new_stream_delay,
             obs_data_get_string(settings, PROP_SUBSYSTEM),
-            m_Filter.settings().path_correction_limits.width * 100.0f,
+            m_Filter.settings().corrective_limit * 100.0f,
             m_Filter.settings().crop_to_stable_region ? "Yes" : "No",
             m_Filter.settings().stabilize_output ? "No" : "Yes",
             m_TestMode ? "Yes" : "No"

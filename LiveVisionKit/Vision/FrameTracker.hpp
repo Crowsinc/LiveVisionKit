@@ -20,7 +20,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "FeatureDetector.hpp"
-#include "Math/WarpField.hpp"
+#include "Math/WarpMesh.hpp"
 #include "Utility/Configurable.hpp"
 
 namespace lvk
@@ -31,8 +31,8 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
 
         // Local Motion Constraints
-        float max_local_increase = 1.5f;
-        float max_local_variance = 0.25f;
+        bool track_local_motions = false;
+        float local_smoothing = 1.0f;
 
         // Robustness Constraints
         size_t min_motion_samples = 75;
@@ -48,7 +48,7 @@ namespace lvk
 
         void configure(const FrameTrackerSettings& settings) override;
 
-		std::optional<WarpField> track(const cv::UMat& next_frame);
+		std::optional<WarpMesh> track(const cv::UMat& next_frame);
 
 		void restart();
 
@@ -64,14 +64,11 @@ namespace lvk
 
     private:
 
-        bool should_use_homography() const;
-
-        WarpField estimate_local_motions(
+        WarpMesh estimate_local_motions(
             const cv::Rect2f& region,
             const Homography& global_transform,
             const std::vector<cv::Point2f>& tracked_points,
-            const std::vector<cv::Point2f>& matched_points,
-            std::vector<uint8_t>& inlier_status
+            const std::vector<cv::Point2f>& matched_points
         );
 
     private:

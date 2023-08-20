@@ -23,10 +23,14 @@ namespace lvk
 	bool test_bits(const T bits, const T test_flag);
 
 	template<typename T, typename ...Options>
-	bool any_of(T value, Options ...option);
+	bool any_of(const T value, Options ...option);
 
 	template<typename T, typename ...Options>
-	bool all_of(T value, Options ...option);
+	bool all_of(const T value, Options ...option);
+
+
+    template<typename T>
+    T hysteresis(const T state, const T thresh_lower, const T state_lower, const T thresh_upper, const T state_upper);
 
 }
 

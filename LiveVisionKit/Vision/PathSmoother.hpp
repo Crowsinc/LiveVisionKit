@@ -19,7 +19,7 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "Math/WarpField.hpp"
+#include "Math/WarpMesh.hpp"
 #include "Data/StreamBuffer.hpp"
 #include "Utility/Configurable.hpp"
 
@@ -31,12 +31,10 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
 
         // NOTE: introduces time delay.
-        size_t path_prediction_samples = 10;
-        cv::Size2f path_correction_limits = {0.1f, 0.1f};
-
-        float max_smoothing_range = 10.0f;
-        float min_smoothing_factor = 3.0f;
-        float response_rate = 0.08f;
+        size_t predictive_samples = 10;
+        float corrective_limit = 0.1f;
+        float smoothing_steps = 20.0f;
+        float response_rate = 0.04f;
     };
 
     class PathSmoother final : public Configurable<PathSmootherSettings>
@@ -47,24 +45,25 @@ namespace lvk
 
         void configure(const PathSmootherSettings& settings) override;
 
-        WarpField next(const WarpField& motion);
+        WarpMesh next(const WarpMesh& motion);
 
         void restart();
 
         size_t time_delay() const;
 
-        const WarpField& scene_crop() const;
+        const WarpMesh& scene_crop() const;
 
         const cv::Rect2f& scene_margins() const;
 
     private:
-        double m_SmoothingFactor = 0.0f;
-        StreamBuffer<WarpField> m_Trajectory{1};
-        WarpField m_Trace{WarpField::MinimumSize};
-        WarpField m_Position{WarpField::MinimumSize};
+        double m_SmoothingFactor = 0.0f; // TODO: rename
+        double m_BaseSmoothingFactor = 0.0f;
+        StreamBuffer<WarpMesh> m_Trajectory{1};
+        WarpMesh m_Trace{WarpMesh::MinimumSize};
+        WarpMesh m_Position{WarpMesh::MinimumSize};
 
         cv::Rect2f m_SceneMargins{0,0,0,0};
-        WarpField m_SceneCrop{WarpField::MinimumSize};
+        WarpMesh m_SceneCrop{WarpMesh::MinimumSize};
     };
 
 

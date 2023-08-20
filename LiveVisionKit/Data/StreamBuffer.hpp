@@ -53,6 +53,9 @@ namespace lvk
         template<typename... Args>
         void pad_back(Args&&... args);
 
+        template<typename... Args>
+        void fill(Args&&... args);
+
 
 		void trim(const size_t amount);
 

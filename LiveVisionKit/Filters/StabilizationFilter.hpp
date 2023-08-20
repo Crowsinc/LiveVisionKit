@@ -67,7 +67,7 @@ namespace lvk
 
         StreamBuffer<Frame> m_FrameQueue{1};
         VideoFrame m_WarpFrame, m_TrackingFrame;
-        WarpField m_NullMotion{WarpField::MinimumSize};
+        WarpMesh m_NullMotion{WarpMesh::MinimumSize};
 	};
 
 }

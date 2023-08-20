@@ -28,24 +28,24 @@
 namespace lvk
 {
 
-    class WarpField
+    class WarpMesh
     {
     public:
 
         inline static const cv::Size MinimumSize = {2,2};
 
 
-        WarpField(const cv::Size& size);
+        WarpMesh(const cv::Size& size);
 
-        WarpField(const WarpField& other);
+        WarpMesh(const WarpMesh& other);
 
-        WarpField(WarpField&& other) noexcept;
+        WarpMesh(WarpMesh&& other) noexcept;
 
-        WarpField(cv::Mat&& warp_map, const bool as_offsets, const bool normalized);
+        WarpMesh(cv::Mat&& warp_map, const bool as_offsets, const bool normalized);
 
-        WarpField(const cv::Mat& warp_map, const bool as_offsets, const bool normalized);
+        WarpMesh(const cv::Mat& warp_map, const bool as_offsets, const bool normalized);
 
-        WarpField(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size = MinimumSize);
+        WarpMesh(const Homography& motion, const cv::Size2f& motion_scale, const cv::Size& size = MinimumSize);
 
 
         void resize(const cv::Size& new_size);
@@ -118,23 +118,23 @@ namespace lvk
         void clamp(const cv::Size2f& min, const cv::Size2f& max);
 
 
-        void blend(const float field_weight, const WarpField& field);
+        void blend(const float mesh_weight, const WarpMesh& mesh);
 
-        void blend(const float weight_1, const float weight_2, const WarpField& field);
+        void blend(const float weight_1, const float weight_2, const WarpMesh& mesh);
 
-        void combine(const WarpField& field, const float scaling = 1.0f);
-
-
-        WarpField& operator=(WarpField&& other) noexcept;
-
-        WarpField& operator=(const WarpField& other);
+        void combine(const WarpMesh& mesh, const float scaling = 1.0f);
 
 
-        void operator+=(const WarpField& other);
+        WarpMesh& operator=(WarpMesh&& other) noexcept;
 
-        void operator-=(const WarpField& other);
+        WarpMesh& operator=(const WarpMesh& other);
 
-        void operator*=(const WarpField& other);
+
+        void operator+=(const WarpMesh& other);
+
+        void operator-=(const WarpMesh& other);
+
+        void operator*=(const WarpMesh& other);
 
 
         void operator+=(const cv::Point2f& motion);
@@ -152,41 +152,42 @@ namespace lvk
 
     private:
 
-        static const cv::Mat view_field_grid(const cv::Size& resolution);
+        static const cv::Mat view_identity_mesh(const cv::Size& resolution);
 
     private:
-        // Vector offset from dst to src coord.
-        cv::Mat m_Field;
+        // Offsets map mesh vertices from warped coord to identity coord.
+        // e.g. Mesh Offsets = Warped Mesh - Identity Grid.
+        cv::Mat m_MeshOffsets;
 
         mutable cv::UMat m_WarpMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
     };
 
-    WarpField operator+(const WarpField& left, const WarpField& right);
+    WarpMesh operator+(const WarpMesh& left, const WarpMesh& right);
 
-    WarpField operator-(const WarpField& left, const WarpField& right);
+    WarpMesh operator-(const WarpMesh& left, const WarpMesh& right);
 
-    WarpField operator*(const WarpField& left, const WarpField& right);
-
-
-    WarpField operator+(const WarpField& left, const cv::Point2f& right);
-
-    WarpField operator-(const WarpField& left, const cv::Point2f& right);
-
-    WarpField operator*(const cv::Size2f& scaling, const WarpField& field);
-
-    WarpField operator*(const WarpField& field, const cv::Size2f& scaling);
-
-    WarpField operator/(const cv::Size2f& scaling, const WarpField& field);
-
-    WarpField operator/(const WarpField& field, const cv::Size2f& scaling);
+    WarpMesh operator*(const WarpMesh& left, const WarpMesh& right);
 
 
-    WarpField operator*(const WarpField& field, const float scaling);
+    WarpMesh operator+(const WarpMesh& left, const cv::Point2f& right);
 
-    WarpField operator*(const float scaling, const WarpField& field);
+    WarpMesh operator-(const WarpMesh& left, const cv::Point2f& right);
 
-    WarpField operator/(const WarpField& field, const float scaling);
+    WarpMesh operator*(const cv::Size2f& scaling, const WarpMesh& mesh);
 
-    WarpField operator/(const float scaling, const WarpField& field);
+    WarpMesh operator*(const WarpMesh& mesh, const cv::Size2f& scaling);
+
+    WarpMesh operator/(const cv::Size2f& scaling, const WarpMesh& mesh);
+
+    WarpMesh operator/(const WarpMesh& mesh, const cv::Size2f& scaling);
+
+
+    WarpMesh operator*(const WarpMesh& mesh, const float scaling);
+
+    WarpMesh operator*(const float scaling, const WarpMesh& mesh);
+
+    WarpMesh operator/(const WarpMesh& mesh, const float scaling);
+
+    WarpMesh operator/(const float scaling, const WarpMesh& mesh);
 
 }

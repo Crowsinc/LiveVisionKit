@@ -244,4 +244,26 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    cv::Scalar barycentric_rect(const cv::Rect_<T>& rect, const cv::Point_<T>& point)
+    {
+        const T inverse_area = T(1) / rect.area();
+        const T x1 = rect.x, x2 = x1 + rect.width;
+        const T y1 = rect.y, y2 = y1 + rect.height;
+
+        const T rx1 = x2 - point.x;
+        const T ry1 = y2 - point.y;
+        const T rx2 = point.x - x1;
+        const T ry2 = point.y - y1;
+
+        return cv::Scalar(
+            rx1 * ry1 * inverse_area, // TL
+            rx1 * ry2 * inverse_area, // BL
+            rx2 * ry2 * inverse_area, // BR
+            rx2 * ry1 * inverse_area  // TR
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 }

@@ -135,6 +135,16 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    template<typename T>
+    template<typename... Args>
+    void StreamBuffer<T>::fill(Args&&... args)
+    {
+        clear();
+        pad_back(args...);
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	template<typename T>
     inline void StreamBuffer<T>::skip(const size_t amount)
 	{
