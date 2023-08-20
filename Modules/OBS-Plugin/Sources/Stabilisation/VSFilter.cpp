@@ -202,8 +202,8 @@ namespace lvk
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
                 stab_settings.track_local_motions = true;
-                stab_settings.detection_resolution = {512, 256};
-                stab_settings.motion_resolution = {16, 16};
+                stab_settings.detection_resolution = {480, 270};
+                stab_settings.motion_resolution = {32, 32};
                 stab_settings.detection_regions = {2, 2};
 
                 stab_settings.max_feature_density = 0.15f;
@@ -213,7 +213,7 @@ namespace lvk
             else
             {
                 stab_settings.track_local_motions = false;
-                stab_settings.detection_resolution = {512, 256};
+                stab_settings.detection_resolution = {480, 270};
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
 
