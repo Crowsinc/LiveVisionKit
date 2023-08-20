@@ -34,8 +34,7 @@ namespace lvk
         size_t path_prediction_samples = 10;
         cv::Size2f path_correction_limits = {0.1f, 0.1f};
 
-        float max_smoothing_range = 10.0f;
-        float min_smoothing_factor = 3.0f;
+        float smoothing_steps = 10.0f;
         float response_rate = 0.08f;
     };
 
@@ -59,6 +58,7 @@ namespace lvk
 
     private:
         double m_SmoothingFactor = 0.0f;
+        double m_BaseSmoothingFactor = 0.0f;
         StreamBuffer<WarpMesh> m_Trajectory{1};
         WarpMesh m_Trace{WarpMesh::MinimumSize};
         WarpMesh m_Position{WarpMesh::MinimumSize};
