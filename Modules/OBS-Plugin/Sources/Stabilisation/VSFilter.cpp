@@ -42,6 +42,12 @@ namespace lvk
     constexpr auto PROP_SUBSYSTEM_FIELD = "vs.subsystem.2";
     constexpr auto PROP_SUBSYSTEM_DEFAULT = PROP_SUBSYSTEM_HOMOG;
 
+    constexpr auto PROP_QUALITY_ASSURANCE = "SUPPRESSION_MODE";
+    constexpr auto PROP_QUALITY_ASSURANCE_OFF = "SM_OFF";
+    constexpr auto PROP_QUALITY_ASSURANCE_STRICT = "SM_STRICT";
+    constexpr auto PROP_QUALITY_ASSURANCE_RELAXED = "SM_RELAXED";
+    constexpr auto PROP_QUALITY_ASSURANCE_DEFAULT = PROP_QUALITY_ASSURANCE_STRICT;
+
 	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
 	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
 	constexpr auto PROP_CROP_PERCENTAGE_MAX = 25;
@@ -90,7 +96,7 @@ namespace lvk
 		obs_property_int_set_suffix(property, "ms");
 		obs_property_set_enabled(property, false);
 
-        // Motion Quality Selection
+        // Motion Subsystem Selection
         property = obs_properties_add_list(
             properties,
             PROP_SUBSYSTEM,
@@ -100,6 +106,17 @@ namespace lvk
         );
         obs_property_list_add_string(property, L(PROP_SUBSYSTEM_HOMOG), L(PROP_SUBSYSTEM_HOMOG));
         obs_property_list_add_string(property, L(PROP_SUBSYSTEM_FIELD), L(PROP_SUBSYSTEM_FIELD));
+
+        property = obs_properties_add_list(
+            properties,
+            PROP_QUALITY_ASSURANCE,
+            L("vs.qa"),
+            OBS_COMBO_TYPE_LIST,
+            OBS_COMBO_FORMAT_STRING
+        );
+        obs_property_list_add_string(property, L("vs.qa.relaxed"), PROP_QUALITY_ASSURANCE_RELAXED);
+        obs_property_list_add_string(property, L("vs.qa.strict"), PROP_QUALITY_ASSURANCE_STRICT);
+
 
         // Crop Slider
 		property = obs_properties_add_int_slider(
@@ -159,6 +176,7 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+        obs_data_set_default_string(settings, PROP_QUALITY_ASSURANCE, PROP_QUALITY_ASSURANCE_DEFAULT);
 		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
 		obs_data_set_default_int(settings, PROP_BACKGROUND_COLOUR, PROP_BACKGROUND_COLOUR_DEFAULT);
 		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, PROP_CROP_PERCENTAGE_DEFAULT);
@@ -197,7 +215,7 @@ namespace lvk
 			if(format() == VideoFrame::YUV || is_asynchronous())
 				stab_settings.background_colour = col::rgb2yuv(stab_settings.background_colour);
 
-            // Configure motion quality
+            // Configure motion subsystem
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
@@ -221,6 +239,13 @@ namespace lvk
                 stab_settings.min_feature_density = 0.02f;
                 stab_settings.accumulation_rate = 3.0f;
             }
+
+            // Configure quality assurance
+            const std::string quality_assurance = obs_data_get_string(settings, PROP_QUALITY_ASSURANCE);
+            if(quality_assurance == PROP_QUALITY_ASSURANCE_STRICT)
+                stab_settings.stability_threshold = 0.80f;
+            else
+                stab_settings.stability_threshold = 0.25f;
 		});
 
 		// Update the frame delay indicator for the user
