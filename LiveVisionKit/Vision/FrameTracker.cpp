@@ -38,8 +38,6 @@ namespace lvk
     constexpr auto OPTICAL_TRACKER_MAX_ITERS = 5;
 
     constexpr auto HOMOGRAPHY_DISTRIBUTION_THRESHOLD = 0.6f;
-    constexpr auto USAC_NOISE_TOLERANCE = 10.0f;
-    constexpr auto USAC_MAX_ITERS = 50;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -55,17 +53,16 @@ namespace lvk
 	{
         configure(settings);
 
-        // Set USAC params for accurate Homography estimation
+        m_USACParams.threshold = 5.0f;
         m_USACParams.confidence = 0.99;
-        m_USACParams.threshold = USAC_NOISE_TOLERANCE;
-        m_USACParams.maxIterations = USAC_MAX_ITERS;
+        m_USACParams.maxIterations = 50;
         m_USACParams.sampler = cv::SAMPLING_UNIFORM;
         m_USACParams.score = cv::SCORE_METHOD_MAGSAC;
-        m_USACParams.final_polisher = cv::MAGSAC;
-        m_USACParams.final_polisher_iterations = 5;
         m_USACParams.loMethod = cv::LOCAL_OPTIM_SIGMA;
         m_USACParams.loIterations = 10;
         m_USACParams.loSampleSize = 20;
+        m_USACParams.final_polisher = cv::MAGSAC;
+        m_USACParams.final_polisher_iterations = 5;
 
 		restart();
 	}
@@ -76,8 +73,9 @@ namespace lvk
     {
         LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
         LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
-        LVK_ASSERT(settings.local_smoothing > 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
+        LVK_ASSERT(settings.local_smoothing > 0.0f);
+        LVK_ASSERT_01(settings.stability_threshold);
         LVK_ASSERT_01(settings.min_motion_quality);
 
         m_FeatureDetector.configure(settings);
@@ -183,14 +181,14 @@ namespace lvk
                     m_MatchedPoints,
                     m_InlierStatus,
                     cv::RANSAC,
-                    USAC_NOISE_TOLERANCE,
-                    USAC_MAX_ITERS
+                    m_USACParams.threshold,
+                    m_USACParams.maxIterations
                 )
             );
         }
 
         // A sudden low spike in global inlier ratio often indicates a discontinuity.
-        if(ratio_of<uchar>(m_InlierStatus, 1) < m_Settings.continuity_threshold)
+        if(ratio_of<uchar>(m_InlierStatus, 1) < m_Settings.stability_threshold)
         {
             m_MatchedPoints.clear();
             return std::nullopt;

@@ -32,12 +32,12 @@ namespace lvk
 
         // Local Motion Constraints
         bool track_local_motions = false;
-        float local_smoothing = 1.0f;
+        float local_smoothing = 1.5f;
 
         // Robustness Constraints
         size_t min_motion_samples = 75;
         float min_motion_quality = 0.20f;
-        float continuity_threshold = 0.30f;
+        float stability_threshold = 0.30f;
     };
 
 	class FrameTracker final : public Configurable<FrameTrackerSettings>
