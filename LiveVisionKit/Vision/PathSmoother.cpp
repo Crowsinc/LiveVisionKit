@@ -104,9 +104,7 @@ namespace lvk
             weight -= filter.at<float>(static_cast<int>(i) - 1);
             m_Trace.combine(m_Trajectory[i], weight);
         }
-
         auto path_correction = m_Trace - m_Position;
-        path_correction.clamp(m_SceneMargins.tl());
 
         // Determine how much our smoothed path trace has drifted away from the path,
         // as a percentage of the corrective limits (1.0+ => out of scene bounds).
@@ -114,8 +112,16 @@ namespace lvk
         path_correction.read([&](const cv::Point2f& drift, const cv::Point& coord){
             const auto x_drift = std::abs(drift.x) / m_SceneMargins.x;
             const auto y_drift = std::abs(drift.y) / m_SceneMargins.y;
-            max_drift_error = std::max(x_drift, y_drift);
+            max_drift_error = std::max(max_drift_error, x_drift);
+            max_drift_error = std::max(max_drift_error, y_drift);
         }, false);
+
+        // Clamp drift within the corrective limits
+        if(max_drift_error > 1.0f)
+        {
+            path_correction.clamp(m_SceneMargins.tl());
+            max_drift_error = 1.0f;
+        }
 
         // Adapt the smoothing factor to target a drift of 0.5.
         m_SmoothingFactor = exp_moving_average(
