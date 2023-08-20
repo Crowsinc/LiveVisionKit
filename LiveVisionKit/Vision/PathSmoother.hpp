@@ -33,8 +33,8 @@ namespace lvk
         // NOTE: introduces time delay.
         size_t predictive_samples = 10;
         float corrective_limit = 0.1f;
-        float smoothing_steps = 10.0f;
-        float response_rate = 0.08f;
+        float smoothing_steps = 20.0f;
+        float response_rate = 0.04f;
     };
 
     class PathSmoother final : public Configurable<PathSmootherSettings>
@@ -56,7 +56,7 @@ namespace lvk
         const cv::Rect2f& scene_margins() const;
 
     private:
-        double m_SmoothingFactor = 0.0f;
+        double m_SmoothingFactor = 0.0f; // TODO: rename
         double m_BaseSmoothingFactor = 0.0f;
         StreamBuffer<WarpMesh> m_Trajectory{1};
         WarpMesh m_Trace{WarpMesh::MinimumSize};

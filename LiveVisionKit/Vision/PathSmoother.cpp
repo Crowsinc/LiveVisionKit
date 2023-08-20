@@ -18,10 +18,15 @@
 #include "PathSmoother.hpp"
 
 #include "Functions/Math.hpp"
+#include "Functions/Logic.hpp"
 #include "Logging/CSVLogger.hpp"
 
 namespace lvk
 {
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    constexpr float ADAPTIVE_DEADZONE = 0.5f;
 
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -88,45 +93,47 @@ namespace lvk
         m_Trajectory.push(motion);
         m_Position += m_Trajectory.centre();
 
-
-        // Determine how much our smoothed path trace has drifted away from the path,
-        // as a percentage of the corrective limits (1.0+ => out of scene bounds).
-        cv::absdiff(m_Trace, m_Position, m_Trace);
-        m_Trace /= m_SceneMargins.tl();
-
-        double min_drift_error, max_drift_error;
-        cv::minMaxIdx(m_Trace, &min_drift_error, &max_drift_error);
-        max_drift_error = std::min(max_drift_error, 1.0);
-
-
-        // Adapt the smoothing factor based on the max drift error. If the trace
-        // is close to the original path, the smoothing coefficient is raised to
-        // maximise the smoothing applied. If the trace starts drifting away from
-        // the path and closer to the corrective limits, the smoothing is lowered
-        // to bring the trace back towards the path.
-        m_SmoothingFactor = exp_moving_average(
-            m_SmoothingFactor,
-            m_Settings.smoothing_steps * (1.0 - max_drift_error) + m_BaseSmoothingFactor,
-            m_Settings.response_rate
-        );
-        const cv::Mat smoothing_filter = cv::getGaussianKernel(
+        // Generate adaptive smoothing filter.
+        const cv::Mat filter = cv::getGaussianKernel(
             static_cast<int>(m_Trajectory.capacity()),
-            m_SmoothingFactor,
+            m_BaseSmoothingFactor + m_SmoothingFactor,
             CV_32F
         );
 
-        // Apply the filter to get the current smooth trace position.
+        // Apply the filter to get smooth path correction.
         float weight = 1.0f;
         m_Trace = m_Trajectory.oldest();
         for(size_t i = 1; i < m_Trajectory.size(); i++)
         {
-            weight -= smoothing_filter.at<float>(static_cast<int>(i) - 1);
+            weight -= filter.at<float>(static_cast<int>(i) - 1);
             m_Trace.combine(m_Trajectory[i], weight);
         }
-
-        // Find the corrective motion for smoothing.
         auto path_correction = m_Trace - m_Position;
-        path_correction.clamp(m_SceneMargins.tl());
+
+        // Determine how much our smoothed path trace has drifted away from the path,
+        // as a percentage of the corrective limits (1.0+ => out of scene bounds).
+        float max_drift_error = 0.0f;
+        path_correction.read([&](const cv::Point2f& drift, const cv::Point& coord){
+            const auto x_drift = std::abs(drift.x) / m_SceneMargins.x;
+            const auto y_drift = std::abs(drift.y) / m_SceneMargins.y;
+            max_drift_error = std::max(x_drift, y_drift);
+        }, false);
+
+        // Ensure we don't drift past the corrective limits.
+        if(max_drift_error > 1.0f)
+        {
+            path_correction.clamp(m_SceneMargins.tl());
+            max_drift_error = 1.0f;
+        }
+
+        // Adapt the smoothing factor to target a drift of 0.5.
+        m_SmoothingFactor = exp_moving_average(
+            m_SmoothingFactor,
+            hysteresis<double>(max_drift_error, 0.3, m_Settings.smoothing_steps, 0.7, 0.0),
+            m_Settings.response_rate
+        );
+
+        std::cout << m_SmoothingFactor << std::endl;
 
         return std::move(path_correction);
     }
