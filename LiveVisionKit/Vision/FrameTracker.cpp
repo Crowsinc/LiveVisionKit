@@ -326,7 +326,7 @@ namespace lvk
             const cv::Point2f V2 = V00 - V01, R2 = V11 - V01;
             const float l1 = 1.0f/R1.dot(R1), l2 = 1.0f/R2.dot(R2);
 
-            const float weight = 1.0f;
+            const float weight = m_Settings.local_smoothing;
 
             const float u1 = (R1.x * V1.x + R1.y * V1.y) * l1 * weight;
             const float v1 = (R1.y * V1.x - R1.x * V1.y) * l1 * weight;
