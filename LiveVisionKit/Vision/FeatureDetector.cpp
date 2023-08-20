@@ -25,7 +25,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	constexpr int FAST_MIN_THRESHOLD = 25;
+	constexpr int FAST_MIN_THRESHOLD = 10;
 	constexpr int FAST_MAX_THRESHOLD = 250;
 	constexpr int FAST_THRESHOLD_STEP = 5.0f;
     constexpr int FAST_FEATURE_TOLERANCE = 150;
