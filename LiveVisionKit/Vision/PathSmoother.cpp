@@ -41,41 +41,40 @@ namespace lvk
         LVK_ASSERT_01(settings.corrective_limit);
         LVK_ASSERT_01(settings.response_rate);
 
-        m_Settings = settings;
-
-        // The trajectory is held in a circular buffer representing a windowed view on the
-        // full path. The size of the window is based on the number of predictive samples
-        // and is symmetrical with the center element, representing the current position
-        // in time. To achieve predictive smoothing the trajectory is implicitly delayed.
-        m_Trajectory.resize(2 * settings.predictive_samples + 1);
-
+        // Update motion resolution.
         if(m_Position.size() != settings.motion_resolution)
         {
-            m_Trajectory.clear();
-
-            // Re-create all motion fields with the new resolution.
-            m_Trajectory.pad_back(settings.motion_resolution);
-            m_Position = WarpMesh(settings.motion_resolution);
+            m_Trajectory.fill(settings.motion_resolution);
             m_Trace = WarpMesh(settings.motion_resolution);
+            m_Position = WarpMesh(settings.motion_resolution);
         }
-        else
+
+        // Update trajectory sizing.
+        if(const auto window_size = 2 * settings.predictive_samples + 1; m_Trajectory.size() != window_size)
         {
-            // NOTE: Trajectory is always kept full to avoid edge cases. We also
-            // always pad from the front so that the existing data stays current.
+            // The trajectory is held in a circular buffer representing a windowed view on the
+            // full path. The size of the window is based on the number of predictive samples
+            // and is symmetrical with the center element, representing the current position.
+            // When resizing, always pad the front to avoid invalid time-shifts in the data.
+            m_Trajectory.resize(2 * settings.predictive_samples + 1);
             m_Trajectory.pad_front(settings.motion_resolution);
 
-            // Reset the position in case the trajectory changed.
+            // Reset the current position tracker.
             m_Position = m_Trajectory.oldest();
             for(size_t i = 1; i <= m_Trajectory.centre_index(); i++)
+            {
                 m_Position += m_Trajectory[i];
-        }
+            }
 
-        // Adjust the base factor to stay consistent with different sample counts.
-        m_BaseSmoothingFactor = static_cast<double>(m_Trajectory.capacity()) / 12.0;
+            // Adjust the base factor to stay consistent with different sample counts.
+            m_BaseSmoothingFactor = static_cast<double>(m_Trajectory.capacity()) / 12.0;
+        }
 
         m_SceneMargins = crop<float>({1,1}, settings.corrective_limit);
         m_SceneCrop = WarpMesh(settings.motion_resolution);
         m_SceneCrop.crop_in(m_SceneMargins);
+
+        m_Settings = settings;
     }
 
 //---------------------------------------------------------------------------------------------------------------------
