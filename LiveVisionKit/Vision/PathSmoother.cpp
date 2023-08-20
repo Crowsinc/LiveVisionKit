@@ -133,8 +133,6 @@ namespace lvk
             m_Settings.response_rate
         );
 
-        std::cout << m_SmoothingFactor << std::endl;
-
         return std::move(path_correction);
     }
 
