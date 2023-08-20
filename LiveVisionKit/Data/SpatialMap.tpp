@@ -612,9 +612,12 @@ namespace lvk
         float excess = 0.0;
         for(const auto& [key, data] : m_Data)
         {
-            const size_t index = sector_grid.key_to_index(sector_grid.key_of(key));
-            if(++sector_buckets[index] > ideal_distribution)
-                excess += 1.0;
+            if(sector_grid.test_point(key))
+            {
+                const size_t index = sector_grid.key_to_index(sector_grid.key_of(key));
+                if(++sector_buckets[index] > ideal_distribution)
+                    excess += 1.0;
+            }
         }
 
         // The maximum excess occurs when all points are in the same sector
