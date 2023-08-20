@@ -35,7 +35,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename ...Options>
-    inline bool any_of(T value, Options ...option)
+    inline bool any_of(const T value, Options ...option)
 	{
 		return (... || (value == option));
 	}
@@ -43,10 +43,26 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	template<typename T, typename ...Options>
-    inline bool all_of(T value, Options ...option)
+    inline bool all_of(const T value, Options ...option)
 	{
 		return (... && (value == option));
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    inline T hysteresis(
+        const T state,
+        const T thresh_lower, const T state_lower,
+        const T thresh_upper, const T state_upper
+    )
+    {
+        if(state >= thresh_upper)
+            return state_upper;
+        if(state <= thresh_lower)
+            return state_lower;
+        return state;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 
