@@ -36,10 +36,9 @@ namespace lvk
     {
         LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
         LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
-        LVK_ASSERT_01(settings.path_correction_limits.height);
-        LVK_ASSERT_01(settings.path_correction_limits.width);
-        LVK_ASSERT(settings.path_prediction_samples > 0);
+        LVK_ASSERT(settings.predictive_samples > 0);
         LVK_ASSERT(settings.smoothing_steps > 0.0f);
+        LVK_ASSERT_01(settings.corrective_limit);
         LVK_ASSERT_01(settings.response_rate);
 
         m_Settings = settings;
@@ -48,7 +47,7 @@ namespace lvk
         // full path. The size of the window is based on the number of predictive samples
         // and is symmetrical with the center element, representing the current position
         // in time. To achieve predictive smoothing the trajectory is implicitly delayed.
-        m_Trajectory.resize(2 * settings.path_prediction_samples + 1);
+        m_Trajectory.resize(2 * settings.predictive_samples + 1);
 
         if(m_Position.size() != settings.motion_resolution)
         {
@@ -74,7 +73,7 @@ namespace lvk
         // Adjust the base factor to stay consistent with different sample counts.
         m_BaseSmoothingFactor = static_cast<double>(m_Trajectory.capacity()) / 12.0;
 
-        m_SceneMargins = crop<float>({1,1}, settings.path_correction_limits);
+        m_SceneMargins = crop<float>({1,1}, settings.corrective_limit);
         m_SceneCrop = WarpMesh(settings.motion_resolution);
         m_SceneCrop.crop_in(m_SceneMargins);
     }
@@ -147,7 +146,7 @@ namespace lvk
 
     size_t PathSmoother::time_delay() const
     {
-        return m_Settings.path_prediction_samples;
+        return m_Settings.predictive_samples;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

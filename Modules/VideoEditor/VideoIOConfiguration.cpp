@@ -416,10 +416,7 @@ namespace clt
                 config_parser.add_variable<float>(
                     {".crop_prop", ".cp"},
                     "Used to percentage crop and movement area allowed for stabilization",
-                    [&](const float proportion){
-                        config.path_correction_limits.width = proportion;
-                        config.path_correction_limits.height = proportion;
-                    }
+                    &config.corrective_limit
                 );
                 config_parser.add_switch(
                     {".crop_out", ".co"},
@@ -429,7 +426,7 @@ namespace clt
                 config_parser.add_variable(
                     {".smoothing", ".s"},
                     "The amount of camera smoothing to apply to the video.",
-                    &config.path_prediction_samples
+                    &config.predictive_samples
                 );
             }
         );

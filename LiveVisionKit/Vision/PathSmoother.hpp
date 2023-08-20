@@ -31,9 +31,8 @@ namespace lvk
         cv::Size motion_resolution = {2, 2};
 
         // NOTE: introduces time delay.
-        size_t path_prediction_samples = 10;
-        cv::Size2f path_correction_limits = {0.1f, 0.1f};
-
+        size_t predictive_samples = 10;
+        float corrective_limit = 0.1f;
         float smoothing_steps = 10.0f;
         float response_rate = 0.08f;
     };
