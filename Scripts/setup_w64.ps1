@@ -65,7 +65,7 @@ $eigen_version = "3.4"
 $eigen_path = Join-Path $deps_path "/eigen"
 if(-Not (Test-Path $eigen_path))
 {
-    Set-Location $eigen_path
+    Set-Location $deps_path
     git clone -b $eigen_version https://gitlab.com/libeigen/eigen.git
 }
 
