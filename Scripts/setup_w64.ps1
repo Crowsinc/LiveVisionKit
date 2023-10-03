@@ -39,6 +39,7 @@ Set-Location $opencv_build_path
 cmake -DBUILD_SHARED_LIBS=OFF `
       -DENABLE_LTO=ON `
       -DCV_TRACE=OFF `
+      -DWITH_EIGEN=OFF `
       -DWITH_OPENCL=ON `
       -DWITH_DIRECTX=ON `
       -DWITH_OPENCL_D3D11_NV=ON `
@@ -58,6 +59,34 @@ cmake -DBUILD_SHARED_LIBS=OFF `
 # Compile and install OpenCV
 cmake --build . --target ALL_BUILD --config "$config"
 cmake --install . --prefix ./install/ --config "$config"
+
+# Clone Eigen
+$eigen_version = "3.4"
+$eigen_path = Join-Path $deps_path "/eigen"
+if(-Not (Test-Path $eigen_path))
+{
+    Set-Location $eigen_path
+    git clone -b $eigen_version https://gitlab.com/libeigen/eigen.git
+}
+
+if(-Not (Test-Path $eigen_path))
+{
+    Write-Error "Error! Could not clone Eigen."
+    exit
+}
+
+# Create build folder
+$eigen_build_path = Join-Path $eigen_path "/build"
+if(-Not (Test-Path $eigen_build_path))
+{
+    New-Item -Path $eigen_build_path -ItemType Directory
+}
+Set-Location $eigen_build_path
+
+# Build Eigen (this just generates the cmake package)
+cmake ..
+cmake --build .
+
 
 # Clone obs-studio
 $obs_studio_version = "27.2.4"

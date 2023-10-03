@@ -67,6 +67,7 @@ cmake -DCMAKE_BUILD_TYPE="$config" \
       -DWITH_OPENCL=ON \
       -DWITH_OPENGL=ON \
       -DWITH_QT=ON \
+      -DWITH_EIGEN=OFF \
       -DBUILD_EXAMPLES=OFF \
       -DBUILD_TESTS=OFF \
       -DBUILD_opencv_apps=OFF \
@@ -127,6 +128,32 @@ sudo apt install \
      python3-dev \
      swig
 
+
+# Clone Eigen
+eigen_version="3.4"
+eigen_path="${deps_path}/eigen"
+if [ ! -d "$eigen_path" ]; then
+    cd "$deps_path"
+    git clone -b "$eigen_version" https://gitlab.com/libeigen/eigen.git
+fi
+
+if [ ! -d "$eigen_path" ]; then
+    echo "Error! Could not clone Eigen." 
+    exit
+fi
+
+# Create build folder
+eigen_build_path="${eigen_path}/build"
+if [ ! -d "$eigen_build_path" ]; then
+    mkdir "$eigen_build_path"
+fi
+cd "$eigen_build_path"
+
+# Build Eigen (this just generates the cmake package)
+cmake ..
+cmake --build .
+
+
 # Clone OBS-Studio
 obs_studio_version="27.2.4"
 obs_studio_path="${deps_path}/obs-studio"
@@ -161,5 +188,8 @@ cmake -DCMAKE_BUILD_TYPE="$config" \
 # Compile and install OBS-Studio
 cmake --build . --config "$config"
 cmake --install . --prefix "./install/" --config "$config"
+
+
+
 
 

@@ -23,8 +23,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 set(EIGEN_BUILD_PATH "./Dependencies/eigen/build/" CACHE PATH "The path to the Eigen build folder")
-find_package(Eigen3 PATHS ${EIGEN_BUILD_PATH})
-
+find_package(Eigen3 REQUIRED NO_MODULE PATHS ${EIGEN_BUILD_PATH})
 
 # Include all dependencies
 target_include_directories(
@@ -32,7 +31,6 @@ target_include_directories(
     PUBLIC 
         ${CMAKE_CURRENT_SOURCE_DIR} 
         ${OpenCV_INCLUDE_DIRS}
-        ${EIGEN3_INCLUDE_DIR}
 )    
 
 # Link all dependencies
@@ -45,7 +43,7 @@ target_link_libraries(
     opencv_calib3d
     opencv_highgui
     opencv_features2d
-    Eigen3::Eigen # TODO
+    Eigen3::Eigen
 )
 
 if(UNIX)
