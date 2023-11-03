@@ -45,9 +45,9 @@ namespace lvk
 
         void configure(const FeatureDetectorSettings& settings) override;
 
-        float detect(cv::InputArray frame, std::vector<cv::Point2f>& points);
+        float detect(cv::InputArray frame, std::vector<cv::KeyPoint>& features);
 
-		void propagate(const std::vector<cv::Point2f>& points);
+		void propagate(const std::vector<cv::KeyPoint>& features);
 
 		void reset();
 
@@ -62,7 +62,7 @@ namespace lvk
 		{
             cv::Rect2f bounds;
             int threshold = 0;
-            size_t points = 0;
+            size_t load = 0;
 		};
 
 		void construct_detection_regions();

@@ -99,7 +99,7 @@ namespace lvk
                     region_size.height
 				);
                 region.threshold = FAST_MIN_THRESHOLD;
-                region.points = 0;
+                region.load = 0;
 
                 m_DetectionRegions.place_at({c, r}, region);
 			}
@@ -108,7 +108,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float FeatureDetector::detect(cv::InputArray frame, std::vector<cv::Point2f>& points)
+	float FeatureDetector::detect(cv::InputArray frame, std::vector<cv::KeyPoint>& features)
 	{
 		LVK_ASSERT(frame.size() == m_Settings.detection_resolution);
         LVK_ASSERT(frame.isMat() || frame.isUMat());
@@ -117,9 +117,9 @@ namespace lvk
 		// Detect new features in the detection zones
 		for(auto& [coord, region] : m_DetectionRegions)
 		{
-            auto& [bounds, threshold, features] = region;
+            auto& [bounds, threshold, load] = region;
 
-			if(m_Settings.force_detection || features <= m_MinimumFeatureLoad)
+			if(m_Settings.force_detection || load <= m_MinimumFeatureLoad)
 			{
                 m_FASTFeatureBuffer.clear();
 
@@ -130,7 +130,7 @@ namespace lvk
                 else
                     m_FASTDetector->detect(frame.getUMat()(bounds), m_FASTFeatureBuffer);
 
-                // Process the features into the suppression grid for non-maximal suppression.
+                // Process the features into the suppression grid for further non-maximal suppression.
                 std::for_each(m_FASTFeatureBuffer.begin(), m_FASTFeatureBuffer.end(), [&](cv::KeyPoint& feature)
                 {
                     // Update local region coordinate to global coordinate.
@@ -139,8 +139,8 @@ namespace lvk
                     const auto& key = m_SuppressionGrid.key_of(feature.pt);
                     const auto& maximal_feature = m_SuppressionGrid.at_or(key, feature);
 
-                    // NOTE: propagations are given a size of 0.0f, we do not overwrite them.
-                    if(maximal_feature.size != 0.0f && maximal_feature.response <= feature.response)
+                    // Prefer maximal features
+                    if(maximal_feature.response <= feature.response)
                         m_SuppressionGrid.emplace_at(key, feature);
                 });
 
@@ -151,14 +151,12 @@ namespace lvk
                     threshold = step(threshold, FAST_MIN_THRESHOLD, FAST_THRESHOLD_STEP);
 
             }
-            features = 0; // Reset region
+            load = 0; // Reset region
 		}
 
-        // Extract all the feature points from the suppression grid.
+        // Extract all the features from the suppression grid.
         for(const auto& [key, feature] : m_SuppressionGrid)
-        {
-            points.push_back(feature.pt);
-        }
+            features.push_back(feature);
 
         // Calculate the distribution quality of the points and clear the grid.
         float quality = m_SuppressionGrid.distribution_quality();
@@ -169,16 +167,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FeatureDetector::propagate(const std::vector<cv::Point2f>& points)
+	void FeatureDetector::propagate(const std::vector<cv::KeyPoint>& features)
 	{
-		for(const auto& point : points)
+		for(const auto& feature : features)
 		{
-			// Silently ignore points which are out of bounds.
-			if(const auto& key = m_SuppressionGrid.try_key_of(point); key.has_value())
+			// Silently ignore features which are out of bounds.
+			if(const auto& key = m_SuppressionGrid.try_key_of(feature.pt); key.has_value())
 			{
-                // NOTE: propagated points are given a size of zero.
-                m_SuppressionGrid.emplace_at(*key, point, 0.0f);
-                m_DetectionRegions[point].points++;
+                m_SuppressionGrid.emplace_at(*key, feature);
+                m_DetectionRegions[feature.pt].load++;
 			}
 		}
 	}
@@ -189,7 +186,7 @@ namespace lvk
 	{
         m_SuppressionGrid.clear();
 		for(auto& [coord, region] : m_DetectionRegions)
-            region.points = 0;
+            region.load = 0;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
