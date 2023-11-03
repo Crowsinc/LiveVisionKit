@@ -69,7 +69,8 @@ namespace lvk
 
 	private:
         SpatialMap<FASTRegion> m_DetectionRegions;
-        SpatialMap<cv::KeyPoint> m_SuppressionGrid;
+        SpatialMap<size_t> m_SuppressionGrid;
+        std::vector<cv::KeyPoint> m_Features;
 
         std::vector<cv::KeyPoint> m_FASTFeatureBuffer;
         size_t m_FASTFeatureTarget = 0, m_MinimumFeatureLoad = 0;

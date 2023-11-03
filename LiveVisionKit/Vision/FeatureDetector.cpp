@@ -67,14 +67,17 @@ namespace lvk
         m_DetectionRegions.align(input_region);
         construct_detection_regions();
 
+        const auto max_features = m_SuppressionGrid.area();
         const auto max_regions = static_cast<float>(m_DetectionRegions.area());
-        const auto max_region_features = static_cast<float>(m_SuppressionGrid.area()) / max_regions;
+        const auto max_region_features = static_cast<float>(max_features) / max_regions;
         const auto density_ratio = settings.min_feature_density / settings.max_feature_density;
 
         // Calculate min, max, and target feature loads for each detection zone.
         m_MinimumFeatureLoad = static_cast<size_t>(max_region_features * density_ratio);
         m_FASTFeatureTarget = static_cast<size_t>(settings.accumulation_rate * max_region_features);
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
+        m_Features.reserve(max_features);
+
 
         m_Settings = settings;
     }
@@ -130,18 +133,24 @@ namespace lvk
                 else
                     m_FASTDetector->detect(frame.getUMat()(bounds), m_FASTFeatureBuffer);
 
-                // Process the features into the suppression grid for further non-maximal suppression.
+                // Process the features through the suppression grid for further non-maximal suppression.
                 std::for_each(m_FASTFeatureBuffer.begin(), m_FASTFeatureBuffer.end(), [&](cv::KeyPoint& feature)
                 {
                     // Update local region coordinate to global coordinate.
                     feature.pt += bounds.tl();
 
-                    const auto& key = m_SuppressionGrid.key_of(feature.pt);
-                    const auto& maximal_feature = m_SuppressionGrid.at_or(key, feature);
-
                     // Prefer maximal features
-                    if(maximal_feature.response <= feature.response)
-                        m_SuppressionGrid.emplace_at(key, feature);
+                    const auto& key = m_SuppressionGrid.key_of(feature.pt);
+                    if(!m_SuppressionGrid.contains(key))
+                    {
+                        m_SuppressionGrid.emplace_at(key, m_Features.size());
+                        m_Features.emplace_back(feature);
+                    }
+                    else if(const int i = m_SuppressionGrid.at(key); m_Features[i].response < feature.response)
+                    {
+                        // Replace existing feature
+                        m_Features[i] = feature;
+                    }
                 });
 
 				// Dynamically adjust FAST threshold to try meet the feature target next time
@@ -154,9 +163,9 @@ namespace lvk
             load = 0; // Reset region
 		}
 
-        // Extract all the features from the suppression grid.
-        for(const auto& [key, feature] : m_SuppressionGrid)
-            features.push_back(feature);
+        // Output the resulting maximal features
+        std::swap(m_Features, features);
+        m_Features.clear();
 
         // Calculate the distribution quality of the points and clear the grid.
         float quality = m_SuppressionGrid.distribution_quality();
@@ -174,8 +183,18 @@ namespace lvk
 			// Silently ignore features which are out of bounds.
 			if(const auto& key = m_SuppressionGrid.try_key_of(feature.pt); key.has_value())
 			{
-                m_SuppressionGrid.emplace_at(*key, feature);
-                m_DetectionRegions[feature.pt].load++;
+                // Perform non-maximal suppression
+                if(!m_SuppressionGrid.contains(*key))
+                {
+                    m_SuppressionGrid.emplace_at(*key, m_Features.size());
+                    m_DetectionRegions[feature.pt].load++;
+                    m_Features.emplace_back(feature);
+                }
+                else if(const int i = m_SuppressionGrid.at(*key); m_Features[i].response < feature.response)
+                {
+                    // Replace existing feature
+                    m_Features[i] = feature;
+                }
 			}
 		}
 	}
