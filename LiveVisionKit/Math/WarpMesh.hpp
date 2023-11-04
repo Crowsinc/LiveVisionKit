@@ -35,7 +35,7 @@ namespace lvk
         inline static const cv::Size MinimumSize = {2,2};
 
 
-        WarpMesh(const cv::Size& size);
+        explicit WarpMesh(const cv::Size& size);
 
         WarpMesh(const WarpMesh& other);
 
