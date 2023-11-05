@@ -27,11 +27,9 @@ These videos present LiveVisionKit filters within some of the use cases and vide
  * Adaptive De-Blocker: https://youtu.be/LCrVeJ-H1IY
 
 # Supporting the Project
-Each LiveVisionKit filter is engineered from the ground up using state of the art computer vision, image processing, and AI techniques. This is a costly process which takes hundreds of working hours across various stages of research, experimentation, development, testing, and optimization. If you depend on LiveVisionKit, please consider making a donation to help fund the development and upkeep of the project!
+Each LiveVisionKit filter is engineered from the ground up using state of the art computer vision, image processing, and AI techniques. This is a costly process which takes hundreds of working hours across various stages of research, experimentation, development, testing, and optimization. If you depend on LiveVisionKit, please consider supporting the development and upkeep of the project!
 
-- **PayPal**: https://paypal.me/crowsinc
-
-*Donations above $5 USD will permanently receive the supporter role on the Discord server as a mark of appreciation - this role does not currently come with any extra server benefits. Please include your Discord name and tag in the donation message - or contact @Crowsinc directly on Discord*
+*Helpers of the project and past donators can get the supporter role on Discord. Ask @Crowsinc on Discord for more information*
 
 ### Translations
 Help expand usability in non-English speaking countries by contributing to language translations on [Crowdin](https://crowdin.com/project/livevisionkit) - simply make a free account and start translating to your native language. Updated translations will be released alongside new versions of LiveVisionKit. 
