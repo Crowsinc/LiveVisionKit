@@ -180,60 +180,6 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    void WarpMesh::undistort(const float tolerance)
-    {
-        LVK_ASSERT(tolerance >= 0);
-
-        // Undistort the mesh by finding a parallelogram of best fit and anchoring all
-        // offsets to be within a tolerance of that. This should result in a warp that
-        // is more affine. To find the parallelogram, the line of best fit will be found
-        // for all x and y offsets, which correspond to the y values of the vertical and
-        // horizontal parallel lines of the parallelogram. For each line, the x coordinate
-        // always corresponds to the respective grid coord.
-        //
-        // The linear regression formulae taken from:
-        // https://www.tutorialspoint.com/regression-analysis-and-the-best-fitting-line-using-cplusplus
-
-        const cv::Scalar n(cols(), rows());
-        const cv::Scalar nt(rows(), cols());
-        const cv::Scalar N = n * nt;
-
-        // Simple sums can be calculated up front using series.
-        const auto x_sum = nt * (n * (n - 1.0)) / 2.0;
-        const auto x2_sum = nt * (n * (n + 1.0) * (2.0 * n + 1.0)) / 6.0;
-
-        // Get the y sum directly from the offsets.
-        const auto y_sum = cv::sum(m_MeshOffsets);
-
-        // Multiply the offsets by the coordinate grid to get the xy sum.
-        cv::Mat xy_offsets;
-        cv::multiply(m_MeshOffsets, view_identity_mesh(size()), xy_offsets);
-        const auto xy_sum = cv::sum(xy_offsets);
-
-        // Calculate the slope and intercepts of the lines.
-        auto slope = (N * xy_sum - x_sum * y_sum) / (N * x2_sum - x_sum * x_sum);
-        auto intercept = (y_sum - slope * x_sum) / N;
-
-        // Create the mesh anchor offsets using the lines.
-        cv::Mat anchors;
-        cv::multiply(view_identity_mesh(size()), slope, anchors);
-        cv::add(anchors, intercept, anchors);
-
-        // Apply the tolerance to the anchor points.
-        if(tolerance >= 1.0f)
-        {
-            write([&](cv::Point2f& offset, const cv::Point& coord){
-                const auto anchor = anchors.at<cv::Point2f>(coord);
-
-                offset.x = anchor.x + std::clamp(offset.x - anchor.x, -tolerance, tolerance);
-                offset.y = anchor.y + std::clamp(offset.y - anchor.y, -tolerance, tolerance);
-            });
-        }
-        else std::swap(anchors, m_MeshOffsets);
-    }
-
-//---------------------------------------------------------------------------------------------------------------------
-
     void WarpMesh::apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background) const
     {
         const cv::Scalar motion_scaling(src.cols, src.rows);

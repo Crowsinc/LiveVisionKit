@@ -35,7 +35,7 @@ namespace lvk
         inline static const cv::Size MinimumSize = {2,2};
 
 
-        WarpMesh(const cv::Size& size);
+        explicit WarpMesh(const cv::Size& size);
 
         WarpMesh(const WarpMesh& other);
 
@@ -76,8 +76,6 @@ namespace lvk
 
         void normalize(const cv::Size2f& motion_scale);
 
-
-        void undistort(const float tolerance = 0.7f);
 
         void apply(const VideoFrame& src, VideoFrame& dst, const cv::Scalar& background = {0,0,0}) const;
 

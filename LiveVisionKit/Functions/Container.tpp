@@ -69,8 +69,13 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	template<typename T, typename P>
-    inline void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert)
+    template<typename T1, typename T2, typename P>
+    inline void fast_filter(
+            std::vector<T1>& data_1,
+            std::vector<T2>& data_2,
+            const std::vector<P>& keep,
+            bool invert
+    )
 	{
 		LVK_ASSERT(data_1.size() == keep.size());
 		LVK_ASSERT(data_2.size() == keep.size());
@@ -86,6 +91,34 @@ namespace lvk
 			}
         }
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    template<typename T1, typename T2, typename T3, typename P>
+    inline void fast_filter(
+            std::vector<T1>& data_1,
+            std::vector<T2>& data_2,
+            std::vector<T3>& data_3,
+            const std::vector<P>& keep,
+            bool invert
+    )
+    {
+        LVK_ASSERT(data_1.size() == keep.size());
+        LVK_ASSERT(data_2.size() == keep.size());
+        LVK_ASSERT(data_3.size() == keep.size());
+
+        // We need to filter in reverse so that the fast erase doesn't affect
+        // the data and keep element correspondence of unprocessed elements.
+        for(int k = keep.size() - 1; k >= 0; k--)
+        {
+            if(invert == static_cast<bool>(keep[k]))
+            {
+                fast_erase(data_1, k);
+                fast_erase(data_2, k);
+                fast_erase(data_3, k);
+            }
+        }
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

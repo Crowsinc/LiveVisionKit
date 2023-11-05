@@ -219,19 +219,19 @@ namespace lvk
             const std::string subsystem = obs_data_get_string(settings, PROP_SUBSYSTEM);
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
-                stab_settings.track_local_motions = true;
                 stab_settings.detection_resolution = {480, 270};
-                stab_settings.motion_resolution = {32, 32};
+                stab_settings.track_local_motions = true;
+                stab_settings.motion_resolution = {16, 16};
                 stab_settings.detection_regions = {2, 2};
 
                 stab_settings.max_feature_density = 0.15f;
-                stab_settings.min_feature_density = 0.03f;
-                stab_settings.accumulation_rate = 2.0f;
+                stab_settings.min_feature_density = 0.05f;
+                stab_settings.accumulation_rate = 3.0f;
             }
             else
             {
-                stab_settings.track_local_motions = false;
                 stab_settings.detection_resolution = {480, 270};
+                stab_settings.track_local_motions = false;
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
 
@@ -245,7 +245,7 @@ namespace lvk
             if(quality_assurance == PROP_QUALITY_ASSURANCE_STRICT)
                 stab_settings.stability_threshold = 0.80f;
             else
-                stab_settings.stability_threshold = 0.25f;
+                stab_settings.stability_threshold = 0.30f;
 		});
 
 		// Update the frame delay indicator for the user

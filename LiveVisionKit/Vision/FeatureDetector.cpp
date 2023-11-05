@@ -67,14 +67,17 @@ namespace lvk
         m_DetectionRegions.align(input_region);
         construct_detection_regions();
 
+        const auto max_features = m_SuppressionGrid.area();
         const auto max_regions = static_cast<float>(m_DetectionRegions.area());
-        const auto max_region_features = static_cast<float>(m_SuppressionGrid.area()) / max_regions;
+        const auto max_region_features = static_cast<float>(max_features) / max_regions;
         const auto density_ratio = settings.min_feature_density / settings.max_feature_density;
 
         // Calculate min, max, and target feature loads for each detection zone.
         m_MinimumFeatureLoad = static_cast<size_t>(max_region_features * density_ratio);
         m_FASTFeatureTarget = static_cast<size_t>(settings.accumulation_rate * max_region_features);
         m_FASTFeatureBuffer.reserve(m_FASTFeatureTarget);
+        m_Features.reserve(max_features);
+
 
         m_Settings = settings;
     }
@@ -99,7 +102,7 @@ namespace lvk
                     region_size.height
 				);
                 region.threshold = FAST_MIN_THRESHOLD;
-                region.points = 0;
+                region.load = 0;
 
                 m_DetectionRegions.place_at({c, r}, region);
 			}
@@ -108,7 +111,7 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	float FeatureDetector::detect(cv::InputArray frame, std::vector<cv::Point2f>& points)
+	float FeatureDetector::detect(cv::InputArray frame, std::vector<cv::KeyPoint>& features)
 	{
 		LVK_ASSERT(frame.size() == m_Settings.detection_resolution);
         LVK_ASSERT(frame.isMat() || frame.isUMat());
@@ -117,9 +120,9 @@ namespace lvk
 		// Detect new features in the detection zones
 		for(auto& [coord, region] : m_DetectionRegions)
 		{
-            auto& [bounds, threshold, features] = region;
+            auto& [bounds, threshold, load] = region;
 
-			if(m_Settings.force_detection || features <= m_MinimumFeatureLoad)
+			if(m_Settings.force_detection || load <= m_MinimumFeatureLoad)
 			{
                 m_FASTFeatureBuffer.clear();
 
@@ -130,18 +133,27 @@ namespace lvk
                 else
                     m_FASTDetector->detect(frame.getUMat()(bounds), m_FASTFeatureBuffer);
 
-                // Process the features into the suppression grid for non-maximal suppression.
+                // Process the features through the suppression grid for further non-maximal suppression.
+                // NOTE: user can use class id integer when propagating to prioritize features.
                 std::for_each(m_FASTFeatureBuffer.begin(), m_FASTFeatureBuffer.end(), [&](cv::KeyPoint& feature)
                 {
                     // Update local region coordinate to global coordinate.
                     feature.pt += bounds.tl();
+                    feature.class_id = 0;
 
+                    // Prefer maximal features
                     const auto& key = m_SuppressionGrid.key_of(feature.pt);
-                    const auto& maximal_feature = m_SuppressionGrid.at_or(key, feature);
-
-                    // NOTE: propagations are given a size of 0.0f, we do not overwrite them.
-                    if(maximal_feature.size != 0.0f && maximal_feature.response <= feature.response)
-                        m_SuppressionGrid.emplace_at(key, feature);
+                    if(!m_SuppressionGrid.contains(key))
+                    {
+                        m_SuppressionGrid.emplace_at(key, m_Features.size());
+                        m_Features.emplace_back(feature);
+                    }
+                    else if(auto& max = m_Features[m_SuppressionGrid.at(key)];
+                        feature.response > max.response && max.class_id <= 0
+                    )
+                    {
+                        max = feature; // Replace existing feature
+                    }
                 });
 
 				// Dynamically adjust FAST threshold to try meet the feature target next time
@@ -151,14 +163,12 @@ namespace lvk
                     threshold = step(threshold, FAST_MIN_THRESHOLD, FAST_THRESHOLD_STEP);
 
             }
-            features = 0; // Reset region
+            load = 0; // Reset region
 		}
 
-        // Extract all the feature points from the suppression grid.
-        for(const auto& [key, feature] : m_SuppressionGrid)
-        {
-            points.push_back(feature.pt);
-        }
+        // Output the resulting maximal features
+        std::swap(m_Features, features);
+        m_Features.clear();
 
         // Calculate the distribution quality of the points and clear the grid.
         float quality = m_SuppressionGrid.distribution_quality();
@@ -169,16 +179,27 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void FeatureDetector::propagate(const std::vector<cv::Point2f>& points)
+	void FeatureDetector::propagate(const std::vector<cv::KeyPoint>& features)
 	{
-		for(const auto& point : points)
+		for(const auto& feature : features)
 		{
-			// Silently ignore points which are out of bounds.
-			if(const auto& key = m_SuppressionGrid.try_key_of(point); key.has_value())
+			// Silently ignore features which are out of bounds.
+			if(const auto& key = m_SuppressionGrid.try_key_of(feature.pt); key.has_value())
 			{
-                // NOTE: propagated points are given a size of zero.
-                m_SuppressionGrid.emplace_at(*key, point, 0.0f);
-                m_DetectionRegions[point].points++;
+                // Perform non-maximal suppression
+                // NOTE: user can use class id integer to prioritize features.
+                if(!m_SuppressionGrid.contains(*key))
+                {
+                    m_SuppressionGrid.emplace_at(*key, m_Features.size());
+                    m_DetectionRegions[feature.pt].load++;
+                    m_Features.emplace_back(feature);
+                }
+                else if(auto& max = m_Features[m_SuppressionGrid.at(*key)];
+                    feature.response > max.response && feature.class_id >= max.class_id
+                )
+                {
+                    max = feature; // Replace existing feature
+                }
 			}
 		}
 	}
@@ -189,7 +210,7 @@ namespace lvk
 	{
         m_SuppressionGrid.clear();
 		for(auto& [coord, region] : m_DetectionRegions)
-            region.points = 0;
+            region.load = 0;
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
