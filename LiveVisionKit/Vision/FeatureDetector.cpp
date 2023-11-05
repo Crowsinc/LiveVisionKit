@@ -134,10 +134,12 @@ namespace lvk
                     m_FASTDetector->detect(frame.getUMat()(bounds), m_FASTFeatureBuffer);
 
                 // Process the features through the suppression grid for further non-maximal suppression.
+                // NOTE: user can use class id integer when propagating to prioritize features.
                 std::for_each(m_FASTFeatureBuffer.begin(), m_FASTFeatureBuffer.end(), [&](cv::KeyPoint& feature)
                 {
                     // Update local region coordinate to global coordinate.
                     feature.pt += bounds.tl();
+                    feature.class_id = 0;
 
                     // Prefer maximal features
                     const auto& key = m_SuppressionGrid.key_of(feature.pt);
@@ -146,10 +148,11 @@ namespace lvk
                         m_SuppressionGrid.emplace_at(key, m_Features.size());
                         m_Features.emplace_back(feature);
                     }
-                    else if(const int i = m_SuppressionGrid.at(key); m_Features[i].response < feature.response)
+                    else if(auto& max = m_Features[m_SuppressionGrid.at(key)];
+                        feature.response > max.response && max.class_id <= 0
+                    )
                     {
-                        // Replace existing feature
-                        m_Features[i] = feature;
+                        max = feature; // Replace existing feature
                     }
                 });
 
@@ -184,16 +187,18 @@ namespace lvk
 			if(const auto& key = m_SuppressionGrid.try_key_of(feature.pt); key.has_value())
 			{
                 // Perform non-maximal suppression
+                // NOTE: user can use class id integer to prioritize features.
                 if(!m_SuppressionGrid.contains(*key))
                 {
                     m_SuppressionGrid.emplace_at(*key, m_Features.size());
                     m_DetectionRegions[feature.pt].load++;
                     m_Features.emplace_back(feature);
                 }
-                else if(const int i = m_SuppressionGrid.at(*key); m_Features[i].response < feature.response)
+                else if(auto& max = m_Features[m_SuppressionGrid.at(*key)];
+                    feature.response > max.response && feature.class_id >= max.class_id
+                )
                 {
-                    // Replace existing feature
-                    m_Features[i] = feature;
+                    max = feature; // Replace existing feature
                 }
 			}
 		}
