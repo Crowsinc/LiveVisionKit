@@ -36,8 +36,26 @@ namespace lvk
 	void fast_filter(std::vector<T>& data, const std::vector<P>& keep, bool invert = false);
 
     // NOTE: does not preserve element ordering
-	template<typename T, typename P>
-	void fast_filter(std::vector<T>& data_1, std::vector<T>& data_2, const std::vector<P>& keep, bool invert = false);
+	template<typename T1, typename T2, typename P>
+	void fast_filter(
+        std::vector<T1>& data_1,
+        std::vector<T2>& data_2,
+        const std::vector<P>& keep,
+        bool invert = false
+    );
+
+    // NOTE: does not preserve element ordering
+    template<typename T1, typename T2, typename T3, typename P>
+    void fast_filter(
+        std::vector<T1>& data_1,
+        std::vector<T2>& data_2,
+        std::vector<T3>& data_3,
+        const std::vector<P>& keep,
+        bool invert = false
+    );
+
+
+
 
 
     template<typename T>
