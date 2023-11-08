@@ -23,6 +23,14 @@
 namespace lvk
 {
 
+    void remap(
+        const VideoFrame& src,
+        VideoFrame& dst,
+        const cv::Mat& homography,
+        const cv::Scalar& background,
+        const bool inverted = false
+    );
+
     void remap(const VideoFrame& src, VideoFrame& dst, const cv::UMat& offset_map, const cv::Scalar& background);
 
     void upscale(const cv::UMat& src, cv::UMat& dst, const cv::Size& size, const bool yuv = true);

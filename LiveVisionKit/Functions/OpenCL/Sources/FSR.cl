@@ -402,6 +402,56 @@ __kernel void easu_remap(
     vstore3(dst_pixel, 0, dst + dst_index);
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+
+__kernel void easu_remap_homography(
+    __global uchar* src, int src_step, int src_offset, int src_rows, int src_cols,
+    __global uchar* dst, int dst_step, int dst_offset, int4 dst_bounds,
+    float4 r1, float4 r2, float4 r3, uchar4 background_colour
+)
+{
+    // Swizzle the threads for potentially better cache use.
+    int id = get_local_id(1) * 8 + get_local_id(0);
+    int2 dst_coord = remapRed8x8(id) + (int2)(get_group_id(0) << 3, get_group_id(1) << 3); 
+
+    // Exit early if out of bounds (for uneven output sizes)
+    if(dst_coord.x >= dst_bounds.z || dst_coord.y >= dst_bounds.w)
+        return;
+
+    // Calculate remapping offset
+    float2 fcoord = convert_float2(dst_coord);
+    float dz = 1.0f / (r3.x * fcoord.x + r3.y * fcoord.y + r3.z);
+    float2 offset = (float2)(
+        (r1.x * fcoord.x + r1.y * fcoord.y + r1.z) * dz,
+        (r2.x * fcoord.x + r2.y * fcoord.y + r2.z) * dz
+    ) - fcoord;
+
+    // Remap the src coord
+    float2 sub_pixel = convert_float2(dst_coord + dst_bounds.xy) + offset;
+    int2 src_coord = convert_int2_rtz(sub_pixel);
+    sub_pixel -= floor(sub_pixel);
+
+    // Nest the border conditions on the src to help load balance and minimize branches.
+    uchar3 dst_pixel = background_colour.xyz;
+    if(src_coord.x < 1 || src_coord.y < 1 || src_coord.x >= src_cols - 4 || src_coord.y >= src_rows - 4)
+    {
+        // If we are still within the overall src bounds use nearest neighbour. 
+        if(src_coord.x >= 0 && src_coord.x < src_cols && src_coord.y >= 0 && src_coord.y < src_rows)
+        {
+            int src_index = src_coord.y * src_step + (3 * src_coord.x) + src_offset;
+            int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+            vstore3(vload3(0, src + src_index), 0, dst + dst_index);
+            return;
+        }
+    }
+    else easu(src, src_step, src_offset, src_coord, sub_pixel, &dst_pixel);
+
+    // Write pixel.
+    int dst_index = dst_coord.y * dst_step + (3 * dst_coord.x) + dst_offset;
+    vstore3(dst_pixel, 0, dst + dst_index);
+}
+
+
 // )" R"(
 //==============================================================================================================================
 //                                      FSR - [RCAS] ROBUST CONTRAST ADAPTIVE SHARPENING
