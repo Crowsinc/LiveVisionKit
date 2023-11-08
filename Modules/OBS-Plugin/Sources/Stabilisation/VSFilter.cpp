@@ -17,8 +17,6 @@
 
 #include "VSFilter.hpp"
 
-#include <util/platform.h>
-
 #include "Effects/FSREffect.hpp"
 #include "Utility/ScopedProfiler.hpp"
 #include "Utility/Locale.hpp"
@@ -43,15 +41,19 @@ namespace lvk
     constexpr auto PROP_SUBSYSTEM_DEFAULT = PROP_SUBSYSTEM_HOMOG;
 
     constexpr auto PROP_QUALITY_ASSURANCE = "SUPPRESSION_MODE";
-    constexpr auto PROP_QUALITY_ASSURANCE_OFF = "SM_OFF";
     constexpr auto PROP_QUALITY_ASSURANCE_STRICT = "SM_STRICT";
     constexpr auto PROP_QUALITY_ASSURANCE_RELAXED = "SM_RELAXED";
     constexpr auto PROP_QUALITY_ASSURANCE_DEFAULT = PROP_QUALITY_ASSURANCE_STRICT;
 
-	constexpr auto PROP_CROP_PERCENTAGE = "CROP_PERCENTAGE";
-	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5;
-	constexpr auto PROP_CROP_PERCENTAGE_MAX = 25;
-	constexpr auto PROP_CROP_PERCENTAGE_MIN = 1;
+    constexpr auto PROP_INDEP_CROP = "INDEP_CROP";
+    constexpr auto PROP_INDEP_CROP_DEFAULT = false;
+
+    constexpr auto PROP_CROP_PERCENTAGE_X = "CROP_PERCENTAGE_X";
+    constexpr auto PROP_CROP_PERCENTAGE_Y = "CROP_PERCENTAGE_Y";
+	constexpr auto PROP_CROP_PERCENTAGE_DEFAULT = 5.0f;
+	constexpr auto PROP_CROP_PERCENTAGE_MAX = 25.0f;
+    constexpr auto PROP_CROP_PERCENTAGE_MIN = 1.0f;
+    constexpr auto PROP_CROP_PERCENTAGE_STEP = 0.1f;
 
     constexpr auto PROP_APPLY_CROP = "APPLY_CROP";
     constexpr auto PROP_APPLY_CROP_DEFAULT = true;
@@ -118,16 +120,34 @@ namespace lvk
         obs_property_list_add_string(property, L("vs.qa.strict"), PROP_QUALITY_ASSURANCE_STRICT);
 
 
-        // Crop Slider
-		property = obs_properties_add_int_slider(
+        // Independent crop toggle
+        property = obs_properties_add_bool(
+            properties,
+            PROP_INDEP_CROP,
+            L("vs.independent-crop")
+        );
+        obs_property_set_modified_callback(property, VSFilter::on_crop_split);
+
+        // Crop Sliders
+		property = obs_properties_add_float_slider(
 			properties,
-			PROP_CROP_PERCENTAGE,
-			L("f.crop"),
+			PROP_CROP_PERCENTAGE_X,
+			L("f.cropx"),
 			PROP_CROP_PERCENTAGE_MIN,
 			PROP_CROP_PERCENTAGE_MAX,
-			1
+            PROP_CROP_PERCENTAGE_STEP
 		);
 		obs_property_int_set_suffix(property, "%");
+
+        property = obs_properties_add_float_slider(
+            properties,
+            PROP_CROP_PERCENTAGE_Y,
+            L("f.cropy"),
+            PROP_CROP_PERCENTAGE_MIN,
+            PROP_CROP_PERCENTAGE_MAX,
+            PROP_CROP_PERCENTAGE_STEP
+        );
+        obs_property_int_set_suffix(property, "%");
 
         // Auto-Apply Crop Toggle
         obs_properties_add_bool(
@@ -172,6 +192,15 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    bool VSFilter::on_crop_split(obs_properties_t* props, obs_property_t* property, obs_data_t* settings)
+    {
+        auto slider = obs_properties_get(props, PROP_CROP_PERCENTAGE_Y);
+        obs_property_set_enabled(slider, obs_data_get_bool(settings, PROP_INDEP_CROP));
+        return true;
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	void VSFilter::LoadDefaults(obs_data_t* settings)
 	{
 		LVK_ASSERT(settings != nullptr);
@@ -179,8 +208,10 @@ namespace lvk
         obs_data_set_default_string(settings, PROP_QUALITY_ASSURANCE, PROP_QUALITY_ASSURANCE_DEFAULT);
 		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
 		obs_data_set_default_int(settings, PROP_BACKGROUND_COLOUR, PROP_BACKGROUND_COLOUR_DEFAULT);
-		obs_data_set_default_int(settings, PROP_CROP_PERCENTAGE, PROP_CROP_PERCENTAGE_DEFAULT);
+        obs_data_set_default_double(settings, PROP_CROP_PERCENTAGE_X, PROP_CROP_PERCENTAGE_DEFAULT);
+        obs_data_set_default_double(settings, PROP_CROP_PERCENTAGE_Y, PROP_CROP_PERCENTAGE_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_STAB_DISABLED, PROP_STAB_DISABLED_DEFAULT);
+        obs_data_set_default_int(settings, PROP_INDEP_CROP, PROP_INDEP_CROP_DEFAULT);
         obs_data_set_default_string(settings, PROP_SUBSYSTEM, PROP_SUBSYSTEM_DEFAULT);
         obs_data_set_default_bool(settings, PROP_APPLY_CROP, PROP_APPLY_CROP_DEFAULT);
 		obs_data_set_default_bool(settings, PROP_TEST_MODE, PROP_TEST_MODE_DEFAULT);
@@ -192,18 +223,19 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
-		obs_video_info video_info = {};
-		obs_get_video_info(&video_info);
-		const float video_fps = static_cast<float>(video_info.fps_num) / static_cast<float>(video_info.fps_den);
-		const float frame_ms = 1000.0f/video_fps;
-
         m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
-		m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
+        // Handle case where independent crop is turned off.
+        const bool independent_crop =  obs_data_get_bool(settings, PROP_INDEP_CROP);
+        const float crop_x = obs_data_get_double(settings, PROP_CROP_PERCENTAGE_X) * 0.01f;
+        const float crop_y = independent_crop ? obs_data_get_double(settings, PROP_CROP_PERCENTAGE_Y) * 0.01f : crop_x;
+
+        m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
             stab_settings.crop_to_stable_region = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
-            stab_settings.corrective_limit = (float)obs_data_get_int(settings, PROP_CROP_PERCENTAGE) / 100.0f;
 			stab_settings.predictive_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
+            stab_settings.corrective_limits.height = crop_y;
+            stab_settings.corrective_limits.width = crop_x;
 
 			// Decode the background colour in RGB.
 			uint32_t colour = obs_data_get_int(settings, PROP_BACKGROUND_COLOUR);
@@ -220,6 +252,7 @@ namespace lvk
             if(subsystem == L(PROP_SUBSYSTEM_FIELD))
             {
                 stab_settings.detection_resolution = {480, 270};
+                stab_settings.acceptance_threshold = 10.0f;
                 stab_settings.track_local_motions = true;
                 stab_settings.motion_resolution = {16, 16};
                 stab_settings.detection_regions = {2, 2};
@@ -231,6 +264,7 @@ namespace lvk
             else
             {
                 stab_settings.detection_resolution = {480, 270};
+                stab_settings.acceptance_threshold = 3.0f;
                 stab_settings.track_local_motions = false;
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
@@ -245,12 +279,17 @@ namespace lvk
             if(quality_assurance == PROP_QUALITY_ASSURANCE_STRICT)
                 stab_settings.stability_threshold = 0.80f;
             else
-                stab_settings.stability_threshold = 0.30f;
+                stab_settings.stability_threshold = 0.20f;
 		});
+
+        // Get FPS info for the stream.
+        obs_video_info video_info = {};
+        obs_get_video_info(&video_info);
+        const float video_fps = static_cast<float>(video_info.fps_num) / static_cast<float>(video_info.fps_den);
 
 		// Update the frame delay indicator for the user
 		const auto old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
-		const auto new_stream_delay = static_cast<int>(frame_ms * static_cast<float>(m_Filter.frame_delay()));
+		const auto new_stream_delay = static_cast<int>((1000.0f/video_fps) * static_cast<float>(m_Filter.frame_delay()));
 
 		// NOTE: Need to update the property UI to push a stream delay update because
 		// the UI element is disabled. But only if the delay has changed, otherwise
@@ -261,21 +300,21 @@ namespace lvk
 			obs_source_update_properties(m_Context);
 		}
 
-
         // Print out settings
         lvk::log::print_settings(
             m_Context,
             "\n    Predictive Frames: %d"
             "\n    Stream Delay: %dms"
             "\n    Subsystem: %s"
-            "\n    Crop Percentage: %.0f%%"
+            "\n    Crop Percentage: (%.0f%%,%.0f%%)"
             "\n    Auto-apply Crop: %s"
             "\n    Disable Stabilization: %s"
             "\n    Test Mode: %s",
             m_Filter.settings().predictive_samples,
             new_stream_delay,
             obs_data_get_string(settings, PROP_SUBSYSTEM),
-            m_Filter.settings().corrective_limit * 100.0f,
+            m_Filter.settings().corrective_limits.width * 100.0f,
+            m_Filter.settings().corrective_limits.height * 100.0f,
             m_Filter.settings().crop_to_stable_region ? "Yes" : "No",
             m_Filter.settings().stabilize_output ? "No" : "Yes",
             m_TestMode ? "Yes" : "No"

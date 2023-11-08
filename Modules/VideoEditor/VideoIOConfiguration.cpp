@@ -415,8 +415,11 @@ namespace clt
             [](clt::OptionsParser& config_parser, lvk::StabilizationFilterSettings& config){
                 config_parser.add_variable<float>(
                     {".crop_prop", ".cp"},
-                    "Used to percentage crop and movement area allowed for stabilization",
-                    &config.corrective_limit
+                    "Used to set percentage crop and movement area allowed for stabilization",
+                    [&](auto crop){
+                        config.corrective_limits.width = crop;
+                        config.corrective_limits.height = crop;
+                    }
                 );
                 config_parser.add_switch(
                     {".crop_out", ".co"},

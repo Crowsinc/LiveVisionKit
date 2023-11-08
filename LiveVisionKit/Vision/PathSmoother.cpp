@@ -37,9 +37,10 @@ namespace lvk
     {
         LVK_ASSERT(settings.motion_resolution.height >= WarpMesh::MinimumSize.height);
         LVK_ASSERT(settings.motion_resolution.width >= WarpMesh::MinimumSize.width);
+        LVK_ASSERT_01(settings.corrective_limits.height);
+        LVK_ASSERT_01(settings.corrective_limits.width);
         LVK_ASSERT(settings.predictive_samples > 0);
         LVK_ASSERT(settings.smoothing_steps > 0.0f);
-        LVK_ASSERT_01(settings.corrective_limit);
         LVK_ASSERT_01(settings.response_rate);
 
         // Update motion resolution.
@@ -71,7 +72,7 @@ namespace lvk
             m_BaseSmoothingFactor = static_cast<double>(m_Trajectory.capacity()) / 12.0;
         }
 
-        m_SceneMargins = crop<float>({1,1}, settings.corrective_limit);
+        m_SceneMargins = crop<float>({1,1}, settings.corrective_limits);
         m_SceneCrop = WarpMesh(settings.motion_resolution);
         m_SceneCrop.crop_in(m_SceneMargins);
 

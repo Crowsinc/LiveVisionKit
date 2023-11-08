@@ -44,6 +44,10 @@ namespace lvk
 
 		void draw_debug_hud(OBSFrame& frame);
 
+        static bool on_crop_split(obs_properties_t* props, obs_property_t* property, obs_data_t* settings);
+
+        static bool on_delay_update(void* data, obs_properties_t* props, obs_property_t* property, obs_data_t* settings);
+
 	private:
 		obs_source_t* m_Context = nullptr;
 
