@@ -197,8 +197,8 @@ namespace lvk
             const auto w = static_cast<float>(src.cols);
             const auto h = static_cast<float>(src.rows);
             const std::array<cv::Point2f, 4> destination = {
-                    cv::Point2f(0, 0), cv::Point2f(w, 0),
-                    cv::Point2f(0, h), cv::Point2f(w, h)
+                cv::Point2f(0, 0), cv::Point2f(w, 0),
+                cv::Point2f(0, h), cv::Point2f(w, h)
             };
 
             const std::array<cv::Point2f, 4> source = {
@@ -208,14 +208,12 @@ namespace lvk
                 destination[3] + m_MeshOffsets.at<cv::Point2f>(1, 1) * motion_scaling
             };
 
-            cv::warpPerspective(
+            remap(
                 src,
                 dst,
                 cv::getPerspectiveTransform(destination.data(), source.data()),
-                src.size(),
-                cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
-                cv::BORDER_CONSTANT,
-                background
+                background,
+                true
             );
         }
 
