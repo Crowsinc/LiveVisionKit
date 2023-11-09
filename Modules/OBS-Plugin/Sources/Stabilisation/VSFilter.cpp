@@ -132,7 +132,7 @@ namespace lvk
 		property = obs_properties_add_float_slider(
 			properties,
 			PROP_CROP_PERCENTAGE_X,
-			L("f.cropx"),
+			L("vs.crop-x"),
 			PROP_CROP_PERCENTAGE_MIN,
 			PROP_CROP_PERCENTAGE_MAX,
             PROP_CROP_PERCENTAGE_STEP
@@ -142,7 +142,7 @@ namespace lvk
         property = obs_properties_add_float_slider(
             properties,
             PROP_CROP_PERCENTAGE_Y,
-            L("f.cropy"),
+            L("vs.crop-y"),
             PROP_CROP_PERCENTAGE_MIN,
             PROP_CROP_PERCENTAGE_MAX,
             PROP_CROP_PERCENTAGE_STEP
