@@ -43,7 +43,7 @@ opencv_version="4.8.0"
 opencv_path="${deps_path}/opencv"
 if [ ! -d "$opencv_path" ]; then
     cd "$deps_path"
-    git clone -b "$opencv_version" git@github.com:opencv/opencv.git
+    git clone -b "$opencv_version" https://github.com/opencv/opencv.git
 fi
 
 if [ ! -d "$opencv_path" ]; then
@@ -159,7 +159,7 @@ obs_studio_version="27.2.4"
 obs_studio_path="${deps_path}/obs-studio"
 if [ ! -d "$obs_studio_path" ]; then
     cd "$deps_path"
-    git clone -b "$obs_studio_version" --recursive git@github.com:obsproject/obs-studio.git
+    git clone -b "$obs_studio_version" --recursive https://github.com/obsproject/obs-studio.git
 fi
 
 if [ ! -d "$obs_studio_path" ]; then

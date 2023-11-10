@@ -18,7 +18,7 @@ $opencv_path = Join-Path $deps_path "/opencv"
 if(-Not (Test-Path $opencv_path))
 {
     Set-Location $deps_path
-    git clone -b $opencv_version git@github.com:opencv/opencv.git 
+    git clone -b $opencv_version https://github.com/opencv/opencv.git
 }
 
 if(-Not (Test-Path $opencv_path))
@@ -94,7 +94,7 @@ $obs_studio_path = Join-Path $deps_path "/obs-studio"
 if(-Not (Test-Path $obs_studio_path))
 {
     Set-Location $deps_path
-    git clone -b $obs_studio_version --recursive git@github.com:obsproject/obs-studio.git 
+    git clone -b $obs_studio_version --recursive https://github.com/obsproject/obs-studio.git 
 }
 
 if(-Not (Test-Path $obs_studio_path))
