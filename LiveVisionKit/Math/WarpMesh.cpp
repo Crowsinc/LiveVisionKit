@@ -462,8 +462,8 @@ namespace lvk
             // Combine the resolutions maximally to avoid always throwing out the
             // cache for non-square resolutions which are rotations of each other.
             coord_grid = VirtualGrid({
-                 std::max(resolution.height, coord_grid.rows),
-                 std::max(resolution.width, coord_grid.cols)
+                 std::max(resolution.width, coord_grid.cols),
+                 std::max(resolution.height, coord_grid.rows)
             }).make_grid();
         }
 
