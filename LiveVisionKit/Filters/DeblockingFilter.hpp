@@ -39,17 +39,23 @@ namespace lvk
 		
 		void configure(const DeblockingFilterSettings& settings) override;
 
+        void draw_influence(VideoFrame& frame) const;
+
+        cv::Rect filter_region() const;
+
 	private:
 
         void filter(VideoFrame&& input, VideoFrame& output) override;
 
+        cv::Rect m_FilterRegion{0,0,0,0};
 		VideoFrame m_SmoothFrame, m_DetectionFrame, m_ReferenceFrame;
 		cv::UMat m_BlockMask{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_KeepBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_DeblockBlendMap{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_BlockGrid{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 		cv::UMat m_DeblockBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
-		cv::UMat m_FloatBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        cv::UMat m_FloatBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
+        mutable cv::UMat m_InfluenceBuffer{cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY};
 	};
 
 }

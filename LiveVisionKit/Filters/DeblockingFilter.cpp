@@ -63,21 +63,21 @@ namespace lvk
 
 		const int macroblock_size = static_cast<int>(m_Settings.block_size);
 		const cv::Size macroblock_extent = input.size() / macroblock_size;
-		const cv::Rect macroblock_region({0,0}, macroblock_extent * macroblock_size);
+        m_FilterRegion = cv::Rect({0,0}, macroblock_extent * macroblock_size);
 
 		// Resolutions such as 1920x1080 may not be evenly divisible by macroblocks.
 		// We ignore areas containing partial blocks by applying the filter on only
 		// the region of the frame which consists of only full macroblocks.
-		auto filter_region = input(macroblock_region);
+		auto filter_input = input(m_FilterRegion);
 
 		// Generate smooth frame
 		const float area_scaling = 1.0f / m_Settings.filter_scaling;
-		cv::resize(filter_region, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
+		cv::resize(filter_input, m_DeblockBuffer, cv::Size(), area_scaling, area_scaling, cv::INTER_AREA);
 		cv::medianBlur(m_DeblockBuffer, m_DeblockBuffer, static_cast<int>(m_Settings.filter_size));
-		cv::resize(m_DeblockBuffer, m_SmoothFrame, macroblock_region.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_DeblockBuffer, m_SmoothFrame, m_FilterRegion.size(), 0, 0, cv::INTER_LINEAR);
 
 		// Generate reference frame
-        filter_region.reformatTo(m_DetectionFrame, VideoFrame::GRAY);
+        filter_input.reformatTo(m_DetectionFrame, VideoFrame::GRAY);
 		cv::resize(m_DetectionFrame, m_BlockGrid, macroblock_extent, 0, 0, cv::INTER_AREA);
 		cv::resize(m_BlockGrid, m_ReferenceFrame, m_DetectionFrame.size(), 0, 0, cv::INTER_NEAREST);
 		cv::absdiff(m_DetectionFrame, m_ReferenceFrame, m_DetectionFrame);
@@ -94,20 +94,48 @@ namespace lvk
 			m_FloatBuffer.setTo(cv::Scalar((l + 1.0) * level_step), m_BlockMask);
 		}
 
-		cv::resize(m_FloatBuffer, m_KeepBlendMap, filter_region.size(), 0, 0, cv::INTER_LINEAR);
+		cv::resize(m_FloatBuffer, m_KeepBlendMap, filter_input.size(), 0, 0, cv::INTER_LINEAR);
 		cv::absdiff(m_KeepBlendMap, cv::Scalar(1.0), m_DeblockBlendMap);
 
 		// Adaptively blend original and smooth frames
 		cv::blendLinear(
-            filter_region,
+            filter_input,
             m_SmoothFrame,
             m_KeepBlendMap,
             m_DeblockBlendMap,
-            filter_region
+            filter_input
 		);
 
         output = std::move(input);
 	}
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    void DeblockingFilter::draw_influence(VideoFrame& frame) const
+    {
+        LVK_ASSERT(!m_KeepBlendMap.empty() && !m_DeblockBlendMap.empty());
+        LVK_ASSERT(m_FilterRegion.br().x <= frame.cols);
+        LVK_ASSERT(m_FilterRegion.br().y <= frame.rows);
+
+        m_InfluenceBuffer.create(m_FilterRegion.size(), CV_8UC3);
+        m_InfluenceBuffer.setTo(col::MAGENTA[frame.format]);
+
+        // Re-use the blend maps to blend the influence buffer.
+        cv::blendLinear(
+            frame(m_FilterRegion),
+            m_InfluenceBuffer,
+            m_KeepBlendMap,
+            m_DeblockBlendMap,
+            frame(m_FilterRegion)
+        );
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+    cv::Rect DeblockingFilter::filter_region() const
+    {
+        return m_FilterRegion;
+    }
 
 //---------------------------------------------------------------------------------------------------------------------
 

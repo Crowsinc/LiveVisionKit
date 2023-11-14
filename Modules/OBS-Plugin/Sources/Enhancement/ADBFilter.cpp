@@ -128,6 +128,7 @@ namespace lvk
 		if(m_TestMode)
 		{
             m_Filter.apply(frame, frame, true);
+            m_Filter.draw_influence(frame);
 			draw_debug_hud(frame);
 		}
 		else m_Filter.apply(frame, frame);
