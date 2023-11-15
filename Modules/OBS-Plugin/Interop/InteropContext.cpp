@@ -222,9 +222,13 @@ namespace lvk::ocl
 
 	void InteropContext::Import(gs_texture_t* src, cv::UMat& dst)
 	{
-		LVK_ASSERT(Attached());
+		LVK_ASSERT(Available());
 		LVK_ASSERT(src != nullptr);
         LVK_PROFILE;
+
+        // Attach the context if it is detached from the thread.
+        if(Available() && !Attached())
+            TryAttach();
 
 #ifdef _WIN32 // DirectX11 Interop
 		
@@ -259,11 +263,15 @@ namespace lvk::ocl
 	
 	void InteropContext::Export(cv::UMat& src, gs_texture_t* dst)
 	{
-		LVK_ASSERT(Attached());
+		LVK_ASSERT(Available());
 		LVK_ASSERT(dst != nullptr);
 		LVK_ASSERT(src.cols == static_cast<int>(gs_texture_get_width(dst)));
 		LVK_ASSERT(src.rows == static_cast<int>(gs_texture_get_height(dst)));
         LVK_PROFILE;
+
+        // Attach the context if it is detached from the thread.
+        if(Available() && !Attached())
+            TryAttach();
 
 #ifdef _WIN32 // DirectX11 Interop
 		
