@@ -150,7 +150,7 @@ namespace lvk
 #ifndef _WIN32
 		// If we are on Linux with access to ARB buffer storage,
 		// then use persistent buffer mapping to speed things up.
-		if(use_custom_buffers())
+		if(use_custom_buffers() && !m_SafeMode)
 		{
 			// Create a new buffer if the existing one isn't the right size.
 			const uint64_t rgb_buffer_size = width * height * 3u;
@@ -176,10 +176,15 @@ namespace lvk
 					0, static_cast<GLsizeiptr>(m_BufferSize),
 					GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT
 				);
+
+                // Force safe mode if we have an OpenGL error.
+                // This can happen due to driver differences between Nvidia/AMD.
+                m_SafeMode = glGetError() != GL_NO_ERROR;
 			}
 		}
-		else
 #endif
+        // NOTE: don't use an else here to handle safe mode toggle.
+        if(!use_custom_buffers() || m_SafeMode)
 		{
 			uint32_t linesize = 0;
 			gs_texture_map(target, &m_MappedData, &linesize);
@@ -195,7 +200,7 @@ namespace lvk
 		LVK_ASSERT(m_Target != nullptr);
 
 #ifndef _WIN32
-		if(use_custom_buffers())
+		if(use_custom_buffers() && !m_SafeMode)
 		{
 			LVK_ASSERT(m_BufferObject != 0);
 
@@ -222,6 +227,10 @@ namespace lvk
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+            // Force safe mode if we have an OpenGL error.
+            // This can happen due to driver differences between Nvidia/AMD.
+            m_SafeMode = glGetError() != GL_NO_ERROR;
 		}
 		else
 #endif
@@ -315,7 +324,7 @@ namespace lvk
 #ifndef _WIN32
 		// If we are on Linux with access to ARB buffer storage,
 		// then use persistent buffer mapping to speed things up.
-		if(use_custom_buffers())
+		if(use_custom_buffers() && !m_SafeMode)
 		{
 			// Create a new buffer if the existing one isn't the right size.
 			const uint64_t rgb_buffer_size = width * height * 3u;
@@ -362,10 +371,16 @@ namespace lvk
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+            // Force safe mode if we have an OpenGL error.
+            // This can happen due to driver differences between Nvidia/AMD.
+            m_SafeMode = glGetError() != GL_NO_ERROR;
 		}
 		else
 #endif
-		{
+            // NOTE: don't use an else here to handle safe mode toggle.
+        if(!use_custom_buffers() || m_SafeMode)
+        {
 			prepare_staging_surface(
 				m_StagingSurface,
 				width, height,
@@ -385,7 +400,7 @@ namespace lvk
 	void RGBTextureReadBuffer::flush()
 	{
 #ifndef _WIN32
-		if(use_custom_buffers())
+		if(use_custom_buffers() && !m_SafeMode)
 		{
             // Do nothing..
 		}
