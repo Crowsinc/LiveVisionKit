@@ -77,8 +77,8 @@ namespace lvk
         void estimate_local_motions(
             WarpMesh& motion_mesh,
             const cv::Rect2f& region,
-            const std::vector<cv::KeyPoint>& features,
-            const std::vector<cv::Point2f>& matches,
+            const std::vector<cv::Point2f>& tracked_points,
+            const std::vector<cv::Point2f>& matched_points,
             std::vector<uint8_t>& inlier_status
         );
 

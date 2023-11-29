@@ -161,7 +161,7 @@ namespace lvk
             estimate_local_motions(
                 motion,
                 m_TrackingRegion,
-                m_TrackedFeatures, m_MatchedPoints,
+                m_TrackedPoints, m_MatchedPoints,
                 m_InlierStatus
             );
         }
@@ -207,12 +207,12 @@ namespace lvk
     void FrameTracker::estimate_local_motions(
         WarpMesh& motion_mesh,
         const cv::Rect2f& region,
-        const std::vector<cv::KeyPoint>& features,
-        const std::vector<cv::Point2f>& matches,
+        const std::vector<cv::Point2f>& tracked_points,
+        const std::vector<cv::Point2f>& matched_points,
         std::vector<uint8_t>& inlier_status
     )
     {
-        LVK_ASSERT(features.size() == matches.size());
+        LVK_ASSERT(tracked_points.size() == matched_points.size());
 
         const auto mesh_size = motion_mesh.size();
         const auto grid_size = mesh_size - cv::Size(1, 1);
@@ -223,7 +223,7 @@ namespace lvk
         ));
 
         // Initialize linear system to optimize the mesh
-        const int constraints = m_StaticConstraintCount + 2 * features.size();
+        const int constraints = m_StaticConstraintCount + 2 * tracked_points.size();
         Eigen::SparseMatrix<float> A(constraints, 2 * mesh_size.area());
         Eigen::VectorXf b = Eigen::VectorXf::Zero(A.rows());
 
@@ -240,11 +240,10 @@ namespace lvk
         constraint_offset = m_StaticConstraintCount;
 
         // Add feature warping constraints
-        for(size_t i = 0; i < features.size(); i++)
+        for(size_t i = 0; i < tracked_points.size(); i++)
         {
-            const auto& feature = features[i];
-            const cv::Point2f& src_point = feature.pt;
-            const cv::Point2f& dst_point = matches[i];
+            const cv::Point2f& src_point = tracked_points[i];
+            const cv::Point2f& dst_point = matched_points[i];
 
             // Resolve the mesh vertices surrounding the feature.
             cv::Point k00 = mesh_grid.key_of(src_point);
@@ -284,8 +283,8 @@ namespace lvk
         m_OptimizedMesh = solver.solveWithGuess(b, m_OptimizedMesh);
 
         // Update inlier status of all points
-        inlier_status.resize(features.size());
-        for(int i = 0; i < features.size(); i++)
+        inlier_status.resize(tracked_points.size());
+        for(int i = 0; i < tracked_points.size(); i++)
         {
             const int quad_x_index = i * 8 + static_triplet_count;
             const int quad_y_index = quad_x_index + 4;
