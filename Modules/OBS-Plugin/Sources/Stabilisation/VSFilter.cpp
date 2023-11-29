@@ -269,7 +269,7 @@ namespace lvk
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
 
-                stab_settings.max_feature_density = 0.10f;
+                stab_settings.max_feature_density = 0.08f;
                 stab_settings.min_feature_density = 0.02f;
                 stab_settings.accumulation_rate = 3.0f;
             }
