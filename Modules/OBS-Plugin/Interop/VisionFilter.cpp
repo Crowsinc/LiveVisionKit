@@ -78,11 +78,17 @@ namespace lvk
 
 	void VisionFilter::release_resources()
 	{
-		while(m_Source != nullptr && !m_AsyncFrameQueue.empty())
-		{
-			obs_source_release_frame(m_Source, m_AsyncFrameQueue.front().first);
-			m_AsyncFrameQueue.pop_front();
+        // Check that source is still valid, then release its frames.
+        // The source can become invalidated when closing OBS-Studio.
+        if(obs_source_get_name(m_Source) != nullptr)
+        {
+		    while(!m_AsyncFrameQueue.empty())
+		    {
+			    obs_source_release_frame(m_Source, m_AsyncFrameQueue.front().first);
+			    m_AsyncFrameQueue.pop_front();
+            }
 		}
+
 
 		obs_enter_graphics();
 
