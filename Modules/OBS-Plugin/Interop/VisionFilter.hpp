@@ -93,8 +93,8 @@ namespace lvk
 		bool m_Asynchronous, m_HybridRender;
 		TickTimer m_TickTimer;
 
-		VideoFrame::Format m_FrameFormat;
 		gs_texture_t* m_RenderBuffer = nullptr;
+		VideoFrame::Format m_FrameFormat = VideoFrame::UNKNOWN;
 		std::deque<std::pair<obs_source_frame*, size_t>> m_AsyncFrameQueue;
 	};
 
