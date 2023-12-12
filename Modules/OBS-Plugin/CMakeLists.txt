@@ -28,6 +28,12 @@ if(OBS_PLUGIN_SHOW_LOCALE_TAG)
 endif()
 message(STATUS "${MI}Show Locale Tags: ${OBS_PLUGIN_SHOW_LOCALE_TAG}")
 
+option(OBS_PLUGIN_PRINT_SETTINGS "Print filter settings when changed (for debug)" "OFF")
+if(OBS_PLUGIN_PRINT_SETTINGS)
+    add_definitions(-DPRINT_SETTINGS)
+endif()
+message(STATUS "${MI}Print Settings: ${OBS_PLUGIN_PRINT_SETTINGS}")
+
 # Install settings
 option(
     OBS_PLUGIN_AUTO_INSTALL 

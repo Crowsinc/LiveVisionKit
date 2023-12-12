@@ -117,6 +117,7 @@ namespace lvk
         m_TestMode = obs_data_get_bool(settings, PROP_TEST_MODE);
 
         // Print out settings
+#ifdef PRINT_SETTINGS
         lvk::log::print_settings(
             m_Context,
             "\n    Profile: %s"
@@ -124,6 +125,7 @@ namespace lvk
             m_Profile.c_str(),
             m_TestMode ? "Yes" : "No"
         );
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -98,6 +98,7 @@ namespace lvk
 		});
 
         // Print out settings
+#ifdef PRINT_SETTINGS
         lvk::log::print_settings(
             m_Context,
             "\n    Strength: %d"
@@ -105,6 +106,7 @@ namespace lvk
             strength,
             m_TestMode ? "Yes" : "No"
         );
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

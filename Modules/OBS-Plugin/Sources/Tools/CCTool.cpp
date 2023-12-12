@@ -257,6 +257,7 @@ namespace lvk
 		m_SquareSize = obs_data_get_int(settings, PROP_SQUARE_SIZE);
 
         // Print out settings
+#ifdef PRINT_SETTINGS
         lvk::log::print_settings(
             m_Context,
             "\n    Profile Name: %s"
@@ -264,6 +265,7 @@ namespace lvk
             m_ProfileName.c_str(),
             m_SquareSize
         );
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

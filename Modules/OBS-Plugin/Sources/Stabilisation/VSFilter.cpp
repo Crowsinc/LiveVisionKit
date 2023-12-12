@@ -301,12 +301,13 @@ namespace lvk
 		}
 
         // Print out settings
+#ifdef PRINT_SETTINGS
         lvk::log::print_settings(
             m_Context,
             "\n    Predictive Frames: %d"
             "\n    Stream Delay: %dms"
             "\n    Subsystem: %s"
-            "\n    Crop Percentage: (%.0f%%,%.0f%%)"
+            "\n    Crop Percentage: (%.1f%%,%.1f%%)"
             "\n    Auto-apply Crop: %s"
             "\n    Disable Stabilization: %s"
             "\n    Test Mode: %s",
@@ -319,6 +320,7 @@ namespace lvk
             m_Filter.settings().stabilize_output ? "No" : "Yes",
             m_TestMode ? "Yes" : "No"
         );
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

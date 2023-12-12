@@ -197,6 +197,7 @@ namespace lvk
 
 
         // Print out settings
+#ifdef PRINT_SETTINGS
         lvk::log::print_settings(
             m_Context,
             "\n    Output Pattern: %s"
@@ -208,6 +209,7 @@ namespace lvk
             m_TLCrop.width, m_TLCrop.height,
             m_BRCrop.width, m_BRCrop.height
         );
+#endif
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
