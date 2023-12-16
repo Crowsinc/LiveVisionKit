@@ -27,9 +27,10 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 	constexpr auto PROP_PREDICTIVE_SAMPLES = "SMOOTH_RADIUS";
-	constexpr auto PROP_PREDICTIVE_SAMPLES_DEFAULT = 10;
-	constexpr auto PROP_PREDICTIVE_SAMPLES_MAX = 20;
-	constexpr auto PROP_PREDICTIVE_SAMPLES_MIN = 4;
+	constexpr auto PROP_PREDICTIVE_SAMPLES_DEFAULT = "10";
+    constexpr std::array<const char*,7> PROP_PREDICTIVE_SAMPLES_OPTIONS = {
+        "5", "10", "15", "20", "30", "40", "60"
+    };
 
 	constexpr auto PROP_STREAM_DELAY_INFO = "STREAM_DELAY_INFO";
 	constexpr auto PROP_STREAM_DELAY_INFO_MAX = 60000;
@@ -77,17 +78,18 @@ namespace lvk
 		obs_properties_t* properties = obs_properties_create();
 
         // Predictive Samples
-		obs_properties_add_int(
+        auto property = obs_properties_add_list(
             properties,
             PROP_PREDICTIVE_SAMPLES,
             L("vs.radius"),
-            PROP_PREDICTIVE_SAMPLES_MIN,
-            PROP_PREDICTIVE_SAMPLES_MAX,
-            1
-		);
+            obs_combo_type::OBS_COMBO_TYPE_LIST,
+            obs_combo_format::OBS_COMBO_FORMAT_STRING
+        );
+        for(auto value : PROP_PREDICTIVE_SAMPLES_OPTIONS)
+            obs_property_list_add_string(property, value, value);
 
         // Stream Delay (ms)
-		auto property = obs_properties_add_int(
+		property = obs_properties_add_int(
 			properties,
 			PROP_STREAM_DELAY_INFO,
 			L("vs.delay"),
@@ -205,8 +207,8 @@ namespace lvk
 	{
 		LVK_ASSERT(settings != nullptr);
 
+        obs_data_set_default_string(settings,PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
         obs_data_set_default_string(settings, PROP_QUALITY_ASSURANCE, PROP_QUALITY_ASSURANCE_DEFAULT);
-		obs_data_set_default_int(settings, PROP_PREDICTIVE_SAMPLES, PROP_PREDICTIVE_SAMPLES_DEFAULT);
 		obs_data_set_default_int(settings, PROP_BACKGROUND_COLOUR, PROP_BACKGROUND_COLOUR_DEFAULT);
         obs_data_set_default_double(settings, PROP_CROP_PERCENTAGE_X, PROP_CROP_PERCENTAGE_DEFAULT);
         obs_data_set_default_double(settings, PROP_CROP_PERCENTAGE_Y, PROP_CROP_PERCENTAGE_DEFAULT);
@@ -232,10 +234,13 @@ namespace lvk
 
         m_Filter.reconfigure([&](StabilizationFilterSettings& stab_settings) {
             stab_settings.crop_to_stable_region = obs_data_get_bool(settings, PROP_APPLY_CROP) && !m_TestMode;
-			stab_settings.predictive_samples = obs_data_get_int(settings, PROP_PREDICTIVE_SAMPLES);
 			stab_settings.stabilize_output = !obs_data_get_bool(settings, PROP_STAB_DISABLED);
             stab_settings.corrective_limits.height = crop_y;
             stab_settings.corrective_limits.width = crop_x;
+
+            // Parse sample count
+            const std::string samples = obs_data_get_string(settings, PROP_PREDICTIVE_SAMPLES);
+            if(!samples.empty()) stab_settings.predictive_samples = std::stoi(samples);
 
 			// Decode the background colour in RGB.
 			uint32_t colour = obs_data_get_int(settings, PROP_BACKGROUND_COLOUR);
@@ -289,7 +294,9 @@ namespace lvk
 
 		// Update the frame delay indicator for the user
 		const auto old_stream_delay = obs_data_get_int(settings, PROP_STREAM_DELAY_INFO);
-		const auto new_stream_delay = static_cast<int>((1000.0f/video_fps) * static_cast<float>(m_Filter.frame_delay()));
+		const auto new_stream_delay = static_cast<int>(
+            std::round((1000.0f/video_fps) * static_cast<float>(m_Filter.frame_delay()))
+        );
 
 		// NOTE: Need to update the property UI to push a stream delay update because
 		// the UI element is disabled. But only if the delay has changed, otherwise
