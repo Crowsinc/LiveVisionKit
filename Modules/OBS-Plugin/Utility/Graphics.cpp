@@ -376,7 +376,6 @@ namespace lvk
             // This can happen due to driver differences between Nvidia/AMD.
             m_SafeMode = glGetError() != GL_NO_ERROR;
 		}
-		else
 #endif
             // NOTE: don't use an else here to handle safe mode toggle.
         if(!use_custom_buffers() || m_SafeMode)
