@@ -105,8 +105,6 @@ namespace lvk
         uint32_t m_BufferObject = 0;
         uint8_t* m_MappedData = nullptr;
         gs_stagesurf_t* m_StagingSurface = nullptr;
-
-        bool m_SafeMode = false;
     };
 
 }

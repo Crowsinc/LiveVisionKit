@@ -34,6 +34,14 @@ if(OBS_PLUGIN_PRINT_SETTINGS)
 endif()
 message(STATUS "${MI}Print Settings: ${OBS_PLUGIN_PRINT_SETTINGS}")
 
+if(UNIX)
+    option(OBS_PLUGIN_FAST_DMA "Use experimental OpenGL operations for faster DMA" "OFF")
+    if(OBS_PLUGIN_FAST_DMA)
+        add_definitions(-DFAST_GL_DMA)
+    endif()
+    message(STATUS "${MI}Faster OpenGL DMA: ${OBS_PLUGIN_FAST_DMA}")
+endif()
+
 # Install settings
 option(
     OBS_PLUGIN_AUTO_INSTALL 

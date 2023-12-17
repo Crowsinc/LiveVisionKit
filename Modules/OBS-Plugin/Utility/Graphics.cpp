@@ -84,7 +84,7 @@ namespace lvk
 //---------------------------------------------------------------------------------------------------------------------
 
 // TODO: handle this properly
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 	bool init_glad() {thread_local auto status = gladLoadGL(); return status != 0;}
 #endif
 
@@ -110,7 +110,7 @@ namespace lvk
 	{
 		obs_enter_graphics();
 
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		if(m_BufferObject != 0)
 		{
 			glDeleteBuffers(1, &m_BufferObject);
@@ -147,10 +147,10 @@ namespace lvk
 		const uint64_t width = gs_texture_get_width(target);
 		const uint64_t height = gs_texture_get_height(target);
 
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		// If we are on Linux with access to ARB buffer storage,
 		// then use persistent buffer mapping to speed things up.
-		if(use_custom_buffers() && !m_SafeMode)
+		if(use_custom_buffers())
 		{
 			// Create a new buffer if the existing one isn't the right size.
 			const uint64_t rgb_buffer_size = width * height * 3u;
@@ -176,15 +176,10 @@ namespace lvk
 					0, static_cast<GLsizeiptr>(m_BufferSize),
 					GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT
 				);
-
-                // Force safe mode if we have an OpenGL error.
-                // This can happen due to driver differences between Nvidia/AMD.
-                m_SafeMode = glGetError() != GL_NO_ERROR;
 			}
 		}
+        else
 #endif
-        // NOTE: don't use an else here to handle safe mode toggle.
-        if(!use_custom_buffers() || m_SafeMode)
 		{
 			uint32_t linesize = 0;
 			gs_texture_map(target, &m_MappedData, &linesize);
@@ -199,8 +194,8 @@ namespace lvk
 	{
 		LVK_ASSERT(m_Target != nullptr);
 
-#ifndef _WIN32
-		if(use_custom_buffers() && !m_SafeMode)
+#ifdef FAST_GL_DMA
+		if(use_custom_buffers())
 		{
 			LVK_ASSERT(m_BufferObject != 0);
 
@@ -227,10 +222,6 @@ namespace lvk
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-            // Force safe mode if we have an OpenGL error.
-            // This can happen due to driver differences between Nvidia/AMD.
-            m_SafeMode = glGetError() != GL_NO_ERROR;
 		}
 		else
 #endif
@@ -252,7 +243,7 @@ namespace lvk
 
 	bool RGBTextureWriteBuffer::use_custom_buffers()
 	{
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		return init_glad() && GLAD_GL_ARB_buffer_storage;
 #else
 		return false;
@@ -281,7 +272,7 @@ namespace lvk
 	{
 		obs_enter_graphics();
 
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		if(m_BufferObject != 0)
 		{
 			glDeleteBuffers(1, &m_BufferObject);
@@ -321,10 +312,10 @@ namespace lvk
 		const uint64_t width = gs_texture_get_width(target);
 		const uint64_t height = gs_texture_get_height(target);
 
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		// If we are on Linux with access to ARB buffer storage,
 		// then use persistent buffer mapping to speed things up.
-		if(use_custom_buffers() && !m_SafeMode)
+		if(use_custom_buffers())
 		{
 			// Create a new buffer if the existing one isn't the right size.
 			const uint64_t rgb_buffer_size = width * height * 3u;
@@ -371,14 +362,9 @@ namespace lvk
 
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-            // Force safe mode if we have an OpenGL error.
-            // This can happen due to driver differences between Nvidia/AMD.
-            m_SafeMode = glGetError() != GL_NO_ERROR;
 		}
+        else
 #endif
-            // NOTE: don't use an else here to handle safe mode toggle.
-        if(!use_custom_buffers() || m_SafeMode)
         {
 			prepare_staging_surface(
 				m_StagingSurface,
@@ -398,8 +384,8 @@ namespace lvk
 
 	void RGBTextureReadBuffer::flush()
 	{
-#ifndef _WIN32
-		if(use_custom_buffers() && !m_SafeMode)
+#ifdef FAST_GL_DMA
+		if(use_custom_buffers())
 		{
             // Do nothing..
 		}
@@ -421,7 +407,7 @@ namespace lvk
 
 	bool RGBTextureReadBuffer::use_custom_buffers()
 	{
-#ifndef _WIN32
+#ifdef FAST_GL_DMA
 		return init_glad() && GLAD_GL_ARB_buffer_storage;
 #else
 		return false;
