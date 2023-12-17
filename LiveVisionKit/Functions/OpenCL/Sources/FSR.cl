@@ -497,11 +497,11 @@ __kernel void rcas(
     float3 f = convert_float3((uchar3)(r1.s6, r1.s7, src[src_index + 5])) * norm_factor;
     
     // Rename 
-    float bR=b.r; float bG=b.g; float bB=b.b;
-    float dR=d.r; float dG=d.g; float dB=d.b;
-    float eR=e.r; float eG=e.g; float eB=e.b;
-    float fR=f.r; float fG=f.g; float fB=f.b;
-    float hR=h.r; float hG=h.g; float hB=h.b;
+    float bR=b.z; float bG=b.y; float bB=b.x;
+    float dR=d.z; float dG=d.y; float dB=d.x;
+    float eR=e.z; float eG=e.y; float eB=e.x;
+    float fR=f.z; float fG=f.y; float fB=f.x;
+    float hR=h.z; float hG=h.y; float hB=h.x;
 
     // Min and max of ring.
     float mn4R = min4f(bR,dR,fR,hR);
