@@ -76,8 +76,24 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-	void VisionFilter::release_resources()
-	{
+    void VisionFilter::release_resources()
+    {
+        release_async_frames();
+        obs_enter_graphics();
+
+        if(m_RenderBuffer != nullptr)
+        {
+            gs_texture_destroy(m_RenderBuffer);
+            m_RenderBuffer = nullptr;
+        }
+
+        obs_leave_graphics();
+    }
+
+//---------------------------------------------------------------------------------------------------------------------
+
+	void VisionFilter::release_async_frames()
+    {
         // Check that source is still valid, then release its frames.
         // The source can become invalidated when closing OBS-Studio.
         if(obs_source_get_name(m_Source) != nullptr)
@@ -88,17 +104,6 @@ namespace lvk
 			    m_AsyncFrameQueue.pop_front();
             }
 		}
-
-
-		obs_enter_graphics();
-
-		if(m_RenderBuffer != nullptr)
-		{
-			gs_texture_destroy(m_RenderBuffer);
-			m_RenderBuffer = nullptr;
-		}
-
-		obs_leave_graphics();
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -147,13 +152,23 @@ namespace lvk
 	{
         LVK_PROFILE;
 
+        // Test if the graphics thread has changed and reset
+        // the frame queue to avoid interacting with old frames.
+        if(m_GraphicsThread != std::this_thread::get_id())
+        {
+            m_GraphicsThread = std::this_thread::get_id();
+            release_async_frames();
+            return nullptr;
+        }
+
+        // Test that the filter is still valid.
 		m_Source = obs_filter_get_parent(m_Context);
 		if(m_Source == nullptr || input_frame == nullptr)
 			return input_frame;
 
 		auto& buffer = fetch_cache().frame_buffer;
 
-		// If we are at the start of a new chain, upload the frame to the frame buffer. 
+		// If we are at the start of a new chain, upload the frame to the frame buffer.
 		// If the upload fails, because the frame format isn't supported, then we will
 		// disable this filter and pass the given frame down the filter chain.
 		if(is_vision_filter_chain_start())
@@ -254,7 +269,7 @@ namespace lvk
             released_frames
         );
 
-        log::error_if(
+        log::warn_if(
             output_frame == nullptr,
             "\'%s\' failed to find a matching frame!",
             obs_source_get_name(m_Context)

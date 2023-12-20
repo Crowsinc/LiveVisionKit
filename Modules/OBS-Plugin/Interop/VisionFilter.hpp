@@ -75,6 +75,8 @@ namespace lvk
 
 		void release_resources();
 
+        void release_async_frames();
+
 		bool acquire_render(OBSFrame& buffer);
 
 		void prepare_render_buffer(const uint32_t width, const uint32_t height);
@@ -96,6 +98,7 @@ namespace lvk
 		gs_texture_t* m_RenderBuffer = nullptr;
 		VideoFrame::Format m_FrameFormat = VideoFrame::UNKNOWN;
 		std::deque<std::pair<obs_source_frame*, size_t>> m_AsyncFrameQueue;
+        std::thread::id m_GraphicsThread;
 	};
 
 }
