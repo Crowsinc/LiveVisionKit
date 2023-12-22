@@ -277,19 +277,20 @@ namespace lvk
                     case Format::BGRA: cv::cvtColor(*this, dst, cv::COLOR_GRAY2BGRA); break;
                     case Format::YUV:
                     {
-                        // Y = gray plane, U = zero plane, V = zero plane
-                        thread_local cv::UMat zero_buffer;
-                        if(zero_buffer.cols < cols || zero_buffer.rows < rows)
+                        // Y = gray plane, U = 128 plane, V = 128 plane
+                        thread_local cv::UMat const_plane;
+                        if(const_plane.cols < cols || const_plane.rows < rows || const_plane.empty())
                         {
                             // TODO: replace with a sized cache buffer construct
-                            // Cache the zero buffer in case the operation happens a lot.
-                            zero_buffer = zeros(
-                                std::max(rows, zero_buffer.rows),
-                                std::max(cols, zero_buffer.cols),
+                            // Cache the const buffer in case the operation happens a lot.
+                            const_plane = zeros(
+                                std::max(rows, const_plane.rows),
+                                std::max(cols, const_plane.cols),
                                 type(), cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY
                             );
+                            const_plane.setTo(cv::Scalar::all(128));
                         }
-                        cv::merge(std::vector<cv::UMat>{*this, zero_buffer, zero_buffer}, dst);
+                        cv::merge(std::vector<cv::UMat>{*this, const_plane, const_plane}, dst);
                         break;
                     }
                     default: LVK_ASSERT("Unsupported GRAY conversion" && false);
