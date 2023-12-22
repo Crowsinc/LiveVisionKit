@@ -70,8 +70,7 @@ namespace lvk
 
         void download_planes(
             const cv::UMat& plane_0,
-            obs_source_frame& dst,
-            uint64_t plane_offset = 0
+            obs_source_frame& dst
         );
 
         void download_planes(
@@ -202,7 +201,9 @@ namespace lvk
         void to_ocl(const obs_source_frame* src, VideoFrame& dst) override;
 
         void to_obs(const VideoFrame& src, obs_source_frame* dst) override;
-
+    private:
+        // NOTE: We assume this will automatically initialize on the GPU
+        cv::UMat m_MixBuffer;
 	};
 
 	// Uncompressed formats

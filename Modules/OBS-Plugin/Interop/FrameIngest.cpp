@@ -226,8 +226,7 @@ namespace lvk
 
     void FrameIngest::download_planes(
         const cv::UMat& plane_0,
-        obs_source_frame& dst,
-        uint64_t plane_offset
+        obs_source_frame& dst
     )
     {
         LVK_ASSERT(!plane_0.empty());
@@ -497,7 +496,7 @@ namespace lvk
         LVK_PROFILE;
 
         auto& frame = *src;
-		
+
 		const cv::Size frame_size(static_cast<int>(src->width), static_cast<int>(src->height));
         const cv::Size chroma_size = m_ChromaScaling * cv::Size2f(frame_size);
 
@@ -514,10 +513,10 @@ namespace lvk
 
 		if(chroma_size != frame_size)
 		{
-			cv::resize(u_roi, m_USubPlane, frame_size, 0, 0, cv::INTER_LINEAR);
-			cv::resize(v_roi, m_VSubPlane, frame_size, 0, 0, cv::INTER_LINEAR);
+			cv::resize(u_roi, m_UPlane, frame_size, 0, 0, cv::INTER_LINEAR);
+			cv::resize(v_roi, m_VPlane, frame_size, 0, 0, cv::INTER_LINEAR);
 
-			merge_planes(y_roi, m_USubPlane, m_VSubPlane, dst);
+			merge_planes(y_roi, m_UPlane, m_VPlane, dst);
 		}
 		else merge_planes(y_roi, u_roi, v_roi, dst);
 	}
@@ -695,8 +694,13 @@ namespace lvk
 
 		auto& frame = *dst;
 
-        // Insert YUV planes after the A plane.
-		download_planes(src, frame, 1);
+        m_MixBuffer.create(src.size(), CV_8UC4, cv::UMatUsageFlags::USAGE_ALLOCATE_DEVICE_MEMORY);
+        m_MixBuffer.setTo(cv::Scalar(255, 0, 0, 0));
+
+        // The video frame has no alpha but P444 does. We'll need a
+        // mix operation to add an alpha channel to the front for AYUV.
+        cv::mixChannels({src}, std::vector<cv::UMat>{m_MixBuffer}, {0,1,  1,2,  2,3});
+		download_planes(m_MixBuffer, frame);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------
