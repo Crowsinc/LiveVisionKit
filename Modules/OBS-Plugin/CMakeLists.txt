@@ -210,9 +210,9 @@ target_sources(
         Sources/Tools/CCTool.cpp
         Sources/Tools/CCTool.hpp
 
-        Sources/Debug/IngestTestFilter.cpp
-        Sources/Debug/IngestTestFilter.hpp
-        Sources/Debug/IngestTestSource.cpp
+        Sources/Tools/IngestTestFilter.cpp
+        Sources/Tools/IngestTestFilter.hpp
+        Sources/Tools/IngestTestSource.cpp
 
         Data/effects/ffx_a.h
         Data/effects/ffx_cas.h

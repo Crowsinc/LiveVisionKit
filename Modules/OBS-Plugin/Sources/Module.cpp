@@ -126,7 +126,7 @@ bool obs_module_load()
 		register_lc_effect_source();
 		register_cct_effect_source();
 
-        // Debug sources
+        // Debug Sources
         register_ingest_test_source();
 	}
 
