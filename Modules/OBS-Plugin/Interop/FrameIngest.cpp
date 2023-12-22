@@ -239,9 +239,7 @@ namespace lvk
         LVK_PROFILE;
 
         const int export_length = static_cast<int>(plane_0.total() * plane_0.elemSize());
-        const int export_offset = static_cast<int>(dst.data[plane_offset] - dst.data[0]);
-
-        plane_0.reshape(1, 1).copyTo(cv::Mat(export_offset, export_length, CV_8UC1, dst.data[0]));
+        plane_0.reshape(1, 1).copyTo(cv::Mat(1, export_length, CV_8UC1, dst.data[0]));
     }
 
 //---------------------------------------------------------------------------------------------------------------------
