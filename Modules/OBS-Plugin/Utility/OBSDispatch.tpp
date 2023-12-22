@@ -50,7 +50,10 @@ namespace lvk::dispatch
 	template<typename T>
     inline void* filter_create(obs_data_t* settings, obs_source_t* context)
 	{
-		return T::Create(context, settings);
+        LVK_ASSERT(context != nullptr);
+        LVK_ASSERT(settings != nullptr);
+
+        return new T(context);
 	}
 
 //---------------------------------------------------------------------------------------------------------------------

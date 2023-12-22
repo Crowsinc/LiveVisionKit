@@ -56,6 +56,8 @@ void register_cct_source();
 
 void register_cct_effect_source();
 
+void register_ingest_test_source();
+
 //---------------------------------------------------------------------------------------------------------------------
 
 void attach_ocl_interop_context(void* param, uint32_t cx, uint32_t cy)
@@ -118,11 +120,14 @@ bool obs_module_load()
 		register_lc_source();
 		register_adb_source();
 		register_cct_source();
-		
+
 		register_vs_effect_source();
 		register_adb_effect_source();
 		register_lc_effect_source();
 		register_cct_effect_source();
+
+        // Debug sources
+        register_ingest_test_source();
 	}
 
 	return true;
