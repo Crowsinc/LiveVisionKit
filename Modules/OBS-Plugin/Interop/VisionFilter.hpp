@@ -20,6 +20,7 @@
 #include <LiveVisionKit.hpp>
 #include <unordered_map>
 #include <obs-module.h>
+#include <thread>
 #include <tuple>
 #include <mutex>
 #include <deque>
