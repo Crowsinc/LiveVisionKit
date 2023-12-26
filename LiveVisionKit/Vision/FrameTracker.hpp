@@ -39,7 +39,6 @@ namespace lvk
 
         // Robustness Constraints
         size_t min_motion_samples = 75;
-        float stability_threshold = 0.30f;
         float acceptance_threshold = 8.0f;
         float uniformity_threshold = 0.20f;
     };
@@ -56,7 +55,7 @@ namespace lvk
 
 		void restart();
 
-        float tracking_quality() const;
+        float tracking_stability() const;
 
         const cv::Size& motion_resolution() const;
 
@@ -99,8 +98,8 @@ namespace lvk
         std::vector<cv::KeyPoint> m_TrackedFeatures;
         std::vector<cv::Point2f> m_TrackedPoints, m_MatchedPoints;
 
-        float m_TrackingQuality;
         cv::Rect2f m_TrackingRegion;
+        float m_TrackingStability = 0;
 		std::vector<uint8_t> m_MatchStatus, m_InlierStatus;
         cv::Ptr<cv::SparsePyrLKOpticalFlow> m_OpticalTracker = nullptr;
 

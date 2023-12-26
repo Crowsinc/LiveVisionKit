@@ -26,6 +26,11 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
+    constexpr float QA_UPDATE_RATE = 0.05f;
+    constexpr float QA_BLEND_STEP = 0.05f;
+
+//---------------------------------------------------------------------------------------------------------------------
+
 	StabilizationFilter::StabilizationFilter(const StabilizationFilterSettings& settings)
 		: VideoFilter("Stabilization Filter")
 	{
@@ -36,6 +41,9 @@ namespace lvk
 
     void StabilizationFilter::configure(const StabilizationFilterSettings& settings)
     {
+        LVK_ASSERT_01(settings.min_tracking_quality);
+        LVK_ASSERT_01(settings.min_scene_quality);
+
         m_NullMotion.resize(settings.motion_resolution);
 
         // We need to reset the context when disabling the stabilization
@@ -88,7 +96,23 @@ namespace lvk
 
         // Track the motion of the incoming frame.
         input.viewAsFormat(m_TrackingFrame, VideoFrame::GRAY);
-        const auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
+        auto motion = m_FrameTracker.track(m_TrackingFrame).value_or(m_NullMotion);
+
+        // Apply quality assurance policies
+        const auto tracking_quality = m_FrameTracker.tracking_stability();
+        m_SceneQuality = exp_moving_average(m_SceneQuality, tracking_quality, QA_UPDATE_RATE);
+        if(tracking_quality < m_Settings.min_tracking_quality)
+        {
+            // This is most likely a discontinuity
+            m_TrustFactor = 0.0f;
+        }
+        else if(m_SceneQuality < m_Settings.min_scene_quality)
+            m_TrustFactor = step(m_TrustFactor, 0.0f, QA_BLEND_STEP);
+        else
+            m_TrustFactor = step(m_TrustFactor, 1.0f, QA_BLEND_STEP);
+
+        // Suppress the motion based on the trust factor
+        motion *= m_TrustFactor;
 
         // Push the tracked frame onto the queue to be stabilized later.
         m_FrameQueue.push(std::move(input));
@@ -114,6 +138,7 @@ namespace lvk
 
 	void StabilizationFilter::restart()
 	{
+        m_SceneQuality = 1.0f;
         m_FrameQueue.clear();
         reset_context();
 	}
@@ -140,7 +165,11 @@ namespace lvk
         auto& frame = m_FrameQueue.newest();
         m_FrameTracker.draw_trackers(
             frame,
-            col::GREEN[frame.format],
+            lerp<cv::Scalar,double>(
+                col::RED[frame.format],
+                col::GREEN[frame.format],
+                m_TrustFactor
+            ),
             7, 10
         );
     }

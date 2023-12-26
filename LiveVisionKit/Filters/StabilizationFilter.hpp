@@ -32,6 +32,10 @@ namespace lvk
 		cv::Scalar background_colour = {255,0,255};
         bool crop_to_stable_region = false;
 		bool stabilize_output = true;
+
+        // Quality Assurance
+        float min_scene_quality = 0.8f;
+        float min_tracking_quality = 0.3f;
 	};
 
 
@@ -68,6 +72,9 @@ namespace lvk
         StreamBuffer<Frame> m_FrameQueue{1};
         VideoFrame m_WarpFrame, m_TrackingFrame;
         WarpMesh m_NullMotion{WarpMesh::MinimumSize};
-	};
+
+        float m_SceneQuality = 0.0f;
+        float m_TrustFactor = 0.0f;
+    };
 
 }

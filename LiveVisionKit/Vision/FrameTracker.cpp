@@ -62,7 +62,6 @@ namespace lvk
         LVK_ASSERT(settings.temporal_smoothing >= 0.0f);
         LVK_ASSERT(settings.local_smoothing >= 0.0f);
         LVK_ASSERT(settings.min_motion_samples >= 4);
-        LVK_ASSERT_01(settings.stability_threshold);
         LVK_ASSERT_01(settings.uniformity_threshold);
 
         m_FeatureDetector.configure(settings);
@@ -97,7 +96,7 @@ namespace lvk
 
 	void FrameTracker::restart()
 	{
-        m_TrackingQuality = 0.0f;
+        m_TrackingStability = 0.0f;
         m_TrackedFeatures.clear();
         m_FeatureDetector.reset();
         m_FrameInitialized = false;
@@ -111,7 +110,7 @@ namespace lvk
 		LVK_ASSERT(!next_frame.empty() && next_frame.type() == CV_8UC1);
 
         // Reset tracking metrics
-        m_TrackingQuality = 0.0f;
+        m_TrackingStability = 0.0f;
 
         // Advance time and import the next frame.
         std::swap(m_PreviousFrame, m_CurrentFrame);
@@ -176,14 +175,8 @@ namespace lvk
             );
         }
 
-        // Drop the frame if the inlier ratio is below the expected threshold.
-        // This usually happens due to an un-trackable frame or discontinuity.
-        const auto inlier_ratio = ratio_of<uint8_t>(m_InlierStatus, 1);
-        if(inlier_ratio < m_Settings.stability_threshold)
-        {
-            m_TrackedFeatures.clear();
-            return std::nullopt;
-        }
+        // Measure tracking stability as the inlier ratio
+        m_TrackingStability = ratio_of<uint8_t>(m_InlierStatus, 1);
 
         // Filter outliers so we're left with only high quality points,
         // then propagate them so that they're re-used in the detector.
@@ -351,7 +344,7 @@ namespace lvk
         params.loIterations = 10;
         params.loSampleSize = 20;
         params.final_polisher = cv::MAGSAC;
-        params.final_polisher_iterations = 5;
+        params.final_polisher_iterations = 0;
 
         if(homography)
         {
@@ -465,9 +458,9 @@ namespace lvk
 
 //---------------------------------------------------------------------------------------------------------------------
 
-    float FrameTracker::tracking_quality() const
+    float FrameTracker::tracking_stability() const
     {
-        return m_TrackingQuality;
+        return m_TrackingStability;
     }
 
 //---------------------------------------------------------------------------------------------------------------------

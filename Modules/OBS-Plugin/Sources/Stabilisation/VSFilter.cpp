@@ -274,17 +274,23 @@ namespace lvk
                 stab_settings.motion_resolution = {2, 2};
                 stab_settings.detection_regions = {2, 1};
 
-                stab_settings.max_feature_density = 0.08f;
-                stab_settings.min_feature_density = 0.02f;
+                stab_settings.max_feature_density = 0.12f;
+                stab_settings.min_feature_density = 0.04f;
                 stab_settings.accumulation_rate = 3.0f;
             }
 
             // Configure quality assurance
             const std::string quality_assurance = obs_data_get_string(settings, PROP_QUALITY_ASSURANCE);
             if(quality_assurance == PROP_QUALITY_ASSURANCE_STRICT)
-                stab_settings.stability_threshold = 0.80f;
+            {
+                stab_settings.min_scene_quality = 0.95f;
+                stab_settings.min_tracking_quality = 0.35f;
+            }
             else
-                stab_settings.stability_threshold = 0.20f;
+            {
+                stab_settings.min_scene_quality = 0.40f;
+                stab_settings.min_tracking_quality = 0.20f;
+            }
 		});
 
         // Get FPS info for the stream.
