@@ -5,6 +5,10 @@
 ![Linux](https://img.shields.io/badge/Linux-%20)
 
 ---------------
+
+### THIS PROJECT IS ON AN INDEFINITE PAUSE (MORE INFO IN THE DISCORD ANNOUNCEMENTS), FEEL FREE TO FORK THE PROJECT OR CONTACT @Crowsinc VIA THE DISCORD IF YOU WISH TO UPDATE IT.
+
+---------------
 ![LiveVisionKit](/Assets/LiveVisionKit_Logo.png)
 ---------------
 LiveVisionKit (LVK) is a set of real-time video processing filters for manipulating and enhancing livestreams or recorded videos. Features include video stabilization, adaptive de-blocking, lens correction, image enhancement, and more. LiveVisionKit may be used via the OBS-Studio plugin, with more options coming in the future!
